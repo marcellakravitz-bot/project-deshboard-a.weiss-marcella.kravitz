@@ -811,6 +811,39 @@ var pdfViewer = `
         .pdfBookPageLabel { font-size: 13px; font-weight: 700; color: var(--steel); min-width: 70px; text-align: center; }
         .pdfBookOpenLink { font-size: 12px; font-weight: 700; color: var(--mist); text-decoration: underline; }
         .pdfBookOpenLink:hover { color: var(--accent); }
+        .photoBody { gap: 14px; }
+        .photoUploadRow { display: flex; justify-content: center; margin-bottom: 4px; }
+        .photoGridScroll {
+          width: 100%; max-height: min(780px, 74vh); overflow-y: auto; overflow-x: hidden;
+          padding-inline-end: 4px; scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+        }
+        .photoGridScroll::-webkit-scrollbar { width: 9px; }
+        .photoGridScroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+        .photoGridScroll::-webkit-scrollbar-thumb:hover { background: var(--mist); }
+        .photoGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .photoTile {
+          position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden;
+          background: #eef0f2; border: 1px solid var(--line-soft);
+        }
+        .photoTile img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; transition: transform .2s ease; }
+        .photoTile:hover img { transform: scale(1.05); }
+        .photoDel {
+          position: absolute; top: 6px; inset-inline-end: 6px; width: 24px; height: 24px; border-radius: 999px;
+          border: none; background: rgba(20,38,94,0.78); color: #fff; display: flex; align-items: center;
+          justify-content: center; cursor: pointer; opacity: 0; transition: opacity .15s ease;
+        }
+        .photoTile:hover .photoDel { opacity: 1; }
+        .photoLightbox {
+          position: absolute; inset: 0; z-index: 200; background: rgba(15,16,19,0.82);
+          display: flex; align-items: center; justify-content: center; padding: 30px;
+        }
+        .photoLightbox img { max-width: 92%; max-height: 92%; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: default; }
+        .photoLightboxClose {
+          position: absolute; top: 16px; inset-inline-end: 16px; width: 40px; height: 40px; border-radius: 999px;
+          border: none; background: rgba(255,255,255,0.15); color: #fff; display: flex; align-items: center;
+          justify-content: center; cursor: pointer;
+        }
+        .photoLightboxClose:hover { background: rgba(255,255,255,0.28); }
 `;
 
 // src/styles/gantt.js
@@ -2209,9 +2242,7 @@ function PdfBookViewer({ dataUrl, isRTL, children }) {
       const baseViewport = loadedPage.getViewport({ scale: 1 });
       const aspect = baseViewport.width / baseViewport.height;
       const parentW = canvas.parentElement && canvas.parentElement.clientWidth || 560;
-      const maxH = (window.innerHeight || 800) * 0.72;
-      let cssWidth = Math.min(parentW, 1150);
-      if (cssWidth / aspect > maxH) cssWidth = maxH * aspect;
+      const cssWidth = Math.min(parentW, 1200);
       const scale = Math.min(3, cssWidth * dpr / baseViewport.width);
       const viewport = loadedPage.getViewport({ scale });
       canvas.width = viewport.width;
@@ -3042,6 +3073,41 @@ function DocumentCard({
   return /* @__PURE__ */ React13.createElement("div", { className: "functionPageBody" }, /* @__PURE__ */ React13.createElement("a", { className: "functionFileLink", href: content.dataUrl, download: content.name }, /* @__PURE__ */ React13.createElement(FileCheck23, { size: 16, strokeWidth: 2 }), " ", content.name));
 }
 
+// src/cards/PhotoGalleryCard.jsx
+import React16, { useState as useState7, useRef as useRef6 } from "react";
+import { Upload as UploadPh, X as XPh } from "lucide-react";
+function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }) {
+  const [zoom, setZoom] = useState7(null);
+  const inputRef = useRef6(null);
+  const list = photos || [];
+  return /* @__PURE__ */ React16.createElement(
+    "div",
+    { className: "functionPageBody photoBody", style: { flexDirection: "column" } },
+    canEdit && /* @__PURE__ */ React16.createElement(
+      "div",
+      { className: "photoUploadRow" },
+      /* @__PURE__ */ React16.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => inputRef.current && inputRef.current.click() }, /* @__PURE__ */ React16.createElement(UploadPh, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת תמונות" : "Upload photos"),
+      /* @__PURE__ */ React16.createElement("input", { ref: inputRef, type: "file", accept: "image/*", multiple: true, style: { display: "none" }, onChange: (e) => { if (onUploadPhotos) onUploadPhotos(e.target.files); e.target.value = ""; } })
+    ),
+    list.length === 0 ? /* @__PURE__ */ React16.createElement("div", { className: "functionEmptyState" }, /* @__PURE__ */ React16.createElement("p", null, isRTL ? canEdit ? "עדיין אין תמונות. לחצי 'העלאת תמונות' כדי להוסיף." : "עדיין לא הועלו תמונות." : canEdit ? "No photos yet. Click 'Upload photos' to add." : "No photos yet.")) : /* @__PURE__ */ React16.createElement(
+      "div",
+      { className: "photoGridScroll" },
+      /* @__PURE__ */ React16.createElement("div", { className: "photoGrid" }, list.map((p) => /* @__PURE__ */ React16.createElement(
+        "div",
+        { className: "photoTile", key: p.id },
+        /* @__PURE__ */ React16.createElement("img", { src: p.dataUrl, alt: "", loading: "lazy", onClick: () => setZoom(p.dataUrl) }),
+        canEdit && /* @__PURE__ */ React16.createElement("button", { type: "button", className: "photoDel", onClick: (e) => { e.stopPropagation(); if (onRemovePhoto) onRemovePhoto(p.id); }, "aria-label": "Remove", title: isRTL ? "מחיקה" : "Remove" }, /* @__PURE__ */ React16.createElement(XPh, { size: 13, strokeWidth: 2.6 }))
+      )))
+    ),
+    zoom && /* @__PURE__ */ React16.createElement(
+      "div",
+      { className: "photoLightbox", onClick: () => setZoom(null) },
+      /* @__PURE__ */ React16.createElement("img", { src: zoom, alt: "", onClick: (e) => e.stopPropagation() }),
+      /* @__PURE__ */ React16.createElement("button", { type: "button", className: "photoLightboxClose", onClick: () => setZoom(null), "aria-label": "Close" }, /* @__PURE__ */ React16.createElement(XPh, { size: 22, strokeWidth: 2.4 }))
+    )
+  );
+}
+
 // src/cards/CardView.jsx
 function CardView({
   card,
@@ -3061,6 +3127,9 @@ function CardView({
   onToggleScheduleTeamNote,
   onSaveSchedule,
   viewerRole,
+  photos,
+  onUploadPhotos,
+  onRemovePhoto,
   onUploadFile,
   onRemoveFile,
   onUploadSchedule,
@@ -3074,9 +3143,10 @@ function CardView({
   }, [cardKey]);
   const isSchedule = cardKey === "schedule";
   const isLook = cardKey === "look";
+  const isPhotos = cardKey === "photos";
   const showRooms = !!roomsDataSource;
   const showSchedule = isSchedule && !!scheduleData;
-  const hasEditModal = canEdit && !showRooms;
+  const hasEditModal = canEdit && !showRooms && !isPhotos;
   return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
     FinishesByRoomCard,
     {
@@ -3098,7 +3168,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -3109,7 +3179,7 @@ function CardView({
       projectName: project.name,
       allowDownload: cardKey === "look" && !canEdit
     }
-  ), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file")) : /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file")) : /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -3605,6 +3675,48 @@ function ProjectDashboardApp() {
     updateProject(activeContractor.id, activeProject.id, { functionContent: next });
     setFunctionEditOpen(false);
   };
+  const handleUploadPhotos = (files) => {
+    const items = Array.from(files || []).filter((f) => f.type && f.type.indexOf("image/") === 0);
+    if (!items.length) return;
+    let pending = items.length;
+    const added = [];
+    const flush = () => {
+      if (pending > 0) return;
+      if (!added.length) return;
+      updateProjectExtras(activeProject.id, { photos: [...activeExtras.photos || [], ...added] });
+    };
+    items.forEach((file, idx) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1500;
+          let w = img.width, h = img.height;
+          if (Math.max(w, h) > maxDim) {
+            const s = maxDim / Math.max(w, h);
+            w = Math.round(w * s);
+            h = Math.round(h * s);
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w;
+          canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          let out;
+          try { out = canvas.toDataURL("image/jpeg", 0.82); } catch (e) { out = reader.result; }
+          added.push({ id: `ph-${Date.now()}-${idx}`, dataUrl: out });
+          pending -= 1;
+          flush();
+        };
+        img.onerror = () => { pending -= 1; flush(); };
+        img.src = reader.result;
+      };
+      reader.onerror = () => { pending -= 1; flush(); };
+      reader.readAsDataURL(file);
+    });
+  };
+  const handleRemovePhoto = (id) => {
+    updateProjectExtras(activeProject.id, { photos: (activeExtras.photos || []).filter((p) => p.id !== id) });
+  };
   const handleScheduleFile = async (file) => {
     const { tasks, parseNote } = await parseScheduleFile(file);
     updateProjectExtras(activeProject.id, { scheduleData: { fileName: file.name, tasks, parseNote } });
@@ -3991,6 +4103,9 @@ function ProjectDashboardApp() {
         onToggleScheduleTeamNote: updateScheduleTeamNote,
         onSaveSchedule: saveScheduleUpdate,
         viewerRole: loggedInEmail === "marcellak@a-weiss.co.il" ? "admin" : authRole,
+        photos: activeExtras.photos || [],
+        onUploadPhotos: handleUploadPhotos,
+        onRemovePhoto: handleRemovePhoto,
         onUploadFile: handleFunctionFileUpload,
         onRemoveFile: handleFunctionFileRemove,
         onUploadSchedule: handleScheduleFile,
