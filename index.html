@@ -31,14 +31,14 @@
     window.storage = {
       get: function (key) {
         try {
-          var v = localStorage.getItem('awdash:' + key);
+          var v = localStorage.getItem('awdash-v2:' + key);
           if (v != null) return Promise.resolve({ value: v });
         } catch (e) {}
         return Promise.resolve(Object.prototype.hasOwnProperty.call(mem, key) ? { value: mem[key] } : null);
       },
       set: function (key, value) {
         mem[key] = value;
-        try { localStorage.setItem('awdash:' + key, value); } catch (e) {}
+        try { localStorage.setItem('awdash-v2:' + key, value); } catch (e) {}
         return Promise.resolve(true);
       }
     };
@@ -3122,13 +3122,13 @@ function ProjectDashboardApp() {
       projects: [
         {
           id: "p-default",
-          slug: null,
-          published: false,
-          name: null,
-          floorsFrom: null,
-          floorsTo: null,
-          startDate: null,
-          endDate: null,
+          slug: "cisco-caesarea",
+          published: true,
+          name: "Cisco Caesarea",
+          floorsFrom: "4",
+          floorsTo: "5",
+          startDate: "2026-07-01",
+          endDate: "2027-01-10",
           clientLogoUrl: null,
           // Access is granted per project (see PROJECT_ACCESS_KINDS). An account
           // starts as "pending" the moment it's invited and becomes "active"
@@ -3210,13 +3210,20 @@ function ProjectDashboardApp() {
     "p-default": {
       dataSources: [],
       scheduleData: {
-        fileName: "sample-schedule.csv",
+        fileName: "demo-schedule.xml",
         parseNote: null,
         tasks: [
-          { name: "Foundation Works", start: "2026-06-01", finish: "2026-07-20", percentComplete: 85, critical: true },
-          { name: "Structural Framing", start: "2026-07-15", finish: "2026-08-08", percentComplete: 60, critical: true },
-          { name: "Electrical Rough-In", start: "2026-08-01", finish: "2026-09-10", percentComplete: 20, critical: false },
-          { name: "Interior Finishes", start: "2026-09-01", finish: "2026-10-15", percentComplete: 0, critical: true }
+          { id: "1", name: "אישור ציוד מערכות", nameHe: "אישור ציוד מערכות", start: "2026-07-01", finish: "2026-08-30", percentComplete: 0, critical: false, level: 1, isSummary: true, predecessors: [] },
+          { id: "2", name: "אישור מערכת מיזוג אוויר", nameHe: "אישור מערכת מיזוג אוויר", start: "2026-07-01", finish: "2026-07-20", percentComplete: 100, critical: true, level: 2, isSummary: false, predecessors: [] },
+          { id: "3", name: "אישור לוחות חשמל", nameHe: "אישור לוחות חשמל", start: "2026-07-20", finish: "2026-08-10", percentComplete: 60, critical: true, level: 2, isSummary: false, predecessors: [{ id: "2", type: "FS", lag: 0 }] },
+          { id: "4", name: "אישור מערכת אינסטלציה", nameHe: "אישור מערכת אינסטלציה", start: "2026-08-10", finish: "2026-08-30", percentComplete: 20, critical: true, level: 2, isSummary: false, predecessors: [{ id: "3", type: "FS", lag: 0 }] },
+          { id: "5", name: "עבודות גמר", nameHe: "עבודות גמר", start: "2026-09-01", finish: "2026-12-20", percentComplete: 0, critical: false, level: 1, isSummary: true, predecessors: [] },
+          { id: "6", name: "ריצוף שטיחים", nameHe: "ריצוף שטיחים", start: "2026-09-01", finish: "2026-10-15", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [{ id: "4", type: "FS", lag: 0 }] },
+          { id: "7", name: "צביעה וגבס", nameHe: "צביעה וגבס", start: "2026-10-15", finish: "2026-12-20", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [{ id: "6", type: "FS", lag: 0 }] },
+          { id: "8", name: "Milestones", nameHe: "אבני דרך", start: "2026-07-01", finish: "2027-01-10", percentComplete: 0, critical: false, level: 1, isSummary: true, predecessors: [] },
+          { id: "9", name: "התחלת עבודות גמר", nameHe: "התחלת עבודות גמר", start: "2026-09-01", finish: "2026-09-01", percentComplete: 100, critical: false, level: 2, isSummary: false, predecessors: [] },
+          { id: "10", name: "מסירת קומה 4", nameHe: "מסירת קומה 4", start: "2026-11-15", finish: "2026-11-15", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [] },
+          { id: "11", name: "מסירת פרויקט", nameHe: "מסירת פרויקט", start: "2027-01-10", finish: "2027-01-10", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [] }
         ]
       }
     }
