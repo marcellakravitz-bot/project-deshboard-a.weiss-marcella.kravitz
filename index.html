@@ -350,7 +350,7 @@ var PROJECT_ACCESS_KINDS = [
   { key: "client", field: "clientAccounts", role: "client" },
   { key: "subcontractor", field: "subcontractorAccounts", role: "subcontractor" }
 ];
-var DESIGN_WIDTH = 1125;
+var DESIGN_WIDTH = 1350;
 
 // src/config/dataSources.js
 import { Building2, DoorOpen as DoorOpen2, ClipboardList as ClipboardList2, Palette as Palette2, FileCheck2 as FileCheck22 } from "lucide-react";
@@ -377,7 +377,7 @@ var base = `
           --accent: #17181c;
           --accent-ink: #000000;
           --accent-soft: #eceef1;
-          --data: #d6432f;
+          --data: #d25a5a;
           --panel: #101114;
           --panel-2: #1c1d22;
           --radius: 14px;
@@ -493,7 +493,7 @@ var landing = `
         }
         .loginFieldInput svg { color: var(--mist); flex-shrink: 0; }
         .loginFieldInput:focus-within { border-color: var(--accent); }
-        .loginFieldError { margin: 10px 0 0; font-size: 12.5px; font-weight: 700; color: #d6432f; text-align: center; }
+        .loginFieldError { margin: 10px 0 0; font-size: 12.5px; font-weight: 700; color: #d25a5a; text-align: center; }
         .loginErrorLine { display: block; }
         .fieldError .loginErrorLine { display: block; }
         .loginSetupIntro {
@@ -710,7 +710,7 @@ var dataSources = `
         .dataSourceLabel { font-size: 14px; font-weight: 800; color: var(--ink); margin: 0; }
         .dataSourceFileName { font-size: 12px; color: var(--mist); font-weight: 600; margin: 3px 0 0; }
         .dataSourceNote { font-size: 11.5px; color: var(--accent); font-weight: 600; margin: 4px 0 0; }
-        .dataSourceNote.error { color: #d6432f; }
+        .dataSourceNote.error { color: #d25a5a; }
         .dataSourceActions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
         .editableTableWrap { margin-top: 16px; }
@@ -737,7 +737,7 @@ var dataSources = `
           border: none; background: none; color: var(--mist); cursor: pointer;
           display: flex; align-items: center; justify-content: center; width: 100%; padding: 8px 0;
         }
-        .tableRowActions button:hover { color: #d6432f; }
+        .tableRowActions button:hover { color: #d25a5a; }
         .editableTableActions { display: flex; gap: 8px; margin-top: 10px; }
 
         .functionEditFooter { display: flex; justify-content: center; margin-top: 30px; }
@@ -770,7 +770,7 @@ var dataSources = `
         }
         .xmlHelpSteps li { font-size: 13px; font-weight: 600; color: var(--ink); line-height: 1.4; }
         .functionRemoveBtn {
-          border: none; background: none; color: #d6432f; font-size: 12.5px; font-weight: 700;
+          border: none; background: none; color: #d25a5a; font-size: 12.5px; font-weight: 700;
           cursor: pointer; text-decoration: underline; padding: 0;
         }
 `;
@@ -874,8 +874,8 @@ var gantt = `
           background: #fff; color: #fff; display: flex; align-items: center; justify-content: center;
           cursor: pointer; padding: 0; flex-shrink: 0;
         }
-        .milestoneCheck.checked { background: #2f9e44; border-color: #2f9e44; }
-        .milestoneCheck:hover { border-color: #2f9e44; }
+        .milestoneCheck.checked { background: #43a06b; border-color: #43a06b; }
+        .milestoneCheck:hover { border-color: #43a06b; }
         .milestoneCurrentArrow {
           display: flex; align-items: center; justify-content: center;
           width: 12px; height: 12px; color: var(--mist); flex-shrink: 0;
@@ -886,8 +886,8 @@ var gantt = `
         }
         .ganttMarkerDateLabel { font-size: 10.5px; font-weight: 700; color: var(--mist); }
         .ganttMarkerDateValue { font-size: 12px; font-weight: 800; color: #14265e; }
-        .ganttMarkerDatePanel.moved { border-color: #e0790a; background: #fff4e6; }
-        .ganttMarkerDatePanel.moved .ganttMarkerDateValue { color: #e0790a; }
+        .ganttMarkerDatePanel.moved { border-color: #dd9633; background: #fff4e6; }
+        .ganttMarkerDatePanel.moved .ganttMarkerDateValue { color: #dd9633; }
         .scheduleWrap { width: 100%; max-width: 100%; min-width: 0; }
 
         /* Bounded box, roughly one screen tall \u2014 scroll inside it in every direction. */
@@ -981,11 +981,11 @@ var gantt = `
 
         .ganttCriticalMark {
           flex: 0 0 22px; width: 22px; height: 22px; border-radius: 6px;
-          display: flex; align-items: center; justify-content: center; color: #d6432f;
+          display: flex; align-items: center; justify-content: center; color: #d25a5a;
           font-size: 12px; font-weight: 800; position: relative;
         }
-        .ganttCriticalMark.overdue { background: #d6432f; color: #fff; }
-        .ganttCriticalMark.done { color: #2f9e44; }
+        .ganttCriticalMark.overdue { background: #d25a5a; color: #fff; }
+        .ganttCriticalMark.done { color: #43a06b; }
         .ganttMarkTooltip {
           position: absolute; top: 50%; transform: translateY(-50%);
           background: #fff; border: 1.5px solid #14265e; border-radius: 6px;
@@ -997,11 +997,11 @@ var gantt = `
         .ganttCriticalMark:hover .ganttMarkTooltip { opacity: 1; visibility: visible; }
         .ganttCriticalMark { z-index: 1; }
         .ganttCriticalMark:hover { z-index: 100; }
-        .ganttCriticalMark.on { color: #e0790a; }
+        .ganttCriticalMark.critical { color: #dd9633; }
         .ganttBarDays {
-          position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+          position: absolute; top: 0; height: 100%; display: flex; align-items: center; justify-content: center;
           font-size: 11px; font-weight: 700; color: #14265e; white-space: nowrap;
-          z-index: 4; pointer-events: none;
+          z-index: 4; pointer-events: none; overflow: visible;
         }
         .ganttBarHoverZone {
           position: absolute; top: 0; height: 100%; z-index: 3; min-width: 6px;
@@ -1035,20 +1035,20 @@ var gantt = `
           content: ""; position: absolute; top: 12px; bottom: 0; inset-inline-start: -1px;
           width: 2px; background: #14265e; pointer-events: none;
         }
-        .ganttMarkerHead.moved::after { background: #e0790a; }
+        .ganttMarkerHead.moved::after { background: #dd9633; }
         .ganttTodayFlag {
           position: absolute; top: 0; inset-inline-start: -5px; width: 10px; height: 14px;
           background: #14265e; border-radius: 0 0 3px 3px; cursor: grab; z-index: 1;
           clip-path: polygon(0 0, 100% 0, 100% 70%, 50% 100%, 0 70%);
         }
-        .ganttMarkerHead.moved .ganttTodayFlag { background: #e0790a; }
+        .ganttMarkerHead.moved .ganttTodayFlag { background: #dd9633; }
         .ganttMarkerHead.dragging .ganttTodayFlag { cursor: grabbing; }
         .ganttMarkerReset {
           position: absolute; top: 16px; inset-inline-start: 6px; width: 15px; height: 15px;
           border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--steel);
           display: flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; z-index: 2;
         }
-        .ganttMarkerReset:hover { border-color: #e0790a; color: #e0790a; }
+        .ganttMarkerReset:hover { border-color: #dd9633; color: #dd9633; }
         .ganttMarkerBalloon {
           position: absolute; top: 38px; left: 50%; transform: translateX(-50%);
           background: #14265e; color: #fff; font-size: 11px; font-weight: 700;
@@ -1058,8 +1058,8 @@ var gantt = `
           content: ""; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
           border: 5px solid transparent; border-bottom-color: #14265e;
         }
-        .ganttMarkerHead.moved .ganttMarkerBalloon { background: #e0790a; }
-        .ganttMarkerHead.moved .ganttMarkerBalloon::after { border-bottom-color: #e0790a; }
+        .ganttMarkerHead.moved .ganttMarkerBalloon { background: #dd9633; }
+        .ganttMarkerHead.moved .ganttMarkerBalloon::after { border-bottom-color: #dd9633; }
         .ganttTodayLineFull {
           position: absolute; top: 0; bottom: 0; width: 9px; margin-inline-start: -4px;
           z-index: 5; cursor: grab; pointer-events: auto;
@@ -1068,7 +1068,7 @@ var gantt = `
           content: ""; position: absolute; top: 0; bottom: 0; inset-inline-start: 3px;
           width: 2px; background: #14265e; pointer-events: none;
         }
-        .ganttTodayLineFull.moved::after { background: #e0790a; }
+        .ganttTodayLineFull.moved::after { background: #dd9633; }
         .ganttTodayLineFull.dragging { cursor: grabbing; z-index: 7; }
         .ganttBar {
           position: absolute; top: 0; height: 100%; border-radius: 5px;
@@ -1077,9 +1077,9 @@ var gantt = `
         /* The status border is always visible regardless of the actual %
            fill's width \u2014 a 0%-wide colored fill renders nothing, so without
            this an orange/red task at 0% would look identical to green. */
-        .ganttBar.status-orange { border: 1.5px solid #e0790a; }
-        .ganttBar.status-red { border: 1.5px solid #d6432f; }
-        .ganttBar.critical { border: 2px solid #e0790a; box-shadow: 0 0 0 2px rgba(224,121,10,0.35); }
+        .ganttBar.status-orange { border: 1.5px solid #dd9633; }
+        .ganttBar.status-red { border: 1.5px solid #d25a5a; }
+        .ganttBar.critical { border: 2px solid #dd9633; box-shadow: 0 0 0 2px rgba(224,121,10,0.35); }
         /* Duration track is light gray; the expected-by-today fill within it
            is a darker gray; the actual fill on top uses the health rule
            (green/orange/red per the expected-vs-actual gap). */
@@ -1089,9 +1089,9 @@ var gantt = `
         .ganttBarFill {
           position: absolute; inset: 0; z-index: 1; transition: width .15s ease;
         }
-        .ganttBarFill.green { background: #2f9e44; }
-        .ganttBarFill.orange { background: #e0790a; }
-        .ganttBarFill.red { background: #d6432f; }
+        .ganttBarFill.green { background: #43a06b; }
+        .ganttBarFill.orange { background: #dd9633; }
+        .ganttBarFill.red { background: #d25a5a; }
         .ganttPct { flex: 0 0 40px; font-size: 11px; font-weight: 700; color: var(--steel); text-align: center; }
         .ganttPct.expected { color: var(--mist); font-weight: 600; }
         .ganttPct.editable {
@@ -1115,7 +1115,7 @@ var gantt = `
         .scheduleNotesToggleRow { display: flex; justify-content: center; margin-top: 18px; }
         .scheduleNotesToggleRow .ghostBtn { position: relative; }
         .scheduleNotesBadge {
-          background: #d6432f; color: #fff; border-radius: 999px; font-size: 10px; font-weight: 800;
+          background: #d25a5a; color: #fff; border-radius: 999px; font-size: 10px; font-weight: 800;
           padding: 1px 6px; margin-inline-start: 4px;
         }
         .scheduleAlerts { margin-top: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -1134,9 +1134,9 @@ var gantt = `
           margin-inline-start: auto; flex: 0 0 auto; width: 18px; height: 18px;
           border-radius: 4px; border: 1.5px solid var(--line); background: #fff;
           display: flex; align-items: center; justify-content: center; cursor: pointer;
-          color: #2f9e44; padding: 0;
+          color: #43a06b; padding: 0;
         }
-        .noteClientCheck.checked { border-color: #2f9e44; background: #eaf7ee; }
+        .noteClientCheck.checked { border-color: #43a06b; background: #eaf7ee; }
 
         .ganttLastUpdated {
           margin: 16px 0 0; font-size: 11px; font-weight: 600; color: var(--mist); text-align: center;
@@ -1940,7 +1940,7 @@ function parseMSProjectXML(xmlText) {
       predecessors
     };
   }).filter((t) => t.name && t.start && t.finish);
-  return computeCriticalPath(tasks);
+  return tasks;
 }
 async function parseScheduleFile(file) {
   const ext = file.name.split(".").pop().toLowerCase();
@@ -2793,9 +2793,9 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
         /* @__PURE__ */ React11.createElement(
           "span",
           {
-            className: `ganttCriticalMark ${isPastDue ? "overdue" : !t.isSummary && t.percentComplete >= 100 ? "done" : ""}`
+            className: `ganttCriticalMark ${!t.isSummary && t.critical ? "critical" : isPastDue ? "overdue" : !t.isSummary && t.percentComplete >= 100 ? "done" : ""}`
           },
-          isPastDue ? "!" : !t.isSummary && t.percentComplete >= 100 ? /* @__PURE__ */ React11.createElement(Check2, { size: 13, strokeWidth: 3 }) : null,
+          !t.isSummary && t.critical ? /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 13, strokeWidth: 2.6 }) : isPastDue ? "!" : !t.isSummary && t.percentComplete >= 100 ? /* @__PURE__ */ React11.createElement(Check2, { size: 13, strokeWidth: 3 }) : null,
           false && /* @__PURE__ */ React11.createElement("span", { className: `ganttMarkTooltip ${isRTL ? "toRight" : "toLeft"}` }, isPastDue ? isRTL ? "\u05D3\u05D5\u05E8\u05E9 \u05D4\u05EA\u05D9\u05D9\u05D7\u05E1\u05D5\u05EA - \u05E4\u05E2\u05D9\u05DC\u05D5\u05EA \u05DC\u05D0 \u05D4\u05D5\u05E9\u05DC\u05DE\u05D4 \u05DC\u05E4\u05D9 \u05D4\u05D6\u05DE\u05DF \u05D4\u05DE\u05D5\u05D2\u05D3\u05E8" : "Requires attention - activity not completed on schedule" : t.critical ? isRTL ? "\u05E0\u05EA\u05D9\u05D1 \u05E7\u05E8\u05D9\u05D8\u05D9" : "Critical path" : isRTL ? "\u05E4\u05E2\u05D9\u05DC\u05D5\u05EA \u05D4\u05D5\u05E9\u05DC\u05DE\u05D4" : "Activity completed")
         ),
         /* @__PURE__ */ React11.createElement("span", { className: "ganttTaskName", style: { paddingInlineStart: indent }, dir: "auto" }, t.isSummary && /* @__PURE__ */ React11.createElement(
@@ -2867,13 +2867,12 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
           /* @__PURE__ */ React11.createElement("div", { className: "ganttBarTrack" }, /* @__PURE__ */ React11.createElement(
             "div",
             {
-              className: `ganttBar status-${fillStatus}`,
+              className: `ganttBar status-${fillStatus} ${!t.isSummary && t.critical ? "critical" : ""}`,
               style: { insetInlineStart: `${leftPct}%`, width: `${widthPct}%` }
             },
             /* @__PURE__ */ React11.createElement("div", { className: "ganttBarExpected", style: { width: `${expected}%` } }),
-            /* @__PURE__ */ React11.createElement("div", { className: `ganttBarFill ${fillStatus}`, style: { width: `${actual}%` } }),
-            /* @__PURE__ */ React11.createElement("span", { className: "ganttBarDays" }, durationLabel)
-          ), /* @__PURE__ */ React11.createElement(
+            /* @__PURE__ */ React11.createElement("div", { className: `ganttBarFill ${fillStatus}`, style: { width: `${actual}%` } })
+          ), /* @__PURE__ */ React11.createElement("span", { className: "ganttBarDays", style: { insetInlineStart: `${leftPct}%`, width: `${widthPct}%` } }, durationLabel), /* @__PURE__ */ React11.createElement(
             "div",
             {
               className: "ganttBarHoverZone",
@@ -2915,11 +2914,11 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
         }
       )), /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ganttNavBtn", onClick: () => scrollTimeline(1), "aria-label": "Scroll timeline later" }, isRTL ? /* @__PURE__ */ React11.createElement(ChevronLeft3, { size: 15, strokeWidth: 2.2 }) : /* @__PURE__ */ React11.createElement(ChevronRight3, { size: 15, strokeWidth: 2.2 })));
     })(), /* @__PURE__ */ React11.createElement("div", { className: "scheduleNotesToggleRow" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setNotesOpen((o) => !o) }, /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 14, strokeWidth: 2.2 }), " ", notesOpen ? sc.hideNotes : sc.showNotes, alerts.length > 0 && /* @__PURE__ */ React11.createElement("span", { className: "scheduleNotesBadge numerals" }, alerts.length))), notesOpen && /* @__PURE__ */ React11.createElement("div", { className: "scheduleAlerts" }, (() => {
-      const shown = !readOnly ? alerts : viewerRole === "client" ? alerts.filter((a) => (clientNotes || {})[a.id]) : alerts.filter((a) => (teamNotes || {})[a.id] !== false);
-      return /* @__PURE__ */ React11.createElement(React11.Fragment, null, !readOnly && alerts.length > 0 && /* @__PURE__ */ React11.createElement("div", { className: "noteColsHead" }, /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה לא.וייס" : "Show to A. Weiss"), /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה ללקוח" : "Show to client")), shown.length === 0 && /* @__PURE__ */ React11.createElement("p", { className: "dataSourceFileName", style: { margin: 0 } }, readOnly ? isRTL ? "אין הערות להצגה." : "No notes to display." : sc.noAlerts), shown.map((a, i) => {
+      const shown = viewerRole === "admin" ? alerts : viewerRole === "client" ? alerts.filter((a) => (clientNotes || {})[a.id]) : alerts.filter((a) => (teamNotes || {})[a.id] !== false);
+      return /* @__PURE__ */ React11.createElement(React11.Fragment, null, viewerRole === "admin" && alerts.length > 0 && /* @__PURE__ */ React11.createElement("div", { className: "noteColsHead" }, /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה לא.וייס" : "Show to A. Weiss"), /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה ללקוח" : "Show to client")), shown.length === 0 && /* @__PURE__ */ React11.createElement("p", { className: "dataSourceFileName", style: { margin: 0 } }, readOnly ? isRTL ? "אין הערות להצגה." : "No notes to display." : sc.noAlerts), shown.map((a, i) => {
         const clientOn = !!(clientNotes || {})[a.id];
         const teamOn = (teamNotes || {})[a.id] !== false;
-        return /* @__PURE__ */ React11.createElement("div", { key: i, className: `scheduleAlert ${a.type}` }, /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 14, strokeWidth: 2.2 }), /* @__PURE__ */ React11.createElement("span", { className: "noteText" }, a.text), !readOnly && /* @__PURE__ */ React11.createElement("span", { className: "noteChecks" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${teamOn ? "checked" : ""}`, onClick: () => onToggleTeamNote && onToggleTeamNote(a.id, !teamOn), title: isRTL ? "הצגה לא.וייס" : "Show to A. Weiss", "aria-label": isRTL ? "הצגה לא.וייס" : "Show to A. Weiss" }, teamOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 })), /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${clientOn ? "checked" : ""}`, onClick: () => onToggleClientNote && onToggleClientNote(a.id, !clientOn), title: isRTL ? "הצגה ללקוח" : "Show to client", "aria-label": isRTL ? "הצגה ללקוח" : "Show to client" }, clientOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 }))));
+        return /* @__PURE__ */ React11.createElement("div", { key: i, className: `scheduleAlert ${a.type}` }, /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 14, strokeWidth: 2.2 }), /* @__PURE__ */ React11.createElement("span", { className: "noteText" }, a.text), viewerRole === "admin" && /* @__PURE__ */ React11.createElement("span", { className: "noteChecks" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${teamOn ? "checked" : ""}`, onClick: () => onToggleTeamNote && onToggleTeamNote(a.id, !teamOn), title: isRTL ? "הצגה לא.וייס" : "Show to A. Weiss", "aria-label": isRTL ? "הצגה לא.וייס" : "Show to A. Weiss" }, teamOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 })), /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${clientOn ? "checked" : ""}`, onClick: () => onToggleClientNote && onToggleClientNote(a.id, !clientOn), title: isRTL ? "הצגה ללקוח" : "Show to client", "aria-label": isRTL ? "הצגה ללקוח" : "Show to client" }, clientOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 }))));
       }));
     })()), lastUpdated && /* @__PURE__ */ React11.createElement("p", { className: "ganttLastUpdated numerals" }, isRTL ? "\u05E2\u05D3\u05DB\u05D5\u05DF \u05D0\u05D7\u05E8\u05D5\u05DF: " : "Last updated: ", new Date(lastUpdated.timestamp).toLocaleDateString(isRTL ? "he-IL" : "en-GB"), " ", new Date(lastUpdated.timestamp).toLocaleTimeString(isRTL ? "he-IL" : "en-GB", { hour: "2-digit", minute: "2-digit" }), lastUpdated.email ? ` \u2014 ${lastUpdated.email}` : "")),
     contextMenu && /* @__PURE__ */ React11.createElement(
@@ -3954,7 +3953,7 @@ function ProjectDashboardApp() {
         onUpdateSchedulePercent: updateScheduleTaskPercent,
         onToggleScheduleClientNote: updateScheduleClientNote,
         onToggleScheduleTeamNote: updateScheduleTeamNote,
-        viewerRole: authRole,
+        viewerRole: loggedInEmail === "marcellak@a-weiss.co.il" ? "admin" : authRole,
         onUploadFile: handleFunctionFileUpload,
         onRemoveFile: handleFunctionFileRemove,
         onUploadSchedule: handleScheduleFile,
