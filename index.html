@@ -2539,7 +2539,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
     const f = new Date(t.finish).getTime();
     return !isNaN(s) && !isNaN(f);
   });
-  const milestoneGroupIndex = validTasks.findIndex((t) => t.isSummary && /milestone/i.test(t.name || ""));
+  const milestoneGroupIndex = validTasks.findIndex((t) => t.isSummary && (/milestone/i.test(t.name || "") || /אבני דרך|אבן דרך/.test(t.nameHe || "") || /אבני דרך|אבן דרך/.test(t.name || "")));
   const milestoneIndices = /* @__PURE__ */ new Set();
   if (milestoneGroupIndex !== -1) {
     milestoneIndices.add(milestoneGroupIndex);
@@ -2687,7 +2687,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
       className: "scheduleFrame ganttWideFrame",
       dir: scheduleLang === "he" ? "rtl" : "ltr",
       ref: scheduleFrameRef,
-      style: { width: `calc(100% + ${breakoutPx * 2}px)`, marginLeft: `-${breakoutPx}px`, marginRight: `-${breakoutPx}px` }
+      style: { width: `calc(100% + ${breakoutPx * 2}px)`, marginInlineStart: `-${breakoutPx}px` }
     },
     /* @__PURE__ */ React11.createElement("div", { className: "scheduleFrameHead" }, /* @__PURE__ */ React11.createElement("div", { className: `ganttMarkerDatePanel ${isMoved ? "moved" : ""}` }, /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateLabel" }, isRTL ? "\u05EA\u05D0\u05E8\u05D9\u05DA \u05E1\u05D9\u05DE\u05D5\u05DF" : "Marker date"), /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateValue numerals" }, markerLabel)), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, !readOnly && /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
     /* @__PURE__ */ React11.createElement("div", { className: "scheduleWrap" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttViewport" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttHeaderSticky" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttLeftHeadRow", style: { flexBasis: nameColWidth } }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderCrit" }), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderTask" }, sc.taskCol), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.expectedWord)), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.actualWord))), /* @__PURE__ */ React11.createElement("div", { className: "ganttAxisWrap" }, /* @__PURE__ */ React11.createElement(
@@ -2783,9 +2783,9 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
         /* @__PURE__ */ React11.createElement(
           "span",
           {
-            className: `ganttCriticalMark ${isPastDue ? "overdue" : t.critical ? "on" : !t.isSummary && t.percentComplete >= 100 ? "done" : ""}`
+            className: `ganttCriticalMark ${isPastDue ? "overdue" : !t.isSummary && t.percentComplete >= 100 ? "done" : ""}`
           },
-          isPastDue ? "!" : t.critical ? /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 12, strokeWidth: 2.6 }) : !t.isSummary && t.percentComplete >= 100 ? /* @__PURE__ */ React11.createElement(Check2, { size: 13, strokeWidth: 3 }) : null,
+          isPastDue ? "!" : !t.isSummary && t.percentComplete >= 100 ? /* @__PURE__ */ React11.createElement(Check2, { size: 13, strokeWidth: 3 }) : null,
           false && /* @__PURE__ */ React11.createElement("span", { className: `ganttMarkTooltip ${isRTL ? "toRight" : "toLeft"}` }, isPastDue ? isRTL ? "\u05D3\u05D5\u05E8\u05E9 \u05D4\u05EA\u05D9\u05D9\u05D7\u05E1\u05D5\u05EA - \u05E4\u05E2\u05D9\u05DC\u05D5\u05EA \u05DC\u05D0 \u05D4\u05D5\u05E9\u05DC\u05DE\u05D4 \u05DC\u05E4\u05D9 \u05D4\u05D6\u05DE\u05DF \u05D4\u05DE\u05D5\u05D2\u05D3\u05E8" : "Requires attention - activity not completed on schedule" : t.critical ? isRTL ? "\u05E0\u05EA\u05D9\u05D1 \u05E7\u05E8\u05D9\u05D8\u05D9" : "Critical path" : isRTL ? "\u05E4\u05E2\u05D9\u05DC\u05D5\u05EA \u05D4\u05D5\u05E9\u05DC\u05DE\u05D4" : "Activity completed")
         ),
         /* @__PURE__ */ React11.createElement("span", { className: "ganttTaskName", style: { paddingInlineStart: indent }, dir: "auto" }, t.isSummary && /* @__PURE__ */ React11.createElement(
@@ -2857,7 +2857,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
           /* @__PURE__ */ React11.createElement("div", { className: "ganttBarTrack" }, /* @__PURE__ */ React11.createElement(
             "div",
             {
-              className: `ganttBar status-${fillStatus} ${t.critical ? "critical" : ""}`,
+              className: `ganttBar status-${fillStatus}`,
               style: { insetInlineStart: `${leftPct}%`, width: `${widthPct}%` }
             },
             /* @__PURE__ */ React11.createElement("div", { className: "ganttBarExpected", style: { width: `${expected}%` } }),
