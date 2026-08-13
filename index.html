@@ -388,8 +388,7 @@ var base = `
           background: var(--bg);
           flex: 1;
           position: relative;
-          overflow-x: clip;
-          overflow-clip-margin: 700px;
+          overflow-x: hidden;
           display: flex;
           flex-direction: column;
         }
@@ -2470,7 +2469,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
       if (!anchor) return;
       const rect = anchor.getBoundingClientRect();
       const available = Math.max(0, Math.min(rect.left, window.innerWidth - rect.right));
-      setBreakoutPx(Math.floor(available * 0.99));
+      setBreakoutPx(Math.floor(available * 0.98));
     }
     measure();
     window.addEventListener("resize", measure);
