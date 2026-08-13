@@ -782,7 +782,7 @@ var pdfViewer = `
           width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px;
         }
         .pdfBookFrame {
-          width: 100%; max-width: 620px; max-height: 62vh;
+          max-width: 100%;
           border: 1px solid var(--line); border-radius: 12px;
           box-shadow: 0 18px 40px -22px rgba(16,17,20,0.35);
           background: #fff; display: block;
@@ -793,7 +793,7 @@ var pdfViewer = `
         .pdfBookStatus a { color: var(--accent); font-weight: 700; }
         .pdfNativeFallback { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
         .pdfNativeFrame {
-          width: 100%; max-width: 620px; height: 62vh; border: 1px solid var(--line);
+          width: 100%; max-width: 1150px; height: 72vh; border: 1px solid var(--line);
           border-radius: 12px; box-shadow: 0 18px 40px -22px rgba(16,17,20,0.35); background: #fff;
         }
         .pdfNativeNote { font-size: 12px; font-weight: 600; color: var(--mist); text-align: center; }
@@ -2206,8 +2206,12 @@ function PdfBookViewer({ dataUrl, isRTL, children }) {
       if (!canvas) return;
       const ctx = canvas.getContext("2d");
       const dpr = window.devicePixelRatio || 1;
-      const cssWidth = canvas.parentElement && canvas.parentElement.clientWidth || 560;
       const baseViewport = loadedPage.getViewport({ scale: 1 });
+      const aspect = baseViewport.width / baseViewport.height;
+      const parentW = canvas.parentElement && canvas.parentElement.clientWidth || 560;
+      const maxH = (window.innerHeight || 800) * 0.72;
+      let cssWidth = Math.min(parentW, 1150);
+      if (cssWidth / aspect > maxH) cssWidth = maxH * aspect;
       const scale = Math.min(3, cssWidth * dpr / baseViewport.width);
       const viewport = loadedPage.getViewport({ scale });
       canvas.width = viewport.width;
@@ -3069,10 +3073,11 @@ function CardView({
     setXmlHelpOpen(false);
   }, [cardKey]);
   const isSchedule = cardKey === "schedule";
+  const isLook = cardKey === "look";
   const showRooms = !!roomsDataSource;
   const showSchedule = isSchedule && !!scheduleData;
   const hasEditModal = canEdit && !showRooms;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
     FinishesByRoomCard,
     {
       dataSource: roomsDataSource,
