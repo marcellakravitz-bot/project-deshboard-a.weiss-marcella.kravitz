@@ -868,6 +868,14 @@ var gantt = `
         .milestoneRow span:nth-child(3), .milestoneRow span:nth-child(4), .milestoneRow span:nth-child(5),
         .milestoneHeadRow span:nth-child(3), .milestoneHeadRow span:nth-child(4), .milestoneHeadRow span:nth-child(5) { text-align: center; }
         .milestoneDur { white-space: nowrap; text-align: center; }
+        .ganttSaveBtn { border-color: var(--accent); color: var(--accent); font-weight: 800; }
+        .ganttSaveBtn.saved { border-color: #43a06b; color: #43a06b; }
+        .milestoneTotalRow { background: #f2f3f5; font-weight: 800; border-top: 1.5px solid var(--line); }
+        .ganttFollowTip {
+          position: absolute; z-index: 300; background: #fff; border: 1.5px solid #14265e;
+          border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 800; color: #14265e;
+          white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(15,16,19,0.14);
+        }
         .milestoneCheckCell { display: flex; align-items: center; gap: 5px; }
         .milestoneCheck {
           width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--line);
@@ -2377,7 +2385,7 @@ import React12 from "react";
 
 // src/schedule/ScheduleGantt.jsx
 import React11, { useState as useState4, useRef as useRef4, useEffect as useEffect3 } from "react";
-import { ChevronDown, ChevronLeft as ChevronLeft3, ChevronRight as ChevronRight3, AlertTriangle, Check as Check2, Download } from "lucide-react";
+import { ChevronDown, ChevronLeft as ChevronLeft3, ChevronRight as ChevronRight3, AlertTriangle, Check as Check2, Download, Save } from "lucide-react";
 
 // src/schedule/status.js
 function getExpectedPercent(task) {
@@ -2456,7 +2464,9 @@ var SCHEDULE_COPY = {
   }
 };
 var SUMMARY_SHADES = ["#14265e", "#d9e7fa", "#e8f0fc", "#f2f6fd"];
-function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, projectEnd, lastUpdated, projectName, clientNotes, onToggleClientNote, teamNotes, onToggleTeamNote, viewerRole }) {
+function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, projectStart, projectEnd, lastUpdated, projectName, clientNotes, onToggleClientNote, teamNotes, onToggleTeamNote, viewerRole }) {
+  const [justSaved, setJustSaved] = useState4(false);
+  const [barTip, setBarTip] = useState4(null);
   const [scheduleLang, setScheduleLang] = useState4("he");
   const [notesOpen, setNotesOpen] = useState4(false);
   const [markerPct, setMarkerPct] = useState4(null);
@@ -2699,7 +2709,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
       ref: scheduleFrameRef,
       style: { width: `calc(100% + ${breakoutPx * 2}px)`, marginInlineStart: `-${breakoutPx}px` }
     },
-    /* @__PURE__ */ React11.createElement("div", { className: "scheduleFrameHead" }, /* @__PURE__ */ React11.createElement("div", { className: `ganttMarkerDatePanel ${isMoved ? "moved" : ""}` }, /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateLabel" }, isRTL ? "\u05EA\u05D0\u05E8\u05D9\u05DA \u05E1\u05D9\u05DE\u05D5\u05DF" : "Marker date"), /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateValue numerals" }, markerLabel)), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, false && /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
+    /* @__PURE__ */ React11.createElement("div", { className: "scheduleFrameHead" }, /* @__PURE__ */ React11.createElement("div", { className: `ganttMarkerDatePanel ${isMoved ? "moved" : ""}` }, /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateLabel" }, isRTL ? "\u05EA\u05D0\u05E8\u05D9\u05DA \u05E1\u05D9\u05DE\u05D5\u05DF" : "Marker date"), /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateValue numerals" }, markerLabel)), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, !readOnly && /* @__PURE__ */ React11.createElement("button", { type: "button", className: `ghostBtn small ganttSaveBtn ${justSaved ? "saved" : ""}`, onClick: () => { onSaveUpdate && onSaveUpdate(); setJustSaved(true); setTimeout(() => setJustSaved(false), 2e3); } }, /* @__PURE__ */ React11.createElement(Save, { size: 14, strokeWidth: 2.2 }), " ", justSaved ? isRTL ? "נשמר ✓" : "Saved ✓" : isRTL ? "שמור עדכון" : "Save update"), false && /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
     /* @__PURE__ */ React11.createElement("div", { className: "scheduleWrap" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttViewport" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttHeaderSticky" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttLeftHeadRow", style: { flexBasis: nameColWidth } }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderCrit" }), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderTask" }, sc.taskCol), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.expectedWord)), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.actualWord))), /* @__PURE__ */ React11.createElement("div", { className: "ganttAxisWrap" }, /* @__PURE__ */ React11.createElement(
       "div",
       {
@@ -2876,9 +2886,10 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
             "div",
             {
               className: "ganttBarHoverZone",
-              style: { insetInlineStart: `${leftPct}%`, width: `${widthPct}%` }
-            },
-            /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkTooltip ganttBarTooltip numerals" }, dateRangeLabel)
+              style: { insetInlineStart: `${leftPct}%`, width: `${widthPct}%` },
+              onMouseMove: (e) => { const r = scheduleFrameRef.current && scheduleFrameRef.current.getBoundingClientRect(); if (r) setBarTip({ text: dateRangeLabel, x: e.clientX - r.left, y: e.clientY - r.top }); },
+              onMouseLeave: () => setBarTip(null)
+            }
           ))
         ))
       ));
@@ -2930,7 +2941,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
       },
       /* @__PURE__ */ React11.createElement("button", { type: "button", onClick: () => collapseAllAtLevel(contextMenu.level, true) }, isRTL ? "\u05DB\u05D5\u05D5\u05E5 \u05D0\u05EA \u05DB\u05DC \u05D4\u05E2\u05E8\u05E1\u05DC\u05D9\u05DD \u05D1\u05E8\u05DE\u05D4 \u05D6\u05D5" : "Collapse all at this level"),
       /* @__PURE__ */ React11.createElement("button", { type: "button", onClick: () => collapseAllAtLevel(contextMenu.level, false) }, isRTL ? "\u05D4\u05E8\u05D7\u05D1 \u05D0\u05EA \u05DB\u05DC \u05D4\u05E2\u05E8\u05E1\u05DC\u05D9\u05DD \u05D1\u05E8\u05DE\u05D4 \u05D6\u05D5" : "Expand all at this level")
-    )
+    ), barTip && /* @__PURE__ */ React11.createElement("div", { className: "ganttFollowTip numerals", style: { left: barTip.x + 14, top: barTip.y + 14 } }, barTip.text)
   ), milestoneTasks.length > 0 && /* @__PURE__ */ React11.createElement("div", { className: "scheduleFrame milestoneCard", dir: scheduleLang === "he" ? "rtl" : "ltr" }, /* @__PURE__ */ React11.createElement("p", { className: "ganttMilestoneHeading" }, isRTL ? "\u05D0\u05D1\u05E0\u05D9 \u05D3\u05E8\u05DA" : "Milestones"), /* @__PURE__ */ React11.createElement("div", { className: "ganttMilestonePanel" }, /* @__PURE__ */ React11.createElement("div", { className: "milestoneHeadRow" }, /* @__PURE__ */ React11.createElement("span", null), /* @__PURE__ */ React11.createElement("span", null, isRTL ? "\u05E9\u05DD" : "Name"), /* @__PURE__ */ React11.createElement("span", null, isRTL ? "\u05DE\u05E9\u05DA" : "Duration"), /* @__PURE__ */ React11.createElement("span", null, isRTL ? "\u05E1\u05D9\u05D5\u05DD" : "Finish"), /* @__PURE__ */ React11.createElement("span", null, isRTL ? "\u05D4\u05EA\u05D7\u05DC\u05D4" : "Start")), milestoneTasks.map((t, i) => {
     const originalIndex = tasks.indexOf(t);
     const ts_ = new Date(t.start);
@@ -2948,7 +2959,15 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
       },
       isDone && /* @__PURE__ */ React11.createElement(Check2, { size: 11, strokeWidth: 3 })
     ), isCurrent && /* @__PURE__ */ React11.createElement("span", { className: "milestoneCurrentArrow", title: isRTL ? "\u05D0\u05E0\u05D7\u05E0\u05D5 \u05DB\u05D0\u05DF \u05D4\u05D9\u05D5\u05DD" : "We're here today" }, isRTL ? /* @__PURE__ */ React11.createElement(ChevronLeft3, { size: 12, strokeWidth: 3 }) : /* @__PURE__ */ React11.createElement(ChevronRight3, { size: 12, strokeWidth: 3 }))), /* @__PURE__ */ React11.createElement("span", { dir: "auto" }, scheduleLang === "he" ? t.nameHe || t.name : t.name), /* @__PURE__ */ React11.createElement("span", { className: "milestoneDur" }, isRTL ? `${dur} \u05D9\u05DE\u05D9\u05DD` : `${dur}d`), /* @__PURE__ */ React11.createElement("span", { className: "numerals" }, String(tf.getDate()).padStart(2, "0"), "/", String(tf.getMonth() + 1).padStart(2, "0"), "/", tf.getFullYear()), /* @__PURE__ */ React11.createElement("span", { className: "numerals" }, String(ts_.getDate()).padStart(2, "0"), "/", String(ts_.getMonth() + 1).padStart(2, "0"), "/", ts_.getFullYear()));
-  }))));
+  }), (() => {
+    const starts = validTasks.map((tt) => new Date(tt.start).getTime());
+    const finishes = validTasks.map((tt) => new Date(tt.finish).getTime());
+    const ps = new Date(Math.min(...starts));
+    const pf = new Date(Math.max(...finishes));
+    const pd = Math.max(1, Math.round((pf.getTime() - ps.getTime()) / dayMs));
+    const fmt2 = (x) => `${String(x.getDate()).padStart(2, "0")}/${String(x.getMonth() + 1).padStart(2, "0")}/${x.getFullYear()}`;
+    return /* @__PURE__ */ React11.createElement("div", { className: "milestoneRow milestoneTotalRow" }, /* @__PURE__ */ React11.createElement("span", null), /* @__PURE__ */ React11.createElement("span", null, isRTL ? "סה\"כ משך פרויקט" : "Total project duration"), /* @__PURE__ */ React11.createElement("span", { className: "milestoneDur" }, isRTL ? `${pd} ימים` : `${pd}d`), /* @__PURE__ */ React11.createElement("span", { className: "numerals" }, fmt2(pf)), /* @__PURE__ */ React11.createElement("span", { className: "numerals" }, fmt2(ps)));
+  })())));
 }
 
 // src/cards/ProjectScheduleCard.jsx
@@ -2956,6 +2975,7 @@ function ProjectScheduleCard({
   scheduleData,
   canEdit,
   onUpdatePercent,
+  onSaveUpdate,
   onToggleClientNote,
   onToggleTeamNote,
   viewerRole,
@@ -2970,6 +2990,7 @@ function ProjectScheduleCard({
       tasks: scheduleData.tasks,
       readOnly: !canEdit,
       onUpdatePercent,
+      onSaveUpdate,
       projectStart,
       projectEnd,
       lastUpdated: scheduleData.lastUpdated,
@@ -3034,6 +3055,7 @@ function CardView({
   onUpdateSchedulePercent,
   onToggleScheduleClientNote,
   onToggleScheduleTeamNote,
+  onSaveSchedule,
   viewerRole,
   onUploadFile,
   onRemoveFile,
@@ -3063,6 +3085,7 @@ function CardView({
       scheduleData,
       canEdit,
       onUpdatePercent: onUpdateSchedulePercent,
+      onSaveUpdate: onSaveSchedule,
       onToggleClientNote: onToggleScheduleClientNote,
       onToggleTeamNote: onToggleScheduleTeamNote,
       viewerRole,
@@ -3611,6 +3634,14 @@ function ProjectDashboardApp() {
       scheduleData: { ...activeExtras.scheduleData, teamNotes: nextTeamNotes }
     });
   };
+  const saveScheduleUpdate = () => {
+    if (!activeExtras.scheduleData) return;
+    const stamp = { timestamp: Date.now(), email: loggedInEmail || null };
+    const nextHistory = [stamp, ...activeExtras.scheduleData.history || []].slice(0, 50);
+    updateProjectExtras(activeProject.id, {
+      scheduleData: { ...activeExtras.scheduleData, lastUpdated: stamp, history: nextHistory }
+    });
+  };
   const addDataSource = (label, kind, linkedCard) => {
     const id = `ds-${Date.now()}`;
     updateProjectExtras(activeProject.id, {
@@ -3953,6 +3984,7 @@ function ProjectDashboardApp() {
         onUpdateSchedulePercent: updateScheduleTaskPercent,
         onToggleScheduleClientNote: updateScheduleClientNote,
         onToggleScheduleTeamNote: updateScheduleTeamNote,
+        onSaveSchedule: saveScheduleUpdate,
         viewerRole: loggedInEmail === "marcellak@a-weiss.co.il" ? "admin" : authRole,
         onUploadFile: handleFunctionFileUpload,
         onRemoveFile: handleFunctionFileRemove,
