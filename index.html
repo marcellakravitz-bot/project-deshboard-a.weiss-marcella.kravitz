@@ -350,7 +350,7 @@ var PROJECT_ACCESS_KINDS = [
   { key: "client", field: "clientAccounts", role: "client" },
   { key: "subcontractor", field: "subcontractorAccounts", role: "subcontractor" }
 ];
-var DESIGN_WIDTH = 900;
+var DESIGN_WIDTH = 1125;
 
 // src/config/dataSources.js
 import { Building2, DoorOpen as DoorOpen2, ClipboardList as ClipboardList2, Palette as Palette2, FileCheck2 as FileCheck22 } from "lucide-react";
@@ -1959,7 +1959,17 @@ async function parseScheduleFile(file) {
     }
     if (ext === "xml") {
       const text = await file.text();
-      return { tasks: parseMSProjectXML(text).filter((t) => t.level == null || t.level > 1), parseNote: null };
+      const parsedXml = parseMSProjectXML(text);
+      let projectRowDropped = false;
+      const xmlTasks = parsedXml.filter((t) => {
+        if (t.level === 0) return false;
+        if (t.level === 1 && !projectRowDropped) {
+          projectRowDropped = true;
+          return false;
+        }
+        return true;
+      });
+      return { tasks: xmlTasks, parseNote: null };
     }
     if (ext === "pdf") {
       const dataUrl = await fileToDataUrl(file);
@@ -2469,7 +2479,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
       if (!anchor) return;
       const rect = anchor.getBoundingClientRect();
       const available = Math.max(0, Math.min(rect.left, window.innerWidth - rect.right));
-      setBreakoutPx(Math.floor(available * 0.98));
+      setBreakoutPx(0);
     }
     measure();
     window.addEventListener("resize", measure);
@@ -2689,7 +2699,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, projectStart, project
       ref: scheduleFrameRef,
       style: { width: `calc(100% + ${breakoutPx * 2}px)`, marginInlineStart: `-${breakoutPx}px` }
     },
-    /* @__PURE__ */ React11.createElement("div", { className: "scheduleFrameHead" }, /* @__PURE__ */ React11.createElement("div", { className: `ganttMarkerDatePanel ${isMoved ? "moved" : ""}` }, /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateLabel" }, isRTL ? "\u05EA\u05D0\u05E8\u05D9\u05DA \u05E1\u05D9\u05DE\u05D5\u05DF" : "Marker date"), /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateValue numerals" }, markerLabel)), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, !readOnly && /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
+    /* @__PURE__ */ React11.createElement("div", { className: "scheduleFrameHead" }, /* @__PURE__ */ React11.createElement("div", { className: `ganttMarkerDatePanel ${isMoved ? "moved" : ""}` }, /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateLabel" }, isRTL ? "\u05EA\u05D0\u05E8\u05D9\u05DA \u05E1\u05D9\u05DE\u05D5\u05DF" : "Marker date"), /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateValue numerals" }, markerLabel)), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, false && /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
     /* @__PURE__ */ React11.createElement("div", { className: "scheduleWrap" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttViewport" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttHeaderSticky" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttLeftHeadRow", style: { flexBasis: nameColWidth } }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderCrit" }), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderTask" }, sc.taskCol), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.expectedWord)), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.actualWord))), /* @__PURE__ */ React11.createElement("div", { className: "ganttAxisWrap" }, /* @__PURE__ */ React11.createElement(
       "div",
       {
