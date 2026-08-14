@@ -103,6 +103,15 @@ var AWDASH_INITIAL_URL = typeof window !== "undefined" ? (window.location.hash |
 var AWDASH_INITIAL_SEARCH = typeof window !== "undefined" ? window.location.search || "" : "";
 var AWDASH_LOOKS_LIKE_INVITE = /type=(invite|recovery|signup)/.test(AWDASH_INITIAL_URL) || AWDASH_INITIAL_URL.indexOf("access_token=") !== -1 || AWDASH_INITIAL_URL.indexOf("token_hash=") !== -1 || AWDASH_INITIAL_SEARCH.indexOf("code=") !== -1;
 var supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Safety: does this contractors value contain at least one *configured* project
+// (a project with a name)? Used to refuse overwriting real data with an empty state.
+function awdashHasProjects(val) {
+  try {
+    return Array.isArray(val) && val.some((c) => Array.isArray(c && c.projects) && c.projects.some((p) => p && p.name));
+  } catch (e) {
+    return false;
+  }
+}
 
 // src/config/copy.js
 import {
@@ -3374,6 +3383,16 @@ function ProjectDashboardApp() {
   useEffect5(() => {
     if (!isAuthenticated || !stateLoaded) return;
     (async () => {
+      if (!awdashHasProjects(contractors)) {
+        try {
+          const { data: existing } = await supabase.from("app_state").select("value").eq("key", "system-state").maybeSingle();
+          if (awdashHasProjects(existing && existing.value)) {
+            console.warn("[awdash] refusing to overwrite existing projects with an empty state");
+            return;
+          }
+        } catch (e) {
+        }
+      }
       try {
         const { error } = await supabase.from("app_state").upsert({ key: "system-state", value: contractors, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
         if (error) console.error("[awdash] save system-state failed", error);
