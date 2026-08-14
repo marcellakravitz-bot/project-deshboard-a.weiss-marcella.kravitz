@@ -3456,7 +3456,12 @@ function ProjectDashboardApp() {
     const password = form.password;
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (!error && data && data.user) {
+      if (error) {
+        console.error("[awdash] auth error:", error && error.message, error && error.status);
+        setLoginError("wrong");
+        return;
+      }
+      if (data && data.user) {
         let role = "client";
         try {
           const { data: rpcRole, error: roleErr } = await supabase.rpc("my_role");
