@@ -3463,20 +3463,26 @@ function ProjectDashboardApp() {
       }
       if (data && data.user) {
         let role = "client";
-        try {
-          const { data: rpcRole, error: roleErr } = await supabase.rpc("my_role");
-          console.log("[awdash] my_role ->", rpcRole, roleErr);
-          if (rpcRole) role = rpcRole;
-        } catch (e2) {
-          console.error("[awdash] my_role failed", e2);
-        }
-        if (role === "client") {
+        const metaRole = data.user && data.user.app_metadata && data.user.app_metadata.role;
+        console.log("[awdash] app_metadata role ->", metaRole);
+        if (metaRole) {
+          role = metaRole;
+        } else {
           try {
-            const { data: prof, error: selErr } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
-            console.log("[awdash] profiles select ->", prof, selErr);
-            if (prof && prof.role) role = prof.role;
-          } catch (e3) {
-            console.error("[awdash] profiles select failed", e3);
+            const { data: rpcRole, error: roleErr } = await supabase.rpc("my_role");
+            console.log("[awdash] my_role ->", rpcRole, roleErr);
+            if (rpcRole) role = rpcRole;
+          } catch (e2) {
+            console.error("[awdash] my_role failed", e2);
+          }
+          if (role === "client") {
+            try {
+              const { data: prof, error: selErr } = await supabase.from("profiles").select("role").eq("id", data.user.id).maybeSingle();
+              console.log("[awdash] profiles select ->", prof, selErr);
+              if (prof && prof.role) role = prof.role;
+            } catch (e3) {
+              console.error("[awdash] profiles select failed", e3);
+            }
           }
         }
         console.log("[awdash] detected role:", role);
