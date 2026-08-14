@@ -103,6 +103,9 @@ var AWDASH_INITIAL_URL = typeof window !== "undefined" ? (window.location.hash |
 var AWDASH_INITIAL_SEARCH = typeof window !== "undefined" ? window.location.search || "" : "";
 var AWDASH_LOOKS_LIKE_INVITE = /type=(invite|recovery|signup)/.test(AWDASH_INITIAL_URL) || AWDASH_INITIAL_URL.indexOf("access_token=") !== -1 || AWDASH_INITIAL_URL.indexOf("token_hash=") !== -1 || AWDASH_INITIAL_SEARCH.indexOf("code=") !== -1;
 var supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+// Bump this when the disclaimer wording changes; each acceptance records which
+// version the user agreed to (their "signature").
+var DISCLAIMER_VERSION = "1.0";
 // Safety: does this contractors value contain at least one *configured* project
 // (a project with a name)? Used to refuse overwriting real data with an empty state.
 function awdashHasProjects(val) {
@@ -3345,6 +3348,9 @@ function ProjectDashboardApp() {
   const [newPw, setNewPw] = useState6("");
   const [newPw2, setNewPw2] = useState6("");
   const [pwMsg, setPwMsg] = useState6(null);
+  const pwDoneRef = useRef5(false);
+  const [showDisclaimer, setShowDisclaimer] = useState6(false);
+  const [disclaimerChecked, setDisclaimerChecked] = useState6(false);
   const [sessionGrants, setSessionGrants] = useState6([]);
   const [loggedInEmail, setLoggedInEmail] = useState6(null);
   const [editableProjectIds, setEditableProjectIds] = useState6([]);
@@ -3383,6 +3389,7 @@ function ProjectDashboardApp() {
   useEffect5(() => {
     if (!isAuthenticated || !stateLoaded) return;
     (async () => {
+      console.log("[awdash] save system-state attempt, hasProjects:", awdashHasProjects(contractors));
       if (!awdashHasProjects(contractors)) {
         try {
           const { data: existing } = await supabase.from("app_state").select("value").eq("key", "system-state").maybeSingle();
@@ -3396,6 +3403,7 @@ function ProjectDashboardApp() {
       try {
         const { error } = await supabase.from("app_state").upsert({ key: "system-state", value: contractors, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
         if (error) console.error("[awdash] save system-state failed", error);
+        else console.log("[awdash] save system-state OK");
       } catch (e) {
         console.error("[awdash] save system-state failed", e);
       }
@@ -3538,6 +3546,11 @@ function ProjectDashboardApp() {
         setIsAuthenticated(true);
         setLoggedInEmail(email);
         setAppRole(role);
+        const disclaimerOk = data.user && data.user.user_metadata && data.user.user_metadata.disclaimer_version === DISCLAIMER_VERSION;
+        if ((role === "contractor" || role === "client") && !disclaimerOk) {
+          setDisclaimerChecked(false);
+          setShowDisclaimer(true);
+        }
         if (role === "admin" || role === "contractor") {
           setSessionGrants(projs.map((p) => ({ projectId: p.id, role: "contractor", allowedCards: [] })));
           setAuthRole("contractor");
@@ -3681,6 +3694,7 @@ function ProjectDashboardApp() {
     if (looksLikeInvite) setSetPwMode(true);
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
       console.log("[awdash] auth event:", event, "hasSession:", !!session);
+      if (pwDoneRef.current) return;
       if (event === "PASSWORD_RECOVERY") setSetPwMode(true);
       if (looksLikeInvite && session && (event === "SIGNED_IN" || event === "INITIAL_SESSION" || event === "USER_UPDATED")) setSetPwMode(true);
     });
@@ -3707,6 +3721,7 @@ function ProjectDashboardApp() {
         setPwMsg(error.message);
         return;
       }
+      pwDoneRef.current = true;
       try {
         await supabase.auth.signOut();
       } catch (e) {
@@ -3726,6 +3741,41 @@ function ProjectDashboardApp() {
       setPwMsg(String(e));
     }
   };
+  const acceptDisclaimer = async () => {
+    const acceptedText = disc.title + "\n\n" + disc.greeting + "\n\n" + disc.paras.join("\n\n") + "\n\n" + disc.check;
+    const ts = (/* @__PURE__ */ new Date()).toISOString();
+    try {
+      await supabase.from("disclaimer_acceptances").insert({ email: loggedInEmail, version: DISCLAIMER_VERSION, lang, disclaimer_text: acceptedText, status: "Accepted" });
+    } catch (e) {
+      console.error("[awdash] audit-log insert failed", e);
+    }
+    try {
+      await supabase.auth.updateUser({ data: { disclaimer_ok: true, disclaimer_accepted_at: ts, disclaimer_version: DISCLAIMER_VERSION, disclaimer_email: loggedInEmail } });
+    } catch (e) {
+      console.error("[awdash] save disclaimer signature failed", e);
+    }
+    setShowDisclaimer(false);
+    setDisclaimerChecked(false);
+  };
+  const DISCLAIMER_TEXT = {
+    he: {
+      title: "הודעה למשתמש",
+      greeting: "משתמש/ת יקר/ה,",
+      paras: ["מערכת Project Dashboard נועדה לצורכי ניהול, מעקב, ריכוז מידע ושקיפות, במטרה לשקף באופן שוטף ועדכני ככל הניתן את נתוני הפרויקט המוצגים במערכת.", "המידע במערכת מתעדכן באופן שוטף, אך עשוי להיות חלקי, להשתנות מעת לעת או שלא לשקף בכל רגע נתון את המידע העדכני ביותר. לפיכך, אין לראות במידע המוצג במערכת אישור, מצג, התחייבות, הוראת ביצוע, שינוי תכולה או התחייבות חוזית מכל סוג שהוא.", "בכל מקרה של אי התאמה או סתירה, המסמכים הרשמיים והמאושרים של הפרויקט, לרבות החוזה, התוכניות, המפרטים, ההזמנות, האישורים וההנחיות הרשמיות, הם הקובעים.", "השימוש במערכת אינו מחליף קבלת אישור או הנחיה רשמית בהתאם לנהלי הפרויקט."],
+      check: "קראתי, הבנתי ואני מאשר/ת את האמור לעיל.",
+      btn: "אישור והמשך"
+    },
+    en: {
+      title: "User Notice",
+      greeting: "Dear User,",
+      paras: ["The Project Dashboard is intended for management, monitoring, information consolidation, and transparency purposes, with the aim of reflecting the project data presented in the system on an ongoing basis and as accurately and up to date as reasonably possible.", "The information in the system is updated on an ongoing basis; however, it may be incomplete, subject to change, or may not reflect the most current information at any given time. Accordingly, the information displayed in the system shall not be considered an approval, representation, commitment, instruction to proceed, change in scope, or contractual obligation of any kind.", "In the event of any discrepancy or conflict, the project's official and approved documents, including the contract, drawings, specifications, purchase orders, approvals, and formal instructions, shall prevail.", "Use of the system does not replace the requirement to obtain formal approvals or instructions in accordance with the project's applicable procedures."],
+      check: "I have read, understood, and agree to the above.",
+      btn: "Accept & Continue"
+    }
+  };
+  const disc = DISCLAIMER_TEXT[lang] || DISCLAIMER_TEXT.en;
+  const discDir = lang === "he" ? "rtl" : "ltr";
+  const discAlign = lang === "he" ? "right" : "left";
   const triggerAuthNotice = () => {
     setAuthNotice(true);
     setTimeout(() => setAuthNotice(false), 4e3);
@@ -4463,7 +4513,7 @@ function ProjectDashboardApp() {
       value: newProjectName,
       onChange: (e) => setNewProjectName(e.target.value)
     }
-  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים (גיבוי)" : "Export data (backup)"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz"), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection(null) }, isRTL ? "הקמת פרויקטים" : "Project setup", /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, t.admin.logout, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים (גיבוי)" : "Export data (backup)"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz"), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection(null) }, isRTL ? "הקמת פרויקטים" : "Project setup", /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, t.admin.logout, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
