@@ -3351,11 +3351,11 @@ function ProjectDashboardApp() {
       try {
         const { data, error } = await supabase.from("app_state").select("value").eq("key", "system-state").maybeSingle();
         console.log("[awdash] load system-state", data, error);
+        if (error) throw error;
         if (data && data.value) setContractors(data.value);
-      } catch (e) {
-        console.error("[awdash] load system-state failed", e);
-      } finally {
         setStateLoaded(true);
+      } catch (e) {
+        console.error("[awdash] load system-state failed — auto-save stays OFF to protect existing data", e);
       }
     })();
   }, [isAuthenticated]);
@@ -3382,11 +3382,11 @@ function ProjectDashboardApp() {
       try {
         const { data, error } = await supabase.from("app_state").select("value").eq("key", "project-extras").maybeSingle();
         console.log("[awdash] load project-extras", !!(data && data.value), error);
+        if (error) throw error;
         if (data && data.value) setProjectExtras(data.value);
-      } catch (e) {
-        console.error("[awdash] load project-extras failed", e);
-      } finally {
         setExtrasLoaded(true);
+      } catch (e) {
+        console.error("[awdash] load project-extras failed — auto-save stays OFF to protect existing data", e);
       }
     })();
   }, [isAuthenticated]);
