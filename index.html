@@ -3236,6 +3236,39 @@ function CardView({
 }
 
 // src/App.jsx
+function CreateUserPanel({ isRTL }) {
+  const inputStyle = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff" };
+  const [email, setEmail] = useState6("");
+  const [password, setPassword] = useState6("111111");
+  const [role, setRole] = useState6("client");
+  const [busy, setBusy] = useState6(false);
+  const [msg, setMsg] = useState6(null);
+  const submit = async () => {
+    const clean = (email || "").trim().toLowerCase();
+    if (!clean || password.length < 6) {
+      setMsg({ ok: false, text: isRTL ? "צריך אימייל וסיסמה של לפחות 6 תווים" : "Email and a 6+ character password are required" });
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { email: clean, password, role } });
+      if (error) {
+        setMsg({ ok: false, text: error.message || (isRTL ? "שגיאה ביצירת המשתמש" : "Error creating user") });
+      } else if (data && data.error) {
+        setMsg({ ok: false, text: data.error });
+      } else {
+        setMsg({ ok: true, text: (isRTL ? "המשתמש נוצר בהצלחה: " : "User created: ") + clean });
+        setEmail("");
+        setPassword("111111");
+      }
+    } catch (e) {
+      setMsg({ ok: false, text: String(e) });
+    }
+    setBusy(false);
+  };
+  return /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הוספת משתמש" : "Add user"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "צרי משתמש קבלן ראשי או לקוח. הוא יוכל להתחבר מיד עם האימייל והסיסמה." : "Create a main-contractor or client account."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "email", placeholder: isRTL ? "אימייל" : "Email", value: email, onChange: (e) => setEmail(e.target.value), dir: "ltr", style: { ...inputStyle, minWidth: 220 } }), /* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "סיסמה" : "Password", value: password, onChange: (e) => setPassword(e.target.value), dir: "ltr", style: { ...inputStyle, minWidth: 140 } }), /* @__PURE__ */ React15.createElement("select", { value: role, onChange: (e) => setRole(e.target.value), style: inputStyle }, /* @__PURE__ */ React15.createElement("option", { value: "client" }, isRTL ? "לקוח" : "Client"), /* @__PURE__ */ React15.createElement("option", { value: "contractor" }, isRTL ? "קבלן ראשי" : "Main contractor")), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: submit, disabled: busy }, busy ? isRTL ? "יוצר…" : "Creating…" : isRTL ? "צור משתמש" : "Create user")), msg && /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 12, fontWeight: 700, color: msg.ok ? "#1a7f4b" : "#b02a37" } }, msg.text));
+}
 function ProjectDashboardApp() {
   const [lang, setLang] = useState6("en");
   const [menuOpen, setMenuOpen] = useState6(false);
@@ -3260,24 +3293,7 @@ function ProjectDashboardApp() {
       accent: { accent: "#1A559E", accentInk: "#103460" },
       // derived from the logo's navy
       projects: [
-        {
-          id: "p-default",
-          slug: "cisco-caesarea",
-          published: true,
-          name: "Cisco Caesarea",
-          floorsFrom: "4",
-          floorsTo: "5",
-          startDate: "2026-07-01",
-          endDate: "2027-01-10",
-          clientLogoUrl: null,
-          // Access is granted per project (see PROJECT_ACCESS_KINDS). An account
-          // starts as "pending" the moment it's invited and becomes "active"
-          // once that person picks their own password on first sign-in.
-          contractorAccounts: [{ id: 1, email: "marcellak@a-weiss.co.il", password: "1111", status: "active", active: true }],
-          clientAccounts: [{ id: 1, email: "marcella@kravitz.com", password: "1111", status: "active", active: true }],
-          subcontractorAccounts: [],
-          functionContent: {}
-        },
+        { id: "p-default", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
         { id: "p2", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
         { id: "p3", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
         { id: "p4", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
@@ -3327,70 +3343,65 @@ function ProjectDashboardApp() {
   const activeProject = activeContractor.projects.find((p) => p.id === selectedProjectId) || activeContractor.projects[0];
   const [stateLoaded, setStateLoaded] = useState6(false);
   useEffect5(() => {
+    if (!isAuthenticated) return;
     (async () => {
       try {
-        const result = await window.storage.get("system-state", true);
-        if (result?.value) setContractors(JSON.parse(result.value));
+        const { data, error } = await supabase.from("app_state").select("value").eq("key", "system-state").maybeSingle();
+        console.log("[awdash] load system-state", data, error);
+        if (data && data.value) setContractors(data.value);
       } catch (e) {
+        console.error("[awdash] load system-state failed", e);
       } finally {
         setStateLoaded(true);
       }
     })();
-  }, []);
+  }, [isAuthenticated]);
   useEffect5(() => {
-    if (!stateLoaded) return;
+    if (!isAuthenticated || !stateLoaded) return;
     (async () => {
+      try {
+        const { error } = await supabase.from("app_state").upsert({ key: "system-state", value: contractors, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+        if (error) console.error("[awdash] save system-state failed", error);
+      } catch (e) {
+        console.error("[awdash] save system-state failed", e);
+      }
       try {
         await window.storage.set("system-state", JSON.stringify(contractors), true);
       } catch (e) {
-        console.error("Auto-save failed", e);
       }
     })();
-  }, [contractors, stateLoaded]);
-  const [projectExtras, setProjectExtras] = useState6({
-    "p-default": {
-      dataSources: [],
-      scheduleData: {
-        fileName: "demo-schedule.xml",
-        parseNote: null,
-        tasks: [
-          { id: "1", name: "אישור ציוד מערכות", nameHe: "אישור ציוד מערכות", start: "2026-07-01", finish: "2026-08-30", percentComplete: 0, critical: false, level: 1, isSummary: true, predecessors: [] },
-          { id: "2", name: "אישור מערכת מיזוג אוויר", nameHe: "אישור מערכת מיזוג אוויר", start: "2026-07-01", finish: "2026-07-20", percentComplete: 100, critical: true, level: 2, isSummary: false, predecessors: [] },
-          { id: "3", name: "אישור לוחות חשמל", nameHe: "אישור לוחות חשמל", start: "2026-07-20", finish: "2026-08-10", percentComplete: 60, critical: true, level: 2, isSummary: false, predecessors: [{ id: "2", type: "FS", lag: 0 }] },
-          { id: "4", name: "אישור מערכת אינסטלציה", nameHe: "אישור מערכת אינסטלציה", start: "2026-08-10", finish: "2026-08-30", percentComplete: 20, critical: true, level: 2, isSummary: false, predecessors: [{ id: "3", type: "FS", lag: 0 }] },
-          { id: "5", name: "עבודות גמר", nameHe: "עבודות גמר", start: "2026-09-01", finish: "2026-12-20", percentComplete: 0, critical: false, level: 1, isSummary: true, predecessors: [] },
-          { id: "6", name: "ריצוף שטיחים", nameHe: "ריצוף שטיחים", start: "2026-09-01", finish: "2026-10-15", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [{ id: "4", type: "FS", lag: 0 }] },
-          { id: "7", name: "צביעה וגבס", nameHe: "צביעה וגבס", start: "2026-10-15", finish: "2026-12-20", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [{ id: "6", type: "FS", lag: 0 }] },
-          { id: "8", name: "Milestones", nameHe: "אבני דרך", start: "2026-07-01", finish: "2027-01-10", percentComplete: 0, critical: false, level: 1, isSummary: true, predecessors: [] },
-          { id: "9", name: "התחלת עבודות גמר", nameHe: "התחלת עבודות גמר", start: "2026-09-01", finish: "2026-09-01", percentComplete: 100, critical: false, level: 2, isSummary: false, predecessors: [] },
-          { id: "10", name: "מסירת קומה 4", nameHe: "מסירת קומה 4", start: "2026-11-15", finish: "2026-11-15", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [] },
-          { id: "11", name: "מסירת פרויקט", nameHe: "מסירת פרויקט", start: "2027-01-10", finish: "2027-01-10", percentComplete: 0, critical: false, level: 2, isSummary: false, predecessors: [] }
-        ]
-      }
-    }
-  });
+  }, [contractors, stateLoaded, isAuthenticated]);
+  const [projectExtras, setProjectExtras] = useState6({});
   const [extrasLoaded, setExtrasLoaded] = useState6(false);
   useEffect5(() => {
+    if (!isAuthenticated) return;
     (async () => {
       try {
-        const result = await window.storage.get("project-extras", true);
-        if (result?.value) setProjectExtras(JSON.parse(result.value));
+        const { data, error } = await supabase.from("app_state").select("value").eq("key", "project-extras").maybeSingle();
+        console.log("[awdash] load project-extras", !!(data && data.value), error);
+        if (data && data.value) setProjectExtras(data.value);
       } catch (e) {
+        console.error("[awdash] load project-extras failed", e);
       } finally {
         setExtrasLoaded(true);
       }
     })();
-  }, []);
+  }, [isAuthenticated]);
   useEffect5(() => {
-    if (!extrasLoaded) return;
+    if (!isAuthenticated || !extrasLoaded) return;
     (async () => {
+      try {
+        const { error } = await supabase.from("app_state").upsert({ key: "project-extras", value: projectExtras, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+        if (error) console.error("[awdash] save project-extras failed", error);
+      } catch (e) {
+        console.error("[awdash] save project-extras failed", e);
+      }
       try {
         await window.storage.set("project-extras", JSON.stringify(projectExtras), true);
       } catch (e) {
-        console.error("Auto-save (project extras) failed \u2014 this file may be too large to save.", e);
       }
     })();
-  }, [projectExtras, extrasLoaded]);
+  }, [projectExtras, extrasLoaded, isAuthenticated]);
   const updateProjectExtras = (projectId, patch) => {
     setProjectExtras((prev) => ({
       ...prev,
@@ -4180,7 +4191,7 @@ function ProjectDashboardApp() {
         onRemoveSchedule: handleScheduleRemove
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead" }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle" }, t.systemAdmin.title), /* @__PURE__ */ React15.createElement("p", { className: "adminHeadSub" }, t.systemAdmin.subtitle)), /* @__PURE__ */ React15.createElement("button", { className: "logoutBtn", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 14, strokeWidth: 2 }), " ", t.systemAdmin.logout)), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead" }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle" }, t.systemAdmin.title), /* @__PURE__ */ React15.createElement("p", { className: "adminHeadSub" }, t.systemAdmin.subtitle)), /* @__PURE__ */ React15.createElement("button", { className: "logoutBtn", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 14, strokeWidth: 2 }), " ", t.systemAdmin.logout)), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
