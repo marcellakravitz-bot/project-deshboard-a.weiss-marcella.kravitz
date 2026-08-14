@@ -19,7 +19,8 @@
     "xlsx": "https://esm.sh/xlsx@0.18.5",
     "papaparse": "https://esm.sh/papaparse@5.4.1",
     "mammoth": "https://esm.sh/mammoth@1.8.0",
-    "lucide-react": "https://esm.sh/lucide-react@0.417.0?external=react"
+    "lucide-react": "https://esm.sh/lucide-react@0.417.0?external=react",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
   }
 }
 </script>
@@ -87,6 +88,15 @@ import {
   CalendarClock as CalendarClock2,
   LifeBuoy
 } from "lucide-react";
+
+// src/config/supabase.js
+// Real auth + database. These two values are PUBLIC by design (protected by
+// Row Level Security) and safe to ship in the browser. The secret key and the
+// database password are never placed here.
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+var SUPABASE_URL = "https://jvssavyfjuhjniqkiymo.supabase.co";
+var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9FY_yBz2KLVfVYdxPbvBHw_Xx233xC4";
+var supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
 
 // src/config/copy.js
 import {
@@ -3294,6 +3304,7 @@ function ProjectDashboardApp() {
   });
   const [isAuthenticated, setIsAuthenticated] = useState6(false);
   const [authRole, setAuthRole] = useState6(null);
+  const [appRole, setAppRole] = useState6(null);
   const [sessionGrants, setSessionGrants] = useState6([]);
   const [loggedInEmail, setLoggedInEmail] = useState6(null);
   const [editableProjectIds, setEditableProjectIds] = useState6([]);
@@ -3428,7 +3439,7 @@ function ProjectDashboardApp() {
     setLoginError(null);
     setTimeout(() => setMenuView("options"), 250);
   };
-  const handleLoginSubmit = (e) => {
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (menuView === "login-admin") {
       if (form.password !== SYSTEM_ADMIN_PASSWORD) {
@@ -3443,39 +3454,45 @@ function ProjectDashboardApp() {
     }
     const email = form.email.trim().toLowerCase();
     const password = form.password;
-    if (password === SYSTEM_ADMIN_PASSWORD && (email === "marcellak@a-weiss.co.il" || email === "a-weiss@gmail.co.il" || email === "cisco@gmail.co.il")) {
-      setLoginError(null);
-      setForm({ email: "", password: "" });
-      if (email === "marcellak@a-weiss.co.il") {
-        const adminProjs = activeContractor.projects || [];
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (!error && data && data.user) {
+        let role = "client";
+        try {
+          const { data: prof } = await supabase.from("profiles").select("role").eq("id", data.user.id).single();
+          if (prof && prof.role) role = prof.role;
+        } catch (e2) {
+        }
+        const projs = activeContractor.projects || [];
+        const configured = projs.filter((p) => p.name);
+        setLoginError(null);
+        setForm({ email: "", password: "" });
         setIsAuthenticated(true);
         setLoggedInEmail(email);
-        setSessionGrants(adminProjs.map((p) => ({ projectId: p.id, role: "contractor", allowedCards: [] })));
-        setAuthRole("contractor");
-        setEditableProjectIds(adminProjs.map((p) => p.id));
-        setView("projectPicker");
+        setAppRole(role);
+        if (role === "admin" || role === "contractor") {
+          setSessionGrants(projs.map((p) => ({ projectId: p.id, role: "contractor", allowedCards: [] })));
+          setAuthRole("contractor");
+          setEditableProjectIds(projs.map((p) => p.id));
+          if (role === "admin") {
+            setView("projectPicker");
+          } else {
+            const target = configured[0] || projs[0];
+            if (target) setSelectedProjectId(target.id);
+            setView(target ? "dashboard" : "projectPicker");
+          }
+        } else {
+          const target = configured[0] || projs[0];
+          setSessionGrants(target ? [{ projectId: target.id, role: "client", allowedCards: [] }] : []);
+          setAuthRole("client");
+          setEditableProjectIds([]);
+          if (target) setSelectedProjectId(target.id);
+          setView(target ? "dashboard" : "projectPicker");
+        }
+        closeMenu();
         return;
       }
-      const projs = activeContractor.projects || [];
-      const configured = projs.filter((p) => p.name);
-      setIsAuthenticated(true);
-      setLoggedInEmail(email);
-      if (email === "a-weiss@gmail.co.il") {
-        const target = configured[0] || projs[0];
-        setSessionGrants(projs.map((p) => ({ projectId: p.id, role: "contractor", allowedCards: [] })));
-        setAuthRole("contractor");
-        setEditableProjectIds(projs.map((p) => p.id));
-        if (target) setSelectedProjectId(target.id);
-        setView(target ? "dashboard" : "projectPicker");
-      } else {
-        const target = configured[0] || projs[0];
-        setSessionGrants(target ? [{ projectId: target.id, role: "client", allowedCards: [] }] : []);
-        setAuthRole("client");
-        setEditableProjectIds([]);
-        if (target) setSelectedProjectId(target.id);
-        setView(target ? "dashboard" : "projectPicker");
-      }
-      return;
+    } catch (e1) {
     }
     const matches = findAccountMatches(email);
     if (matches.length === 0) {
@@ -3574,10 +3591,15 @@ function ProjectDashboardApp() {
     setTimeout(() => setSaved(false), 2200);
   };
   const handleLogout = () => {
+    try {
+      supabase.auth.signOut();
+    } catch (e) {
+    }
     setView("login");
     setForm({ email: "", password: "" });
     setIsAuthenticated(false);
     setAuthRole(null);
+    setAppRole(null);
     setLoggedInEmail(null);
     setEditableProjectIds([]);
     setSessionGrants([]);
@@ -4125,7 +4147,7 @@ function ProjectDashboardApp() {
         onToggleScheduleClientNote: updateScheduleClientNote,
         onToggleScheduleTeamNote: updateScheduleTeamNote,
         onSaveSchedule: saveScheduleUpdate,
-        viewerRole: loggedInEmail === "marcellak@a-weiss.co.il" ? "admin" : authRole,
+        viewerRole: appRole === "admin" ? "admin" : authRole,
         photos: activeExtras.photos || [],
         onUploadPhotos: handleUploadPhotos,
         onRemovePhoto: handleRemovePhoto,
@@ -4322,7 +4344,7 @@ function ProjectDashboardApp() {
       value: newProjectName,
       onChange: (e) => setNewProjectName(e.target.value)
     }
-  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים (גיבוי)" : "Export data (backup)"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz"), /* @__PURE__ */ React15.createElement(React15.Fragment, null, authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), loggedInEmail === "marcellak@a-weiss.co.il" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection(null) }, isRTL ? "הקמת פרויקטים" : "Project setup", /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, t.admin.logout, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים (גיבוי)" : "Export data (backup)"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz"), /* @__PURE__ */ React15.createElement(React15.Fragment, null, authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection(null) }, isRTL ? "הקמת פרויקטים" : "Project setup", /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, t.admin.logout, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
