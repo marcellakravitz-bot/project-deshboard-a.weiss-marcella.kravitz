@@ -88,7 +88,7 @@ import {
   CalendarClock as CalendarClock2,
   LifeBuoy
 } from "lucide-react";
-import { Settings as SettingsIcon, LayoutDashboard as DashIcon } from "lucide-react";
+import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3 } from "lucide-react";
 
 // src/config/supabase.js
 // Real auth + database. These two values are PUBLIC by design (protected by
@@ -797,6 +797,34 @@ var dataSources = `
           cursor: pointer; font-family: 'Assistant', sans-serif; transition: border-color .15s ease;
         }
         .functionEditBtn:hover { border-color: var(--accent); }
+        .functionEditBtn[disabled] { opacity: .55; cursor: default; }
+        /* Once a file is waiting, SAVE is the obvious next step. */
+        .functionEditBtn.primed { background: #14181f; color: #fff; border-color: #14181f; }
+        .pendingFileRow {
+          display: flex; flex-direction: column; align-items: center; gap: 3px;
+          margin-top: 12px; padding: 9px 12px; border-radius: 10px;
+          background: #fdf6d8; border: 1px solid #ecd98f;
+        }
+        .pendingFileName { font-size: 12.5px; font-weight: 800; color: #7a6100; }
+        .pendingFileHint { font-size: 11px; font-weight: 600; color: #8a7320; text-align: center; }
+
+        /* Post-upload "what moved in the schedule" report */
+        .scheduleChangeModal {
+          background: #fff; border-radius: 14px; padding: 20px 24px; width: 94%; max-width: 620px;
+          max-height: 84vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .scheduleChangeHead { display: flex; align-items: flex-start; gap: 9px; color: #d9a400; }
+        .scheduleChangeHead h2 {
+          margin: 0 0 4px; font-size: 16px; line-height: 1.4; color: #7a6100; flex: 1;
+        }
+        .scheduleChangeGroup { margin-top: 14px; }
+        .scheduleChangeGroup h3 {
+          margin: 0 0 6px; font-size: 12px; font-weight: 800; text-transform: uppercase;
+          letter-spacing: .04em; color: var(--steel);
+        }
+        .scheduleChangeGroup ul { margin: 0; padding-inline-start: 18px; display: flex; flex-direction: column; gap: 5px; }
+        .scheduleChangeGroup li { font-size: 12.5px; font-weight: 600; line-height: 1.5; color: var(--ink); }
+        .scheduleChangeFoot { font-size: 11.5px; color: var(--mist); font-weight: 600; margin: 16px 0 12px; }
         .functionEditModalScrim {
           position: absolute; inset: 0; z-index: 75; background: rgba(15,16,19,0.45);
           display: flex; align-items: center; justify-content: center; padding: 24px;
@@ -828,10 +856,18 @@ var dataSources = `
 var pdfViewer = `
         /* ---------- PDF "book" viewer ---------- */
         .pdfBook {
-          width: 100%; display: flex; flex-direction: column; align-items: center; gap: 14px;
+          width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px;
         }
+        /* Sized to fit the screen without pushing the page into scrolling.
+           --appvh is the visible height in DESIGN pixels, published by
+           ScaleToFit; a plain vh here would be wrong, because everything in
+           .appRoot is drawn at 1350px wide and then scaled down, so a raw vh
+           value shrinks along with it. Width capped 20% below the old 1200px.  */
         .pdfBookFrame {
-          width: 100%; max-width: 1200px; height: auto;
+          width: auto; height: auto;
+          max-width: min(960px, 100%);
+          max-height: calc(var(--appvh, 100vh) * 0.62);
+          object-fit: contain;
           border: 1px solid var(--line); border-radius: 12px;
           box-shadow: 0 18px 40px -22px rgba(16,17,20,0.35);
           background: #fff; display: block;
@@ -842,7 +878,7 @@ var pdfViewer = `
         .pdfBookStatus a { color: var(--accent); font-weight: 700; }
         .pdfNativeFallback { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 10px; }
         .pdfNativeFrame {
-          width: 100%; max-width: 1150px; height: 72vh; border: 1px solid var(--line);
+          width: 100%; max-width: 1150px; height: calc(var(--appvh, 100vh) * 0.62); border: 1px solid var(--line);
           border-radius: 12px; box-shadow: 0 18px 40px -22px rgba(16,17,20,0.35); background: #fff;
         }
         .pdfNativeNote { font-size: 12px; font-weight: 600; color: var(--mist); text-align: center; }
@@ -1240,7 +1276,14 @@ var gantt = `
         }
         .scheduleAlert.overdue { background: #fdeceA; color: #b3341f; }
         .scheduleAlert.upcoming { background: #fff4e6; color: #a4610a; }
+        /* Schedule-change notes: yellow, with a heart. They are informational
+           (the file moved), not a health problem, hence their own colour. */
+        .scheduleAlert.change { background: #fdf6d8; color: #7a6100; }
+        .ganttCriticalMark.noteMark.change { color: #d9a400; }
         .scheduleAlert svg { flex-shrink: 0; margin-top: 1px; }
+        /* The note carries the exact same mark as the row it came from. */
+        .ganttCriticalMark.noteMark { flex: 0 0 22px; margin-top: -2px; }
+        .scheduleAlert.overdue .ganttCriticalMark.noteMark.critical { color: #d02f2f; }
         .noteText { flex: 1; }
         .noteChecks { margin-inline-start: auto; display: flex; gap: 26px; flex: 0 0 auto; padding-inline-end: 2px; }
         .noteColsHead { display: flex; gap: 10px; margin-inline-start: auto; margin-bottom: 6px; padding-inline-end: 2px; }
@@ -1424,6 +1467,16 @@ var admin = `
         /* User list is the one tab we widen ~25% total (12.5% each side) */
         .panel.adminPanel.adminPanelWide { width: 125%; margin-inline: -12.5%; }
         .adminPanelScroll { flex: 1; min-height: 0; overflow-y: scroll; overflow-x: hidden; }
+        /* This box is a COLUMN FLEX container with a fixed height. Flex items
+           shrink by default, so once the project list got long enough the open
+           project card was squashed to fit instead of overflowing — and since
+           that card sets overflow:hidden for its rounded corners, the bottom of
+           the form (the "Save changes" button) was simply cut off. Worse, the
+           container's scrollHeight then equalled its clientHeight, so there was
+           nothing to scroll to and the button was unreachable, not just hidden.
+           Locking flex-shrink to 0 makes the children keep their natural height
+           and the container scroll properly. */
+        .adminPanelScroll > * { flex-shrink: 0; }
         /* Sub-view back link sits ABOVE the card without changing its 560px height */
         .adminBackRow { display: flex; align-items: center; min-height: 30px; margin-bottom: 4px; }
 
@@ -2179,6 +2232,10 @@ function ScaleToFit({ children }) {
           // Expressed in pre-scale units, so once scaled it fills exactly one
           // screen — this is what lets the footer anchor to the bottom.
           minHeight: scale ? availableHeight / scale : void 0,
+          // The visible height expressed in DESIGN pixels. Anything inside that
+          // wants to be "one screen tall" must use this, not vh: vh is measured
+          // on the real viewport and then shrinks again with the transform.
+          "--appvh": scale ? `${availableHeight / scale}px` : void 0,
           transform: `scale(${scale})`,
           transformOrigin: "top left",
           // Flex column so .appRoot can stretch into that min-height (a
@@ -2522,17 +2579,31 @@ import React12 from "react";
 
 // src/schedule/ScheduleGantt.jsx
 import React11, { useState as useState4, useRef as useRef4, useEffect as useEffect3 } from "react";
-import { ChevronDown, ChevronLeft as ChevronLeft3, ChevronRight as ChevronRight3, AlertTriangle, Check as Check2, Download, Save } from "lucide-react";
+import { ChevronDown, ChevronLeft as ChevronLeft3, ChevronRight as ChevronRight3, AlertTriangle, Check as Check2, Download, Save, Printer, Heart as Heart2 } from "lucide-react";
 
 // src/schedule/status.js
+// Dates arrive from the schedule file as plain YYYY-MM-DD, i.e. midnight at
+// the START of that day. But a Finish date means "by the end of that day", so
+// the activity's real window closes 24h later. Everything that asks "should
+// this be done by now?" must use this end-of-day value.
+//
+// This is also what broke one-day activities: in MS Project a one-day task has
+// Finish === Start, so after stripping the time both were the same midnight —
+// a zero-length window. The old guard `finish <= start` then returned 0, so a
+// one-day activity showed "expected 0%" forever, even long after its date had
+// passed. Treating finish as end-of-day gives it a real 24h window.
+function getTaskFinishEnd(task) {
+  const finish = new Date(task.finish).getTime();
+  return isNaN(finish) ? NaN : finish + 864e5;
+}
 function getExpectedPercent(task) {
   const start = new Date(task.start).getTime();
-  const finish = new Date(task.finish).getTime();
+  const finishEnd = getTaskFinishEnd(task);
   const today = Date.now();
-  if (isNaN(start) || isNaN(finish) || finish <= start) return 0;
+  if (isNaN(start) || isNaN(finishEnd) || finishEnd <= start) return 0;
   if (today <= start) return 0;
-  if (today >= finish) return 100;
-  return Math.round((today - start) / (finish - start) * 100);
+  if (today >= finishEnd) return 100;
+  return Math.round((today - start) / (finishEnd - start) * 100);
 }
 function getDescendantLeaves(tasks, i) {
   const t = tasks[i];
@@ -2548,11 +2619,28 @@ function getTaskGap(t) {
   return getExpectedPercent(t) - t.percentComplete;
 }
 function getTaskStatus(t) {
-  if (Date.now() > new Date(t.finish).getTime() && t.percentComplete < 100) return "red";
+  if (Date.now() > getTaskFinishEnd(t) && t.percentComplete < 100) return "red";
   const gap = getTaskGap(t);
   if (gap <= 0) return "green";
   if (gap <= 40) return "orange";
   return "red";
+}
+// SINGLE SOURCE OF TRUTH for the little icon in the column next to the task
+// name. The Gantt row AND the "critical schedule notes" list both call this,
+// so the icon shown in a row and the icon shown in its note can never disagree,
+// and the number of notes can never drift away from the number of icons.
+//
+//   "critical"  = on the critical path        -> RED warning triangle
+//   "attention" = behind schedule or overdue  -> ORANGE "!"
+//   "done"      = finished                    -> GREEN check
+//
+// Critical wins over everything else, by explicit request.
+function getTaskIconKind(t) {
+  if (t.isSummary) return null;
+  if (t.critical) return "critical";
+  if (getTaskStatus(t) !== "green") return "attention";
+  if (t.percentComplete >= 100) return "done";
+  return null;
 }
 function getScheduleAlerts(tasks, lang, allTasks) {
   const alerts = [];
@@ -2564,19 +2652,166 @@ function getScheduleAlerts(tasks, lang, allTasks) {
       successorsOf[p.id].push(t);
     });
   });
-  tasks.forEach((t) => {
+  tasks.forEach((t, idx) => {
     if (t.isSummary) return;
     const status = getTaskStatus(t);
+    // A note is raised for every task that is not on track. A critical-path
+    // task that IS on track keeps its red triangle in the row but raises no
+    // note \u2014 it is information, not a problem.
     if (status === "green") return;
     const gap = Math.round(getTaskGap(t));
     const taskName = lang === "he" ? t.nameHe || t.name : t.name;
     const succs = t.id && successorsOf[t.id] ? successorsOf[t.id] : [];
     const succNames = succs.map((s) => lang === "he" ? s.nameHe || s.name : s.name).slice(0, 3);
     const succText = succNames.length ? lang === "he" ? `. \u05E2\u05DC\u05D5\u05DC\u05D4 \u05DC\u05E2\u05DB\u05D1 \u05D0\u05EA: ${succNames.join(", ")}` : `. may delay: ${succNames.join(", ")}` : "";
-    const text = lang === "he" ? `"${taskName}" \u05DE\u05E4\u05D2\u05E8\u05EA \u05D1-${gap}% \u05DE\u05D4\u05E6\u05E4\u05D5\u05D9 (${Math.round(t.percentComplete)}% \u05D1\u05E4\u05D5\u05E2\u05DC)${succText}` : `"${taskName}" is ${gap}% behind schedule (${Math.round(t.percentComplete)}% actual)${succText}`;
-    alerts.push({ id: t.id || t.name, type: status === "red" ? "overdue" : "upcoming", text });
+    // Critical-path tasks say so explicitly, so the red triangle on the note
+    // is self-explaining.
+    const critText = t.critical ? lang === "he" ? "\u05E0\u05EA\u05D9\u05D1 \u05E7\u05E8\u05D9\u05D8\u05D9 \u2013 " : "Critical path \u2013 " : "";
+    const text = lang === "he" ? `${critText}"${taskName}" \u05DE\u05E4\u05D2\u05E8\u05EA \u05D1-${gap}% \u05DE\u05D4\u05E6\u05E4\u05D5\u05D9 (${Math.round(t.percentComplete)}% \u05D1\u05E4\u05D5\u05E2\u05DC)${succText}` : `${critText}"${taskName}" is ${gap}% behind schedule (${Math.round(t.percentComplete)}% actual)${succText}`;
+    alerts.push({
+      // Task names repeat across phases ("\u05EA\u05D5\u05DB\u05E0\u05D9\u05D5\u05EA \u05DE\u05D9\u05D6\u05D5\u05D2 \u05DE\u05E2\u05D5\u05D3\u05DB\u05E0\u05D5\u05EA" appears under
+      // several meetings), so falling back to the bare name made two different
+      // rows share one id \u2014 toggling one note's checkbox toggled the other.
+      id: t.id || `${t.name}#${idx}`,
+      type: status === "red" ? "overdue" : "upcoming",
+      kind: getTaskIconKind(t),
+      text
+    });
   });
   return alerts;
+}
+
+// ---------------------------------------------------------------------------
+// Comparing an uploaded schedule against the one already in the system.
+//
+// Matching is BY ACTIVITY NAME, as requested. Names repeat across phases in
+// these files ("תוכניות מיזוג מעודכנות" shows up under several meetings), so a
+// bare name is not unique — the key is name + which occurrence it is, counted
+// in file order. That is stable as long as the export keeps its order, and it
+// never silently glues two different rows together.
+// ---------------------------------------------------------------------------
+function normalizeTaskName(t) {
+  return String(t.name || t.nameHe || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+function indexTasksByName(tasks) {
+  const counts = {};
+  const map = /* @__PURE__ */ new Map();
+  (tasks || []).forEach((t) => {
+    const raw = normalizeTaskName(t);
+    if (!raw) return;
+    counts[raw] = (counts[raw] || 0) + 1;
+    map.set(raw + "#" + counts[raw], t);
+  });
+  return map;
+}
+function taskDurationDays(t) {
+  const s = new Date(t.start).getTime();
+  const f = new Date(t.finish).getTime();
+  if (isNaN(s) || isNaN(f)) return null;
+  return Math.max(0, Math.round((f - s) / 864e5));
+}
+function compareSchedules(prevTasks, nextTasks) {
+  const prevMap = indexTasksByName(prevTasks);
+  const nextMap = indexTasksByName(nextTasks);
+  const changed = [];
+  const added = [];
+  const removed = [];
+  nextMap.forEach((next, key) => {
+    const prev = prevMap.get(key);
+    if (!prev) {
+      added.push({ key, task: next });
+      return;
+    }
+    const startChanged = String(prev.start || "") !== String(next.start || "");
+    const finishChanged = String(prev.finish || "") !== String(next.finish || "");
+    if (!startChanged && !finishChanged) return;
+    const prevDays = taskDurationDays(prev);
+    const nextDays = taskDurationDays(next);
+    changed.push({
+      key,
+      task: next,
+      prevStart: prev.start,
+      prevFinish: prev.finish,
+      nextStart: next.start,
+      nextFinish: next.finish,
+      prevDays,
+      nextDays,
+      datesChanged: startChanged || finishChanged,
+      durationChanged: prevDays !== nextDays
+    });
+  });
+  prevMap.forEach((prev, key) => {
+    if (!nextMap.has(key)) removed.push({ key, task: prev });
+  });
+  return { changed, added, removed };
+}
+// Percentages typed into the dashboard are the user's work and must survive a
+// re-upload; MS Project's own PercentComplete is ignored for activities we
+// already know. Only genuinely new activities keep the file's value.
+function mergeSchedulePercents(prevTasks, nextTasks) {
+  const prevMap = indexTasksByName(prevTasks);
+  const counts = {};
+  return (nextTasks || []).map((t) => {
+    const raw = normalizeTaskName(t);
+    if (!raw) return t;
+    counts[raw] = (counts[raw] || 0) + 1;
+    const prev = prevMap.get(raw + "#" + counts[raw]);
+    return prev && typeof prev.percentComplete === "number" ? { ...t, percentComplete: prev.percentComplete } : t;
+  });
+}
+function buildScheduleChangeNotes(diff) {
+  const notes = [];
+  diff.changed.forEach((c) => notes.push({
+    id: "chg:" + c.key,
+    change: "updated",
+    name: c.task.name,
+    nameHe: c.task.nameHe || null,
+    prevStart: c.prevStart,
+    prevFinish: c.prevFinish,
+    nextStart: c.nextStart,
+    nextFinish: c.nextFinish,
+    prevDays: c.prevDays,
+    nextDays: c.nextDays,
+    durationChanged: c.durationChanged
+  }));
+  diff.added.forEach((a) => notes.push({
+    id: "add:" + a.key,
+    change: "added",
+    name: a.task.name,
+    nameHe: a.task.nameHe || null,
+    nextStart: a.task.start,
+    nextFinish: a.task.finish,
+    nextDays: taskDurationDays(a.task)
+  }));
+  diff.removed.forEach((r) => notes.push({
+    id: "del:" + r.key,
+    change: "removed",
+    name: r.task.name,
+    nameHe: r.task.nameHe || null,
+    prevStart: r.task.start,
+    prevFinish: r.task.finish,
+    prevDays: taskDurationDays(r.task)
+  }));
+  return notes;
+}
+function shortDate(d) {
+  const dt = new Date(d);
+  if (isNaN(dt.getTime())) return "";
+  return `${String(dt.getDate()).padStart(2, "0")}/${String(dt.getMonth() + 1).padStart(2, "0")}/${String(dt.getFullYear()).slice(-2)}`;
+}
+function formatScheduleChangeNote(n, lang) {
+  const he = lang !== "en";
+  const label = he ? n.nameHe || n.name : n.name;
+  if (n.change === "added") {
+    return he ? `פעילות חדשה: "${label}" (${shortDate(n.nextStart)}–${shortDate(n.nextFinish)}, ${n.nextDays} י')` : `New activity: "${label}" (${shortDate(n.nextStart)}–${shortDate(n.nextFinish)}, ${n.nextDays}d)`;
+  }
+  if (n.change === "removed") {
+    return he ? `פעילות הוסרה מהקובץ: "${label}" (הייתה ${shortDate(n.prevStart)}–${shortDate(n.prevFinish)})` : `Activity removed from the file: "${label}" (was ${shortDate(n.prevStart)}–${shortDate(n.prevFinish)})`;
+  }
+  // Hebrew uses words rather than an arrow: in an RTL line an arrow glyph
+  // flips visually and "old → new" ends up reading backwards.
+  const durPart = n.durationChanged ? he ? `, משך מ-${n.prevDays} י' ל-${n.nextDays} י'` : `, duration ${n.prevDays}d → ${n.nextDays}d` : "";
+  return he ? `"${label}": מ-${shortDate(n.prevStart)}–${shortDate(n.prevFinish)} ל-${shortDate(n.nextStart)}–${shortDate(n.nextFinish)}${durPart}` : `"${label}": ${shortDate(n.prevStart)}–${shortDate(n.prevFinish)} → ${shortDate(n.nextStart)}–${shortDate(n.nextFinish)}${durPart}`;
 }
 
 // src/schedule/ScheduleGantt.jsx
@@ -2601,7 +2836,7 @@ var SCHEDULE_COPY = {
   }
 };
 var SUMMARY_SHADES = ["#14265e", "#d9e7fa", "#e8f0fc", "#f2f6fd"];
-function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, projectStart, projectEnd, lastUpdated, projectName, clientNotes, onToggleClientNote, teamNotes, onToggleTeamNote, viewerRole }) {
+function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, projectStart, projectEnd, lastUpdated, projectName, clientNotes, onToggleClientNote, teamNotes, onToggleTeamNote, viewerRole, changeNotes, printBrand }) {
   const [justSaved, setJustSaved] = useState4(false);
   const [barTip, setBarTip] = useState4(null);
   const [scheduleLang, setScheduleLang] = useState4("he");
@@ -2691,6 +2926,106 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
     triggerDownload(url, fname);
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   };
+  // Print: the Gantt only — no critical notes, no milestones table. Rendered
+  // into a fresh document rather than printing the page, because on screen the
+  // timeline is a 5000px-wide pannable strip inside a 46vh scroll box; printing
+  // that would put a keyhole on the paper. Here the whole span is laid out in
+  // percentages so the entire project fits one landscape sheet.
+  const printSchedule = () => {
+    const he = isRTL;
+    const dir = he ? "rtl" : "ltr";
+    const align = he ? "right" : "left";
+    const brand = printBrand || {};
+    const accent = brand.accent || "#1A559E";
+    const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const flip = (pct) => he ? 100 - pct : pct;
+    const monthLabels = months.map((m) => `<span class="ml" style="left:${flip(m.leftPct + m.widthPct / 2)}%">${esc(m.label)}</span>`).join("");
+    const gridlines = monthLines.map((p) => `<span class="gl" style="left:${flip(p)}%"></span>`).join("");
+    const todayMark = `<span class="today" style="left:${flip(activePct)}%"></span>`;
+    // Every activity from project start to project end — collapsed phases are
+    // expanded for the printout, since a printed schedule is a full record.
+    const rows = mainTasks.map((t) => {
+      const label = esc(scheduleLang === "he" ? t.nameHe || t.name : t.name);
+      const indent = t.level != null ? (t.level - minLevel) * 10 : 0;
+      if (t.isSummary) {
+        return `<tr class="sum"><td class="nm" style="padding-inline-start:${indent}px">${label}</td><td></td><td></td><td class="tk">${gridlines}${todayMark}</td></tr>`;
+      }
+      const s = new Date(t.start).getTime();
+      const f = new Date(t.finish).getTime();
+      const leftPct = (s - minDate) / span * 100;
+      const widthPct = Math.max((f - s) / span * 100, 0.6);
+      const barLeft = he ? 100 - leftPct - widthPct : leftPct;
+      const expected = getExpectedPercent(t);
+      const actual = Math.max(0, Math.min(100, t.percentComplete || 0));
+      const gap = expected - actual;
+      const past = now > f + dayMs && actual < 100;
+      const fill = past ? "#d25a5a" : gap <= 0 ? "#43a06b" : gap <= 40 ? "#dd9633" : "#d25a5a";
+      return `<tr><td class="nm" style="padding-inline-start:${indent}px">${label}</td><td class="pc">${Math.round(expected)}%</td><td class="pc">${Math.round(actual)}%</td><td class="tk">${gridlines}${todayMark}<span class="bar${t.critical ? " crit" : ""}" style="left:${barLeft}%;width:${widthPct}%"><span class="fl" style="width:${actual}%;background:${fill}"></span></span></td></tr>`;
+    }).join("");
+    const title = he ? "לוח זמנים" : "Project Schedule";
+    const range = `${shortDate(minDate)} – ${shortDate(maxDate)}`;
+    const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "";
+    const footImg = brand.footerImg ? `<div class="footImg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
+    const footTxt = brand.footerText ? `<div class="ftr">${esc(brand.footerText)}</div>` : "";
+    // Same document shell as the user-list PDF: A4 landscape, no page margin,
+    // 20mm of white, then a rounded accent frame holding logo + title + table
+    // + company footer.
+    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || title)}</title><style>
+@page { size: A4 landscape; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { width: 297mm; min-height: 210mm; padding: 20mm; font-family: Arial, "Helvetica Neue", sans-serif; color: #1f2a37; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.frame { min-height: calc(210mm - 40mm); border: 1.5px solid ${accent}; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; }
+.hdr { display: flex; align-items: center; justify-content: space-between; border-bottom: 3px solid ${accent}; padding-bottom: 10px; margin-bottom: 16px; }
+.hdr img { max-height: 52px; max-width: 200px; object-fit: contain; }
+.hdr .ttl { font-size: 22px; font-weight: 800; color: ${accent}; letter-spacing: .5px; }
+.hdr .sub { font-size: 11px; font-weight: 600; color: #6b7280; margin-top: 3px; }
+/* The date range is a run of Latin numerals inside an RTL line — without an
+   isolate the two dates swap places and the range reads backwards. */
+.rng { direction: ltr; unicode-bidi: isolate; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+col.c1 { width: 28%; } col.c2, col.c3 { width: 6%; } col.c4 { width: 60%; }
+th { background: ${accent}; color: #fff; font-size: 10px; font-weight: 700; padding: 6px 8px; text-align: ${align}; vertical-align: middle; }
+/* Horizontal padding here MUST equal .tk's, or the month labels sit on a
+   different axis than the bars and gridlines below them. */
+th.axisHead { padding: 4px 0; }
+td { font-size: 9px; padding: 3px 8px; border-bottom: 1px solid #e5e7eb; text-align: ${align}; }
+tbody tr:nth-child(even) td { background: #f5f8fc; }
+.nm { font-weight: 600; word-break: break-word; }
+.pc { text-align: center; font-variant-numeric: tabular-nums; }
+.tk { position: relative; height: 14px; padding: 0; }
+.axis { position: relative; height: 14px; }
+.ml { position: absolute; top: 1px; font-size: 9px; font-weight: 700; color: #fff; transform: translateX(-50%); white-space: nowrap; }
+.gl { position: absolute; top: 0; bottom: 0; border-left: 1px dashed #ccd1d8; }
+.today { position: absolute; top: 0; bottom: 0; width: 1.4px; background: ${accent}; }
+.bar { position: absolute; top: 3px; height: 9px; border-radius: 3px; background: #f2f3f4; border: 1px solid #cdd2d8; overflow: hidden; }
+.bar.crit { border: 1.4px solid #d02f2f; }
+.fl { position: absolute; top: 0; bottom: 0; left: 0; }
+tbody tr.sum td { background: #e7f0fb; font-weight: 800; }
+tr { page-break-inside: avoid; }
+.spacer { flex: 1; }
+.ftr { margin-top: 10px; font-size: 10px; color: #6b7280; text-align: center; white-space: pre-line; }
+.footImg { margin-top: 14px; text-align: center; }
+.footImg img { max-width: 100%; max-height: 90px; object-fit: contain; }
+</style></head><body><div class="frame">
+<div class="hdr">${logo}<div><div class="ttl">${esc(projectName || title)}</div><div class="sub">${esc(title)} &nbsp;|&nbsp; <span class="rng">${esc(range)}</span></div></div></div>
+<table><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
+<thead><tr><th>${esc(sc.taskCol)}</th><th class="pc">% ${esc(sc.expectedWord)}</th><th class="pc">% ${esc(sc.actualWord)}</th><th class="axisHead"><div class="axis">${monthLabels}</div></th></tr></thead>
+<tbody>${rows}</tbody></table>
+<div class="spacer"></div>${footTxt}${footImg}</div></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => {
+      try {
+        w.print();
+      } catch (e) {
+      }
+    }, 400);
+  };
   const validTasks = (tasks || []).filter((t) => {
     const s = new Date(t.start).getTime();
     const f = new Date(t.finish).getTime();
@@ -2779,7 +3114,20 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
   const minDate = projectStartTime || Math.min(...validTasks.map((t) => new Date(t.start).getTime()));
   const maxDate = projectEndTime || Math.max(...validTasks.map((t) => new Date(t.finish).getTime()));
   const span = Math.max(maxDate - minDate, 864e5);
-  const alerts = getScheduleAlerts(mainTasks, scheduleLang, validTasks);
+  // Schedule-change notes come from the last file upload and live at the top
+  // of the list until the next upload replaces (or clears) them.
+  const changeAlerts = (changeNotes || []).map((n) => ({
+    id: n.id,
+    type: "change",
+    kind: "change",
+    text: formatScheduleChangeNote(n, scheduleLang)
+  }));
+  const alerts = changeAlerts.concat(getScheduleAlerts(mainTasks, scheduleLang, validTasks));
+  // Which notes this viewer actually sees. Computed once here so the badge
+  // number on the button and the rows inside the panel can never disagree —
+  // the badge used to count ALL alerts while the panel rendered the filtered
+  // subset, so a viewer could see "8" on the button and 2 rows in the list.
+  const shownAlerts = viewerRole === "admin" ? alerts : viewerRole === "client" ? alerts.filter((a) => (clientNotes || {})[a.id]) : alerts.filter((a) => (teamNotes || {})[a.id] !== false);
   const minLevel = minLevelForIndent;
   const summaryLevels = Array.from(new Set(mainTasks.filter((t) => t.isSummary).map((t) => t.level))).sort((a, b) => a - b);
   const summaryShade = (level) => {
@@ -2856,7 +3204,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
       /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateLabel" }, isRTL ? "\u05EA\u05D0\u05E8\u05D9\u05DA \u05E1\u05D9\u05DE\u05D5\u05DF" : "Marker date"),
       /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateValue numerals" }, markerLabel),
       isMoved && /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateReset" }, isRTL ? "\u05D7\u05D6\u05E8\u05D4 \u05DC\u05D4\u05D9\u05D5\u05DD" : "back to today")
-    ), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, !readOnly && /* @__PURE__ */ React11.createElement("button", { type: "button", className: `ghostBtn small ganttSaveBtn ${justSaved ? "saved" : ""}`, onClick: () => { onSaveUpdate && onSaveUpdate(); setJustSaved(true); setTimeout(() => setJustSaved(false), 2e3); } }, /* @__PURE__ */ React11.createElement(Save, { size: 14, strokeWidth: 2.2 }), " ", justSaved ? isRTL ? "נשמר ✓" : "Saved ✓" : isRTL ? "שמור עדכון" : "Save update"), false && /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
+    ), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, !readOnly && /* @__PURE__ */ React11.createElement("button", { type: "button", className: `ghostBtn small ganttSaveBtn ${justSaved ? "saved" : ""}`, onClick: () => { onSaveUpdate && onSaveUpdate(); setJustSaved(true); setTimeout(() => setJustSaved(false), 2e3); } }, /* @__PURE__ */ React11.createElement(Save, { size: 14, strokeWidth: 2.2 }), " ", justSaved ? isRTL ? "נשמר ✓" : "Saved ✓" : isRTL ? "שמור עדכון" : "Save update"), /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: printSchedule, title: isRTL ? "הדפסת הלו\"ז בלבד" : "Print the schedule only" }, /* @__PURE__ */ React11.createElement(Printer, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הדפסה" : "Print"), false &&/* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
     /* @__PURE__ */ React11.createElement("div", { className: "scheduleWrap" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttViewport" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttHeaderSticky", style: { gridTemplateColumns: `${nameColWidth}px 1fr` } }, /* @__PURE__ */ React11.createElement("div", { className: "ganttLeftHeadRow", style: { flexBasis: nameColWidth } }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderCrit" }), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderTask" }, sc.taskCol), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.expectedWord)), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.actualWord))), /* @__PURE__ */ React11.createElement("div", { className: "ganttAxisWrap" }, /* @__PURE__ */ React11.createElement(
       "div",
       {
@@ -2924,7 +3272,8 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
       const durationDays = Math.max(1, Math.round((f - s) / dayMs));
       const durationLabel = isRTL ? `${durationDays} \u05D9'` : `${durationDays}d`;
       const gap = expected - actual;
-      const isPastDue = now > f && actual < 100 && !t.isSummary;
+      const isPastDue = now > f + dayMs && actual < 100 && !t.isSummary;
+      const iconKind = getTaskIconKind(t);
       const fillStatus = isPastDue ? "red" : gap <= 0 ? "green" : gap <= 40 ? "orange" : "red";
       const fmtDate = (d) => {
         const dt = new Date(d);
@@ -2950,9 +3299,9 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
         /* @__PURE__ */ React11.createElement(
           "span",
           {
-            className: `ganttCriticalMark ${!t.isSummary && t.critical ? "critical" : isPastDue ? "overdue" : !t.isSummary && t.percentComplete >= 100 ? "done" : ""}`
+            className: `ganttCriticalMark ${iconKind === "critical" ? "critical" : iconKind === "attention" ? "overdue" : iconKind === "done" ? "done" : ""}`
           },
-          !t.isSummary && t.critical ? /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 13, strokeWidth: 2.6 }) : isPastDue ? "!" : !t.isSummary && t.percentComplete >= 100 ? /* @__PURE__ */ React11.createElement(Check2, { size: 13, strokeWidth: 3 }) : null,
+          iconKind === "critical" ? /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 13, strokeWidth: 2.6 }) : iconKind === "attention" ? "!" : iconKind === "done" ? /* @__PURE__ */ React11.createElement(Check2, { size: 13, strokeWidth: 3 }) : null,
           false && /* @__PURE__ */ React11.createElement("span", { className: `ganttMarkTooltip ${isRTL ? "toRight" : "toLeft"}` }, isPastDue ? isRTL ? "\u05D3\u05D5\u05E8\u05E9 \u05D4\u05EA\u05D9\u05D9\u05D7\u05E1\u05D5\u05EA - \u05E4\u05E2\u05D9\u05DC\u05D5\u05EA \u05DC\u05D0 \u05D4\u05D5\u05E9\u05DC\u05DE\u05D4 \u05DC\u05E4\u05D9 \u05D4\u05D6\u05DE\u05DF \u05D4\u05DE\u05D5\u05D2\u05D3\u05E8" : "Requires attention - activity not completed on schedule" : t.critical ? isRTL ? "\u05E0\u05EA\u05D9\u05D1 \u05E7\u05E8\u05D9\u05D8\u05D9" : "Critical path" : isRTL ? "\u05E4\u05E2\u05D9\u05DC\u05D5\u05EA \u05D4\u05D5\u05E9\u05DC\u05DE\u05D4" : "Activity completed")
         ),
         /* @__PURE__ */ React11.createElement("span", { className: "ganttTaskName", style: { paddingInlineStart: indent }, dir: "auto" }, t.isSummary && /* @__PURE__ */ React11.createElement(
@@ -3071,12 +3420,16 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
           onTouchStart: handleScrollbarDragStart
         }
       )), /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ganttNavBtn", onClick: () => scrollTimeline(1), "aria-label": "Scroll timeline later" }, isRTL ? /* @__PURE__ */ React11.createElement(ChevronLeft3, { size: 15, strokeWidth: 2.2 }) : /* @__PURE__ */ React11.createElement(ChevronRight3, { size: 15, strokeWidth: 2.2 })));
-    })(), /* @__PURE__ */ React11.createElement("div", { className: "scheduleNotesToggleRow" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setNotesOpen((o) => !o) }, /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 14, strokeWidth: 2.2 }), " ", notesOpen ? sc.hideNotes : sc.showNotes, alerts.length > 0 && /* @__PURE__ */ React11.createElement("span", { className: "scheduleNotesBadge numerals" }, alerts.length))), notesOpen && /* @__PURE__ */ React11.createElement("div", { className: "scheduleAlerts" }, (() => {
-      const shown = viewerRole === "admin" ? alerts : viewerRole === "client" ? alerts.filter((a) => (clientNotes || {})[a.id]) : alerts.filter((a) => (teamNotes || {})[a.id] !== false);
+    })(), /* @__PURE__ */ React11.createElement("div", { className: "scheduleNotesToggleRow" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setNotesOpen((o) => !o) }, /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 14, strokeWidth: 2.2 }), " ", notesOpen ? sc.hideNotes : sc.showNotes, shownAlerts.length > 0 && /* @__PURE__ */ React11.createElement("span", { className: "scheduleNotesBadge numerals" }, shownAlerts.length))), notesOpen && /* @__PURE__ */ React11.createElement("div", { className: "scheduleAlerts" }, (() => {
+      const shown = shownAlerts;
       return /* @__PURE__ */ React11.createElement(React11.Fragment, null, viewerRole === "admin" && alerts.length > 0 && /* @__PURE__ */ React11.createElement("div", { className: "noteColsHead" }, /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה לא.וייס" : "Show to A. Weiss"), /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה ללקוח" : "Show to client")), shown.length === 0 && /* @__PURE__ */ React11.createElement("p", { className: "dataSourceFileName", style: { margin: 0 } }, readOnly ? isRTL ? "אין הערות להצגה." : "No notes to display." : sc.noAlerts), shown.map((a, i) => {
         const clientOn = !!(clientNotes || {})[a.id];
         const teamOn = (teamNotes || {})[a.id] !== false;
-        return /* @__PURE__ */ React11.createElement("div", { key: i, className: `scheduleAlert ${a.type}` }, /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 14, strokeWidth: 2.2 }), /* @__PURE__ */ React11.createElement("span", { className: "noteText" }, a.text), viewerRole === "admin" && /* @__PURE__ */ React11.createElement("span", { className: "noteChecks" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${teamOn ? "checked" : ""}`, onClick: () => onToggleTeamNote && onToggleTeamNote(a.id, !teamOn), title: isRTL ? "הצגה לא.וייס" : "Show to A. Weiss", "aria-label": isRTL ? "הצגה לא.וייס" : "Show to A. Weiss" }, teamOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 })), /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${clientOn ? "checked" : ""}`, onClick: () => onToggleClientNote && onToggleClientNote(a.id, !clientOn), title: isRTL ? "הצגה ללקוח" : "Show to client", "aria-label": isRTL ? "הצגה ללקוח" : "Show to client" }, clientOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 }))));
+        return /* @__PURE__ */ React11.createElement("div", { key: a.id + "|" + i, className: `scheduleAlert ${a.kind === "change" ? "change" : a.kind === "critical" ? "overdue" : "upcoming"}` }, /* @__PURE__ */ React11.createElement(
+          "span",
+          { className: `ganttCriticalMark noteMark ${a.kind === "change" ? "change" : a.kind === "critical" ? "critical" : "overdue"}` },
+          a.kind === "change" ? /* @__PURE__ */ React11.createElement(Heart2, { size: 13, strokeWidth: 2.4, fill: "currentColor" }) : a.kind === "critical" ? /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 13, strokeWidth: 2.6 }) : "!"
+        ), /* @__PURE__ */ React11.createElement("span", { className: "noteText" }, a.text), viewerRole === "admin" && /* @__PURE__ */ React11.createElement("span", { className: "noteChecks" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${teamOn ? "checked" : ""}`, onClick: () => onToggleTeamNote && onToggleTeamNote(a.id, !teamOn), title: isRTL ? "הצגה לא.וייס" : "Show to A. Weiss", "aria-label": isRTL ? "הצגה לא.וייס" : "Show to A. Weiss" }, teamOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 })), /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${clientOn ? "checked" : ""}`, onClick: () => onToggleClientNote && onToggleClientNote(a.id, !clientOn), title: isRTL ? "הצגה ללקוח" : "Show to client", "aria-label": isRTL ? "הצגה ללקוח" : "Show to client" }, clientOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 }))));
       }));
     })()), lastUpdated && /* @__PURE__ */ React11.createElement("p", { className: "ganttLastUpdated numerals" }, isRTL ? "\u05E2\u05D3\u05DB\u05D5\u05DF \u05D0\u05D7\u05E8\u05D5\u05DF: " : "Last updated: ", new Date(lastUpdated.timestamp).toLocaleDateString(isRTL ? "he-IL" : "en-GB"), " ", new Date(lastUpdated.timestamp).toLocaleTimeString(isRTL ? "he-IL" : "en-GB", { hour: "2-digit", minute: "2-digit" }), lastUpdated.email ? ` \u2014 ${lastUpdated.email}` : "")),
     contextMenu && /* @__PURE__ */ React11.createElement(
@@ -3128,7 +3481,8 @@ function ProjectScheduleCard({
   viewerRole,
   projectStart,
   projectEnd,
-  projectName
+  projectName,
+  printBrand
 }) {
   const note = scheduleData.parseNote;
   return /* @__PURE__ */ React12.createElement("div", { className: "functionPageBody", style: { flexDirection: "column" } }, note === "unsupported" && /* @__PURE__ */ React12.createElement("p", { className: "pdfBookStatus" }, "Unsupported file \u2014 export as CSV, Excel, MS Project XML, or a PDF task table."), note === "failed" && /* @__PURE__ */ React12.createElement("p", { className: "pdfBookStatus" }, "Couldn't find a readable task table in this file. If this PDF is a drawn Gantt chart (an image, not text), export a task-table report or CSV/Excel/XML from MS Project instead."), note === "draft" && /* @__PURE__ */ React12.createElement("p", { className: "dataSourceNote", style: { marginBottom: 12 } }, "Extracted from PDF text as a best-effort read \u2014 double check dates and the Critical column look right."), (!note || note === "draft") && /* @__PURE__ */ React12.createElement(
@@ -3142,6 +3496,8 @@ function ProjectScheduleCard({
       projectEnd,
       lastUpdated: scheduleData.lastUpdated,
       projectName,
+      changeNotes: scheduleData.changeNotes,
+      printBrand,
       clientNotes: scheduleData.clientNotes,
       onToggleClientNote,
       teamNotes: scheduleData.teamNotes,
@@ -3245,13 +3601,20 @@ function CardView({
   onUploadFile,
   onRemoveFile,
   onUploadSchedule,
-  onRemoveSchedule
+  onRemoveSchedule,
+  printBrand
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
+  // Picking a file no longer applies it straight away. It waits here until
+  // Save is pressed, so the comparison against the current schedule happens on
+  // a deliberate action and the user can still back out.
+  const [pendingScheduleFile, setPendingScheduleFile] = useState5(null);
+  const [savingSchedule, setSavingSchedule] = useState5(false);
   useEffect4(() => {
     setEditOpen(false);
     setXmlHelpOpen(false);
+    setPendingScheduleFile(null);
   }, [cardKey]);
   const isSchedule = cardKey === "schedule";
   const isLook = cardKey === "look";
@@ -3274,6 +3637,7 @@ function CardView({
       onUpdatePercent: onUpdateSchedulePercent,
       onSaveUpdate: onSaveSchedule,
       onToggleClientNote: onToggleScheduleClientNote,
+      printBrand,
       onToggleTeamNote: onToggleScheduleTeamNote,
       viewerRole,
       projectStart: project.startDate,
@@ -3291,7 +3655,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file")) : /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -3301,13 +3665,37 @@ function CardView({
         setEditOpen(false);
       }
     }
-  ), content && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, content.name), content && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: () => onRemoveFile(cardKey) }, "Remove file"))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalSaveRow" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(false) }, isRTL ? "שמירה" : "Save")))), hasEditModal && isSchedule && xmlHelpOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setXmlHelpOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "\u05D0\u05D9\u05DA \u05DE\u05D9\u05D9\u05E6\u05D0\u05D9\u05DD XML \u05DE-MS Project"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setXmlHelpOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, /* @__PURE__ */ React14.createElement("ol", { className: "xmlHelpSteps" }, /* @__PURE__ */ React14.createElement("li", null, "\u05E7\u05D5\u05D1\u05E5"), /* @__PURE__ */ React14.createElement("li", null, "\u05D9\u05D9\u05E6\u05D5\u05D0 (Export)"), /* @__PURE__ */ React14.createElement("li", null, "\u05E9\u05DE\u05D5\u05E8 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8 \u05DB\u05E7\u05D5\u05D1\u05E5"), /* @__PURE__ */ React14.createElement("li", null, "\u05D1\u05D7\u05E8 \u05E4\u05D5\u05E8\u05DE\u05D8 XML"), /* @__PURE__ */ React14.createElement("li", null, "\u05E9\u05DE\u05D5\u05E8 \u05D1\u05E9\u05DD")), /* @__PURE__ */ React14.createElement(
+  ), content && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, content.name), content && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: () => onRemoveFile(cardKey) }, "Remove file"))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalSaveRow" }, /* @__PURE__ */ React14.createElement(
+      "button",
+      {
+        type: "button",
+        className: `functionEditBtn ${isSchedule && pendingScheduleFile ? "primed" : ""}`,
+        disabled: savingSchedule,
+        onClick: async () => {
+          if (isSchedule && pendingScheduleFile) {
+            setSavingSchedule(true);
+            try {
+              await onUploadSchedule(pendingScheduleFile);
+            } finally {
+              setSavingSchedule(false);
+              setPendingScheduleFile(null);
+              // This modal's open state is local to FunctionPage; the App's own
+              // close call does not reach it, so close it here too.
+              setEditOpen(false);
+            }
+            return;
+          }
+          setEditOpen(false);
+        }
+      },
+      savingSchedule ? isRTL ? "שומר…" : "Saving…" : "SAVE"
+    )))), hasEditModal && isSchedule && xmlHelpOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setXmlHelpOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "\u05D0\u05D9\u05DA \u05DE\u05D9\u05D9\u05E6\u05D0\u05D9\u05DD XML \u05DE-MS Project"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setXmlHelpOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, /* @__PURE__ */ React14.createElement("ol", { className: "xmlHelpSteps" }, /* @__PURE__ */ React14.createElement("li", null, "\u05E7\u05D5\u05D1\u05E5"), /* @__PURE__ */ React14.createElement("li", null, "\u05D9\u05D9\u05E6\u05D5\u05D0 (Export)"), /* @__PURE__ */ React14.createElement("li", null, "\u05E9\u05DE\u05D5\u05E8 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8 \u05DB\u05E7\u05D5\u05D1\u05E5"), /* @__PURE__ */ React14.createElement("li", null, "\u05D1\u05D7\u05E8 \u05E4\u05D5\u05E8\u05DE\u05D8 XML"), /* @__PURE__ */ React14.createElement("li", null, "\u05E9\u05DE\u05D5\u05E8 \u05D1\u05E9\u05DD")), /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: ".xml",
       label: scheduleData ? "Replace schedule" : "Upload schedule",
       onFile: (file) => {
-        onUploadSchedule(file);
+        setPendingScheduleFile(file);
         setXmlHelpOpen(false);
       }
     }
@@ -3828,6 +4216,7 @@ function ProjectDashboardApp() {
   const canSeeCard = (key) => !visibleCardKeys || visibleCardKeys.includes(key);
   const canEditCard = (key) => appRole === "admin" || authRole === "contractor" && editableProjectIds.includes(activeProject.id) || isSubcontractorHere && visibleCardKeys.includes(key);
   const [docViewerSourceId, setDocViewerSourceId] = useState6(null);
+  const [scheduleChangeReport, setScheduleChangeReport] = useState6(null);
   const viewingDocSource = docViewerSourceId ? (activeExtras.dataSources || []).find((ds) => ds.id === docViewerSourceId) : null;
   const updateContractor = (id, patch) => {
     setContractors((list) => list.map((c) => c.id === id ? { ...c, ...patch } : c));
@@ -4012,6 +4401,81 @@ function ProjectDashboardApp() {
     setLoginError(null);
     if (grants.length > 0) signInWith(grants, email);
   };
+  // ---------------------------------------------------------------
+  // Browser Back / Forward support.
+  //
+  // The app is a single page: every "screen" is React state, not a URL, so
+  // the browser had nothing to go back to and Back left the site entirely.
+  // Here we mirror the current screen into the browser's history stack with
+  // pushState (the URL itself never changes — important, because GitHub Pages
+  // would 404 on a refresh of an invented path). Back/Forward then restore
+  // that screen instead of leaving. The in-app Back buttons keep working
+  // exactly as before; this is in addition to them, not instead.
+  // ---------------------------------------------------------------
+  const navSnapshot = {
+    view,
+    openCardKey: openCardKey || null,
+    dataSourcesOpen: !!dataSourcesOpen,
+    systemAdminSection: systemAdminSection || null,
+    docViewerSourceId: docViewerSourceId || null
+  };
+  const navKey = JSON.stringify(navSnapshot);
+  const navLastKeyRef = useRef5(null);
+  const navFromPopRef = useRef5(false);
+  useEffect5(() => {
+    if (navLastKeyRef.current === navKey) return;
+    const isFirstScreen = navLastKeyRef.current === null;
+    // Crossing the login boundary REPLACES instead of pushing: after signing
+    // in, Back must not drop the user onto a login form they already passed,
+    // and after signing out, Forward must not walk back into the app.
+    let prevView = null;
+    try {
+      prevView = navLastKeyRef.current ? JSON.parse(navLastKeyRef.current).view : null;
+    } catch (e) {
+    }
+    const crossesLogin = prevView === "login" || view === "login";
+    navLastKeyRef.current = navKey;
+    // A screen change that the browser itself caused (Back/Forward) must not
+    // push a new entry, or Back would just bounce between two states.
+    if (navFromPopRef.current) {
+      navFromPopRef.current = false;
+      return;
+    }
+    try {
+      const entry = { awnav: JSON.parse(navKey) };
+      if (isFirstScreen || crossesLogin) window.history.replaceState(entry, "");
+      else window.history.pushState(entry, "");
+    } catch (e) {
+    }
+  }, [navKey]);
+  const navAuthRef = useRef5(false);
+  navAuthRef.current = isAuthenticated;
+  useEffect5(() => {
+    const onPopState = (e) => {
+      const s = e.state && e.state.awnav;
+      if (!s) return;
+      // Forward after a reload must not drop an unauthenticated visitor into
+      // the admin screens. Data is protected by RLS either way, but the screen
+      // itself shouldn't open without a session.
+      if (s.view === "systemAdmin" && !navAuthRef.current) return;
+      navFromPopRef.current = true;
+      navLastKeyRef.current = JSON.stringify({
+        view: s.view,
+        openCardKey: s.openCardKey || null,
+        dataSourcesOpen: !!s.dataSourcesOpen,
+        systemAdminSection: s.systemAdminSection || null,
+        docViewerSourceId: s.docViewerSourceId || null
+      });
+      setMenuOpen(false);
+      setView(s.view);
+      setOpenCardKey(s.openCardKey || null);
+      setDataSourcesOpen(!!s.dataSourcesOpen);
+      setSystemAdminSection(s.systemAdminSection || null);
+      setDocViewerSourceId(s.docViewerSourceId || null);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
   const goHome = () => {
     setOpenCardKey(null);
     setMenuOpen(false);
@@ -4318,8 +4782,26 @@ function ProjectDashboardApp() {
   };
   const handleScheduleFile = async (file) => {
     const { tasks, parseNote } = await parseScheduleFile(file);
-    updateProjectExtras(activeProject.id, { scheduleData: { fileName: file.name, tasks, parseNote } });
+    const prev = activeExtras.scheduleData;
+    const prevTasks = prev && prev.tasks && prev.tasks.length ? prev.tasks : null;
+    // Percentages entered in the dashboard are carried onto the new file by
+    // activity name; only the schedule itself comes from the upload.
+    const nextTasks = prevTasks ? mergeSchedulePercents(prevTasks, tasks) : tasks;
+    const changeNotes = prevTasks ? buildScheduleChangeNotes(compareSchedules(prevTasks, tasks)) : [];
+    updateProjectExtras(activeProject.id, {
+      scheduleData: {
+        ...prev || {},
+        fileName: file.name,
+        tasks: nextTasks,
+        parseNote,
+        // Replaced on every upload — so last upload's notes disappear when the
+        // new file brings no changes, exactly as requested.
+        changeNotes,
+        lastUpdated: { timestamp: Date.now(), email: loggedInEmail || null }
+      }
+    });
     setFunctionEditOpen(false);
+    setScheduleChangeReport(changeNotes.length ? changeNotes : null);
   };
   const handleScheduleRemove = () => {
     updateProjectExtras(activeProject.id, { scheduleData: null });
@@ -4709,7 +5191,13 @@ function ProjectDashboardApp() {
         onUploadFile: handleFunctionFileUpload,
         onRemoveFile: handleFunctionFileRemove,
         onUploadSchedule: handleScheduleFile,
-        onRemoveSchedule: handleScheduleRemove
+        onRemoveSchedule: handleScheduleRemove,
+        printBrand: {
+          logoUrl: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL,
+          accent: viewData.accent && viewData.accent.accent || "#1A559E",
+          footerImg: typeof DEFAULT_PDF_FOOTER !== "undefined" ? DEFAULT_PDF_FOOTER : "",
+          footerText: ""
+        }
       }
     );
   })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
@@ -4899,7 +5387,28 @@ function ProjectDashboardApp() {
       value: newProjectName,
       onChange: (e) => setNewProjectName(e.target.value)
     }
-  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz"), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: "auto" } }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { style: { borderTop: "1px solid rgba(255,255,255,0.12)", marginTop: 8, marginBottom: 8 } }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz"), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), scheduleChangeReport && /* @__PURE__ */ React15.createElement(
+      "div",
+      { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 640, padding: 20 }, onClick: () => setScheduleChangeReport(null) },
+      /* @__PURE__ */ React15.createElement(
+        "div",
+        { className: "scheduleChangeModal", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+        /* @__PURE__ */ React15.createElement("div", { className: "scheduleChangeHead" }, /* @__PURE__ */ React15.createElement(Heart3, { size: 18, strokeWidth: 2.2, fill: "currentColor" }), /* @__PURE__ */ React15.createElement("h2", null, isRTL ? "שימו לב — לפעילויות מטה עודכנו תאריכים / משך" : "Please note — the activities below had dates / duration updated")),
+        ["updated", "added", "removed"].map((group) => {
+          const items = scheduleChangeReport.filter((n) => n.change === group);
+          if (!items.length) return null;
+          const heading = group === "updated" ? isRTL ? "עודכנו תאריכים / משך" : "Dates / duration updated" : group === "added" ? isRTL ? "פעילויות חדשות בקובץ" : "New activities in the file" : isRTL ? "פעילויות שהוסרו מהקובץ" : "Activities removed from the file";
+          return /* @__PURE__ */ React15.createElement(
+            "div",
+            { key: group, className: "scheduleChangeGroup" },
+            /* @__PURE__ */ React15.createElement("h3", null, heading, " ", /* @__PURE__ */ React15.createElement("span", { className: "numerals" }, "(", items.length, ")")),
+            /* @__PURE__ */ React15.createElement("ul", null, items.map((n) => /* @__PURE__ */ React15.createElement("li", { key: n.id, dir: "auto" }, formatScheduleChangeNote(n, lang))))
+          );
+        }),
+        /* @__PURE__ */ React15.createElement("p", { className: "scheduleChangeFoot" }, isRTL ? 'הרשימה נשמרת גם ב"הערות קריטיות ללו״ז" עד ההעלאה הבאה.' : "This list is also kept in the schedule notes until the next upload."),
+        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setScheduleChangeReport(null) }, isRTL ? "הבנתי" : "Got it")
+      )
+    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: "auto" } }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { style: { borderTop: "1px solid rgba(255,255,255,0.12)", marginTop: 8, marginBottom: 8 } }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
