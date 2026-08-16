@@ -4276,6 +4276,39 @@ function catalogLabel(entry, lang) {
 // belongs to the group being filled in. Entries with no group (anything added
 // by hand later) stay visible everywhere, and a group that has nothing of its
 // own falls back to the full list rather than showing an empty picker.
+// A catalog already saved on the server used to REPLACE the built-in one, so
+// every time the built-in lists grew, an existing installation never saw the
+// new entries. Now the two are merged: anything typed or edited by hand is kept
+// exactly as it is, and whatever is missing from the built-in lists is added.
+// Ids are kept unique — the old and the new built-in lists both start at d1/r1,
+// so a blind merge would produce two different entries sharing one id and
+// contacts would resolve to the wrong name.
+function mergeContactCatalog(stored, seed) {
+  const out = { people: stored && stored.people || [] };
+  const used = /* @__PURE__ */ new Set();
+  ["disciplines", "roles", "companies"].forEach((key) => {
+    const current = (stored && stored[key] || []).map((e) => ({ ...e }));
+    current.forEach((e) => used.add(e.id));
+    const byName = /* @__PURE__ */ new Map();
+    current.forEach((e) => byName.set(String(e.en || e.he || "").trim().toLowerCase(), e));
+    (seed[key] || []).forEach((se) => {
+      const name = String(se.en || se.he || "").trim().toLowerCase();
+      const hit = byName.get(name);
+      if (hit) {
+        if ((!hit.groups || !hit.groups.length) && se.groups && se.groups.length) hit.groups = se.groups.slice();
+        return;
+      }
+      let id = se.id;
+      while (used.has(id)) id = `${se.id}-${used.size}`;
+      used.add(id);
+      const added = { ...se, id };
+      current.push(added);
+      byName.set(name, added);
+    });
+    out[key] = current;
+  });
+  return out;
+}
 function catalogForGroup(list, group) {
   const all = list || [];
   if (!group) return all;
@@ -5511,7 +5544,7 @@ function ProjectDashboardApp() {
       try {
         const { data, error } = await supabase.from("app_state").select("value").eq("key", "contacts-catalog").maybeSingle();
         if (error) throw error;
-        if (data && data.value) setContactsCatalog(data.value);
+        if (data && data.value) setContactsCatalog(mergeContactCatalog(data.value, buildContactCatalogSeed()));
         setCatalogLoaded(true);
       } catch (e) {
         console.error("[awdash] load contacts-catalog failed — auto-save stays OFF", e);
