@@ -89,6 +89,10 @@ import {
   LifeBuoy
 } from "lucide-react";
 import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon } from "lucide-react";
+import {
+  PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
+  Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2
+} from "lucide-react";
 
 // src/config/supabase.js
 // Real auth + database. These two values are PUBLIC by design (protected by
@@ -938,6 +942,40 @@ var pdfViewer = `
           justify-content: center; cursor: pointer;
         }
         .photoLightboxClose:hover { background: rgba(255,255,255,0.28); }
+
+        /* ---------- Submittal categories ---------- */
+        .submittalCard { width: 100%; }
+        .submittalHead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .submittalIntro { flex: 1; margin: 0; font-size: 13px; font-weight: 600; color: var(--steel); }
+        /* Same tile, hover and highlight as the project board — .dashCard is
+           reused deliberately so the two screens can never drift apart. */
+        /* Four to a row, so the eight categories read as the two lines they
+           were given in. FIXED column width on purpose: with 1fr the columns
+           were sized by their content, so the tiles changed width — and moved —
+           when the labels switched language. */
+        .submittalGrid {
+          display: grid; grid-template-columns: repeat(4, 168px); justify-content: center;
+          gap: 10px; margin: 0 auto;
+        }
+        @media (max-width: 760px) {
+          .submittalGrid { grid-template-columns: repeat(2, 168px); }
+        }
+        .submittalTile { min-height: 84px; justify-content: center; }
+        .submittalTile.selected {
+          background: var(--accent-soft); border-color: var(--accent);
+          box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 22%, transparent);
+        }
+        .submittalTile.selected .cardIcon { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .submittalTile.selected .cardTitle { color: var(--accent-ink); }
+        .submittalPanel {
+          max-width: 900px; margin: 18px auto 0; border: 1px solid var(--line); border-radius: 12px;
+          background: #fff; padding: 14px 18px;
+        }
+        .submittalPanelHead {
+          display: flex; align-items: center; gap: 8px;
+          font-size: 14px; font-weight: 800; color: var(--accent-ink);
+        }
+        .submittalPanelNote { margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: var(--mist); }
 
         /* ---------- Contacts ---------- */
         /* Every cell centred, headers included — a deliberate rule for this
@@ -3837,11 +3875,12 @@ function CardView({
   const isLook = cardKey === "look";
   const isPhotos = cardKey === "photos";
   const isContacts = cardKey === "contacts";
+  const isSubmittal = cardKey === "submittal";
   const showRooms = !!roomsDataSource;
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
-  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
     FinishesByRoomCard,
     {
       dataSource: roomsDataSource,
@@ -3863,7 +3902,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && !isContacts && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -3874,7 +3913,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -4264,6 +4303,10 @@ function contactMatchesSearch(c, catalog, q) {
 function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) {
   const [open, setOpen] = useState6(false);
   const [query, setQuery] = useState6("");
+  // Until the user actually types, the box keeps showing what is already chosen
+  // and the list shows everything. Focusing used to blank the field, which hid
+  // values that had been filled in automatically.
+  const [typed, setTyped] = useState6(false);
   const boxRef = useRef5(null);
   const selected = catalogFind(options, valueId);
   useEffect5(() => {
@@ -4274,7 +4317,7 @@ function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) 
     window.addEventListener("mousedown", close);
     return () => window.removeEventListener("mousedown", close);
   }, [open]);
-  const needle = query.trim().toLowerCase();
+  const needle = typed ? query.trim().toLowerCase() : "";
   const filtered = (options || []).filter((o) => !needle || `${o.he || ""} ${o.en || ""}`.toLowerCase().includes(needle));
   return /* @__PURE__ */ React15.createElement(
     "div",
@@ -4284,12 +4327,22 @@ function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) 
       className: "catalogComboInput",
       value: open ? query : catalogLabel(selected, lang),
       placeholder: placeholder || "",
-      onFocus: () => {
-        setQuery("");
+      onFocus: (e) => {
+        const current = catalogLabel(selected, lang);
+        setQuery(current);
+        setTyped(false);
         setOpen(true);
+        const el = e.target;
+        setTimeout(() => {
+          try {
+            el.select();
+          } catch (err) {
+          }
+        }, 0);
       },
       onChange: (e) => {
         setQuery(e.target.value);
+        setTyped(true);
         setOpen(true);
       },
       dir: "auto"
@@ -4308,6 +4361,7 @@ function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) 
             onChange(o.id);
             setOpen(false);
             setQuery("");
+            setTyped(false);
           }
         },
         /* @__PURE__ */ React15.createElement("span", { className: "cc1" }, catalogLabel(o, lang)),
@@ -4319,9 +4373,10 @@ function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) 
 
 // src/cards/ContactsCard.jsx
 function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, appIsRTL, groupVisibility, contractorAccent }) {
-  const [lang, setLang] = useState6(appIsRTL ? "he" : "en");
+  // Language follows the site switch in the top bar — no second toggle here.
+  const lang = appIsRTL ? "he" : "en";
   const [q, setQ] = useState6("");
-  const isRTL = lang === "he";
+  const isRTL = appIsRTL;
   const cat = catalog || { disciplines: [], roles: [], companies: [] };
   const rows = contacts || [];
   // Visibility is decided per group, per project, by the switches in System
@@ -4448,13 +4503,7 @@ tr { page-break-inside: avoid; }
         "div",
         { className: "contactsHeadBtns" },
         /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportCsv }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.excel),
-        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportPdf }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf),
-        /* @__PURE__ */ React15.createElement(
-          "div",
-          { className: "langToggle" },
-          /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "עברית"),
-          /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "English")
-        )
+        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportPdf }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf)
       )
     ),
     groupsWithRows.length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "pdfBookStatus" }, c.empty),
@@ -4549,10 +4598,19 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   }, [catalog]);
   const vis = groupVisibility || {};
   const groupShown = (key) => key === "suppliers" ? vis[key] === true : vis[key] !== false;
+  // Under Main Contractor and Supervision the discipline is always the same, so
+  // it is filled in for you on every new row (still editable if ever needed).
+  const GROUP_FIXED_DISCIPLINE = { main: "Main Contractor", supervision: "Supervision" };
+  const defaultDisciplineFor = (groupKey) => {
+    const want = GROUP_FIXED_DISCIPLINE[groupKey];
+    if (!want) return null;
+    const hit = (cat.disciplines || []).find((d) => String(d.en || "").trim().toLowerCase() === want.toLowerCase());
+    return hit ? hit.id : null;
+  };
   const newContact = (groupKey) => ({
     id: `ct-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
     group: groupKey,
-    disciplineId: null,
+    disciplineId: defaultDisciplineFor(groupKey),
     company: { he: "", en: "" },
     person: { he: "", en: "" },
     roleId: null,
@@ -4564,7 +4622,11 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     setDraft((d) => d.concat([row]));
     setDirty(true);
     setTimeout(() => {
-      const el = document.querySelector(`[data-row="${row.id}"] input`);
+      const scope = document.querySelector(`[data-row="${row.id}"]`);
+      if (!scope) return;
+      const combos = scope.querySelectorAll(".catalogComboInput");
+      // Discipline already filled for this group? Start on the company instead.
+      const el = row.disciplineId ? combos[1] : combos[0];
       if (el) el.focus();
     }, 30);
   };
@@ -4801,6 +4863,64 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
           savedFlash === "all" ? isRTL ? "נשמר ✓" : "Saved ✓" : isRTL ? "שמירת שינויים" : "Save changes"
         )
       )
+    )
+  );
+}
+
+// src/cards/SubmittalCard.jsx
+// The categories that need submittal approvals. English is the site default, so
+// the English label leads; the Hebrew is right here for the HE toggle, no
+// translation step at runtime.
+var SUBMITTAL_CATEGORIES = [
+  { key: "architecture", en: "Architecture", he: "אדריכלות", icon: Building23 },
+  { key: "flooring", en: "Flooring", he: "ריצוף", icon: Grid3x32 },
+  { key: "cladding", en: "Cladding", he: "חיפוי", icon: Layers2 },
+  { key: "ceiling", en: "Ceiling", he: "תקרה", icon: PanelTop2 },
+  { key: "electrical", en: "Electrical", he: "חשמל", icon: Zap2 },
+  { key: "lighting", en: "Lighting", he: "תאורה", icon: Lightbulb2 },
+  { key: "hvac", en: "HVAC", he: "מיזוג אוויר", icon: AirVent2 },
+  { key: "plumbing", en: "Plumbing", he: "אינסטלציה", icon: Droplets2 }
+];
+function SubmittalCard({ appIsRTL, projectName }) {
+  // Language follows the site switch in the top bar — no second toggle here.
+  const lang = appIsRTL ? "he" : "en";
+  const [selected, setSelected] = useState6(null);
+  const isRTL = appIsRTL;
+  const label = (c) => lang === "he" ? c.he : c.en;
+  const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
+  return /* @__PURE__ */ React15.createElement(
+    "div",
+    { className: "submittalCard", dir: isRTL ? "rtl" : "ltr" },
+    /* @__PURE__ */ React15.createElement(
+      "div",
+      { className: "submittalHead" },
+      /* @__PURE__ */ React15.createElement("p", { className: "submittalIntro" }, isRTL ? "בחרו קטגוריה להגשת אישורי חומרים ודגימות." : "Choose a category to submit material and sample approvals.")
+    ),
+    /* @__PURE__ */ React15.createElement(
+      "div",
+      // The grid keeps a fixed direction so the tiles never jump to the other
+      // side of the screen when the language changes. Only the label inside a
+      // tile switches direction, and it stays inside its own tile.
+      { className: "submittalGrid", dir: "rtl" },
+      SUBMITTAL_CATEGORIES.map((c) => /* @__PURE__ */ React15.createElement(
+        "button",
+        {
+          key: c.key,
+          type: "button",
+          // Same hover-and-select behaviour as the project board cards.
+          className: `dashCard submittalTile ${selected === c.key ? "selected" : ""}`,
+          "aria-pressed": selected === c.key,
+          onClick: () => setSelected((s) => s === c.key ? null : c.key)
+        },
+        /* @__PURE__ */ React15.createElement("div", { className: "cardIcon" }, /* @__PURE__ */ React15.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
+        /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "cardTitle", dir: "auto" }, label(c)))
+      ))
+    ),
+    chosen && /* @__PURE__ */ React15.createElement(
+      "div",
+      { className: "submittalPanel" },
+      /* @__PURE__ */ React15.createElement("div", { className: "submittalPanelHead" }, /* @__PURE__ */ React15.createElement(chosen.icon, { size: 17, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", null, label(chosen))),
+      /* @__PURE__ */ React15.createElement("p", { className: "submittalPanelNote" }, isRTL ? "כאן ייכנסו הגשות האישורים לקטגוריה הזו." : "The approval submissions for this category will live here.")
     )
   );
 }
