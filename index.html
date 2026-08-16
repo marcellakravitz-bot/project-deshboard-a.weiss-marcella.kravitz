@@ -938,6 +938,108 @@ var pdfViewer = `
           justify-content: center; cursor: pointer;
         }
         .photoLightboxClose:hover { background: rgba(255,255,255,0.28); }
+
+        /* ---------- Contacts ---------- */
+        /* Every cell centred, headers included — a deliberate rule for this
+           document so the columns read as a block whichever language is on. */
+        .contactsCard { width: 100%; }
+        .contactsHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        .contactsHeadBtns { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .contactsSearch {
+          border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 13px;
+          font-family: inherit; outline: none; min-width: 200px; background: #fff; color: var(--ink);
+        }
+        .contactsSearch:focus { border-color: var(--accent); }
+        .contactsGroup { margin-bottom: 18px; }
+        .contactsGroupHead {
+          background: #14265e; color: #fff; font-weight: 800; font-size: 13px; text-align: center;
+          padding: 7px 10px; border-radius: 8px 8px 0 0;
+        }
+        .contactsTable { width: 100%; border-collapse: collapse; table-layout: fixed; background: #fff; }
+        .contactsTable th {
+          background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 800;
+          padding: 7px 6px; text-align: center;
+        }
+        .contactsTable td {
+          font-size: 12.5px; font-weight: 600; color: var(--ink); padding: 7px 6px;
+          text-align: center; vertical-align: middle; border-bottom: 1px solid var(--line-soft);
+          word-break: break-word;
+        }
+        .contactsTable tbody tr:last-child td { border-bottom: none; }
+        .contactsTable a { color: var(--ink); text-decoration: none; }
+        .contactsTable a:hover { color: var(--accent); text-decoration: underline; }
+
+        /* Admin side */
+        .contactsAdminBar { display: flex; align-items: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .contactsTabs { display: flex; gap: 6px; }
+        .contactsTabBtn {
+          border: 1px solid var(--line); background: #fff; color: var(--steel); border-radius: 999px;
+          padding: 6px 16px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+        }
+        .contactsTabBtn.on { background: #14181f; color: #fff; border-color: #14181f; }
+        .contactsProjectPick {
+          margin-inline-start: auto; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+          font-size: 13px; font-family: inherit; background: #fff; color: var(--ink); min-width: 180px;
+        }
+        .contactsAdminGroup { margin-bottom: 16px; }
+        .contactsAdminGroupHead {
+          display: flex; align-items: center; gap: 10px;
+          font-size: 12.5px; font-weight: 800; color: var(--ink);
+          background: var(--accent-soft); border-radius: 8px; padding: 7px 12px; margin-bottom: 8px;
+        }
+        .contactsClientTag {
+          margin-inline-start: auto; font-size: 10.5px; font-weight: 700; color: #a4610a;
+          background: #fff4e6; border-radius: 999px; padding: 2px 9px;
+        }
+        .contactsAdminRows { display: flex; flex-direction: column; gap: 7px; }
+        .contactsAdminRow {
+          display: grid; grid-template-columns: 1.2fr 1.2fr 1.4fr 1.2fr 0.9fr 1.3fr 26px;
+          gap: 6px; align-items: start;
+        }
+        .contactsBiField { display: flex; flex-direction: column; gap: 4px; }
+        .contactsInput {
+          width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+          font-size: 12.5px; font-family: inherit; color: var(--ink); background: #fff; outline: none;
+        }
+        .contactsInput:focus { border-color: var(--accent); }
+        .contactsRowDel {
+          width: 26px; height: 32px; border: none; background: none; color: var(--mist);
+          cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .contactsRowDel:hover { color: #d02f2f; }
+        .contactsAddRow {
+          margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;
+          border: 1px dashed var(--line); background: #fff; color: var(--steel); border-radius: 8px;
+          padding: 7px 14px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+        }
+        .contactsAddRow:hover { border-color: var(--accent); color: var(--accent); }
+        .contactsCatalogRows { display: flex; flex-direction: column; gap: 6px; }
+        .contactsCatalogRow { display: grid; grid-template-columns: 1fr 1fr 26px; gap: 6px; align-items: center; }
+        .contactsCatalogRow.head span { font-size: 11px; font-weight: 800; color: var(--mist); text-align: center; }
+
+        /* Type-ahead picker */
+        .catalogCombo { position: relative; }
+        .catalogComboInput {
+          width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
+          font-size: 12.5px; font-family: inherit; color: var(--ink); background: #fff; outline: none;
+        }
+        .catalogComboInput:focus { border-color: var(--accent); }
+        .catalogComboList {
+          position: absolute; z-index: 40; top: calc(100% + 3px); inset-inline-start: 0; width: 100%;
+          min-width: 190px; max-height: 210px; overflow-y: auto; background: #fff;
+          border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 28px -10px rgba(0,0,0,0.25);
+          padding: 4px;
+        }
+        .catalogComboItem {
+          display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: start;
+          border: none; background: none; border-radius: 6px; padding: 6px 8px; cursor: pointer;
+          font-family: inherit;
+        }
+        .catalogComboItem:hover { background: var(--bg); }
+        .catalogComboItem.on { background: var(--accent-soft); }
+        .catalogComboItem .cc1 { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+        .catalogComboItem .cc2 { font-size: 10.5px; font-weight: 600; color: var(--mist); }
+        .catalogComboEmpty { padding: 10px; font-size: 12px; font-weight: 600; color: var(--mist); text-align: center; }
 `;
 
 // src/styles/gantt.js
@@ -3671,7 +3773,9 @@ function CardView({
   onRemoveFile,
   onUploadSchedule,
   onRemoveSchedule,
-  printBrand
+  printBrand,
+  contacts,
+  contactsCatalog
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -3688,10 +3792,12 @@ function CardView({
   const isSchedule = cardKey === "schedule";
   const isLook = cardKey === "look";
   const isPhotos = cardKey === "photos";
+  const isContacts = cardKey === "contacts";
   const showRooms = !!roomsDataSource;
   const showSchedule = isSchedule && !!scheduleData;
-  const hasEditModal = canEdit && !showRooms && !isPhotos;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
+  // Contacts are maintained in System Admin, not through the upload modal.
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
     FinishesByRoomCard,
     {
       dataSource: roomsDataSource,
@@ -3713,7 +3819,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -3724,7 +3830,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -3769,6 +3875,473 @@ function CardView({
       }
     }
   )))));
+}
+
+// src/contacts/model.js
+// ---------------------------------------------------------------------------
+// Contacts. Two stores, on purpose:
+//   * the CATALOG is global (one per account, key "contacts-catalog"). A
+//     consultant's discipline/role/company is typed once and reused by every
+//     project, and fixing a name there fixes it everywhere.
+//   * the CONTACT ROWS are per project, inside projectExtras.
+// Every catalog entry is bilingual, so switching the page language switches the
+// whole document — headings, groups, disciplines, roles — with no translation
+// step. Free text the user types (company, person) is bilingual too: fill the
+// language you have, and the other falls back to it until it's filled in.
+// ---------------------------------------------------------------------------
+var CONTACT_GROUPS = [
+  { key: "main", he: "קבלן ראשי", en: "Main Contractor" },
+  { key: "supervision", he: "פיקוח", en: "Supervision" },
+  { key: "consultants", he: "יועצים", en: "Consultants" },
+  { key: "suppliers", he: "ספקים", en: "Suppliers" }
+];
+// The client always sees these three groups and never the suppliers.
+var CLIENT_CONTACT_GROUPS = ["main", "supervision", "consultants"];
+var CONTACT_CATALOG_SEED = {
+  disciplines: [
+    ["Supervision", "פיקוח"],
+    ["Main Contractor", "קבלן ראשי"],
+    ["Architecture", "אדריכלות"],
+    ["Electrical & Fire Detection Contractor", "קבלן חשמל וגילוי אש"],
+    ["Plumbing & Sprinklers Contractor", "קבלן אינסטלציה ומתזים"],
+    ["HVAC Contractor", "קבלן מיזוג אוויר"],
+    ["MEP Consulting Firm", "יועץ מערכות"],
+    ["MEP Coordination", "תיאום מערכות"],
+    ["HVAC Consultant", "יועץ מיזוג אוויר"],
+    ["Electrical Consultant", "יועץ חשמל"],
+    ["Plumbing Consultant", "יועץ אינסטלציה"],
+    ["Fire Safety Consultant", "יועץ בטיחות אש"],
+    ["Acoustic Consultant", "יועץ אקוסטיקה"],
+    ["Technical Specifications Consultant", "יועץ מפרטים"],
+    ["BIM Manager", "מנהל BIM"],
+    ["Graphics & Signage Contractor", "קבלן גרפיקה ושילוט"],
+    ["IT & Security", "תקשורת ואבטחה"],
+    ["Audio Visual (AV)", "מערכות קול ווידאו"]
+  ],
+  roles: [
+    ["Senior Project Manager", "מנהל פרויקט בכיר"],
+    ["Project Manager", "מנהל פרויקט"],
+    ["Construction Manager", "מנהל בנייה"],
+    ["Design Manager", "מנהל תכנון"],
+    ["Cost Manager", "מנהל עלויות"],
+    ["Permit Manager", "מנהל היתרים"],
+    ["VP of Operations", "סמנכ״ל תפעול"],
+    ["PMO", "PMO"],
+    ["CEO", "מנכ״ל"],
+    ["Architecture", "אדריכלות"],
+    ["Code/Life Safety Consultant", "יועץ בטיחות"],
+    ["MEP", "מערכות"],
+    ["Mechanical-System Coordination", "תיאום מערכות"],
+    ["Mechanical-AC", "מיזוג אוויר"],
+    ["Electrical", "חשמל"],
+    ["Plumbing & Fire Protection", "אינסטלציה וכיבוי אש"],
+    ["BIM Manager", "מנהל BIM"],
+    ["Acoustician", "אקוסטיקאי"],
+    ["Spec Writer", "כותב מפרטים"],
+    ["Branding/Graphics", "מיתוג וגרפיקה"]
+  ],
+  companies: [
+    ["JLL", "JLL"],
+    ["A. Weiss Construction & Supervision", "א. וייס בנייה ופיקוח"],
+    ["Setter Architects", "סטר אדריכלים"],
+    ["Lim Design", "לים דיזיין"],
+    ["HRVAC", "HRVAC"],
+    ["BimTech", "בימטך"],
+    ["Lev Avir", "לב אוויר"],
+    ["Fireless", "פיירלס"],
+    ["Antartikor", "אנטרטיקור"],
+    ["OKD", "OKD"],
+    ["Gamzu", "גמזו"]
+  ]
+};
+function buildContactCatalogSeed() {
+  const mk = (pairs, prefix) => pairs.map((p, i) => ({ id: `${prefix}${i + 1}`, en: p[0], he: p[1] }));
+  return {
+    disciplines: mk(CONTACT_CATALOG_SEED.disciplines, "d"),
+    roles: mk(CONTACT_CATALOG_SEED.roles, "r"),
+    companies: mk(CONTACT_CATALOG_SEED.companies, "c")
+  };
+}
+function catalogLabel(entry, lang) {
+  if (!entry) return "";
+  return lang === "he" ? entry.he || entry.en || "" : entry.en || entry.he || "";
+}
+function catalogFind(list, id) {
+  return (list || []).find((e) => e.id === id) || null;
+}
+// Bilingual free text: show the requested language, fall back to the other so a
+// half-filled row is never blank.
+function bilingual(value, lang) {
+  if (!value) return "";
+  if (typeof value === "string") return value;
+  return lang === "he" ? value.he || value.en || "" : value.en || value.he || "";
+}
+function contactMatchesSearch(c, catalog, q) {
+  if (!q) return true;
+  const needle = q.trim().toLowerCase();
+  const parts = [
+    bilingual(c.company, "he"), bilingual(c.company, "en"),
+    bilingual(c.person, "he"), bilingual(c.person, "en"),
+    catalogLabel(catalogFind(catalog.disciplines, c.disciplineId), "he"),
+    catalogLabel(catalogFind(catalog.disciplines, c.disciplineId), "en"),
+    catalogLabel(catalogFind(catalog.roles, c.roleId), "he"),
+    catalogLabel(catalogFind(catalog.roles, c.roleId), "en"),
+    c.phone, c.email
+  ];
+  return parts.filter(Boolean).some((p) => String(p).toLowerCase().includes(needle));
+}
+
+// src/contacts/CatalogCombo.jsx
+// Type-ahead picker over a catalog list: type a few letters, the list narrows,
+// pick the exact entry. It matches on BOTH languages, so typing "יועץ" finds an
+// entry whose English is "Consultant" and the other way round.
+function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) {
+  const [open, setOpen] = useState6(false);
+  const [query, setQuery] = useState6("");
+  const boxRef = useRef5(null);
+  const selected = catalogFind(options, valueId);
+  useEffect5(() => {
+    if (!open) return;
+    const close = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false);
+    };
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [open]);
+  const needle = query.trim().toLowerCase();
+  const filtered = (options || []).filter((o) => !needle || `${o.he || ""} ${o.en || ""}`.toLowerCase().includes(needle));
+  return /* @__PURE__ */ React15.createElement(
+    "div",
+    { className: "catalogCombo", ref: boxRef },
+    /* @__PURE__ */ React15.createElement("input", {
+      type: "text",
+      className: "catalogComboInput",
+      value: open ? query : catalogLabel(selected, lang),
+      placeholder: placeholder || "",
+      onFocus: () => {
+        setQuery("");
+        setOpen(true);
+      },
+      onChange: (e) => {
+        setQuery(e.target.value);
+        setOpen(true);
+      },
+      dir: "auto"
+    }),
+    open && /* @__PURE__ */ React15.createElement(
+      "div",
+      { className: "catalogComboList" },
+      filtered.length === 0 && /* @__PURE__ */ React15.createElement("div", { className: "catalogComboEmpty" }, isRTL ? "אין התאמה במאגר" : "No match in the catalog"),
+      filtered.slice(0, 60).map((o) => /* @__PURE__ */ React15.createElement(
+        "button",
+        {
+          key: o.id,
+          type: "button",
+          className: `catalogComboItem ${o.id === valueId ? "on" : ""}`,
+          onClick: () => {
+            onChange(o.id);
+            setOpen(false);
+            setQuery("");
+          }
+        },
+        /* @__PURE__ */ React15.createElement("span", { className: "cc1" }, catalogLabel(o, lang)),
+        /* @__PURE__ */ React15.createElement("span", { className: "cc2" }, catalogLabel(o, lang === "he" ? "en" : "he"))
+      ))
+    )
+  );
+}
+
+// src/cards/ContactsCard.jsx
+function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, appIsRTL }) {
+  const [lang, setLang] = useState6(appIsRTL ? "he" : "en");
+  const [q, setQ] = useState6("");
+  const isRTL = lang === "he";
+  const cat = catalog || { disciplines: [], roles: [], companies: [] };
+  const rows = contacts || [];
+  // Group visibility is fixed by role, not per contact: the client always sees
+  // main contractor / supervision / consultants and never the suppliers.
+  const allowed = viewerRole === "client" ? CLIENT_CONTACT_GROUPS : CONTACT_GROUPS.map((g) => g.key);
+  const visible = rows.filter((c) => allowed.indexOf(c.group) !== -1 && contactMatchesSearch(c, cat, q));
+  const COPY = {
+    he: { title: "אנשי קשר", discipline: "תחום", company: "חברה", person: "איש קשר", role: "תפקיד", phone: "טלפון", email: 'דוא"ל', empty: "לא הוזנו עדיין אנשי קשר לפרויקט.", search: "חיפוש", excel: "הורדה ל-Excel", pdf: "הורדה ל-PDF" },
+    en: { title: "Contacts", discipline: "Discipline", company: "Company", person: "Contact Person", role: "Role", phone: "Phone", email: "E-mail", empty: "No contacts have been entered for this project yet.", search: "Search", excel: "Download Excel", pdf: "Download PDF" }
+  };
+  const c = COPY[lang];
+  const cellOf = (row) => ({
+    discipline: catalogLabel(catalogFind(cat.disciplines, row.disciplineId), lang),
+    company: bilingual(row.company, lang) || catalogLabel(catalogFind(cat.companies, row.companyId), lang),
+    person: bilingual(row.person, lang),
+    role: catalogLabel(catalogFind(cat.roles, row.roleId), lang),
+    phone: row.phone || "",
+    email: row.email || ""
+  });
+  const groupsWithRows = CONTACT_GROUPS.filter((g) => allowed.indexOf(g.key) !== -1).map((g) => ({
+    group: g,
+    items: visible.filter((r) => r.group === g.key)
+  })).filter((g) => g.items.length > 0);
+  const exportCsv = () => {
+    const head = [c.discipline, c.company, c.person, c.role, c.phone, c.email];
+    const lines = [];
+    groupsWithRows.forEach((g) => {
+      lines.push([lang === "he" ? g.group.he : g.group.en, "", "", "", "", ""]);
+      lines.push(head);
+      g.items.forEach((r) => {
+        const v = cellOf(r);
+        lines.push([v.discipline, v.company, v.person, v.role, v.phone, v.email]);
+      });
+      lines.push(["", "", "", "", "", ""]);
+    });
+    const esc = (x) => `"${String(x == null ? "" : x).replace(/"/g, '""')}"`;
+    const csv = "﻿" + lines.map((r) => r.map(esc).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
+    triggerDownload(url, `${sanitizeFileNamePart(projectName || "Project")} - ${c.title}.csv`);
+    setTimeout(() => URL.revokeObjectURL(url), 1e3);
+  };
+  const exportPdf = () => {
+    const brand = printBrand || {};
+    // Same four accent slots as the schedule print: project name, sub-line,
+    // table header, page frame. Nothing else.
+    const accent = brand.accent || "#1A559E";
+    const dir = isRTL ? "rtl" : "ltr";
+    const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const body = groupsWithRows.map((g) => {
+      const head = `<tr class="grp"><td colspan="6">${esc(lang === "he" ? g.group.he : g.group.en)}</td></tr>` +
+        `<tr class="hd"><td>${esc(c.discipline)}</td><td>${esc(c.company)}</td><td>${esc(c.person)}</td><td>${esc(c.role)}</td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td></tr>`;
+      const items = g.items.map((r) => {
+        const v = cellOf(r);
+        // Kept as a real link so it stays clickable in the saved PDF.
+        const mail = v.email ? `<a href="mailto:${esc(v.email)}">${esc(v.email)}</a>` : "";
+        const tel = v.phone ? `<a href="tel:${esc(String(v.phone).replace(/[^0-9+]/g, ""))}">${esc(v.phone)}</a>` : "";
+        return `<tr><td>${esc(v.discipline)}</td><td>${esc(v.company)}</td><td>${esc(v.person)}</td><td>${esc(v.role)}</td><td>${tel}</td><td>${mail}</td></tr>`;
+      }).join("");
+      return head + items;
+    }).join("");
+    const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "";
+    const footImg = brand.footerImg ? `<div class="footImg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
+    const html = `<!doctype html><html dir="${dir}" lang="${lang}"><head><meta charset="utf-8"><title>${esc(projectName || c.title)}</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
+@page { size: A4 landscape; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { width: 297mm; min-height: 210mm; padding: 20mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.frame { min-height: calc(210mm - 40mm); border: 1.5px solid ${accent}; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; }
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 10px; margin-bottom: 16px; }
+.hdr img { max-height: 52px; max-width: 200px; object-fit: contain; }
+.ttlWrap { flex: 1; text-align: center; }
+.ttlWrap .ttl { font-size: 22px; font-weight: 800; color: ${accent}; letter-spacing: .5px; }
+.ttlWrap .sub { font-size: 11.5px; font-weight: 600; color: ${accent}; margin-top: 3px; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+/* Every cell is centred, headers included. */
+td { font-size: 9.5px; padding: 5px 6px; border-bottom: 1px solid #f0f0f2; text-align: center; vertical-align: middle; word-break: break-word; }
+tr.grp td { background: #14265e; color: #fff; font-weight: 800; font-size: 11px; text-align: center; padding: 6px; }
+tr.hd td { background: ${accent}; color: #fff; font-weight: 800; }
+a { color: #17181c; text-decoration: none; }
+tr { page-break-inside: avoid; }
+.spacer { flex: 1; }
+.footImg { margin-top: 14px; text-align: center; }
+.footImg img { max-width: 100%; max-height: 90px; object-fit: contain; }
+</style></head><body><div class="frame">
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(c.title)}</div></div></div>
+<table><colgroup><col style="width:20%"><col style="width:19%"><col style="width:17%"><col style="width:17%"><col style="width:12%"><col style="width:15%"></colgroup><tbody>${body}</tbody></table>
+<div class="spacer"></div>${footImg}</div></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) return;
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => {
+      try {
+        w.print();
+      } catch (e) {
+      }
+    }, 700);
+  };
+  return /* @__PURE__ */ React15.createElement(
+    "div",
+    { className: "contactsCard", dir: isRTL ? "rtl" : "ltr" },
+    /* @__PURE__ */ React15.createElement(
+      "div",
+      { className: "contactsHead" },
+      /* @__PURE__ */ React15.createElement("input", { type: "search", className: "contactsSearch", placeholder: c.search, value: q, onChange: (e) => setQ(e.target.value), dir: "auto" }),
+      /* @__PURE__ */ React15.createElement(
+        "div",
+        { className: "contactsHeadBtns" },
+        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportCsv }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.excel),
+        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportPdf }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf),
+        /* @__PURE__ */ React15.createElement(
+          "div",
+          { className: "langToggle" },
+          /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "עברית"),
+          /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "English")
+        )
+      )
+    ),
+    groupsWithRows.length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "pdfBookStatus" }, c.empty),
+    groupsWithRows.map((g) => /* @__PURE__ */ React15.createElement(
+      "div",
+      { key: g.group.key, className: "contactsGroup" },
+      /* @__PURE__ */ React15.createElement("div", { className: "contactsGroupHead" }, lang === "he" ? g.group.he : g.group.en),
+      /* @__PURE__ */ React15.createElement(
+        "table",
+        { className: "contactsTable" },
+        /* @__PURE__ */ React15.createElement(
+          "thead",
+          null,
+          /* @__PURE__ */ React15.createElement(
+            "tr",
+            null,
+            [c.discipline, c.company, c.person, c.role, c.phone, c.email].map((h, i) => /* @__PURE__ */ React15.createElement("th", { key: i }, h))
+          )
+        ),
+        /* @__PURE__ */ React15.createElement(
+          "tbody",
+          null,
+          g.items.map((r) => {
+            const v = cellOf(r);
+            return /* @__PURE__ */ React15.createElement(
+              "tr",
+              { key: r.id },
+              /* @__PURE__ */ React15.createElement("td", { dir: "auto" }, v.discipline),
+              /* @__PURE__ */ React15.createElement("td", { dir: "auto" }, v.company),
+              /* @__PURE__ */ React15.createElement("td", { dir: "auto" }, v.person),
+              /* @__PURE__ */ React15.createElement("td", { dir: "auto" }, v.role),
+              /* @__PURE__ */ React15.createElement("td", { className: "numerals" }, v.phone ? /* @__PURE__ */ React15.createElement("a", { href: `tel:${String(v.phone).replace(/[^0-9+]/g, "")}` }, v.phone) : ""),
+              /* @__PURE__ */ React15.createElement("td", null, v.email ? /* @__PURE__ */ React15.createElement("a", { href: `mailto:${v.email}` }, v.email) : "")
+            );
+          })
+        )
+      )
+    ))
+  );
+}
+
+// src/admin/ProjectContactsScreen.jsx
+function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, contactsByProject, onContactsChange }) {
+  const [projectId, setProjectId] = useState6(projects.length ? projects[0].id : null);
+  const [tab, setTab] = useState6("document");
+  const lang = isRTL ? "he" : "en";
+  const cat = catalog || { disciplines: [], roles: [], companies: [] };
+  const rows = (contactsByProject && contactsByProject[projectId]) || [];
+  const setRows = (next) => onContactsChange(projectId, next);
+  const addContact = (groupKey) => setRows(rows.concat([{
+    id: `ct-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
+    group: groupKey,
+    disciplineId: null,
+    companyId: null,
+    person: { he: "", en: "" },
+    roleId: null,
+    phone: "",
+    email: ""
+  }]));
+  const patchContact = (id, patch) => setRows(rows.map((r) => r.id === id ? { ...r, ...patch } : r));
+  const removeContact = (id) => setRows(rows.filter((r) => r.id !== id));
+  const listKeys = [
+    { key: "disciplines", he: "תחום", en: "Discipline", prefix: "d" },
+    { key: "roles", he: "תפקיד", en: "Role", prefix: "r" },
+    { key: "companies", he: "חברה", en: "Company", prefix: "c" }
+  ];
+  const addCatalogEntry = (listKey, prefix) => onCatalogChange({
+    ...cat,
+    [listKey]: (cat[listKey] || []).concat([{ id: `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e4)}`, he: "", en: "" }])
+  });
+  const patchCatalogEntry = (listKey, id, patch) => onCatalogChange({
+    ...cat,
+    [listKey]: (cat[listKey] || []).map((e) => e.id === id ? { ...e, ...patch } : e)
+  });
+  const removeCatalogEntry = (listKey, id) => onCatalogChange({
+    ...cat,
+    [listKey]: (cat[listKey] || []).filter((e) => e.id !== id)
+  });
+  const tabBtn = (key, he, en) => /* @__PURE__ */ React15.createElement(
+    "button",
+    { type: "button", className: `contactsTabBtn ${tab === key ? "on" : ""}`, onClick: () => setTab(key) },
+    isRTL ? he : en
+  );
+  return /* @__PURE__ */ React15.createElement(
+    React15.Fragment,
+    null,
+    /* @__PURE__ */ React15.createElement(
+      "section",
+      { className: "panel adminPanel adminPanelFlex adminPanelTall adminPanelWide" },
+      /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "מסמך אנשי קשר בפרויקט" : "Project Contacts Document"),
+      /* @__PURE__ */ React15.createElement(
+        "div",
+        { className: "contactsAdminBar" },
+        /* @__PURE__ */ React15.createElement(
+          "div",
+          { className: "contactsTabs" },
+          tabBtn("document", "אנשי הקשר בפרויקט", "Project contacts"),
+          tabBtn("catalog", "מאגר", "Catalog")
+        ),
+        tab === "document" && /* @__PURE__ */ React15.createElement(
+          "select",
+          { className: "contactsProjectPick", value: projectId || "", onChange: (e) => setProjectId(e.target.value) },
+          projects.map((p) => /* @__PURE__ */ React15.createElement("option", { key: p.id, value: p.id }, p.name))
+        )
+      ),
+      /* @__PURE__ */ React15.createElement(
+        "div",
+        { className: "adminPanelScroll", style: { marginTop: 10, paddingInlineEnd: 6 } },
+        tab === "document" && !projectId && /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים." : "No projects yet."),
+        tab === "document" && projectId && CONTACT_GROUPS.map((g) => /* @__PURE__ */ React15.createElement(
+          "div",
+          { key: g.key, className: "contactsAdminGroup" },
+          /* @__PURE__ */ React15.createElement(
+            "div",
+            { className: "contactsAdminGroupHead" },
+            /* @__PURE__ */ React15.createElement("span", null, isRTL ? g.he : g.en),
+            g.key === "suppliers" && /* @__PURE__ */ React15.createElement("span", { className: "contactsClientTag" }, isRTL ? "לא מוצג ללקוח" : "hidden from client")
+          ),
+          /* @__PURE__ */ React15.createElement(
+            "div",
+            { className: "contactsAdminRows" },
+            rows.filter((r) => r.group === g.key).map((r) => /* @__PURE__ */ React15.createElement(
+              "div",
+              { key: r.id, className: "contactsAdminRow" },
+              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: cat.disciplines, valueId: r.disciplineId, onChange: (id) => patchContact(r.id, { disciplineId: id }), lang, isRTL, placeholder: isRTL ? "תחום" : "Discipline" }),
+              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: cat.companies, valueId: r.companyId, onChange: (id) => patchContact(r.id, { companyId: id }), lang, isRTL, placeholder: isRTL ? "חברה" : "Company" }),
+              /* @__PURE__ */ React15.createElement(
+                "div",
+                { className: "contactsBiField" },
+                /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", placeholder: isRTL ? "איש קשר (עברית)" : "Contact (Hebrew)", value: (r.person && r.person.he) || "", onChange: (e) => patchContact(r.id, { person: { ...r.person || {}, he: e.target.value } }), dir: "auto" }),
+                /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", placeholder: isRTL ? "איש קשר (אנגלית)" : "Contact (English)", value: (r.person && r.person.en) || "", onChange: (e) => patchContact(r.id, { person: { ...r.person || {}, en: e.target.value } }), dir: "ltr" })
+              ),
+              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: cat.roles, valueId: r.roleId, onChange: (id) => patchContact(r.id, { roleId: id }), lang, isRTL, placeholder: isRTL ? "תפקיד" : "Role" }),
+              /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", placeholder: isRTL ? "טלפון" : "Phone", value: r.phone || "", onChange: (e) => patchContact(r.id, { phone: e.target.value }), dir: "ltr" }),
+              /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", type: "email", placeholder: isRTL ? 'דוא"ל' : "E-mail", value: r.email || "", onChange: (e) => patchContact(r.id, { email: e.target.value }), dir: "ltr" }),
+              /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsRowDel", onClick: () => removeContact(r.id), title: isRTL ? "מחיקה" : "Delete" }, /* @__PURE__ */ React15.createElement(X4, { size: 14, strokeWidth: 2.4 }))
+            ))
+          ),
+          /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addContact(g.key) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת איש קשר" : "Add contact")
+        )),
+        tab === "catalog" && listKeys.map((lk) => /* @__PURE__ */ React15.createElement(
+          "div",
+          { key: lk.key, className: "contactsAdminGroup" },
+          /* @__PURE__ */ React15.createElement("div", { className: "contactsAdminGroupHead" }, /* @__PURE__ */ React15.createElement("span", null, isRTL ? lk.he : lk.en)),
+          /* @__PURE__ */ React15.createElement(
+            "div",
+            { className: "contactsCatalogRows" },
+            /* @__PURE__ */ React15.createElement(
+              "div",
+              { className: "contactsCatalogRow head" },
+              /* @__PURE__ */ React15.createElement("span", null, "עברית"),
+              /* @__PURE__ */ React15.createElement("span", null, "English"),
+              /* @__PURE__ */ React15.createElement("span", null)
+            ),
+            (cat[lk.key] || []).map((e) => /* @__PURE__ */ React15.createElement(
+              "div",
+              { key: e.id, className: "contactsCatalogRow" },
+              /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", value: e.he || "", onChange: (ev) => patchCatalogEntry(lk.key, e.id, { he: ev.target.value }), dir: "rtl" }),
+              /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", value: e.en || "", onChange: (ev) => patchCatalogEntry(lk.key, e.id, { en: ev.target.value }), dir: "ltr" }),
+              /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsRowDel", onClick: () => removeCatalogEntry(lk.key, e.id), title: isRTL ? "מחיקה" : "Delete" }, /* @__PURE__ */ React15.createElement(X4, { size: 14, strokeWidth: 2.4 }))
+            ))
+          ),
+          /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addCatalogEntry(lk.key, lk.prefix) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספה למאגר" : "Add to catalog")
+        ))
+      )
+    )
+  );
 }
 
 // src/App.jsx
@@ -4241,6 +4814,33 @@ function ProjectDashboardApp() {
       }
     })();
   }, [contractors, stateLoaded, isAuthenticated]);
+  // Global contacts catalog — one per account, shared by every project.
+  const [contactsCatalog, setContactsCatalog] = useState6(() => buildContactCatalogSeed());
+  const [catalogLoaded, setCatalogLoaded] = useState6(false);
+  useEffect5(() => {
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase.from("app_state").select("value").eq("key", "contacts-catalog").maybeSingle();
+        if (error) throw error;
+        if (data && data.value) setContactsCatalog(data.value);
+        setCatalogLoaded(true);
+      } catch (e) {
+        console.error("[awdash] load contacts-catalog failed — auto-save stays OFF", e);
+      }
+    })();
+  }, [isAuthenticated]);
+  useEffect5(() => {
+    if (!isAuthenticated || !catalogLoaded) return;
+    (async () => {
+      try {
+        const { error } = await supabase.from("app_state").upsert({ key: "contacts-catalog", value: contactsCatalog, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+        if (error) console.error("[awdash] save contacts-catalog failed", error);
+      } catch (e) {
+        console.error("[awdash] save contacts-catalog failed", e);
+      }
+    })();
+  }, [contactsCatalog, catalogLoaded, isAuthenticated]);
   const [projectExtras, setProjectExtras] = useState6({});
   const [extrasLoaded, setExtrasLoaded] = useState6(false);
   useEffect5(() => {
@@ -4279,6 +4879,11 @@ function ProjectDashboardApp() {
     }));
   };
   const activeExtras = projectExtras[activeProject.id] || { dataSources: [], scheduleData: null };
+  const setProjectContacts = (projectId, contacts) => updateProjectExtras(projectId, { contacts });
+  const contactsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    acc[pid] = projectExtras[pid] && projectExtras[pid].contacts || [];
+    return acc;
+  }, {});
   const activeGrant = sessionGrants.find((g) => g.projectId === activeProject.id) || null;
   const isSubcontractorHere = activeGrant?.role === "subcontractor";
   const visibleCardKeys = isSubcontractorHere ? activeGrant.allowedCards || [] : null;
@@ -5262,6 +5867,8 @@ function ProjectDashboardApp() {
         onRemoveFile: handleFunctionFileRemove,
         onUploadSchedule: handleScheduleFile,
         onRemoveSchedule: handleScheduleRemove,
+        contacts: activeExtras.contacts || [],
+        contactsCatalog,
         printBrand: {
           logoUrl: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL,
           accent: viewData.accent && viewData.accent.accent || "#1A559E",
@@ -5270,7 +5877,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
@@ -5478,7 +6085,7 @@ function ProjectDashboardApp() {
         /* @__PURE__ */ React15.createElement("p", { className: "scheduleChangeFoot" }, isRTL ? 'הרשימה נשמרת גם ב"הערות קריטיות ללו״ז" עד ההעלאה הבאה.' : "This list is also kept in the schedule notes until the next upload."),
         /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setScheduleChangeReport(null) }, isRTL ? "הבנתי" : "Got it")
       )
-    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: "auto" } }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { style: { borderTop: "1px solid rgba(255,255,255,0.12)", marginTop: 8, marginBottom: 8 } }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: "auto" } }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { style: { borderTop: "1px solid rgba(255,255,255,0.12)", marginTop: 8, marginBottom: 8 } }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
