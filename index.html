@@ -1044,12 +1044,33 @@ var pdfViewer = `
           color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
         }
         .contactsPersonCell { display: flex; flex-direction: column; gap: 4px; }
-        .contactsKnownRow { display: flex; flex-wrap: wrap; gap: 4px; }
-        .contactsKnownChip {
-          border: 1px solid var(--line); background: var(--bg); color: var(--steel); border-radius: 999px;
-          padding: 2px 9px; font-size: 10.5px; font-weight: 700; cursor: pointer; font-family: inherit;
+        /* Suggestions live in a popup that only exists while the field is
+           focused, so the row stays clean while you type. */
+        .personField { position: relative; display: flex; flex-direction: column; gap: 4px; }
+        .personSuggest {
+          position: absolute; z-index: 45; top: calc(100% + 3px); inset-inline-start: 0;
+          min-width: 220px; width: max-content; max-width: 320px; max-height: 220px; overflow-y: auto;
+          background: #fff; border: 1px solid var(--line); border-radius: 10px;
+          box-shadow: 0 12px 28px -10px rgba(0,0,0,0.25); padding: 4px;
         }
-        .contactsKnownChip:hover { border-color: var(--accent); color: var(--accent); background: #fff; }
+        .personSuggestHead {
+          font-size: 10px; font-weight: 800; color: var(--mist); text-transform: uppercase;
+          letter-spacing: .04em; padding: 4px 8px 2px;
+        }
+        .personSuggestItem {
+          display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: start;
+          border: none; background: none; border-radius: 6px; padding: 6px 8px; cursor: pointer; font-family: inherit;
+        }
+        .personSuggestItem:hover { background: var(--accent-soft); }
+        .personSuggestItem .ps1 { font-size: 12.5px; font-weight: 700; color: var(--ink); }
+        .personSuggestItem .ps2 { font-size: 10.5px; font-weight: 600; color: var(--mist); }
+        .peopleCatalogRows { display: flex; flex-direction: column; gap: 4px; }
+        .peopleCatalogRow {
+          display: grid; grid-template-columns: 1.2fr 1.2fr 1.2fr 0.9fr 1.4fr 26px;
+          gap: 8px; align-items: center; font-size: 12px; font-weight: 600; color: var(--ink);
+          padding: 5px 8px; border-bottom: 1px solid var(--line-soft);
+        }
+        .peopleCatalogRow.head { font-size: 10.5px; font-weight: 800; color: var(--mist); text-transform: uppercase; }
         .contactsVisToggle {
           margin-inline-start: auto; display: flex; align-items: center; gap: 6px;
           font-size: 11px; font-weight: 700; color: var(--steel); cursor: pointer;
@@ -3986,252 +4007,231 @@ var CLIENT_CONTACT_GROUPS = ["main", "supervision", "consultants"];
 var CONTACTS_DOC_ACCENT = "#1A559E";
 var CONTACT_CATALOG_SEED = {
   disciplines: [
-    ["Supervision", "פיקוח"],
-    ["Main Contractor", "קבלן ראשי"],
-    ["Architecture", "אדריכלות"],
-    ["Electrical & Fire Detection Contractor", "קבלן חשמל וגילוי אש"],
-    ["Plumbing & Sprinklers Contractor", "קבלן אינסטלציה ומתזים"],
-    ["HVAC Contractor", "קבלן מיזוג אוויר"],
-    ["MEP Consulting Firm", "יועץ מערכות"],
-    ["MEP Coordination", "תיאום מערכות"],
-    ["HVAC Consultant", "יועץ מיזוג אוויר"],
-    ["Electrical Consultant", "יועץ חשמל"],
-    ["Plumbing Consultant", "יועץ אינסטלציה"],
-    ["Fire Safety Consultant", "יועץ בטיחות אש"],
-    ["Acoustic Consultant", "יועץ אקוסטיקה"],
-    ["Technical Specifications Consultant", "יועץ מפרטים"],
-    ["BIM Manager", "מנהל BIM"],
-    ["Graphics & Signage Contractor", "קבלן גרפיקה ושילוט"],
-    ["IT & Security", "תקשורת ואבטחה"],
-    ["Audio Visual (AV)", "מערכות קול ווידאו"],
-    ["BMS Contractor", "קבלן בקרת מבנה"],
-    ["IT & Communications Contractor", "קבלן IT ותקשורת"],
-    ["Security & Access Control Contractor", "קבלן אבטחה ובקרת כניסה"],
-    ["Audio Visual (AV) Contractor", "קבלן אודיו וידאו"],
-    ["Fireproofing Contractor", "קבלן מיגון אש"],
-    ["Drywall & Gypsum Contractor", "קבלן גבס"],
-    ["Painting Contractor", "קבלן צבע"],
-    ["Electrical Low Voltage / ELV Contractor", "קבלן מתח נמוך"],
-    ["Aluminum & Glazing Contractor", "קבלן אלומיניום וזכוכית"],
-    ["Metalwork Contractor", "קבלן מסגרות"],
-    ["Waterproofing Contractor", "קבלן איטום"],
-    ["Interior Design", "עיצוב פנים"],
-    ["MEP Consultant", "יועץ מערכות MEP"],
-    ["Fire Protection Consultant", "יועץ מערכות כיבוי אש"],
-    ["Sustainability Consultant", "יועץ קיימות"],
-    ["LEED Consultant", "יועץ LEED"],
-    ["WELL Consultant", "יועץ WELL"],
-    ["Lab Planning Consultant", "יועץ תכנון מעבדות"],
-    ["Lighting Consultant", "יועץ תאורה"],
-    ["Accessibility Consultant", "יועץ נגישות"],
-    ["Structural & Stairs Consultant", "יועץ קונסטרוקציה ומדרגות"],
-    ["Security Consultant", "יועץ ביטחון"],
-    ["IT / ICT Consultant", "יועץ IT ותקשורת"],
-    ["AV Consultant", "יועץ אודיו וידאו"],
-    ["BMS Consultant", "יועץ בקרת מבנה"],
-    ["Commissioning Consultant", "יועץ Commissioning"],
-    ["Fire-Rated Doors", "דלתות אש"],
-    ["Main Entrance Doors", "דלתות כניסה ראשיות"],
-    ["Double-Action Swing & Pivot Doors", "דלתות פנדל ודלתות Pivot"],
-    ["Acoustic Doors", "דלתות אקוסטיות"],
-    ["Security Doors", "דלתות ביטחון"],
-    ["Automatic Doors", "דלתות אוטומטיות"],
-    ["Glass Doors", "דלתות זכוכית"],
-    ["Door Hardware & Ironmongery", "פרזול ואביזרי דלתות"],
-    ["Access Control Hardware", "פרזול לבקרת כניסה"],
-    ["FTC Partitions", "מחיצות FTC"],
-    ["Glass Partitions", "מחיצות זכוכית"],
-    ["Operable / Folding Partitions", "מחיצות ניידות / מתקפלות"],
-    ["Fire Curtain", "וילון אש"],
-    ["Curtains & Blinds", "וילונות ותריסים"],
-    ["Joinery", "נגרות"],
-    ["Custom Joinery", "נגרות בהתאמה אישית"],
-    ["Metalwork", "מסגרות"],
-    ["Stainless Steel Products", "מוצרי נירוסטה"],
-    ["Mirrors", "מראות"],
-    ["Arched Door Frames", "משקופי קשת"],
-    ["Whiteboards", "לוחות מחיקים"],
-    ["Wall Protection", "הגנות קיר"],
-    ["Decorative Wall Panels", "פנלים דקורטיביים"],
-    ["Wall Cladding", "חיפויי קירות"],
-    ["Tile Flooring & Wall Cladding", "ריצוף אריחים וחיפויי קירות"],
-    ["Porcelain & Ceramic Tiles", "אריחי פורצלן וקרמיקה"],
-    ["Natural Stone", "אבן טבעית"],
-    ["LVT Flooring", "ריצוף LVT"],
-    ["Carpet Flooring", "שטיחים"],
-    ["Raised Access Flooring", "רצפה צפה / מוגבהת"],
-    ["Communication Room Flooring", "ריצוף חדרי תקשורת"],
-    ["Entrance Mats", "שטיחי כניסה"],
-    ["Skirting", "פנלים / סוקלים"],
-    ["Acoustic Wall Cladding", "חיפויי קיר אקוסטיים"],
-    ["Acoustic Ceilings", "תקרות אקוסטיות"],
-    ["Suspended Ceilings", "תקרות תלויות"],
-    ["Metal Ceilings", "תקרות מתכת"],
-    ["Acoustic Products", "מוצרים אקוסטיים"],
-    ["Lighting Fixtures", "גופי תאורה"],
-    ["Decorative Lighting", "תאורה דקורטיבית"],
-    ["Emergency Lighting", "תאורת חירום"],
-    ["Lighting Control Equipment", "ציוד בקרת תאורה"],
-    ["LED Profiles & Accessories", "פרופילי LED ואביזרים"],
-    ["Sanitary Fixtures & Accessories", "כלים סניטריים ואביזרים"],
-    ["Faucets & Mixers", "ברזים"],
-    ["Accessible Sanitary Equipment", "ציוד סניטרי נגיש"],
-    ["Kitchen Sinks", "כיורי מטבח"],
-    ["Kitchen Equipment", "ציוד מטבח"],
-    ["Kitchen Appliances", "מוצרי חשמל למטבח"],
-    ["Water Dispensers", "מתקני מים"],
-    ["Soft Furniture / Soft Furnishings", "ריהוט רך"],
-    ["System Furniture", "ריהוט מערכתי / מתועש"],
-    ["Office Furniture", "ריהוט משרדי"],
-    ["Custom Furniture", "ריהוט בהתאמה אישית"],
-    ["Workstations", "עמדות עבודה"],
-    ["Office Chairs", "כיסאות משרדיים"],
-    ["Meeting Room Furniture", "ריהוט חדרי ישיבות"],
-    ["Lockers", "לוקרים"],
-    ["Storage & Shelving Systems", "מערכות אחסון ומדפים"],
-    ["Signage", "שילוט"],
-    ["Wayfinding Signage", "שילוט הכוונה"],
-    ["External Signage", "שילוט חיצוני"],
-    ["Internal Signage", "שילוט פנים"],
-    ["Digital Signage", "שילוט דיגיטלי"],
-    ["Graphics & Branding Elements", "גרפיקה ואלמנטים מיתוגיים"],
-    ["Privacy Films & Window Graphics", "מדבקות פרטיות וגרפיקה לזכוכית"],
-    ["Glass & Glazing", "זכוכית וזיגוג"],
-    ["Aluminum Systems", "מערכות אלומיניום"],
-    ["Curtain Wall Systems", "מערכות קיר מסך"],
-    ["Green Wall Systems", "מערכות קיר ירוק"],
-    ["Indoor Planting & Planters", "צמחיית פנים ואדניות"],
-    ["Irrigation Equipment", "ציוד השקיה"],
-    ["Electrical Panels", "לוחות חשמל"],
-    ["Electrical Accessories", "אביזרי חשמל"],
-    ["Wiring Devices", "אביזרי קצה לחשמל"],
-    ["Floor Boxes", "קופסאות רצפה"],
-    ["Cable Management Systems", "מערכות ניהול כבילה"],
-    ["Cable Trays", "תעלות וסולמות כבלים"],
-    ["UPS Systems", "מערכות אל פסק"],
-    ["BMS Equipment", "ציוד בקרת מבנה"],
-    ["HVAC Equipment", "ציוד מיזוג אוויר"],
-    ["Air Distribution Products", "מפזרים, גרילים ותריסי אוויר"],
-    ["HVAC Controls", "ציוד בקרת מיזוג"],
-    ["Fire Detection Equipment", "ציוד גילוי אש"],
-    ["Fire Protection Equipment", "ציוד כיבוי אש"],
-    ["Sprinkler Equipment", "ציוד ספרינקלרים"],
-    ["Access Control Equipment", "ציוד בקרת כניסה"],
-    ["CCTV Equipment", "ציוד מצלמות אבטחה"],
-    ["Security Equipment", "ציוד אבטחה"],
-    ["Intercom Systems", "מערכות אינטרקום"],
-    ["IT Equipment", "ציוד IT"],
-    ["Network Equipment", "ציוד רשת"],
-    ["Data Racks & Cabinets", "ארונות תקשורת"],
-    ["Structured Cabling", "כבילה מובנית"],
-    ["AV Equipment", "ציוד אודיו וידאו"],
-    ["Displays & Screens", "מסכים"],
-    ["Video Conferencing Equipment", "ציוד ועידות וידאו"],
-    ["Speakers & Audio Equipment", "רמקולים וציוד שמע"],
-    ["Room Booking Systems", "מערכות זימון חדרים"],
-    ["Smart Workplace Equipment", "ציוד סביבת עבודה חכמה"],
-    ["Sensors & IoT Devices", "חיישנים וציוד IoT"],
-    ["Firestopping Materials", "חומרי איטום מעברי אש"],
-    ["Sealants & Adhesives", "חומרי איטום ודבקים"],
-    ["Paints & Coatings", "צבעים וציפויים"],
-    ["Construction Chemicals", "כימיקלים וחומרי בנייה"],
-    ["Insulation Materials", "חומרי בידוד"],
-    ["Waterproofing Materials", "חומרי איטום"],
-    ["Gypsum Boards & Accessories", "לוחות גבס ואביזרים"],
-    ["Metal Profiles", "פרופילי מתכת"],
-    ["Fasteners & Fixings", "עוגנים ואמצעי קיבוע"]
+    ["Supervision", "פיקוח", ["supervision"]],
+    ["Main Contractor", "קבלן ראשי", ["main"]],
+    ["Electrical Contractor", "קבלן חשמל", ["suppliers"]],
+    ["HVAC Contractor", "קבלן מיזוג אוויר", ["suppliers"]],
+    ["Plumbing Contractor", "קבלן אינסטלציה", ["suppliers"]],
+    ["Fire Protection Contractor", "קבלן מערכות כיבוי אש", ["suppliers"]],
+    ["BMS Contractor", "קבלן בקרת מבנה", ["suppliers"]],
+    ["Low Voltage / ELV Contractor", "קבלן מתח נמוך", ["suppliers"]],
+    ["Fire Alarm Contractor", "קבלן גילוי אש", ["suppliers"]],
+    ["Security & Access Control Contractor", "קבלן אבטחה ובקרת כניסה", ["suppliers"]],
+    ["Communication / ICT Contractor", "קבלן תקשורת", ["suppliers"]],
+    ["AV Contractor", "קבלן אודיו וידאו", ["suppliers"]],
+    ["Drywall Contractor", "קבלן גבס", ["suppliers"]],
+    ["Ceiling Contractor", "קבלן תקרות", ["suppliers"]],
+    ["Flooring Contractor", "קבלן ריצוף וחיפויים", ["suppliers"]],
+    ["Carpentry / Joinery Contractor", "קבלן נגרות", ["suppliers"]],
+    ["Doors Contractor", "קבלן דלתות", ["suppliers"]],
+    ["Aluminum & Glazing Contractor", "קבלן אלומיניום וזכוכית", ["suppliers"]],
+    ["Painting Contractor", "קבלן צבע", ["suppliers"]],
+    ["Signage Contractor", "קבלן שילוט", ["suppliers"]],
+    ["Furniture Contractor", "קבלן ריהוט", ["suppliers"]],
+    ["Acoustic Contractor", "קבלן אקוסטיקה", ["suppliers"]],
+    ["Metalwork Contractor", "קבלן מסגרות", ["suppliers"]],
+    ["Waterproofing Contractor", "קבלן איטום", ["suppliers"]],
+    ["Landscaping Contractor", "קבלן גינון", ["suppliers"]],
+    ["Green Wall Contractor", "קבלן קיר ירוק / צמחייה", ["suppliers"]],
+    ["Electrical & Fire Detection Contractor", "קבלן חשמל וגילוי אש", ["suppliers"]],
+    ["Plumbing & Sprinklers Contractor", "קבלן אינסטלציה וספרינקלרים", ["suppliers"]],
+    ["IT & Communications Contractor", "קבלן IT ותקשורת", ["suppliers"]],
+    ["Audio Visual (AV) Contractor", "קבלן אודיו וידאו", ["suppliers"]],
+    ["Fireproofing Contractor", "קבלן מיגון אש", ["suppliers"]],
+    ["Drywall & Gypsum Contractor", "קבלן גבס", ["suppliers"]],
+    ["Electrical Low Voltage / ELV Contractor", "קבלן מתח נמוך", ["suppliers"]],
+    ["Graphics & Signage Contractor", "קבלן גרפיקה ושילוט", ["suppliers"]],
+    ["Architecture", "אדריכלות", ["consultants"]],
+    ["Interior Design", "עיצוב פנים", ["consultants"]],
+    ["MEP Consultant", "יועץ מערכות MEP", ["consultants"]],
+    ["MEP Coordination", "תיאום מערכות", ["consultants"]],
+    ["HVAC Consultant", "יועץ מיזוג אוויר", ["consultants"]],
+    ["Electrical Consultant", "יועץ חשמל", ["consultants"]],
+    ["Plumbing Consultant", "יועץ אינסטלציה", ["consultants"]],
+    ["Fire Safety Consultant", "יועץ בטיחות אש", ["consultants"]],
+    ["Fire Protection Consultant", "יועץ מערכות כיבוי אש", ["consultants"]],
+    ["BIM Manager", "מנהל BIM", ["consultants"]],
+    ["Acoustic Consultant", "יועץ אקוסטיקה", ["consultants"]],
+    ["Technical Specifications Consultant", "יועץ מפרטים טכניים", ["consultants"]],
+    ["Sustainability Consultant", "יועץ קיימות", ["consultants"]],
+    ["LEED Consultant", "יועץ LEED", ["consultants"]],
+    ["WELL Consultant", "יועץ WELL", ["consultants"]],
+    ["Lab Planning Consultant", "יועץ תכנון מעבדות", ["consultants"]],
+    ["Lighting Consultant", "יועץ תאורה", ["consultants"]],
+    ["Accessibility Consultant", "יועץ נגישות", ["consultants"]],
+    ["Structural & Stairs Consultant", "יועץ קונסטרוקציה ומדרגות", ["consultants"]],
+    ["Security Consultant", "יועץ ביטחון", ["consultants"]],
+    ["IT / ICT Consultant", "יועץ IT ותקשורת", ["consultants"]],
+    ["AV Consultant", "יועץ אודיו וידאו", ["consultants"]],
+    ["BMS Consultant", "יועץ בקרת מבנה", ["consultants"]],
+    ["Commissioning Consultant", "יועץ Commissioning", ["consultants"]],
+    ["Fire-Rated Doors", "דלתות אש", ["suppliers"]],
+    ["Main Entrance Doors", "דלתות כניסה ראשיות", ["suppliers"]],
+    ["Double-Action Swing & Pivot Doors", "דלתות פנדל ודלתות Pivot", ["suppliers"]],
+    ["Acoustic Doors", "דלתות אקוסטיות", ["suppliers"]],
+    ["Security Doors", "דלתות ביטחון", ["suppliers"]],
+    ["Automatic Doors", "דלתות אוטומטיות", ["suppliers"]],
+    ["Glass Doors", "דלתות זכוכית", ["suppliers"]],
+    ["Door Hardware & Ironmongery", "פרזול ואביזרי דלתות", ["suppliers"]],
+    ["Access Control Hardware", "פרזול לבקרת כניסה", ["suppliers"]],
+    ["FTC Partitions", "מחיצות FTC", ["suppliers"]],
+    ["Glass Partitions", "מחיצות זכוכית", ["suppliers"]],
+    ["Operable / Folding Partitions", "מחיצות ניידות / מתקפלות", ["suppliers"]],
+    ["Fire Curtain", "וילון אש", ["suppliers"]],
+    ["Curtains & Blinds", "וילונות ותריסים", ["suppliers"]],
+    ["Joinery", "נגרות", ["suppliers"]],
+    ["Custom Joinery", "נגרות בהתאמה אישית", ["suppliers"]],
+    ["Metalwork", "מסגרות", ["suppliers"]],
+    ["Stainless Steel Products", "מוצרי נירוסטה", ["suppliers"]],
+    ["Mirrors", "מראות", ["suppliers"]],
+    ["Arched Door Frames", "משקופי קשת", ["suppliers"]],
+    ["Whiteboards", "לוחות מחיקים", ["suppliers"]],
+    ["Wall Protection", "הגנות קיר", ["suppliers"]],
+    ["Decorative Wall Panels", "פנלים דקורטיביים", ["suppliers"]],
+    ["Wall Cladding", "חיפויי קירות", ["suppliers"]],
+    ["Tile Flooring & Wall Cladding", "ריצוף אריחים וחיפויי קירות", ["suppliers"]],
+    ["Porcelain & Ceramic Tiles", "אריחי פורצלן וקרמיקה", ["suppliers"]],
+    ["Natural Stone", "אבן טבעית", ["suppliers"]],
+    ["LVT Flooring", "ריצוף LVT", ["suppliers"]],
+    ["Carpet Flooring", "שטיחים", ["suppliers"]],
+    ["Raised Access Flooring", "רצפה צפה / מוגבהת", ["suppliers"]],
+    ["Communication Room Flooring", "ריצוף חדרי תקשורת", ["suppliers"]],
+    ["Entrance Mats", "שטיחי כניסה", ["suppliers"]],
+    ["Skirting", "פנלים / סוקלים", ["suppliers"]],
+    ["Acoustic Wall Cladding", "חיפויי קיר אקוסטיים", ["suppliers"]],
+    ["Acoustic Ceilings", "תקרות אקוסטיות", ["suppliers"]],
+    ["Suspended Ceilings", "תקרות תלויות", ["suppliers"]],
+    ["Metal Ceilings", "תקרות מתכת", ["suppliers"]],
+    ["Acoustic Products", "מוצרים אקוסטיים", ["suppliers"]],
+    ["Lighting Fixtures", "גופי תאורה", ["suppliers"]],
+    ["Decorative Lighting", "תאורה דקורטיבית", ["suppliers"]],
+    ["Emergency Lighting", "תאורת חירום", ["suppliers"]],
+    ["Lighting Control Equipment", "ציוד בקרת תאורה", ["suppliers"]],
+    ["LED Profiles & Accessories", "פרופילי LED ואביזרים", ["suppliers"]],
+    ["Sanitary Fixtures & Accessories", "כלים סניטריים ואביזרים", ["suppliers"]],
+    ["Faucets & Mixers", "ברזים", ["suppliers"]],
+    ["Accessible Sanitary Equipment", "ציוד סניטרי נגיש", ["suppliers"]],
+    ["Kitchen Sinks", "כיורי מטבח", ["suppliers"]],
+    ["Kitchen Equipment", "ציוד מטבח", ["suppliers"]],
+    ["Kitchen Appliances", "מוצרי חשמל למטבח", ["suppliers"]],
+    ["Water Dispensers", "מתקני מים", ["suppliers"]],
+    ["Soft Furniture / Soft Furnishings", "ריהוט רך", ["suppliers"]],
+    ["System Furniture", "ריהוט מערכתי / מתועש", ["suppliers"]],
+    ["Office Furniture", "ריהוט משרדי", ["suppliers"]],
+    ["Custom Furniture", "ריהוט בהתאמה אישית", ["suppliers"]],
+    ["Workstations", "עמדות עבודה", ["suppliers"]],
+    ["Office Chairs", "כיסאות משרדיים", ["suppliers"]],
+    ["Meeting Room Furniture", "ריהוט חדרי ישיבות", ["suppliers"]],
+    ["Lockers", "לוקרים", ["suppliers"]],
+    ["Storage & Shelving Systems", "מערכות אחסון ומדפים", ["suppliers"]],
+    ["Signage", "שילוט", ["suppliers"]],
+    ["Wayfinding Signage", "שילוט הכוונה", ["suppliers"]],
+    ["External Signage", "שילוט חיצוני", ["suppliers"]],
+    ["Internal Signage", "שילוט פנים", ["suppliers"]],
+    ["Digital Signage", "שילוט דיגיטלי", ["suppliers"]],
+    ["Graphics & Branding Elements", "גרפיקה ואלמנטים מיתוגיים", ["suppliers"]],
+    ["Privacy Films & Window Graphics", "מדבקות פרטיות וגרפיקה לזכוכית", ["suppliers"]],
+    ["Glass & Glazing", "זכוכית וזיגוג", ["suppliers"]],
+    ["Aluminum Systems", "מערכות אלומיניום", ["suppliers"]],
+    ["Curtain Wall Systems", "מערכות קיר מסך", ["suppliers"]],
+    ["Green Wall Systems", "מערכות קיר ירוק", ["suppliers"]],
+    ["Indoor Planting & Planters", "צמחיית פנים ואדניות", ["suppliers"]],
+    ["Irrigation Equipment", "ציוד השקיה", ["suppliers"]],
+    ["Electrical Panels", "לוחות חשמל", ["suppliers"]],
+    ["Electrical Accessories", "אביזרי חשמל", ["suppliers"]],
+    ["Wiring Devices", "אביזרי קצה לחשמל", ["suppliers"]],
+    ["Floor Boxes", "קופסאות רצפה", ["suppliers"]],
+    ["Cable Management Systems", "מערכות ניהול כבילה", ["suppliers"]],
+    ["Cable Trays", "תעלות וסולמות כבלים", ["suppliers"]],
+    ["UPS Systems", "מערכות אל פסק", ["suppliers"]],
+    ["BMS Equipment", "ציוד בקרת מבנה", ["suppliers"]],
+    ["HVAC Equipment", "ציוד מיזוג אוויר", ["suppliers"]],
+    ["Air Distribution Products", "מפזרים, גרילים ותריסי אוויר", ["suppliers"]],
+    ["HVAC Controls", "ציוד בקרת מיזוג", ["suppliers"]],
+    ["Fire Detection Equipment", "ציוד גילוי אש", ["suppliers"]],
+    ["Fire Protection Equipment", "ציוד כיבוי אש", ["suppliers"]],
+    ["Sprinkler Equipment", "ציוד ספרינקלרים", ["suppliers"]],
+    ["Access Control Equipment", "ציוד בקרת כניסה", ["suppliers"]],
+    ["CCTV Equipment", "ציוד מצלמות אבטחה", ["suppliers"]],
+    ["Security Equipment", "ציוד אבטחה", ["suppliers"]],
+    ["Intercom Systems", "מערכות אינטרקום", ["suppliers"]],
+    ["IT Equipment", "ציוד IT", ["suppliers"]],
+    ["Network Equipment", "ציוד רשת", ["suppliers"]],
+    ["Data Racks & Cabinets", "ארונות תקשורת", ["suppliers"]],
+    ["Structured Cabling", "כבילה מובנית", ["suppliers"]],
+    ["AV Equipment", "ציוד אודיו וידאו", ["suppliers"]],
+    ["Displays & Screens", "מסכים", ["suppliers"]],
+    ["Video Conferencing Equipment", "ציוד ועידות וידאו", ["suppliers"]],
+    ["Speakers & Audio Equipment", "רמקולים וציוד שמע", ["suppliers"]],
+    ["Room Booking Systems", "מערכות זימון חדרים", ["suppliers"]],
+    ["Smart Workplace Equipment", "ציוד סביבת עבודה חכמה", ["suppliers"]],
+    ["Sensors & IoT Devices", "חיישנים וציוד IoT", ["suppliers"]],
+    ["Firestopping Materials", "חומרי איטום מעברי אש", ["suppliers"]],
+    ["Sealants & Adhesives", "חומרי איטום ודבקים", ["suppliers"]],
+    ["Paints & Coatings", "צבעים וציפויים", ["suppliers"]],
+    ["Construction Chemicals", "כימיקלים וחומרי בנייה", ["suppliers"]],
+    ["Insulation Materials", "חומרי בידוד", ["suppliers"]],
+    ["Waterproofing Materials", "חומרי איטום", ["suppliers"]],
+    ["Gypsum Boards & Accessories", "לוחות גבס ואביזרים", ["suppliers"]],
+    ["Metal Profiles", "פרופילי מתכת", ["suppliers"]],
+    ["Fasteners & Fixings", "עוגנים ואמצעי קיבוע", ["suppliers"]]
   ],
   roles: [
-    ["Senior Project Manager", "מנהל פרויקט בכיר"],
-    ["Project Manager", "מנהל פרויקט"],
-    ["Construction Manager", "מנהל בנייה"],
-    ["Design Manager", "מנהל תכנון"],
-    ["Cost Manager", "מנהל עלויות"],
-    ["Permit Manager", "מנהל היתרים"],
-    ["VP of Operations", "סמנכ״ל תפעול"],
-    ["PMO", "PMO"],
-    ["CEO", "מנכ״ל"],
-    ["Architecture", "אדריכלות"],
-    ["Code/Life Safety Consultant", "יועץ בטיחות"],
-    ["MEP", "מערכות"],
-    ["Mechanical-System Coordination", "תיאום מערכות"],
-    ["Mechanical-AC", "מיזוג אוויר"],
-    ["Electrical", "חשמל"],
-    ["Plumbing & Fire Protection", "אינסטלציה וכיבוי אש"],
-    ["BIM Manager", "מנהל BIM"],
-    ["Acoustician", "אקוסטיקאי"],
-    ["Spec Writer", "כותב מפרטים"],
-    ["Branding/Graphics", "מיתוג וגרפיקה"],
-    ["Construction Supervisor", "מפקח ביצוע"],
-    ["MEP Supervisor", "מפקח מערכות"],
-    ["VP of Construction", "סמנכ״ל ביצוע"],
-    ["Vice President (VP)", "סמנכ״ל"],
-    ["CEO – Chief Executive Officer", "מנכ״ל"],
-    ["Owner", "בעלים"],
-    ["Regional Manager", "מנהל אזור"],
-    ["Site Manager", "מנהל אתר"],
-    ["General Foreman", "מנהל עבודה"],
-    ["Project Coordinator", "מתאם פרויקט"],
-    ["Technical Coordinator", "מתאם טכני"],
-    ["MEP Coordinator", "מתאם מערכות"],
-    ["Planning Engineer", "מהנדס תכנון ובקרה"],
-    ["Quantity Surveyor (QS)", "חשב כמויות"],
-    ["Procurement Manager", "מנהל רכש"],
-    ["Document Controller", "בקר מסמכים"],
-    ["QA/QC Manager", "מנהל אבטחת ובקרת איכות"],
-    ["Safety Officer", "ממונה בטיחות"],
-    ["Logistics Manager", "מנהל לוגיסטיקה"],
-    ["Electrical Contractor", "קבלן חשמל"],
-    ["HVAC Contractor", "קבלן מיזוג אוויר"],
-    ["Plumbing Contractor", "קבלן אינסטלציה"],
-    ["Fire Protection Contractor", "קבלן מערכות כיבוי אש"],
-    ["BMS Contractor", "קבלן בקרת מבנה"],
-    ["Low Voltage / ELV Contractor", "קבלן מתח נמוך"],
-    ["Fire Alarm Contractor", "קבלן גילוי אש"],
-    ["Security & Access Control Contractor", "קבלן אבטחה ובקרת כניסה"],
-    ["Communication / ICT Contractor", "קבלן תקשורת"],
-    ["AV Contractor", "קבלן אודיו וידאו"],
-    ["Drywall Contractor", "קבלן גבס"],
-    ["Ceiling Contractor", "קבלן תקרות"],
-    ["Flooring Contractor", "קבלן ריצוף וחיפויים"],
-    ["Carpentry / Joinery Contractor", "קבלן נגרות"],
-    ["Doors Contractor", "קבלן דלתות"],
-    ["Aluminum & Glazing Contractor", "קבלן אלומיניום וזכוכית"],
-    ["Painting Contractor", "קבלן צבע"],
-    ["Signage Contractor", "קבלן שילוט"],
-    ["Furniture Contractor", "קבלן ריהוט"],
-    ["Acoustic Contractor", "קבלן אקוסטיקה"],
-    ["Metalwork Contractor", "קבלן מסגרות"],
-    ["Waterproofing Contractor", "קבלן איטום"],
-    ["Landscaping Contractor", "קבלן גינון"],
-    ["Green Wall Contractor", "קבלן קיר ירוק / צמחייה"],
-    ["Architect", "אדריכל"],
-    ["Interior Designer", "מעצב פנים"],
-    ["Structural Engineer", "מהנדס קונסטרוקציה"],
-    ["MEP Consultant", "יועץ מערכות MEP"],
-    ["Mechanical / HVAC Consultant", "יועץ מיזוג אוויר"],
-    ["Electrical Consultant", "יועץ חשמל"],
-    ["Plumbing Consultant", "יועץ אינסטלציה"],
-    ["Fire Protection Consultant", "יועץ מערכות כיבוי אש"],
-    ["Code / Life Safety Consultant", "יועץ תקינה ובטיחות חיים"],
-    ["Fire Safety Consultant", "יועץ בטיחות אש"],
-    ["BMS Consultant", "יועץ בקרת מבנה"],
-    ["Lighting Consultant", "יועץ תאורה"],
-    ["Acoustic Consultant", "יועץ אקוסטיקה"],
-    ["Accessibility Consultant", "יועץ נגישות"],
-    ["Sustainability Consultant", "יועץ קיימות"],
-    ["LEED Consultant", "יועץ LEED"],
-    ["WELL Consultant", "יועץ WELL"],
-    ["Security Consultant", "יועץ ביטחון / אבטחה"],
-    ["ICT / Telecom Consultant", "יועץ תקשורת"],
-    ["AV Consultant", "יועץ אודיו וידאו"],
-    ["Façade Consultant", "יועץ חזיתות"],
-    ["Elevator Consultant", "יועץ מעליות"],
-    ["Signage / Wayfinding Consultant", "יועץ שילוט והתמצאות"],
-    ["Branding & Graphics Consultant", "יועץ מיתוג וגרפיקה"],
-    ["Specification Writer", "עורך מפרטים"],
-    ["Lab Planner", "מתכנן מעבדות"],
-    ["Commissioning Consultant / CxA", "יועץ Commissioning"]
+    ["Senior Project Manager", "מנהל פרויקט בכיר", ["supervision"]],
+    ["Project Manager", "מנהל פרויקט", ["supervision", "main"]],
+    ["Cost Manager", "מנהל עלויות", ["supervision"]],
+    ["Design Manager", "מנהל תכנון", ["supervision"]],
+    ["Construction Manager", "מנהל ביצוע / מנהל הקמה", ["supervision", "main"]],
+    ["Permit Manager", "מנהל רישוי והיתרים", ["supervision"]],
+    ["PMO", "ניהול ובקרת פרויקטים", ["supervision"]],
+    ["Construction Supervisor", "מפקח ביצוע", ["supervision"]],
+    ["MEP Supervisor", "מפקח מערכות", ["supervision"]],
+    ["VP of Operations", "סמנכ״ל תפעול", ["main"]],
+    ["VP of Construction", "סמנכ״ל ביצוע", ["main"]],
+    ["Vice President (VP)", "סמנכ״ל", ["main"]],
+    ["CEO – Chief Executive Officer", "מנכ״ל", ["main"]],
+    ["Owner", "בעלים", ["main"]],
+    ["Regional Manager", "מנהל אזור", ["main"]],
+    ["Site Manager", "מנהל אתר", ["main"]],
+    ["General Foreman", "מנהל עבודה", ["main"]],
+    ["Project Coordinator", "מתאם פרויקט", ["main"]],
+    ["Technical Coordinator", "מתאם טכני", ["main"]],
+    ["MEP Coordinator", "מתאם מערכות", ["main"]],
+    ["Planning Engineer", "מהנדס תכנון ובקרה", ["main"]],
+    ["Quantity Surveyor (QS)", "חשב כמויות", ["main"]],
+    ["Procurement Manager", "מנהל רכש", ["main"]],
+    ["Document Controller", "בקר מסמכים", ["main"]],
+    ["QA/QC Manager", "מנהל אבטחת ובקרת איכות", ["main"]],
+    ["Safety Officer", "ממונה בטיחות", ["main"]],
+    ["Logistics Manager", "מנהל לוגיסטיקה", ["main"]],
+    ["Architect", "אדריכל", ["consultants"]],
+    ["Interior Designer", "מעצב פנים", ["consultants"]],
+    ["Structural Engineer", "מהנדס קונסטרוקציה", ["consultants"]],
+    ["MEP Consultant", "יועץ מערכות MEP", ["consultants"]],
+    ["Mechanical / HVAC Consultant", "יועץ מיזוג אוויר", ["consultants"]],
+    ["Electrical Consultant", "יועץ חשמל", ["consultants"]],
+    ["Plumbing Consultant", "יועץ אינסטלציה", ["consultants"]],
+    ["Fire Protection Consultant", "יועץ מערכות כיבוי אש", ["consultants"]],
+    ["Code / Life Safety Consultant", "יועץ תקינה ובטיחות חיים", ["consultants"]],
+    ["Fire Safety Consultant", "יועץ בטיחות אש", ["consultants"]],
+    ["BMS Consultant", "יועץ בקרת מבנה", ["consultants"]],
+    ["Lighting Consultant", "יועץ תאורה", ["consultants"]],
+    ["Acoustic Consultant", "יועץ אקוסטיקה", ["consultants"]],
+    ["Accessibility Consultant", "יועץ נגישות", ["consultants"]],
+    ["Sustainability Consultant", "יועץ קיימות", ["consultants"]],
+    ["LEED Consultant", "יועץ LEED", ["consultants"]],
+    ["WELL Consultant", "יועץ WELL", ["consultants"]],
+    ["Security Consultant", "יועץ ביטחון / אבטחה", ["consultants"]],
+    ["ICT / Telecom Consultant", "יועץ תקשורת", ["consultants"]],
+    ["AV Consultant", "יועץ אודיו וידאו", ["consultants"]],
+    ["BIM Manager", "מנהל BIM", ["consultants"]],
+    ["Façade Consultant", "יועץ חזיתות", ["consultants"]],
+    ["Elevator Consultant", "יועץ מעליות", ["consultants"]],
+    ["Signage / Wayfinding Consultant", "יועץ שילוט והתמצאות", ["consultants"]],
+    ["Branding & Graphics Consultant", "יועץ מיתוג וגרפיקה", ["consultants"]],
+    ["Specification Writer", "עורך מפרטים", ["consultants"]],
+    ["Lab Planner", "מתכנן מעבדות", ["consultants"]],
+    ["Commissioning Consultant / CxA", "יועץ Commissioning", ["consultants"]]
   ],
   companies: [
     ["JLL", "JLL"],
@@ -4248,7 +4248,7 @@ var CONTACT_CATALOG_SEED = {
   ]
 };
 function buildContactCatalogSeed() {
-  const mk = (pairs, prefix) => pairs.map((p, i) => ({ id: `${prefix}${i + 1}`, en: p[0], he: p[1] }));
+  const mk = (pairs, prefix) => pairs.map((p, i) => ({ id: `${prefix}${i + 1}`, en: p[0], he: p[1], groups: p[2] || [] }));
   return {
     disciplines: mk(CONTACT_CATALOG_SEED.disciplines, "d"),
     roles: mk(CONTACT_CATALOG_SEED.roles, "r"),
@@ -4270,6 +4270,18 @@ function shadeDarker(hex) {
 function catalogLabel(entry, lang) {
   if (!entry) return "";
   return lang === "he" ? entry.he || entry.en || "" : entry.en || entry.he || "";
+}
+// The source spreadsheet groups its disciplines and roles under Supervision /
+// Main Contractor / Consultants / Suppliers, so a picker only offers what
+// belongs to the group being filled in. Entries with no group (anything added
+// by hand later) stay visible everywhere, and a group that has nothing of its
+// own falls back to the full list rather than showing an empty picker.
+function catalogForGroup(list, group) {
+  const all = list || [];
+  if (!group) return all;
+  const own = all.filter((e) => e.groups && e.groups.indexOf(group) !== -1);
+  if (!own.length) return all;
+  return all.filter((e) => !e.groups || !e.groups.length || e.groups.indexOf(group) !== -1);
 }
 function catalogFind(list, id) {
   return (list || []).find((e) => e.id === id) || null;
@@ -4300,7 +4312,7 @@ function contactMatchesSearch(c, catalog, q) {
 // Type-ahead picker over a catalog list: type a few letters, the list narrows,
 // pick the exact entry. It matches on BOTH languages, so typing "יועץ" finds an
 // entry whose English is "Consultant" and the other way round.
-function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) {
+function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholder, isRTL }) {
   const [open, setOpen] = useState6(false);
   const [query, setQuery] = useState6("");
   // Until the user actually types, the box keeps showing what is already chosen
@@ -4308,7 +4320,10 @@ function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) 
   // values that had been filled in automatically.
   const [typed, setTyped] = useState6(false);
   const boxRef = useRef5(null);
-  const selected = catalogFind(options, valueId);
+  // Look the chosen entry up in the FULL catalog, not in the group-filtered
+  // list: a value carried over from another group (a role remembered on a
+  // supervision contact, say) must still show its name here.
+  const selected = catalogFind(allOptions || options, valueId);
   useEffect5(() => {
     if (!open) return;
     const close = (e) => {
@@ -4351,7 +4366,7 @@ function CatalogCombo({ options, valueId, onChange, lang, placeholder, isRTL }) 
       "div",
       { className: "catalogComboList" },
       filtered.length === 0 && /* @__PURE__ */ React15.createElement("div", { className: "catalogComboEmpty" }, isRTL ? "אין התאמה במאגר" : "No match in the catalog"),
-      filtered.slice(0, 60).map((o) => /* @__PURE__ */ React15.createElement(
+      filtered.slice(0, 300).map((o) => /* @__PURE__ */ React15.createElement(
         "button",
         {
           key: o.id,
@@ -4577,6 +4592,54 @@ function CompanyField({ companies, valueId, onPick, onAddCompany, lang, isRTL })
     )
   );
 }
+// Person field: two language boxes plus a suggestion list that only appears
+// while you are in the field. The suggestions come from the People catalog —
+// everyone saved on any project — so the same person can be reused across
+// projects with one click instead of being retyped.
+function PersonField({ row, people, companies, roles, lang, isRTL, onChange, onPick }) {
+  const [open, setOpen] = useState6(false);
+  const boxRef = useRef5(null);
+  useEffect5(() => {
+    if (!open) return;
+    const close = (e) => {
+      if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false);
+    };
+    window.addEventListener("mousedown", close);
+    return () => window.removeEventListener("mousedown", close);
+  }, [open]);
+  const typed = String((row.person && (row.person.he || row.person.en)) || "").trim().toLowerCase();
+  let list = people || [];
+  // Narrow to the chosen company when there is one; otherwise the whole book.
+  if (row.companyId) list = list.filter((pp) => pp.companyId === row.companyId);
+  if (typed) list = list.filter((pp) => `${pp.person && pp.person.he || ""} ${pp.person && pp.person.en || ""}`.toLowerCase().includes(typed));
+  const nameOf = (pp) => lang === "he" ? (pp.person && (pp.person.he || pp.person.en)) || "" : (pp.person && (pp.person.en || pp.person.he)) || "";
+  const meta = (pp) => [catalogLabel(catalogFind(companies, pp.companyId), lang), catalogLabel(catalogFind(roles, pp.roleId), lang)].filter(Boolean).join(" · ");
+  return /* @__PURE__ */ React15.createElement(
+    "div",
+    { className: "personField", ref: boxRef },
+    /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", placeholder: isRTL ? "איש קשר (עברית)" : "Contact (Hebrew)", value: (row.person && row.person.he) || "", onFocus: () => setOpen(true), onChange: (e) => onChange("he", e.target.value), dir: "auto" }),
+    /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", placeholder: isRTL ? "איש קשר (אנגלית)" : "Contact (English)", value: (row.person && row.person.en) || "", onFocus: () => setOpen(true), onChange: (e) => onChange("en", e.target.value), dir: "ltr" }),
+    open && list.length > 0 && /* @__PURE__ */ React15.createElement(
+      "div",
+      { className: "personSuggest" },
+      /* @__PURE__ */ React15.createElement("div", { className: "personSuggestHead" }, isRTL ? "מהמאגר" : "From the catalog"),
+      list.slice(0, 8).map((pp) => /* @__PURE__ */ React15.createElement(
+        "button",
+        {
+          key: pp.id,
+          type: "button",
+          className: "personSuggestItem",
+          onClick: () => {
+            onPick(pp);
+            setOpen(false);
+          }
+        },
+        /* @__PURE__ */ React15.createElement("span", { className: "ps1" }, nameOf(pp)),
+        /* @__PURE__ */ React15.createElement("span", { className: "ps2" }, meta(pp))
+      ))
+    )
+  );
+}
 function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, contactsByProject, onContactsChange, groupVisibility, onGroupVisibilityChange }) {
   const [projectId, setProjectId] = useState6(projects.length ? projects[0].id : null);
   const [tab, setTab] = useState6("document");
@@ -4663,6 +4726,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   };
   const knownFor = (companyId) => (cat.people || []).filter((pp) => pp.companyId === companyId);
   const applyKnown = (rowId, k) => patchContact(rowId, {
+    companyId: k.companyId || null,
     person: { ...k.person || {} },
     roleId: k.roleId || null,
     phone: k.phone || "",
@@ -4805,23 +4869,19 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
                 onKeyDown: (e) => onRowKeyDown(e, g.key)
               },
               /* @__PURE__ */ React15.createElement("span", { className: "contactsDragHandle", title: isRTL ? "גרירה לסידור" : "Drag to reorder" }, "⋮⋮"),
-              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: cat.disciplines, valueId: r.disciplineId, onChange: (id) => patchContact(r.id, { disciplineId: id }), lang, isRTL, placeholder: isRTL ? "תחום" : "Discipline" }),
+              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: catalogForGroup(cat.disciplines, g.key), allOptions: cat.disciplines, valueId: r.disciplineId, onChange: (id) => patchContact(r.id, { disciplineId: id }), lang, isRTL, placeholder: isRTL ? "תחום" : "Discipline" }),
               /* @__PURE__ */ React15.createElement(CompanyField, { companies: cat.companies, valueId: r.companyId, onPick: (id) => pickCompany(r, id), onAddCompany: (names) => addCompany(r.id, names), lang, isRTL }),
-              /* @__PURE__ */ React15.createElement(
-                "div",
-                { className: "contactsPersonCell" },
-                biField(r, "person", "איש קשר (עברית)", "Contact (English)"),
-                knownFor(r.companyId).length > 0 && /* @__PURE__ */ React15.createElement(
-                  "div",
-                  { className: "contactsKnownRow" },
-                  knownFor(r.companyId).slice(0, 4).map((k) => /* @__PURE__ */ React15.createElement(
-                    "button",
-                    { key: k.id, type: "button", className: "contactsKnownChip", onClick: () => applyKnown(r.id, k), title: isRTL ? "מילוי מהמאגר" : "Fill from the catalog" },
-                    (k.person && (lang === "he" ? k.person.he || k.person.en : k.person.en || k.person.he)) || ""
-                  ))
-                )
-              ),
-              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: cat.roles, valueId: r.roleId, onChange: (id) => patchContact(r.id, { roleId: id }), lang, isRTL, placeholder: isRTL ? "תפקיד" : "Role" }),
+              /* @__PURE__ */ React15.createElement(PersonField, {
+                row: r,
+                people: cat.people,
+                companies: cat.companies,
+                roles: cat.roles,
+                lang,
+                isRTL,
+                onChange: (which, value) => patchContact(r.id, { person: { ...r.person || {}, [which]: value } }),
+                onPick: (pp) => applyKnown(r.id, pp)
+              }),
+              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: catalogForGroup(cat.roles, g.key), allOptions: cat.roles, valueId: r.roleId, onChange: (id) => patchContact(r.id, { roleId: id }), lang, isRTL, placeholder: isRTL ? "תפקיד" : "Role" }),
               /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", placeholder: isRTL ? "טלפון" : "Phone", value: r.phone || "", onChange: (e) => patchContact(r.id, { phone: e.target.value }), dir: "ltr" }),
               /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", type: "email", placeholder: isRTL ? 'דוא"ל' : "E-mail", value: r.email || "", onChange: (e) => patchContact(r.id, { email: e.target.value }), dir: "ltr" }),
               /* @__PURE__ */ React15.createElement(
@@ -4834,6 +4894,49 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
           ),
           /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addContact(g.key) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת איש קשר" : "Add contact")
         )),
+        tab === "catalog" && /* @__PURE__ */ React15.createElement(
+          "div",
+          { className: "contactsAdminGroup" },
+          /* @__PURE__ */ React15.createElement(
+            "div",
+            { className: "contactsAdminGroupHead" },
+            /* @__PURE__ */ React15.createElement("span", null, isRTL ? "אנשי קשר במאגר" : "Contacts catalog"),
+            /* @__PURE__ */ React15.createElement("span", { className: "contactsClientTag" }, isRTL ? "משותף לכל הפרויקטים" : "shared by every project")
+          ),
+          (cat.people || []).length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "אנשי קשר שתשמרי ייכנסו לכאן ויוצעו אוטומטית בפרויקטים הבאים." : "Contacts you save land here and are offered automatically on the next project."),
+          (cat.people || []).length > 0 && /* @__PURE__ */ React15.createElement(
+            "div",
+            { className: "peopleCatalogRows" },
+            /* @__PURE__ */ React15.createElement(
+              "div",
+              { className: "peopleCatalogRow head" },
+              /* @__PURE__ */ React15.createElement("span", null, isRTL ? "איש קשר" : "Contact"),
+              /* @__PURE__ */ React15.createElement("span", null, isRTL ? "חברה" : "Company"),
+              /* @__PURE__ */ React15.createElement("span", null, isRTL ? "תפקיד" : "Role"),
+              /* @__PURE__ */ React15.createElement("span", null, isRTL ? "טלפון" : "Phone"),
+              /* @__PURE__ */ React15.createElement("span", null, isRTL ? 'דוא"ל' : "E-mail"),
+              /* @__PURE__ */ React15.createElement("span", null)
+            ),
+            (cat.people || []).map((pp) => /* @__PURE__ */ React15.createElement(
+              "div",
+              { key: pp.id, className: "peopleCatalogRow" },
+              /* @__PURE__ */ React15.createElement("span", { dir: "auto" }, (pp.person && (lang === "he" ? pp.person.he || pp.person.en : pp.person.en || pp.person.he)) || ""),
+              /* @__PURE__ */ React15.createElement("span", { dir: "auto" }, catalogLabel(catalogFind(cat.companies, pp.companyId), lang)),
+              /* @__PURE__ */ React15.createElement("span", { dir: "auto" }, catalogLabel(catalogFind(cat.roles, pp.roleId), lang)),
+              /* @__PURE__ */ React15.createElement("span", { dir: "ltr" }, pp.phone || ""),
+              /* @__PURE__ */ React15.createElement("span", { dir: "ltr" }, pp.email || ""),
+              /* @__PURE__ */ React15.createElement("button", {
+                type: "button",
+                className: "contactsRowDel",
+                title: isRTL ? "הסרה מהמאגר" : "Remove from the catalog",
+                onClick: () => {
+                  setCatalogDraft((c) => ({ ...c, people: (c.people || []).filter((x) => x.id !== pp.id) }));
+                  setDirty(true);
+                }
+              }, /* @__PURE__ */ React15.createElement(X4, { size: 14, strokeWidth: 2.4 }))
+            ))
+          )
+        ),
         tab === "catalog" && listKeys.map((lk) => /* @__PURE__ */ React15.createElement(
           "div",
           { key: lk.key, className: "contactsAdminGroup" },
