@@ -2936,6 +2936,12 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
     const dir = he ? "rtl" : "ltr";
     const align = he ? "right" : "left";
     const brand = printBrand || {};
+    // The project's colour is used in EXACTLY four places in this document and
+    // nowhere else: the project name, the marker date, the Gantt's header row,
+    // and the page's outer frame. Everything else — the rule under the header,
+    // the bars, the status fills, the marker line, the gridlines, the phase
+    // shading — keeps its own fixed colour so the schedule reads the same way
+    // whatever colour a project is assigned.
     const accent = brand.accent || "#1A559E";
     const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const flip = (pct) => he ? 100 - pct : pct;
@@ -3029,7 +3035,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
 html, body { margin: 0; padding: 0; }
 body { width: 297mm; min-height: 210mm; padding: 20mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .frame { min-height: calc(210mm - 40mm); border: 1.5px solid ${accent}; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; }
-.hdr { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 3px solid ${accent}; padding-bottom: 10px; margin-bottom: 16px; }
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 10px; margin-bottom: 16px; }
 .hdr img { max-height: 52px; max-width: 200px; object-fit: contain; }
 .ttlWrap { flex: 1; text-align: center; }
 .ttlWrap .ttl { font-size: 22px; font-weight: 800; color: ${accent}; letter-spacing: .5px; }
@@ -4680,14 +4686,10 @@ function ProjectDashboardApp() {
   const pickPalette = (pal) => {
     updateContractor(activeContractor.id, { accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } });
   };
-  useEffect5(() => {
-    const a = (activeProject && activeProject.accent) || (activeContractor && activeContractor.accent);
-    if (!a) return;
-    const root = document.documentElement;
-    if (a.accent) root.style.setProperty("--accent", a.accent);
-    if (a.accentInk) root.style.setProperty("--accent-ink", a.accentInk);
-    if (a.accentSoft) root.style.setProperty("--accent-soft", a.accentSoft);
-  }, [activeProject, activeContractor]);
+  // NOTE: the CSS accent variables are written in exactly ONE place — the
+  // effect next to viewData below. There used to be a second effect here doing
+  // the same job from a different source, and whichever ran last won, so the
+  // dashboard colour depended on render order.
   const triggerAuthNotice = () => {
     setAuthNotice(true);
     setTimeout(() => setAuthNotice(false), 4e3);
@@ -5050,7 +5052,7 @@ function ProjectDashboardApp() {
     const payload = {
       contractorName: activeContractor.name || DEFAULT_BRAND_NAME,
       contractorLogoUrl: activeContractor.logoUrl,
-      accent: activeContractor.accent,
+      accent: p.accent || activeContractor.accent,
       projectName: p.name || t.projectName,
       floorsFrom: p.floorsFrom || defaults[0],
       floorsTo: p.floorsTo || defaults[1],
@@ -5069,7 +5071,10 @@ function ProjectDashboardApp() {
   const viewData = publicViewData || {
     contractorName: activeContractor.name || DEFAULT_BRAND_NAME,
     contractorLogoUrl: activeContractor.logoUrl,
-    accent: activeContractor.accent,
+    // The colour picked for THIS project wins; the contractor-wide colour is
+    // only the fallback. Reading the contractor colour here is what made every
+    // project print in the same burgundy no matter what was chosen per project.
+    accent: activeProject && activeProject.accent || activeContractor.accent,
     projectName: activeProject.name || t.projectName,
     floorsFrom: activeProject.floorsFrom || defaultFloorsParts[0],
     floorsTo: activeProject.floorsTo || defaultFloorsParts[1],
@@ -5091,9 +5096,11 @@ function ProjectDashboardApp() {
     if (viewData.accent) {
       root.style.setProperty("--accent", viewData.accent.accent);
       root.style.setProperty("--accent-ink", viewData.accent.accentInk);
+      if (viewData.accent.accentSoft) root.style.setProperty("--accent-soft", viewData.accent.accentSoft);
     } else {
       root.style.removeProperty("--accent");
       root.style.removeProperty("--accent-ink");
+      root.style.removeProperty("--accent-soft");
     }
   }, [viewData.accent]);
   return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("header", { className: `topbar ${view === "systemAdmin" ? "adminMode" : ""}`, dir: t.dir }, /* @__PURE__ */ React15.createElement(
