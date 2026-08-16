@@ -3941,6 +3941,10 @@ var CONTACT_GROUPS = [
 ];
 // The client always sees these three groups and never the suppliers.
 var CLIENT_CONTACT_GROUPS = ["main", "supervision", "consultants"];
+// The contacts document is a company document and is fixed to the Navy from the
+// brand palette. It deliberately does NOT follow the contractor's saved accent:
+// that accent is currently Burgundy, which is what made this page come out red.
+var CONTACTS_DOC_ACCENT = "#1A559E";
 var CONTACT_CATALOG_SEED = {
   disciplines: [
     ["Supervision", "פיקוח"],
@@ -3960,7 +3964,143 @@ var CONTACT_CATALOG_SEED = {
     ["BIM Manager", "מנהל BIM"],
     ["Graphics & Signage Contractor", "קבלן גרפיקה ושילוט"],
     ["IT & Security", "תקשורת ואבטחה"],
-    ["Audio Visual (AV)", "מערכות קול ווידאו"]
+    ["Audio Visual (AV)", "מערכות קול ווידאו"],
+    ["BMS Contractor", "קבלן בקרת מבנה"],
+    ["IT & Communications Contractor", "קבלן IT ותקשורת"],
+    ["Security & Access Control Contractor", "קבלן אבטחה ובקרת כניסה"],
+    ["Audio Visual (AV) Contractor", "קבלן אודיו וידאו"],
+    ["Fireproofing Contractor", "קבלן מיגון אש"],
+    ["Drywall & Gypsum Contractor", "קבלן גבס"],
+    ["Painting Contractor", "קבלן צבע"],
+    ["Electrical Low Voltage / ELV Contractor", "קבלן מתח נמוך"],
+    ["Aluminum & Glazing Contractor", "קבלן אלומיניום וזכוכית"],
+    ["Metalwork Contractor", "קבלן מסגרות"],
+    ["Waterproofing Contractor", "קבלן איטום"],
+    ["Interior Design", "עיצוב פנים"],
+    ["MEP Consultant", "יועץ מערכות MEP"],
+    ["Fire Protection Consultant", "יועץ מערכות כיבוי אש"],
+    ["Sustainability Consultant", "יועץ קיימות"],
+    ["LEED Consultant", "יועץ LEED"],
+    ["WELL Consultant", "יועץ WELL"],
+    ["Lab Planning Consultant", "יועץ תכנון מעבדות"],
+    ["Lighting Consultant", "יועץ תאורה"],
+    ["Accessibility Consultant", "יועץ נגישות"],
+    ["Structural & Stairs Consultant", "יועץ קונסטרוקציה ומדרגות"],
+    ["Security Consultant", "יועץ ביטחון"],
+    ["IT / ICT Consultant", "יועץ IT ותקשורת"],
+    ["AV Consultant", "יועץ אודיו וידאו"],
+    ["BMS Consultant", "יועץ בקרת מבנה"],
+    ["Commissioning Consultant", "יועץ Commissioning"],
+    ["Fire-Rated Doors", "דלתות אש"],
+    ["Main Entrance Doors", "דלתות כניסה ראשיות"],
+    ["Double-Action Swing & Pivot Doors", "דלתות פנדל ודלתות Pivot"],
+    ["Acoustic Doors", "דלתות אקוסטיות"],
+    ["Security Doors", "דלתות ביטחון"],
+    ["Automatic Doors", "דלתות אוטומטיות"],
+    ["Glass Doors", "דלתות זכוכית"],
+    ["Door Hardware & Ironmongery", "פרזול ואביזרי דלתות"],
+    ["Access Control Hardware", "פרזול לבקרת כניסה"],
+    ["FTC Partitions", "מחיצות FTC"],
+    ["Glass Partitions", "מחיצות זכוכית"],
+    ["Operable / Folding Partitions", "מחיצות ניידות / מתקפלות"],
+    ["Fire Curtain", "וילון אש"],
+    ["Curtains & Blinds", "וילונות ותריסים"],
+    ["Joinery", "נגרות"],
+    ["Custom Joinery", "נגרות בהתאמה אישית"],
+    ["Metalwork", "מסגרות"],
+    ["Stainless Steel Products", "מוצרי נירוסטה"],
+    ["Mirrors", "מראות"],
+    ["Arched Door Frames", "משקופי קשת"],
+    ["Whiteboards", "לוחות מחיקים"],
+    ["Wall Protection", "הגנות קיר"],
+    ["Decorative Wall Panels", "פנלים דקורטיביים"],
+    ["Wall Cladding", "חיפויי קירות"],
+    ["Tile Flooring & Wall Cladding", "ריצוף אריחים וחיפויי קירות"],
+    ["Porcelain & Ceramic Tiles", "אריחי פורצלן וקרמיקה"],
+    ["Natural Stone", "אבן טבעית"],
+    ["LVT Flooring", "ריצוף LVT"],
+    ["Carpet Flooring", "שטיחים"],
+    ["Raised Access Flooring", "רצפה צפה / מוגבהת"],
+    ["Communication Room Flooring", "ריצוף חדרי תקשורת"],
+    ["Entrance Mats", "שטיחי כניסה"],
+    ["Skirting", "פנלים / סוקלים"],
+    ["Acoustic Wall Cladding", "חיפויי קיר אקוסטיים"],
+    ["Acoustic Ceilings", "תקרות אקוסטיות"],
+    ["Suspended Ceilings", "תקרות תלויות"],
+    ["Metal Ceilings", "תקרות מתכת"],
+    ["Acoustic Products", "מוצרים אקוסטיים"],
+    ["Lighting Fixtures", "גופי תאורה"],
+    ["Decorative Lighting", "תאורה דקורטיבית"],
+    ["Emergency Lighting", "תאורת חירום"],
+    ["Lighting Control Equipment", "ציוד בקרת תאורה"],
+    ["LED Profiles & Accessories", "פרופילי LED ואביזרים"],
+    ["Sanitary Fixtures & Accessories", "כלים סניטריים ואביזרים"],
+    ["Faucets & Mixers", "ברזים"],
+    ["Accessible Sanitary Equipment", "ציוד סניטרי נגיש"],
+    ["Kitchen Sinks", "כיורי מטבח"],
+    ["Kitchen Equipment", "ציוד מטבח"],
+    ["Kitchen Appliances", "מוצרי חשמל למטבח"],
+    ["Water Dispensers", "מתקני מים"],
+    ["Soft Furniture / Soft Furnishings", "ריהוט רך"],
+    ["System Furniture", "ריהוט מערכתי / מתועש"],
+    ["Office Furniture", "ריהוט משרדי"],
+    ["Custom Furniture", "ריהוט בהתאמה אישית"],
+    ["Workstations", "עמדות עבודה"],
+    ["Office Chairs", "כיסאות משרדיים"],
+    ["Meeting Room Furniture", "ריהוט חדרי ישיבות"],
+    ["Lockers", "לוקרים"],
+    ["Storage & Shelving Systems", "מערכות אחסון ומדפים"],
+    ["Signage", "שילוט"],
+    ["Wayfinding Signage", "שילוט הכוונה"],
+    ["External Signage", "שילוט חיצוני"],
+    ["Internal Signage", "שילוט פנים"],
+    ["Digital Signage", "שילוט דיגיטלי"],
+    ["Graphics & Branding Elements", "גרפיקה ואלמנטים מיתוגיים"],
+    ["Privacy Films & Window Graphics", "מדבקות פרטיות וגרפיקה לזכוכית"],
+    ["Glass & Glazing", "זכוכית וזיגוג"],
+    ["Aluminum Systems", "מערכות אלומיניום"],
+    ["Curtain Wall Systems", "מערכות קיר מסך"],
+    ["Green Wall Systems", "מערכות קיר ירוק"],
+    ["Indoor Planting & Planters", "צמחיית פנים ואדניות"],
+    ["Irrigation Equipment", "ציוד השקיה"],
+    ["Electrical Panels", "לוחות חשמל"],
+    ["Electrical Accessories", "אביזרי חשמל"],
+    ["Wiring Devices", "אביזרי קצה לחשמל"],
+    ["Floor Boxes", "קופסאות רצפה"],
+    ["Cable Management Systems", "מערכות ניהול כבילה"],
+    ["Cable Trays", "תעלות וסולמות כבלים"],
+    ["UPS Systems", "מערכות אל פסק"],
+    ["BMS Equipment", "ציוד בקרת מבנה"],
+    ["HVAC Equipment", "ציוד מיזוג אוויר"],
+    ["Air Distribution Products", "מפזרים, גרילים ותריסי אוויר"],
+    ["HVAC Controls", "ציוד בקרת מיזוג"],
+    ["Fire Detection Equipment", "ציוד גילוי אש"],
+    ["Fire Protection Equipment", "ציוד כיבוי אש"],
+    ["Sprinkler Equipment", "ציוד ספרינקלרים"],
+    ["Access Control Equipment", "ציוד בקרת כניסה"],
+    ["CCTV Equipment", "ציוד מצלמות אבטחה"],
+    ["Security Equipment", "ציוד אבטחה"],
+    ["Intercom Systems", "מערכות אינטרקום"],
+    ["IT Equipment", "ציוד IT"],
+    ["Network Equipment", "ציוד רשת"],
+    ["Data Racks & Cabinets", "ארונות תקשורת"],
+    ["Structured Cabling", "כבילה מובנית"],
+    ["AV Equipment", "ציוד אודיו וידאו"],
+    ["Displays & Screens", "מסכים"],
+    ["Video Conferencing Equipment", "ציוד ועידות וידאו"],
+    ["Speakers & Audio Equipment", "רמקולים וציוד שמע"],
+    ["Room Booking Systems", "מערכות זימון חדרים"],
+    ["Smart Workplace Equipment", "ציוד סביבת עבודה חכמה"],
+    ["Sensors & IoT Devices", "חיישנים וציוד IoT"],
+    ["Firestopping Materials", "חומרי איטום מעברי אש"],
+    ["Sealants & Adhesives", "חומרי איטום ודבקים"],
+    ["Paints & Coatings", "צבעים וציפויים"],
+    ["Construction Chemicals", "כימיקלים וחומרי בנייה"],
+    ["Insulation Materials", "חומרי בידוד"],
+    ["Waterproofing Materials", "חומרי איטום"],
+    ["Gypsum Boards & Accessories", "לוחות גבס ואביזרים"],
+    ["Metal Profiles", "פרופילי מתכת"],
+    ["Fasteners & Fixings", "עוגנים ואמצעי קיבוע"]
   ],
   roles: [
     ["Senior Project Manager", "מנהל פרויקט בכיר"],
@@ -3982,7 +4122,77 @@ var CONTACT_CATALOG_SEED = {
     ["BIM Manager", "מנהל BIM"],
     ["Acoustician", "אקוסטיקאי"],
     ["Spec Writer", "כותב מפרטים"],
-    ["Branding/Graphics", "מיתוג וגרפיקה"]
+    ["Branding/Graphics", "מיתוג וגרפיקה"],
+    ["Construction Supervisor", "מפקח ביצוע"],
+    ["MEP Supervisor", "מפקח מערכות"],
+    ["VP of Construction", "סמנכ״ל ביצוע"],
+    ["Vice President (VP)", "סמנכ״ל"],
+    ["CEO – Chief Executive Officer", "מנכ״ל"],
+    ["Owner", "בעלים"],
+    ["Regional Manager", "מנהל אזור"],
+    ["Site Manager", "מנהל אתר"],
+    ["General Foreman", "מנהל עבודה"],
+    ["Project Coordinator", "מתאם פרויקט"],
+    ["Technical Coordinator", "מתאם טכני"],
+    ["MEP Coordinator", "מתאם מערכות"],
+    ["Planning Engineer", "מהנדס תכנון ובקרה"],
+    ["Quantity Surveyor (QS)", "חשב כמויות"],
+    ["Procurement Manager", "מנהל רכש"],
+    ["Document Controller", "בקר מסמכים"],
+    ["QA/QC Manager", "מנהל אבטחת ובקרת איכות"],
+    ["Safety Officer", "ממונה בטיחות"],
+    ["Logistics Manager", "מנהל לוגיסטיקה"],
+    ["Electrical Contractor", "קבלן חשמל"],
+    ["HVAC Contractor", "קבלן מיזוג אוויר"],
+    ["Plumbing Contractor", "קבלן אינסטלציה"],
+    ["Fire Protection Contractor", "קבלן מערכות כיבוי אש"],
+    ["BMS Contractor", "קבלן בקרת מבנה"],
+    ["Low Voltage / ELV Contractor", "קבלן מתח נמוך"],
+    ["Fire Alarm Contractor", "קבלן גילוי אש"],
+    ["Security & Access Control Contractor", "קבלן אבטחה ובקרת כניסה"],
+    ["Communication / ICT Contractor", "קבלן תקשורת"],
+    ["AV Contractor", "קבלן אודיו וידאו"],
+    ["Drywall Contractor", "קבלן גבס"],
+    ["Ceiling Contractor", "קבלן תקרות"],
+    ["Flooring Contractor", "קבלן ריצוף וחיפויים"],
+    ["Carpentry / Joinery Contractor", "קבלן נגרות"],
+    ["Doors Contractor", "קבלן דלתות"],
+    ["Aluminum & Glazing Contractor", "קבלן אלומיניום וזכוכית"],
+    ["Painting Contractor", "קבלן צבע"],
+    ["Signage Contractor", "קבלן שילוט"],
+    ["Furniture Contractor", "קבלן ריהוט"],
+    ["Acoustic Contractor", "קבלן אקוסטיקה"],
+    ["Metalwork Contractor", "קבלן מסגרות"],
+    ["Waterproofing Contractor", "קבלן איטום"],
+    ["Landscaping Contractor", "קבלן גינון"],
+    ["Green Wall Contractor", "קבלן קיר ירוק / צמחייה"],
+    ["Architect", "אדריכל"],
+    ["Interior Designer", "מעצב פנים"],
+    ["Structural Engineer", "מהנדס קונסטרוקציה"],
+    ["MEP Consultant", "יועץ מערכות MEP"],
+    ["Mechanical / HVAC Consultant", "יועץ מיזוג אוויר"],
+    ["Electrical Consultant", "יועץ חשמל"],
+    ["Plumbing Consultant", "יועץ אינסטלציה"],
+    ["Fire Protection Consultant", "יועץ מערכות כיבוי אש"],
+    ["Code / Life Safety Consultant", "יועץ תקינה ובטיחות חיים"],
+    ["Fire Safety Consultant", "יועץ בטיחות אש"],
+    ["BMS Consultant", "יועץ בקרת מבנה"],
+    ["Lighting Consultant", "יועץ תאורה"],
+    ["Acoustic Consultant", "יועץ אקוסטיקה"],
+    ["Accessibility Consultant", "יועץ נגישות"],
+    ["Sustainability Consultant", "יועץ קיימות"],
+    ["LEED Consultant", "יועץ LEED"],
+    ["WELL Consultant", "יועץ WELL"],
+    ["Security Consultant", "יועץ ביטחון / אבטחה"],
+    ["ICT / Telecom Consultant", "יועץ תקשורת"],
+    ["AV Consultant", "יועץ אודיו וידאו"],
+    ["Façade Consultant", "יועץ חזיתות"],
+    ["Elevator Consultant", "יועץ מעליות"],
+    ["Signage / Wayfinding Consultant", "יועץ שילוט והתמצאות"],
+    ["Branding & Graphics Consultant", "יועץ מיתוג וגרפיקה"],
+    ["Specification Writer", "עורך מפרטים"],
+    ["Lab Planner", "מתכנן מעבדות"],
+    ["Commissioning Consultant / CxA", "יועץ Commissioning"]
   ],
   companies: [
     ["JLL", "JLL"],
@@ -4122,7 +4332,7 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
   const allowed = viewerRole === "client" ? CONTACT_GROUPS.filter((g) => groupShown(g.key)).map((g) => g.key) : CONTACT_GROUPS.map((g) => g.key);
   // This document is a company document, so it wears the main contractor's
   // colour — not the per-project colour used by the schedule.
-  const accentColour = contractorAccent || "#14265e";
+  const accentColour = contractorAccent || CONTACTS_DOC_ACCENT;
   const visible = rows.filter((c) => allowed.indexOf(c.group) !== -1 && contactMatchesSearch(c, cat, q));
   const COPY = {
     he: { title: "אנשי קשר", discipline: "תחום", company: "חברה", person: "איש קשר", role: "תפקיד", phone: "טלפון", email: 'דוא"ל', empty: "לא הוזנו עדיין אנשי קשר לפרויקט.", search: "חיפוש", excel: "הורדה ל-Excel", pdf: "הורדה ל-PDF" },
@@ -4153,10 +4363,16 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
       });
       lines.push(["", "", "", "", "", ""]);
     });
-    const esc = (x) => `"${String(x == null ? "" : x).replace(/"/g, '""')}"`;
-    const csv = "﻿" + lines.map((r) => r.map(esc).join(",")).join("\r\n");
-    const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
-    triggerDownload(url, `${sanitizeFileNamePart(projectName || "Project")} - ${c.title}.csv`);
+    // A real .xlsx workbook, not a renamed CSV — Excel opens it straight up with
+    // the Hebrew intact and no import dialog.
+    const ws = XLSX3.utils.aoa_to_sheet(lines);
+    ws["!cols"] = [{ wch: 26 }, { wch: 24 }, { wch: 22 }, { wch: 22 }, { wch: 16 }, { wch: 26 }];
+    const wb = XLSX3.utils.book_new();
+    XLSX3.utils.book_append_sheet(wb, ws, isRTL ? "אנשי קשר" : "Contacts");
+    wb.Workbook = { Views: [{ RTL: isRTL }] };
+    const out = XLSX3.write(wb, { bookType: "xlsx", type: "array" });
+    const url = URL.createObjectURL(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    triggerDownload(url, `${sanitizeFileNamePart(projectName || "Project")} - ${c.title}.xlsx`);
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   };
   const exportPdf = () => {
@@ -4844,12 +5060,16 @@ function UserListPanel({ isRTL, projects, brandLogo }) {
   };
   const exportCsv = () => {
     const rows = buildRows();
-    const csv = rows.map((r) => r.map((c) => '"' + String(c == null ? "" : c).replace(/"/g, '""') + '"').join(",")).join("\r\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
+    // Same rule as the contacts export: a real workbook, not a renamed CSV.
+    const ws = XLSX3.utils.aoa_to_sheet(rows);
+    const wb = XLSX3.utils.book_new();
+    XLSX3.utils.book_append_sheet(wb, ws, isRTL ? "משתמשים" : "Users");
+    wb.Workbook = { Views: [{ RTL: isRTL }] };
+    const out = XLSX3.write(wb, { bookType: "xlsx", type: "array" });
+    const url = URL.createObjectURL(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
     const a = document.createElement("a");
     a.href = url;
-    a.download = "users.csv";
+    a.download = "users.xlsx";
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
@@ -6120,8 +6340,8 @@ function ProjectDashboardApp() {
         contacts: activeExtras.contacts || [],
         contactsCatalog,
         contactGroupVisibility: activeExtras.contactGroupVisibility || {},
-        // Contacts is a company document — it wears the main contractor's colour.
-        contractorAccent: activeContractor.accent && activeContractor.accent.accent || "#14265e",
+        // Fixed navy, not the project colour and not the contractor's saved accent.
+        contractorAccent: CONTACTS_DOC_ACCENT,
         printBrand: {
           logoUrl: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL,
           accent: viewData.accent && viewData.accent.accent || "#1A559E",
