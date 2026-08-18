@@ -977,6 +977,147 @@ var pdfViewer = `
         }
         .submittalPanelNote { margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: var(--mist); }
 
+        /* ---------- Submittal: folder, tracking list and form ---------- */
+        .submittalTile { position: relative; }
+        .sbTileCount {
+          position: absolute; top: 7px; inset-inline-end: 7px; min-width: 19px; height: 19px;
+          border-radius: 999px; background: var(--accent); color: #fff;
+          font-size: 11px; font-weight: 800; line-height: 19px; text-align: center; padding: 0 5px;
+        }
+        .sbCreateBtn {
+          display: inline-flex; align-items: center; gap: 7px; margin-top: 12px;
+          background: #14181f; color: #fff; border: none; border-radius: 10px;
+          padding: 10px 20px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
+        }
+        .sbCreateBtn:hover { background: #232a35; }
+        .sbListTitle {
+          margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line-soft);
+          font-size: 12.5px; font-weight: 800; color: var(--steel); letter-spacing: .3px;
+        }
+        .sbTableWrap { overflow-x: auto; margin-top: 8px; }
+        .sbTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .sbTable th {
+          background: #f3f6fa; color: var(--steel); font-weight: 800; font-size: 11.5px;
+          padding: 7px 9px; border-bottom: 1px solid var(--line); white-space: nowrap; text-align: center;
+        }
+        .sbTable td { padding: 7px 9px; border-bottom: 1px solid var(--line-soft); text-align: center; }
+        .sbTable tbody tr:hover td { background: #f8fafc; }
+        .sbNoCell { white-space: nowrap; }
+        .sbNoMain { display: block; font-weight: 800; }
+        .sbNoRev { display: block; font-size: 11px; color: var(--mist); font-weight: 700; }
+        .sbStatus {
+          display: inline-block; color: #fff; border-radius: 999px;
+          padding: 3px 11px; font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        .sbActions { white-space: nowrap; }
+        .sbIconBtn {
+          border: 1px solid var(--line); background: #fff; color: var(--steel);
+          border-radius: 7px; padding: 4px 6px; margin: 0 2px; cursor: pointer; line-height: 0;
+        }
+        .sbIconBtn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+        .sbIconBtn.danger:hover { background: #fdecec; border-color: #d02f2f; color: #d02f2f; }
+        .sbLinkBtn {
+          border: none; background: none; padding: 0; cursor: pointer; font-family: inherit;
+          font-size: 12.5px; font-weight: 700; color: var(--accent); display: inline-flex;
+          align-items: center; gap: 5px;
+        }
+        .sbLinkBtn:hover { text-decoration: underline; }
+
+        /* the form itself — one column of sections, same width as the panel */
+        .sbForm { max-width: 900px; margin: 0 auto; }
+        .sbFormHead {
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          margin-bottom: 12px;
+        }
+        .sbFormHeadBtns { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+        .sbNoBox {
+          border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; text-align: center; line-height: 1.25;
+        }
+        .sbNoBox b { display: block; font-size: 9.5px; color: var(--accent); letter-spacing: .4px; }
+        .sbNoBox span { font-size: 14px; font-weight: 800; }
+        .sbNoBox i { display: block; font-style: normal; font-size: 10.5px; color: var(--mist); font-weight: 700; }
+        .sbRoTag {
+          background: #eef0f2; color: var(--steel); border-radius: 999px;
+          padding: 4px 12px; font-size: 11.5px; font-weight: 800;
+        }
+        .sbErr { margin: 8px 0 0; color: #b02a37; font-size: 12.5px; font-weight: 700; }
+        .sbSecBar {
+          background: var(--accent); color: #fff; text-align: center;
+          font-size: 11.5px; font-weight: 800; letter-spacing: .5px;
+          padding: 5px 0; margin: 16px 0 10px; border-radius: 5px;
+        }
+        .sbGrid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+        @media (max-width: 700px) { .sbGrid2 { grid-template-columns: 1fr; } }
+        .sbField { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .sbFieldLbl { font-size: 12px; font-weight: 700; color: var(--steel); }
+
+        /* Equipment block: four fields with the picture cube beside them,
+           exactly as the cells sit in the workbook. */
+        .sbEqWrap { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 16px; align-items: start; }
+        @media (max-width: 700px) { .sbEqWrap { grid-template-columns: 1fr; } }
+        .sbEqFields { display: flex; flex-direction: column; gap: 10px; }
+        .sbImgBox {
+          position: relative; display: flex; align-items: center; justify-content: center;
+          min-height: 160px; border: 1.5px dashed var(--line); border-radius: 10px;
+          background: #fafbfc; cursor: pointer; overflow: hidden;
+        }
+        .sbImgBox.ro { cursor: default; }
+        .sbImgBox:not(.ro):hover { border-color: var(--accent); background: var(--accent-soft); }
+        .sbImgBox img { max-width: 100%; max-height: 200px; object-fit: contain; display: block; }
+        .sbImgEmpty {
+          display: flex; flex-direction: column; align-items: center; gap: 7px;
+          color: var(--mist); font-size: 12px; font-weight: 700; text-align: center; padding: 8px;
+        }
+        .sbImgClear {
+          position: absolute; top: 6px; inset-inline-end: 6px; border: none; border-radius: 999px;
+          width: 22px; height: 22px; background: rgba(20,24,31,.72); color: #fff;
+          cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+
+        .sbDocs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+        @media (max-width: 700px) { .sbDocs { grid-template-columns: 1fr; } }
+        .sbDocRow {
+          display: flex; align-items: center; gap: 8px; padding: 5px 8px;
+          border-radius: 7px; font-size: 12.5px; font-weight: 600; cursor: pointer;
+        }
+        .sbDocRow:hover { background: #f5f7fa; }
+        .sbDocName { flex: 1; min-width: 0; }
+        .sbDocOther {
+          flex: 1; min-width: 60px; padding: 4px 7px; border: 1px solid var(--line);
+          border-radius: 6px; font-size: 12px; font-family: inherit; background: #fff;
+        }
+
+        .sbReview { display: grid; grid-template-columns: 1fr 1.3fr 0.9fr; gap: 14px; align-items: start; }
+        @media (max-width: 760px) { .sbReview { grid-template-columns: 1fr; } }
+        .sbDecisions { display: flex; flex-direction: column; gap: 3px; padding-top: 18px; }
+        .sbDecRow { display: flex; align-items: center; gap: 7px; font-size: 12.5px; cursor: pointer; }
+
+        .sbSpecs {
+          margin-top: 20px; border: 1px solid var(--line); border-radius: 12px;
+          background: #fbfcfd; padding: 14px 16px;
+        }
+        .sbSpecsHead {
+          display: flex; align-items: center; gap: 7px;
+          font-size: 13px; font-weight: 800; color: var(--accent-ink); margin-bottom: 10px;
+        }
+        .sbSpecsRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .sbAiBtn {
+          display: inline-flex; align-items: center; gap: 7px;
+          background: #14181f; color: #fff; border: none; border-radius: 999px;
+          padding: 8px 18px; font-weight: 700; font-size: 12.5px; cursor: pointer; font-family: inherit;
+        }
+        .sbAiBtn:hover { background: #232a35; }
+        .sbAiBtn[disabled] { opacity: .6; cursor: default; }
+        .sbAiHint { margin: 9px 0 0; font-size: 11.5px; font-weight: 600; color: var(--mist); }
+        .sbAiMsg { margin: 7px 0 0; font-size: 12px; font-weight: 700; color: var(--accent-ink); }
+        .sbAttList { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+        .sbAttList li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
+        .sbInlineTag {
+          background: #fdf0d5; color: #8a5a00; border-radius: 999px;
+          padding: 2px 9px; font-size: 10.5px; font-weight: 800;
+        }
+        .sbSaveRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 22px 0 6px; }
+
         /* ---------- Contacts ---------- */
         /* Every cell centred, headers included — a deliberate rule for this
            document so the columns read as a block whichever language is on. */
@@ -3878,7 +4019,11 @@ function CardView({
   contacts,
   contactsCatalog,
   contactGroupVisibility,
-  contractorAccent
+  contractorAccent,
+  submittals,
+  onChangeSubmittals,
+  submittalPerms,
+  currentEmail
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -3934,7 +4079,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, viewerRole, submittalPerms, currentEmail, contacts, contactsCatalog, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -5004,9 +5149,18 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
 }
 
 // src/cards/SubmittalCard.jsx
-// The categories that need submittal approvals. English is the site default, so
-// the English label leads; the Hebrew is right here for the HE toggle, no
-// translation step at runtime.
+// -----------------------------------------------------------------------------
+// Submittal folders. Eight categories, each one a folder that holds its own
+// numbered submittals. Inside a folder: a "Create submittal" button and, right
+// underneath it, the tracking list of everything already created there.
+//
+// The form below mirrors the Excel sheet ("MATERIAL SUBMITTAL") one-to-one, and
+// every label carries both languages so the site-wide EN/HE switch flips the
+// whole document, no runtime translation.
+// -----------------------------------------------------------------------------
+import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw } from "lucide-react";
+var sbH = React15.createElement;
+var SUBMITTAL_BUCKET = "submittals";
 var SUBMITTAL_CATEGORIES = [
   { key: "architecture", en: "Architecture", he: "אדריכלות", icon: Building23 },
   { key: "flooring", en: "Flooring", he: "ריצוף", icon: Grid3x32 },
@@ -5017,50 +5171,1202 @@ var SUBMITTAL_CATEGORIES = [
   { key: "hvac", en: "HVAC", he: "מיזוג אוויר", icon: AirVent2 },
   { key: "plumbing", en: "Plumbing", he: "אינסטלציה", icon: Droplets2 }
 ];
-function SubmittalCard({ appIsRTL, projectName }) {
+
+// Every label in the sheet, in both languages. The Hebrew comes from the cell
+// comments in the source workbook so the wording is Marcella's, not a
+// translation of the English.
+var SB_L = {
+  submittalNo: { en: "SUBMITTAL NO.", he: "מספר סבמיטל" },
+  revision: { en: "Revision", he: "גירסה" },
+  projectInfo: { en: "PROJECT INFORMATION", he: "פרטי הפרויקט" },
+  projectName: { en: "Project Name", he: "שם הפרויקט" },
+  date: { en: "Date", he: "תאריך הגשה" },
+  contractor: { en: "Contractor", he: "קבלן" },
+  requiredApprovalDate: { en: "Required Approval Date", he: "תאריך נדרש לאישור" },
+  discipline: { en: "Discipline", he: "תחום" },
+  submittedBy: { en: "Submitted By", he: "הוגש ע\"י" },
+  scope: { en: "Scope", he: "הפניה לתוכנית" },
+  email: { en: "E-mail", he: "מייל" },
+  equipment: { en: "EQUIPMENT / MATERIAL DETAILS", he: "פרטי ציוד / חומר" },
+  typeId: { en: "Type ID", he: "איפיון בתוכנית" },
+  itemDescription: { en: "Item Description", he: "תיאור הפריט" },
+  modelCode: { en: "Model / Product Code", he: "דגם / מק\"ט" },
+  manufacturer: { en: "Manufacturer", he: "יצרן" },
+  picture: { en: "Picture", he: "תמונה" },
+  addPicture: { en: "Add picture", he: "העלאת תמונה" },
+  documents: { en: "SUBMITTED DOCUMENTS", he: "מסמכים מצורפים" },
+  additional: { en: "Additional Information", he: "מידע נוסף" },
+  additionalEn: { en: "General information (English)", he: "מידע כללי על הציוד באנגלית" },
+  additionalHe: { en: "General information (Hebrew)", he: "מידע כללי על הציוד בעברית" },
+  review: { en: "REVIEW & APPROVAL", he: "הערות ואישור" },
+  signature: { en: "Signature (Name & Date)", he: "חתימה + תאריך אישור + שם מלא" },
+  approvalComments: { en: "Approval Comments", he: "הערות לאישור" },
+  specs: { en: "Specification files (PDF)", he: "מפרטים מצורפים (PDF)" },
+  uploadSpec: { en: "Upload specification (PDF)", he: "העלאת מפרט (PDF)" },
+  fillWithAi: { en: "Fill with AI", he: "מילוי אוטומטי בעזרת AI" },
+  aiHint: {
+    en: "The AI reads only the files uploaded here. Anything it cannot find is written as \"No information\".",
+    he: "ה‑AI קורא אך ורק את הקבצים שהועלו כאן. כל סעיף שאין לו מקור נרשם כ‏\"אין מידע\"."
+  },
+  create: { en: "Create submittal", he: "צור סבמיטל" },
+  noSubmittals: { en: "No submittals in this folder yet.", he: "עדיין אין סבמיטלים בתיקייה הזו." },
+  trackingList: { en: "Tracking list", he: "רשימת מעקב" },
+  status: { en: "Status", he: "סטטוס" },
+  actions: { en: "", he: "" },
+  save: { en: "Save", he: "שמירה" },
+  cancel: { en: "Cancel", he: "ביטול" },
+  open: { en: "Open", he: "פתיחה" },
+  print: { en: "Print / PDF", he: "הדפסה / PDF" },
+  newRevision: { en: "New revision", he: "גירסה חדשה" },
+  remove: { en: "Delete", he: "מחיקה" },
+  confirmDelete: { en: "Delete this submittal?", he: "למחוק את הסבמיטל הזה?" },
+  backToFolder: { en: "Back to the folder", he: "חזרה לתיקייה" },
+  viewOnly: { en: "View only", he: "צפייה בלבד" },
+  other: { en: "Other", he: "אחר" }
+};
+var SB_NO_INFO = { en: "No information", he: "אין מידע" };
+
+// The ten checkbox rows, in sheet order.
+var SB_DOC_ROWS = [
+  { key: "datasheet", en: "Technical Datasheet", he: "מפרט טכני" },
+  { key: "catalogue", en: "Product Catalogue", he: "קטלוג מוצר" },
+  { key: "sample", en: "Sample / Material Board", he: "דוגמא" },
+  { key: "shopDrawing", en: "Shop Drawing (SD)", he: "תוכנית ייצור (SD)" },
+  { key: "certificates", en: "Certificates and Compliance Documents", he: "תעודות תקן ואישורי התאמה" },
+  { key: "testReports", en: "Test Reports (if applicable)", he: "דוחות בדיקה במידה ונדרש" },
+  { key: "warranty", en: "Warranty Certificate", he: "תעודות אחריות" },
+  { key: "sustainability", en: "Sustainability Documentation (EPD / HPD, if applicable)", he: "מסמכי קיימות (EPD / HPD, במידת הצורך)" },
+  { key: "installation", en: "Installation Instructions", he: "הוראות התקנה" },
+  { key: "other", en: "Other", he: "אחר" }
+];
+
+// The four decisions inside every REVIEW & APPROVAL block.
+var SB_DECISIONS = [
+  { key: "approved", en: "Approved", he: "מאושר", color: "#1a7f4b" },
+  { key: "approvedNoted", en: "Approved as Noted", he: "מאושר בכפוף להערות", color: "#2f7d8f" },
+  { key: "revise", en: "Revise & Resubmit", he: "נדרש תיקון והגשה מחדש", color: "#e08a12" },
+  { key: "rejected", en: "Rejected", he: "נדחה", color: "#d02f2f" }
+];
+var SB_REVIEW_BLOCKS = 4;
+var SB_ACCENT = "#1A559E";
+
+function sbText(entry, lang) {
+  if (!entry) return "";
+  return lang === "he" ? entry.he : entry.en;
+}
+function sbPad3(n) {
+  return String(n).padStart(3, "0");
+}
+function sbToday() {
+  const d = new Date();
+  const p = (x) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function sbAddDays(iso, days) {
+  if (!iso) return "";
+  const d = new Date(`${iso}T00:00:00`);
+  if (isNaN(d.getTime())) return "";
+  d.setDate(d.getDate() + days);
+  const p = (x) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function sbFmtDate(iso) {
+  if (!iso) return "";
+  const parts = String(iso).split("-");
+  if (parts.length !== 3) return String(iso);
+  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+}
+// The serial is per category per project, exactly like the workbook:
+// Plumbing-001, Plumbing-002 ... and the revision sits underneath it.
+function sbCatCode(categoryKey) {
+  const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === categoryKey);
+  return (cat ? cat.en : categoryKey || "General").replace(/[^A-Za-z0-9]/g, "");
+}
+function sbNumber(categoryKey, seq) {
+  return `${sbCatCode(categoryKey)}-${sbPad3(seq || 1)}`;
+}
+function sbNextSeq(list, categoryKey) {
+  const seqs = (list || []).filter((s) => s.category === categoryKey).map((s) => Number(s.seq) || 0);
+  return (seqs.length ? Math.max.apply(null, seqs) : 0) + 1;
+}
+// The status shown in the tracking list is the last decision that a reviewer
+// actually made. No decision anywhere means the submittal is still open.
+function sbStatusOf(rec) {
+  const reviews = (rec && rec.reviews) || [];
+  for (let i = reviews.length - 1; i >= 0; i--) {
+    if (reviews[i] && reviews[i].decision) return reviews[i].decision;
+  }
+  return "open";
+}
+function sbStatusLabel(status, lang) {
+  if (status === "open") return lang === "he" ? "פתוח" : "Open";
+  const d = SB_DECISIONS.find((x) => x.key === status);
+  return d ? sbText(d, lang) : status;
+}
+function sbStatusColor(status) {
+  const d = SB_DECISIONS.find((x) => x.key === status);
+  return d ? d.color : "#7a8494";
+}
+function sbEmptyDocs() {
+  return SB_DOC_ROWS.reduce((acc, r) => {
+    acc[r.key] = false;
+    return acc;
+  }, {});
+}
+function sbEmptyReviews() {
+  return Array.from({ length: SB_REVIEW_BLOCKS }, (_, i) => ({
+    id: `rv-${i + 1}`,
+    decision: null,
+    comments: "",
+    signature: "",
+    signedAt: null
+  }));
+}
+// A fresh record. Everything the system already knows is filled in here, so the
+// person only types what the system cannot know.
+function sbNewSubmittal(opts) {
+  const today = sbToday();
+  return {
+    id: `sb-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
+    category: opts.category,
+    seq: opts.seq,
+    rev: 0,
+    createdAt: new Date().toISOString(),
+    createdBy: opts.email || "",
+    projectName: opts.projectName || "",
+    date: today,
+    // The sheet says four days after the day it was filled in.
+    requiredApprovalDate: sbAddDays(today, 4),
+    contractor: opts.contractor || "",
+    discipline: opts.disciplineEn || "",
+    disciplineHe: opts.disciplineHe || "",
+    submittedBy: opts.submittedBy || "",
+    email: opts.email || "",
+    scope: "",
+    typeId: "",
+    itemDescription: "",
+    modelCode: "",
+    manufacturer: "",
+    image: null,
+    docs: sbEmptyDocs(),
+    otherText: "",
+    infoEn: "",
+    infoHe: "",
+    attachments: [],
+    specText: "",
+    aiFilledAt: null,
+    reviews: sbEmptyReviews()
+  };
+}
+
+// ---------------------------------------------------------------- file storage
+// PDFs and images go to Supabase Storage, not into the JSON row — a spec sheet
+// is megabytes and the JSON row is rewritten in full on every save.
+// If the bucket has not been created yet the upload falls back to an inline
+// copy (capped, and flagged in the UI) so the feature still works today.
+var SB_INLINE_LIMIT = 2 * 1024 * 1024;
+async function sbUploadFile(projectId, submittalId, file) {
+  const safe = sanitizeFileNamePart(file.name || "file");
+  const path = `${projectId}/${submittalId}/${Date.now()}-${safe}`;
+  try {
+    const { error } = await supabase.storage.from(SUBMITTAL_BUCKET).upload(path, file, {
+      upsert: true,
+      contentType: file.type || "application/octet-stream"
+    });
+    if (error) throw error;
+    return { path, inline: false, dataUrl: null };
+  } catch (e) {
+    console.warn("[awdash] submittal storage upload failed, keeping an inline copy", e);
+    if (file.size > SB_INLINE_LIMIT) throw new Error("STORAGE_UNAVAILABLE_AND_TOO_LARGE");
+    const dataUrl = await fileToDataUrl(file);
+    return { path: null, inline: true, dataUrl };
+  }
+}
+async function sbFileUrl(att) {
+  if (!att) return null;
+  if (att.inline && att.dataUrl) return att.dataUrl;
+  if (!att.path) return null;
+  try {
+    const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(att.path, 3600);
+    if (error) throw error;
+    return data && data.signedUrl || null;
+  } catch (e) {
+    console.warn("[awdash] could not sign submittal file url", e);
+    return null;
+  }
+}
+async function sbRemoveFile(att) {
+  if (!att || !att.path) return;
+  try {
+    await supabase.storage.from(SUBMITTAL_BUCKET).remove([att.path]);
+  } catch (e) {
+    console.warn("[awdash] could not remove submittal file", e);
+  }
+}
+// Images keep a small inline thumbnail as well, so the form and the printout
+// draw instantly and do not depend on a signed URL that expires.
+function sbMakeThumb(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 900;
+        let w = img.width;
+        let hh = img.height;
+        if (Math.max(w, hh) > maxDim) {
+          const s = maxDim / Math.max(w, hh);
+          w = Math.round(w * s);
+          hh = Math.round(hh * s);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = hh;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, hh);
+        let out;
+        try {
+          out = canvas.toDataURL("image/jpeg", 0.82);
+        } catch (e) {
+          out = reader.result;
+        }
+        resolve(out);
+      };
+      img.onerror = () => resolve(reader.result);
+      img.src = reader.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+// The text the AI is allowed to read. Extracted in the browser at upload time,
+// while the file is still in hand, and kept on the record so a later AI run does
+// not have to fetch the PDF again.
+var SB_TEXT_CAP = 6e4;
+async function sbExtractPdfText(file) {
+  try {
+    const pdfjsLib = await loadPdfJs();
+    const buf = await fileToArrayBuffer(file);
+    const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+    let out = "";
+    const pages = Math.min(doc.numPages, 40);
+    for (let i = 1; i <= pages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      out += content.items.map((it) => it.str).join(" ") + "\n";
+      if (out.length > SB_TEXT_CAP) break;
+    }
+    return out.slice(0, SB_TEXT_CAP);
+  } catch (e) {
+    console.warn("[awdash] could not read text out of the PDF", e);
+    return "";
+  }
+}
+
+// ------------------------------------------------------------------- printing
+function sbEsc(s) {
+  return String(s == null ? "" : s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
+}
+function sbPrint(rec, lang, brand) {
+  const isHe = lang === "he";
+  const dir = isHe ? "rtl" : "ltr";
+  const L = (k) => sbEsc(sbText(SB_L[k], lang));
+  const accent = brand && brand.accent || SB_ACCENT;
+  const logo = brand && brand.logoUrl ? `<img class="logo" src="${brand.logoUrl}" alt="">` : "";
+  const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === rec.category);
+  const val = (v) => sbEsc(v || "");
+  const infoRow = (l1, v1, l2, v2) =>
+    `<tr><th>${l1}</th><td>${v1}</td><th>${l2}</th><td>${v2}</td></tr>`;
+  const docRows = SB_DOC_ROWS.map((r) => {
+    const on = rec.docs && rec.docs[r.key];
+    const extra = r.key === "other" && rec.otherText ? ` — ${sbEsc(rec.otherText)}` : "";
+    return `<tr><td class="docName">${sbEsc(sbText(r, lang))}${extra}</td><td class="docBox">${on ? "&#10004;" : "&#9744;"}</td></tr>`;
+  }).join("");
+  const reviewBlocks = (rec.reviews || []).map((rv) => {
+    const decisions = SB_DECISIONS.map((d) =>
+      `<div class="dec"><span class="box">${rv.decision === d.key ? "&#10004;" : "&#9744;"}</span> ${sbEsc(sbText(d, lang))}</div>`
+    ).join("");
+    return `<div class="revBlock"><div class="secBar">${L("review")}</div>
+      <table class="rev"><tr>
+        <td class="sig"><div class="miniLbl">${L("signature")}</div><div class="sigVal">${sbEsc(rv.signature || "")}</div></td>
+        <td class="cmt"><div class="miniLbl">${L("approvalComments")}</div><div class="cmtVal">${sbEsc(rv.comments || "")}</div></td>
+        <td class="decs">${decisions}</td>
+      </tr></table></div>`;
+  }).join("");
+  const img = rec.image && rec.image.thumb
+    ? `<img src="${rec.image.thumb}" alt="">`
+    : `<span class="noImg">${L("picture")}</span>`;
+  const html = `<html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbNumber(rec.category, rec.seq))}</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
+@page { size: A4 portrait; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.frame { border: 1.5px solid ${accent}; border-radius: 10px; padding: 8px 10px; }
+.hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding-bottom: 8px; margin-bottom: 8px; }
+.hdr .logo { max-height: 40px; max-width: 150px; object-fit: contain; }
+.hdr .mid { flex: 1; text-align: center; }
+.hdr .proj { font-size: 14px; font-weight: 800; color: #c0392b; }
+.hdr .ttl { font-size: 13px; font-weight: 800; color: ${accent}; letter-spacing: .4px; }
+.hdr .no { border: 1px solid ${accent}; border-radius: 6px; padding: 5px 10px; text-align: center; min-width: 96px; }
+.hdr .no b { display: block; font-size: 9px; color: ${accent}; letter-spacing: .4px; }
+.hdr .no span { font-size: 12px; font-weight: 800; }
+.hdr .no i { display: block; font-style: normal; font-size: 9px; color: #6b7280; }
+.secBar { background: ${accent}; color: #fff; text-align: center; font-weight: 700; font-size: 9.5px; letter-spacing: .5px; padding: 2px 0; margin: 6px 0 0; }
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #cfd6e0; padding: 2.5px 6px; vertical-align: middle; }
+.info th { background: #f3f6fa; font-weight: 700; width: 17%; white-space: nowrap; text-align: ${isHe ? "right" : "left"}; }
+.info td { width: 33%; }
+.eq { table-layout: fixed; }
+.eq th { background: #f3f6fa; font-weight: 700; width: 26%; text-align: ${isHe ? "right" : "left"}; }
+.eq td.v { width: 42%; }
+.eq td.pic { width: 36%; text-align: center; padding: 4px; }
+.eq td.pic img { max-width: 100%; max-height: 96px; object-fit: contain; }
+.noImg { color: #9aa3af; font-size: 9px; }
+.docName { text-align: ${isHe ? "right" : "left"}; }
+.docBox { width: 34px; text-align: center; font-size: 12px; }
+.txtBox { border: 1px solid #cfd6e0; padding: 4px 7px; min-height: 26px; white-space: pre-wrap; }
+.miniLbl { font-size: 8.5px; color: #6b7280; font-weight: 700; margin-bottom: 2px; }
+.rev td { vertical-align: top; height: 40px; }
+.rev .sig { width: 30%; }
+.rev .cmt { width: 42%; }
+.rev .decs { width: 28%; }
+.dec { display: flex; align-items: center; gap: 5px; font-size: 9px; padding: 0; }
+.dec .box { font-size: 11px; }
+.revBlock { page-break-inside: avoid; }
+.ftr { margin-top: 6px; font-size: 8px; color: #6b7280; text-align: center; }
+</style></head><body><div class="frame">
+<div class="hdr">${logo}<div class="mid"><div class="proj">${val(rec.projectName)}</div><div class="ttl">EQUIPMENT / MATERIAL SUBMITTAL</div></div>
+<div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
+
+<div class="secBar">${L("projectInfo")}</div>
+<table class="info">
+${infoRow(L("projectName"), val(rec.projectName), L("date"), sbEsc(sbFmtDate(rec.date)))}
+${infoRow(L("contractor"), val(rec.contractor), L("requiredApprovalDate"), sbEsc(sbFmtDate(rec.requiredApprovalDate)))}
+${infoRow(L("discipline"), sbEsc(cat ? sbText(cat, lang) : rec.discipline), L("submittedBy"), val(rec.submittedBy))}
+${infoRow(L("scope"), val(rec.scope), L("email"), val(rec.email))}
+</table>
+
+<div class="secBar">${L("equipment")}</div>
+<table class="eq">
+<tr><th>${L("typeId")}</th><td class="v">${val(rec.typeId)}</td><td class="pic" rowspan="4">${img}</td></tr>
+<tr><th>${L("itemDescription")}</th><td class="v">${val(rec.itemDescription)}</td></tr>
+<tr><th>${L("modelCode")}</th><td class="v">${val(rec.modelCode)}</td></tr>
+<tr><th>${L("manufacturer")}</th><td class="v">${val(rec.manufacturer)}</td></tr>
+</table>
+
+<div class="secBar">${L("documents")}</div>
+<table>${docRows}</table>
+
+<div class="secBar">${L("additional")}</div>
+<div class="txtBox" dir="ltr">${sbEsc(rec.infoEn || "")}</div>
+<div class="txtBox" dir="rtl">${sbEsc(rec.infoHe || "")}</div>
+
+${reviewBlocks}
+<div class="ftr">${sbEsc(sbNumber(rec.category, rec.seq))} &nbsp;·&nbsp; Rev.${sbEsc(rec.rev || 0)} &nbsp;·&nbsp; ${sbEsc(sbFmtDate(rec.date))}</div>
+</div></body></html>`;
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => {
+    try {
+      w.print();
+    } catch (e) {
+    }
+  }, 700);
+}
+
+// ------------------------------------------------------------------- the form
+function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onSave, onCancel, printBrand }) {
+  const [d, setD] = useState6(rec);
+  const [busy, setBusy] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [aiMsg, setAiMsg] = useState6(null);
+  const L = (k) => sbText(SB_L[k], lang);
+  const set = (patch) => setD((prev) => ({ ...prev, ...patch }));
+  const ro = !canEdit;
+  useEffect5(() => {
+    setD(rec);
+  }, [rec.id]);
+  // The submission date drives the required approval date: the sheet asks for
+  // four days after the day it was filled in.
+  const onDateChange = (v) => set({ date: v, requiredApprovalDate: sbAddDays(v, 4) });
+
+  const inS = {
+    padding: "7px 9px",
+    border: "1px solid var(--line)",
+    borderRadius: 7,
+    fontSize: 13,
+    background: ro ? "#f6f7f9" : "#fff",
+    width: "100%",
+    fontFamily: "inherit",
+    color: "inherit"
+  };
+  const field = (key, opts) => {
+    const o = opts || {};
+    return sbH(
+      "label",
+      { className: "sbField", key },
+      sbH("span", { className: "sbFieldLbl" }, L(key)),
+      o.list
+        ? sbH(
+            React15.Fragment,
+            null,
+            sbH("input", {
+              type: "text",
+              value: d[key] || "",
+              readOnly: ro,
+              onChange: (e) => set({ [key]: e.target.value }),
+              style: inS,
+              list: `sb-list-${key}`
+            }),
+            sbH(
+              "datalist",
+              { id: `sb-list-${key}` },
+              (o.list || []).map((v) => sbH("option", { key: v, value: v }))
+            )
+          )
+        : sbH("input", {
+            type: o.type || "text",
+            value: d[key] || "",
+            readOnly: ro,
+            dir: o.dir,
+            onChange: (e) => (o.onChange ? o.onChange(e.target.value) : set({ [key]: e.target.value })),
+            style: inS
+          })
+    );
+  };
+
+  // ---- picture -------------------------------------------------------------
+  const onPickImage = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setErr(null);
+    setBusy("image");
+    try {
+      const thumb = await sbMakeThumb(f);
+      const up = await sbUploadFile(projectId, d.id, f);
+      set({ image: { name: f.name, thumb, path: up.path, inline: up.inline, dataUrl: up.inline ? null : null } });
+    } catch (ex) {
+      setErr(lang === "he" ? "לא הצלחתי להעלות את התמונה." : "Could not upload the image.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  // ---- specification PDFs --------------------------------------------------
+  const onPickSpec = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    setErr(null);
+    setBusy("spec");
+    try {
+      const added = [];
+      let text = d.specText || "";
+      for (const f of files) {
+        const up = await sbUploadFile(projectId, d.id, f);
+        const att = {
+          id: `at-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
+          name: f.name,
+          size: f.size,
+          type: f.type,
+          path: up.path,
+          inline: up.inline,
+          dataUrl: up.inline ? up.dataUrl : null,
+          uploadedAt: new Date().toISOString()
+        };
+        added.push(att);
+        if ((f.type || "").indexOf("pdf") >= 0 && text.length < SB_TEXT_CAP) {
+          const t2 = await sbExtractPdfText(f);
+          if (t2) text = `${text}\n\n===== ${f.name} =====\n${t2}`.slice(0, SB_TEXT_CAP);
+        }
+      }
+      set({ attachments: [...(d.attachments || []), ...added], specText: text });
+    } catch (ex) {
+      setErr(
+        ex && ex.message === "STORAGE_UNAVAILABLE_AND_TOO_LARGE"
+          ? lang === "he"
+            ? "אחסון הקבצים עדיין לא הוקם, והקובץ גדול מ‑2MB. ראי את הוראות ההקמה."
+            : "File storage is not set up yet and the file is over 2MB. See the setup notes."
+          : lang === "he"
+            ? "לא הצלחתי להעלות את הקובץ."
+            : "Could not upload the file."
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+  const removeAtt = async (att) => {
+    await sbRemoveFile(att);
+    set({ attachments: (d.attachments || []).filter((a) => a.id !== att.id) });
+  };
+  const openAtt = async (att) => {
+    const url = await sbFileUrl(att);
+    if (url) window.open(url, "_blank");
+  };
+
+  // ---- AI ------------------------------------------------------------------
+  // The AI is only allowed to read the files uploaded on this submittal. It is
+  // not allowed to fill a field from general knowledge — anything it cannot
+  // source from the documents comes back as "No information".
+  const runAi = async () => {
+    setAiMsg(null);
+    setErr(null);
+    if (!(d.specText || "").trim()) {
+      setAiMsg(lang === "he" ? "צריך להעלות מפרט PDF קודם — ה‑AI קורא רק ממנו." : "Upload a specification PDF first — the AI reads only from it.");
+      return;
+    }
+    setBusy("ai");
+    try {
+      const { data, error } = await supabase.functions.invoke("submittal-ai", {
+        body: {
+          specText: d.specText,
+          category: d.category,
+          lang,
+          fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe"]
+        }
+      });
+      if (error) throw error;
+      const out = data || {};
+      const pick = (k) => {
+        const v = out[k];
+        return v && String(v).trim() ? String(v).trim() : sbText(SB_NO_INFO, lang);
+      };
+      set({
+        typeId: d.typeId || pick("typeId"),
+        itemDescription: pick("itemDescription"),
+        modelCode: pick("modelCode"),
+        manufacturer: pick("manufacturer"),
+        infoEn: out.infoEn && String(out.infoEn).trim() ? String(out.infoEn).trim() : SB_NO_INFO.en,
+        infoHe: out.infoHe && String(out.infoHe).trim() ? String(out.infoHe).trim() : SB_NO_INFO.he,
+        docs: out.docs && typeof out.docs === "object" ? { ...d.docs, ...out.docs } : d.docs,
+        aiFilledAt: new Date().toISOString()
+      });
+      setAiMsg(lang === "he" ? "הטופס מולא מתוך המסמכים שהועלו." : "Filled from the uploaded documents.");
+    } catch (ex) {
+      console.warn("[awdash] submittal-ai not reachable", ex);
+      setAiMsg(
+        lang === "he"
+          ? "שירות ה‑AI עדיין לא מחובר (הפונקציה submittal-ai). כל השאר עובד — אפשר למלא ידנית."
+          : "The AI service is not connected yet (function submittal-ai). Everything else works — fill it in manually."
+      );
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const secBar = (key) => sbH("div", { className: "sbSecBar" }, L(key));
+
+  return sbH(
+    "div",
+    { className: "sbForm", dir: isRTL ? "rtl" : "ltr" },
+    // ------- header
+    sbH(
+      "div",
+      { className: "sbFormHead" },
+      sbH(
+        "button",
+        { type: "button", className: "ghostBtn small", onClick: onCancel },
+        sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.2 }),
+        " ",
+        L("backToFolder")
+      ),
+      sbH(
+        "div",
+        { className: "sbNoBox" },
+        sbH("b", null, L("submittalNo")),
+        sbH("span", null, sbNumber(d.category, d.seq)),
+        sbH("i", null, `Rev.${d.rev || 0}`)
+      ),
+      sbH(
+        "div",
+        { className: "sbFormHeadBtns" },
+        sbH(
+          "button",
+          { type: "button", className: "ghostBtn small", onClick: () => sbPrint(d, lang, printBrand) },
+          sbH(Printer, { size: 14, strokeWidth: 2 }),
+          " ",
+          L("print")
+        ),
+        ro ? sbH("span", { className: "sbRoTag" }, L("viewOnly")) : null
+      )
+    ),
+    err ? sbH("p", { className: "sbErr" }, err) : null,
+
+    // ------- PROJECT INFORMATION
+    secBar("projectInfo"),
+    sbH(
+      "div",
+      { className: "sbGrid2" },
+      field("projectName"),
+      field("date", { type: "date", dir: "ltr", onChange: onDateChange }),
+      field("contractor"),
+      field("requiredApprovalDate", { type: "date", dir: "ltr" }),
+      sbH(
+        "label",
+        { className: "sbField" },
+        sbH("span", { className: "sbFieldLbl" }, L("discipline")),
+        sbH("input", {
+          type: "text",
+          value: (() => {
+            const c = SUBMITTAL_CATEGORIES.find((x) => x.key === d.category);
+            return c ? sbText(c, lang) : d.discipline || "";
+          })(),
+          readOnly: true,
+          style: { ...inS, background: "#f6f7f9" }
+        })
+      ),
+      field("submittedBy"),
+      field("scope", { list: scopeOptions }),
+      field("email", { type: "email", dir: "ltr" })
+    ),
+
+    // ------- EQUIPMENT / MATERIAL DETAILS
+    secBar("equipment"),
+    sbH(
+      "div",
+      { className: "sbEqWrap" },
+      sbH(
+        "div",
+        { className: "sbEqFields" },
+        field("typeId"),
+        field("itemDescription"),
+        field("modelCode"),
+        field("manufacturer")
+      ),
+      // The picture cube. Clicking it opens the file picker.
+      sbH(
+        "label",
+        { className: `sbImgBox ${ro ? "ro" : ""}` },
+        d.image && d.image.thumb
+          ? sbH(React15.Fragment, null,
+              sbH("img", { src: d.image.thumb, alt: "" }),
+              ro
+                ? null
+                : sbH(
+                    "button",
+                    {
+                      type: "button",
+                      className: "sbImgClear",
+                      title: L("remove"),
+                      onClick: (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        sbRemoveFile(d.image);
+                        set({ image: null });
+                      }
+                    },
+                    sbH(X4, { size: 13, strokeWidth: 2.4 })
+                  )
+            )
+          : sbH(
+              "span",
+              { className: "sbImgEmpty" },
+              sbH(ImagePlus, { size: 26, strokeWidth: 1.6 }),
+              sbH("span", null, busy === "image" ? "…" : L("addPicture"))
+            ),
+        ro ? null : sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPickImage })
+      )
+    ),
+
+    // ------- SUBMITTED DOCUMENTS
+    secBar("documents"),
+    sbH(
+      "div",
+      { className: "sbDocs" },
+      SB_DOC_ROWS.map((r) =>
+        sbH(
+          "label",
+          { key: r.key, className: "sbDocRow" },
+          sbH("input", {
+            type: "checkbox",
+            checked: !!(d.docs && d.docs[r.key]),
+            disabled: ro,
+            onChange: (e) => set({ docs: { ...d.docs, [r.key]: e.target.checked } })
+          }),
+          sbH("span", { className: "sbDocName" }, sbText(r, lang)),
+          r.key === "other"
+            ? sbH("input", {
+                type: "text",
+                value: d.otherText || "",
+                readOnly: ro,
+                placeholder: "…",
+                onChange: (e) => set({ otherText: e.target.value }),
+                className: "sbDocOther"
+              })
+            : null
+        )
+      )
+    ),
+
+    // ------- Additional Information
+    secBar("additional"),
+    sbH(
+      "div",
+      { className: "sbGrid2" },
+      sbH(
+        "label",
+        { className: "sbField" },
+        sbH("span", { className: "sbFieldLbl" }, L("additionalEn")),
+        sbH("textarea", {
+          value: d.infoEn || "",
+          readOnly: ro,
+          dir: "ltr",
+          rows: 3,
+          onChange: (e) => set({ infoEn: e.target.value }),
+          style: { ...inS, resize: "vertical" }
+        })
+      ),
+      sbH(
+        "label",
+        { className: "sbField" },
+        sbH("span", { className: "sbFieldLbl" }, L("additionalHe")),
+        sbH("textarea", {
+          value: d.infoHe || "",
+          readOnly: ro,
+          dir: "rtl",
+          rows: 3,
+          onChange: (e) => set({ infoHe: e.target.value }),
+          style: { ...inS, resize: "vertical" }
+        })
+      )
+    ),
+
+    // ------- REVIEW & APPROVAL x4
+    (d.reviews || []).map((rv, i) =>
+      sbH(
+        "div",
+        { key: rv.id || i },
+        secBar("review"),
+        sbH(
+          "div",
+          { className: "sbReview" },
+          sbH(
+            "label",
+            { className: "sbField" },
+            sbH("span", { className: "sbFieldLbl" }, L("signature")),
+            sbH("input", {
+              type: "text",
+              value: rv.signature || "",
+              readOnly: ro,
+              onChange: (e) => {
+                const next = (d.reviews || []).slice();
+                next[i] = { ...rv, signature: e.target.value, signedAt: e.target.value ? new Date().toISOString() : null };
+                set({ reviews: next });
+              },
+              style: inS
+            })
+          ),
+          sbH(
+            "label",
+            { className: "sbField" },
+            sbH("span", { className: "sbFieldLbl" }, L("approvalComments")),
+            sbH("textarea", {
+              value: rv.comments || "",
+              readOnly: ro,
+              rows: 2,
+              onChange: (e) => {
+                const next = (d.reviews || []).slice();
+                next[i] = { ...rv, comments: e.target.value };
+                set({ reviews: next });
+              },
+              style: { ...inS, resize: "vertical" }
+            })
+          ),
+          sbH(
+            "div",
+            { className: "sbDecisions" },
+            SB_DECISIONS.map((dec) =>
+              sbH(
+                "label",
+                { key: dec.key, className: "sbDecRow" },
+                sbH("input", {
+                  type: "radio",
+                  name: `sb-dec-${d.id}-${i}`,
+                  checked: rv.decision === dec.key,
+                  disabled: ro,
+                  onChange: () => {
+                    const next = (d.reviews || []).slice();
+                    next[i] = { ...rv, decision: dec.key };
+                    set({ reviews: next });
+                  }
+                }),
+                sbH("span", { style: { color: dec.color, fontWeight: 700 } }, sbText(dec, lang))
+              )
+            ),
+            ro || !rv.decision
+              ? null
+              : sbH(
+                  "button",
+                  {
+                    type: "button",
+                    className: "sbLinkBtn",
+                    onClick: () => {
+                      const next = (d.reviews || []).slice();
+                      next[i] = { ...rv, decision: null };
+                      set({ reviews: next });
+                    }
+                  },
+                  lang === "he" ? "ניקוי" : "Clear"
+                )
+          )
+        )
+      )
+    ),
+
+    // ------- specification files + AI
+    sbH(
+      "div",
+      { className: "sbSpecs" },
+      sbH("div", { className: "sbSpecsHead" }, sbH(FileTextIcon, { size: 15, strokeWidth: 2 }), " ", L("specs")),
+      sbH(
+        "div",
+        { className: "sbSpecsRow" },
+        ro
+          ? null
+          : sbH(
+              "label",
+              { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
+              sbH(Upload4, { size: 14, strokeWidth: 2 }),
+              " ",
+              busy === "spec" ? "…" : L("uploadSpec"),
+              sbH("input", {
+                type: "file",
+                accept: "application/pdf,.pdf",
+                multiple: true,
+                style: { display: "none" },
+                onChange: onPickSpec
+              })
+            ),
+        ro
+          ? null
+          : sbH(
+              "button",
+              { type: "button", className: "sbAiBtn", onClick: runAi, disabled: busy === "ai" },
+              sbH(Sparkles, { size: 14, strokeWidth: 2 }),
+              " ",
+              busy === "ai" ? (lang === "he" ? "קורא את המפרטים…" : "Reading the specs…") : L("fillWithAi")
+            )
+      ),
+      sbH("p", { className: "sbAiHint" }, L("aiHint")),
+      aiMsg ? sbH("p", { className: "sbAiMsg" }, aiMsg) : null,
+      sbH(
+        "ul",
+        { className: "sbAttList" },
+        (d.attachments || []).map((att) =>
+          sbH(
+            "li",
+            { key: att.id },
+            sbH(
+              "button",
+              { type: "button", className: "sbLinkBtn", onClick: () => openAtt(att) },
+              sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
+              " ",
+              att.name
+            ),
+            att.inline ? sbH("span", { className: "sbInlineTag" }, lang === "he" ? "לא באחסון" : "not in storage") : null,
+            ro
+              ? null
+              : sbH(
+                  "button",
+                  { type: "button", className: "sbIconBtn", title: L("remove"), onClick: () => removeAtt(att) },
+                  sbH(Trash2, { size: 13, strokeWidth: 2 })
+                )
+          )
+        )
+      )
+    ),
+
+    // ------- save
+    ro
+      ? null
+      : sbH(
+          "div",
+          { className: "sbSaveRow" },
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: onCancel }, L("cancel")),
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onSave(d) }, L("save"))
+        )
+  );
+}
+
+// ------------------------------------------------------------- folder + list
+function SubmittalFolder({ category, lang, isRTL, list, canEdit, onCreate, onOpen, onPrint, onNewRevision, onDelete }) {
+  const L = (k) => sbText(SB_L[k], lang);
+  const rows = (list || [])
+    .filter((s) => s.category === category.key)
+    .slice()
+    .sort((a, b) => (b.seq - a.seq) || (b.rev - a.rev));
+  return sbH(
+    "div",
+    { className: "submittalPanel", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "submittalPanelHead" },
+      sbH(category.icon, { size: 17, strokeWidth: 1.9 }),
+      sbH("span", null, sbText(category, lang))
+    ),
+    canEdit
+      ? sbH(
+          "button",
+          { type: "button", className: "sbCreateBtn", onClick: onCreate },
+          sbH(Plus2, { size: 16, strokeWidth: 2.4 }),
+          " ",
+          L("create")
+        )
+      : sbH("p", { className: "submittalPanelNote" }, L("viewOnly")),
+    sbH("div", { className: "sbListTitle" }, L("trackingList")),
+    rows.length === 0
+      ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
+      : sbH(
+          "div",
+          { className: "sbTableWrap" },
+          sbH(
+            "table",
+            { className: "sbTable" },
+            sbH(
+              "thead",
+              null,
+              sbH(
+                "tr",
+                null,
+                sbH("th", null, L("submittalNo")),
+                sbH("th", null, L("itemDescription")),
+                sbH("th", null, L("manufacturer")),
+                sbH("th", null, L("date")),
+                sbH("th", null, L("requiredApprovalDate")),
+                sbH("th", null, L("status")),
+                sbH("th", null, "")
+              )
+            ),
+            sbH(
+              "tbody",
+              null,
+              rows.map((s) => {
+                const st = sbStatusOf(s);
+                return sbH(
+                  "tr",
+                  { key: s.id },
+                  sbH(
+                    "td",
+                    { className: "sbNoCell" },
+                    sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
+                    sbH("span", { className: "sbNoRev" }, `Rev.${s.rev || 0}`)
+                  ),
+                  sbH("td", null, s.itemDescription || "—"),
+                  sbH("td", null, s.manufacturer || "—"),
+                  sbH("td", { dir: "ltr" }, sbFmtDate(s.date)),
+                  sbH("td", { dir: "ltr" }, sbFmtDate(s.requiredApprovalDate)),
+                  sbH(
+                    "td",
+                    null,
+                    sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang))
+                  ),
+                  sbH(
+                    "td",
+                    { className: "sbActions" },
+                    sbH(
+                      "button",
+                      { type: "button", className: "sbIconBtn", title: L("open"), onClick: () => onOpen(s) },
+                      sbH(canEdit ? Pencil : FileTextIcon, { size: 14, strokeWidth: 2 })
+                    ),
+                    sbH(
+                      "button",
+                      { type: "button", className: "sbIconBtn", title: L("print"), onClick: () => onPrint(s) },
+                      sbH(Printer, { size: 14, strokeWidth: 2 })
+                    ),
+                    canEdit
+                      ? sbH(
+                          "button",
+                          { type: "button", className: "sbIconBtn", title: L("newRevision"), onClick: () => onNewRevision(s) },
+                          sbH(RotateCcw, { size: 14, strokeWidth: 2 })
+                        )
+                      : null,
+                    canEdit
+                      ? sbH(
+                          "button",
+                          { type: "button", className: "sbIconBtn danger", title: L("remove"), onClick: () => onDelete(s) },
+                          sbH(Trash2, { size: 14, strokeWidth: 2 })
+                        )
+                      : null
+                  )
+                );
+              })
+            )
+          )
+        )
+  );
+}
+
+// --------------------------------------------------------------- the card
+function SubmittalCard({
+  appIsRTL,
+  projectName,
+  project,
+  submittals,
+  onChangeSubmittals,
+  viewerRole,
+  submittalPerms,
+  currentEmail,
+  contacts,
+  contactsCatalog,
+  printBrand
+}) {
   // Language follows the site switch in the top bar — no second toggle here.
   const lang = appIsRTL ? "he" : "en";
-  const [selected, setSelected] = useState6(null);
   const isRTL = appIsRTL;
-  const label = (c) => lang === "he" ? c.he : c.en;
+  const [selected, setSelected] = useState6(null);
+  const [openId, setOpenId] = useState6(null);
+  const [draft, setDraft] = useState6(null);
+  const list = submittals || [];
+  const label = (c) => sbText(c, lang);
   const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
-  return /* @__PURE__ */ React15.createElement(
+  const L = (k) => sbText(SB_L[k], lang);
+
+  // The admin builds. Contractor and client are view-only unless the project
+  // says otherwise — the switch lives in the project settings screen.
+  const perms = submittalPerms || {};
+  const canEdit =
+    viewerRole === "admin" ? true : perms[viewerRole] === "edit";
+
+  const projectId = project && project.id;
+  const pName = (project && project.name) || projectName || "";
+
+  // The contractor line comes from the contacts tab: the company on the "main
+  // contractor" row of this project.
+  const contractorName = (() => {
+    const row = (contacts || []).find((r) => r.group === "main");
+    if (!row) return "";
+    const cat = contactsCatalog || {};
+    const fromCatalog = catalogLabel(catalogFind(cat.companies || [], row.companyId), lang);
+    return fromCatalog || bilingual(row.company, lang) || "";
+  })();
+
+  // The Scope dropdown offers whatever has already been typed on this project,
+  // so the wording stays consistent between submittals.
+  const scopeOptions = Array.from(new Set(list.map((s) => (s.scope || "").trim()).filter(Boolean)));
+
+  const commit = (next) => {
+    if (onChangeSubmittals) onChangeSubmittals(next);
+  };
+  const startCreate = () => {
+    const rec = sbNewSubmittal({
+      category: chosen.key,
+      seq: sbNextSeq(list, chosen.key),
+      projectName: pName,
+      contractor: contractorName,
+      disciplineEn: chosen.en,
+      disciplineHe: chosen.he,
+      email: currentEmail || "",
+      submittedBy: (currentEmail || "").split("@")[0] || ""
+    });
+    setDraft(rec);
+    setOpenId(rec.id);
+  };
+  const startRevision = (s) => {
+    const rec = {
+      ...s,
+      id: `sb-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
+      rev: (Number(s.rev) || 0) + 1,
+      createdAt: new Date().toISOString(),
+      date: sbToday(),
+      requiredApprovalDate: sbAddDays(sbToday(), 4),
+      reviews: sbEmptyReviews(),
+      aiFilledAt: null
+    };
+    setDraft(rec);
+    setOpenId(rec.id);
+  };
+  const openExisting = (s) => {
+    setDraft(s);
+    setOpenId(s.id);
+  };
+  const saveDraft = (rec) => {
+    const exists = list.some((s) => s.id === rec.id);
+    commit(exists ? list.map((s) => (s.id === rec.id ? rec : s)) : [...list, rec]);
+    setDraft(null);
+    setOpenId(null);
+  };
+  const deleteOne = (s) => {
+    if (!window.confirm(L("confirmDelete"))) return;
+    (s.attachments || []).forEach((a) => sbRemoveFile(a));
+    if (s.image) sbRemoveFile(s.image);
+    commit(list.filter((x) => x.id !== s.id));
+  };
+
+  // While a submittal is open, the whole card is the form — the tiles would
+  // only be noise on a page this dense.
+  if (openId && draft) {
+    return sbH(SubmittalForm, {
+      rec: draft,
+      lang,
+      isRTL,
+      canEdit,
+      projectId,
+      scopeOptions,
+      printBrand,
+      onSave: saveDraft,
+      onCancel: () => {
+        setDraft(null);
+        setOpenId(null);
+      }
+    });
+  }
+
+  return sbH(
     "div",
     { className: "submittalCard", dir: isRTL ? "rtl" : "ltr" },
-    /* @__PURE__ */ React15.createElement(
+    sbH(
       "div",
       { className: "submittalHead" },
-      /* @__PURE__ */ React15.createElement("p", { className: "submittalIntro" }, isRTL ? "בחרו קטגוריה להגשת אישורי חומרים ודגימות." : "Choose a category to submit material and sample approvals.")
+      sbH(
+        "p",
+        { className: "submittalIntro" },
+        isRTL ? "בחרו קטגוריה להגשת אישורי חומרים ודגימות." : "Choose a category to submit material and sample approvals."
+      )
     ),
-    /* @__PURE__ */ React15.createElement(
+    sbH(
       "div",
       // The grid keeps a fixed direction so the tiles never jump to the other
       // side of the screen when the language changes. Only the label inside a
       // tile switches direction, and it stays inside its own tile.
       { className: "submittalGrid", dir: "rtl" },
-      SUBMITTAL_CATEGORIES.map((c) => /* @__PURE__ */ React15.createElement(
-        "button",
-        {
-          key: c.key,
-          type: "button",
-          // Same hover-and-select behaviour as the project board cards.
-          className: `dashCard submittalTile ${selected === c.key ? "selected" : ""}`,
-          "aria-pressed": selected === c.key,
-          onClick: () => setSelected((s) => s === c.key ? null : c.key)
-        },
-        /* @__PURE__ */ React15.createElement("div", { className: "cardIcon" }, /* @__PURE__ */ React15.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
-        /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "cardTitle", dir: "auto" }, label(c)))
-      ))
+      SUBMITTAL_CATEGORIES.map((c) => {
+        const count = list.filter((s) => s.category === c.key).length;
+        return sbH(
+          "button",
+          {
+            key: c.key,
+            type: "button",
+            // Same hover-and-select behaviour as the project board cards.
+            className: `dashCard submittalTile ${selected === c.key ? "selected" : ""}`,
+            "aria-pressed": selected === c.key,
+            onClick: () => setSelected((s) => (s === c.key ? null : c.key))
+          },
+          sbH("div", { className: "cardIcon" }, sbH(c.icon, { size: 20, strokeWidth: 1.7 })),
+          sbH("div", null, sbH("p", { className: "cardTitle", dir: "auto" }, label(c))),
+          count ? sbH("span", { className: "sbTileCount" }, count) : null
+        );
+      })
     ),
-    chosen && /* @__PURE__ */ React15.createElement(
-      "div",
-      { className: "submittalPanel" },
-      /* @__PURE__ */ React15.createElement("div", { className: "submittalPanelHead" }, /* @__PURE__ */ React15.createElement(chosen.icon, { size: 17, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", null, label(chosen))),
-      /* @__PURE__ */ React15.createElement("p", { className: "submittalPanelNote" }, isRTL ? "כאן ייכנסו הגשות האישורים לקטגוריה הזו." : "The approval submissions for this category will live here.")
-    )
+    chosen &&
+      sbH(SubmittalFolder, {
+        category: chosen,
+        lang,
+        isRTL,
+        list,
+        canEdit,
+        onCreate: startCreate,
+        onOpen: openExisting,
+        onPrint: (s) => sbPrint(s, lang, printBrand),
+        onNewRevision: startRevision,
+        onDelete: deleteOne
+      })
   );
 }
-
 // src/App.jsx
 function CreateUserPanel({ isRTL }) {
   const inputStyle = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff" };
@@ -5383,7 +6689,49 @@ function UserSettingsScreen({ isRTL, projects, brandLogo }) {
   if (view === "reset") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, backBtn, /* @__PURE__ */ React15.createElement(PasswordResetPanel, { isRTL }));
   return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginTop: 12, maxWidth: 480, marginInline: "auto" } }, blackBtn(/* @__PURE__ */ React15.createElement(Plus2, { size: 17, strokeWidth: 1.8 }), "הוספת משתמש", "Add user", () => setView("add")), blackBtn(/* @__PURE__ */ React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "רשימת משתמשים", "User list", () => setView("list")), blackBtn(/* @__PURE__ */ React15.createElement(Lock3, { size: 17, strokeWidth: 1.8 }), "איפוס סיסמה למשתמש", "Reset a password", () => setView("reset"))));
 }
-function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport }) {
+// Submittal permissions, per project. The system admin always builds; the main
+// contractor and the client are view-only unless they are switched to edit here.
+function SubmittalPermsBlock({ isRTL, perms, onChange }) {
+  const p = perms || {};
+  const rows = [
+    { key: "contractor", he: "\u05e7\u05d1\u05dc\u05df \u05e8\u05d0\u05e9\u05d9", en: "Main contractor" },
+    { key: "client", he: "\u05dc\u05e7\u05d5\u05d7", en: "Client" }
+  ];
+  const modes = [
+    { key: "view", he: "\u05e6\u05e4\u05d9\u05d9\u05d4", en: "View" },
+    { key: "edit", he: "\u05e2\u05e8\u05d9\u05db\u05d4", en: "Edit" }
+  ];
+  return /* @__PURE__ */ React15.createElement(
+    "div",
+    { style: { marginTop: 16 } },
+    /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e1\u05d1\u05de\u05d9\u05d8\u05dc" : "Submittal permissions"),
+    rows.map((r) => /* @__PURE__ */ React15.createElement(
+      "div",
+      { key: r.key, style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" } },
+      /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 12.5, fontWeight: 600, minWidth: 104 } }, isRTL ? r.he : r.en),
+      modes.map((m) => {
+        const active = (p[r.key] || "view") === m.key;
+        return /* @__PURE__ */ React15.createElement(
+          "button",
+          {
+            key: m.key,
+            type: "button",
+            onClick: () => onChange({ ...p, [r.key]: m.key }),
+            style: {
+              border: active ? "1px solid #14181f" : "1px solid var(--line)",
+              background: active ? "#14181f" : "#fff",
+              color: active ? "#fff" : "var(--steel)",
+              borderRadius: 999, padding: "5px 16px", fontSize: 12, fontWeight: 700,
+              cursor: "pointer", fontFamily: "inherit"
+            }
+          },
+          isRTL ? m.he : m.en
+        );
+      })
+    ))
+  );
+}
+function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, submittalPermsByProject, onSubmittalPermsChange }) {
   const inS = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff", width: "100%" };
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6({ name: "", floorsFrom: "", floorsTo: "", startDate: "", endDate: "", clientLogoUrl: null, accent: null });
@@ -5408,7 +6756,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, [1, 2, 3, 4, 5].map((n) => /* @__PURE__ */ React15.createElement("button", { key: n, type: "button", style: { flex: 1, minWidth: 108, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#eef0f2", border: "1px solid var(--line-soft)", borderRadius: 8, padding: "10px 8px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), (isRTL ? "לעלות " : "Upload ") + n))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, [1, 2, 3, 4, 5].map((n) => /* @__PURE__ */ React15.createElement("button", { key: n, type: "button", style: { flex: 1, minWidth: 108, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#eef0f2", border: "1px solid var(--line-soft)", borderRadius: 8, padding: "10px 8px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), (isRTL ? "לעלות " : "Upload ") + n))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -5602,6 +6950,11 @@ function ProjectDashboardApp() {
   const activeExtras = projectExtras[activeProject.id] || { dataSources: [], scheduleData: null };
   const setProjectContacts = (projectId, contacts) => updateProjectExtras(projectId, { contacts });
   const setContactGroupVisibility = (projectId, visibility) => updateProjectExtras(projectId, { contactGroupVisibility: visibility });
+  const setSubmittalPerms = (projectId, perms) => updateProjectExtras(projectId, { submittalPerms: perms });
+  const submittalPermsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    acc[pid] = projectExtras[pid] && projectExtras[pid].submittalPerms || {};
+    return acc;
+  }, {});
   const contactVisibilityByProject = Object.keys(projectExtras).reduce((acc, pid) => {
     acc[pid] = projectExtras[pid] && projectExtras[pid].contactGroupVisibility || {};
     return acc;
@@ -6598,6 +7951,10 @@ function ProjectDashboardApp() {
         contactGroupVisibility: activeExtras.contactGroupVisibility || {},
         // Fixed navy, not the project colour and not the contractor's saved accent.
         contractorAccent: CONTACTS_DOC_ACCENT,
+        submittals: activeExtras.submittals || [],
+        onChangeSubmittals: (next) => updateProjectExtras(activeProject.id, { submittals: next }),
+        submittalPerms: activeExtras.submittalPerms || {},
+        currentEmail: loggedInEmail,
         printBrand: {
           logoUrl: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL,
           accent: viewData.accent && viewData.accent.accent || "#1A559E",
@@ -6606,7 +7963,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
