@@ -1100,6 +1100,14 @@ var pdfViewer = `
         @media (max-width: 760px) { .sbReview { grid-template-columns: 1fr; } }
         .sbDecisions { display: flex; flex-direction: column; gap: 3px; padding-top: 18px; }
         .sbDecRow { display: flex; align-items: center; gap: 7px; font-size: 12.5px; cursor: pointer; }
+        .sbSigBox {
+          height: 62px; border: 1px solid var(--line); border-radius: 7px; background: #fff;
+          display: flex; align-items: center; justify-content: center; overflow: hidden; margin-bottom: 6px;
+        }
+        .sbSigBox img { max-height: 56px; max-width: 100%; object-fit: contain; }
+        .sbSigEmpty { font-size: 10.5px; color: var(--mist); font-weight: 600; text-align: center; padding: 0 8px; }
+        .sbSigRow { display: flex; align-items: center; gap: 12px; margin-top: 5px; }
+        .sbLinkBtn.muted { color: var(--mist); font-weight: 600; }
 
         .sbSpecs {
           margin-top: 20px; border: 1px solid var(--line); border-radius: 12px;
@@ -4032,7 +4040,9 @@ function CardView({
   submittals,
   onChangeSubmittals,
   submittalPerms,
-  currentEmail
+  currentEmail,
+  userSignatures,
+  brandName
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -4088,7 +4098,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, viewerRole, submittalPerms, currentEmail, contacts, contactsCatalog, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -5236,6 +5246,13 @@ var SB_L = {
   confirmDelete: { en: "Delete this submittal?", he: "למחוק את הסבמיטל הזה?" },
   backToFolder: { en: "Back to the folder", he: "חזרה לתיקייה" },
   viewOnly: { en: "View only", he: "צפייה בלבד" },
+  supervision: { en: "Supervision", he: "פיקוח" },
+  signAsMe: { en: "Sign", he: "חתימה" },
+  clearSignature: { en: "Clear signature", he: "ניקוי חתימה" },
+  noSignatureOnFile: {
+    en: "No signature on file for this user — upload one in the user list.",
+    he: "אין חתימה שמורה למשתמש הזה — אפשר להעלות אותה ברשימת המשתמשים."
+  },
   other: { en: "Other", he: "אחר" }
 };
 var SB_NO_INFO = { en: "No information", he: "אין מידע" };
@@ -5261,7 +5278,9 @@ var SB_DECISIONS = [
   { key: "revise", en: "Revise & Resubmit", he: "נדרש תיקון והגשה מחדש", color: "#e08a12" },
   { key: "rejected", en: "Rejected", he: "נדחה", color: "#d02f2f" }
 ];
-var SB_REVIEW_BLOCKS = 4;
+// One approval block, the one the supervision signs. Records created when
+// there were four still open: only the first block is shown and printed.
+var SB_REVIEW_BLOCKS = 1;
 var SB_ACCENT = "#1A559E";
 
 function sbText(entry, lang) {
@@ -5335,13 +5354,18 @@ function sbEmptyDocs() {
     return acc;
   }, {});
 }
+function sbSignatureOf(registry, email) {
+  const rec = (registry || {})[String(email || "").trim().toLowerCase()];
+  return rec && rec.dataUrl || null;
+}
 function sbEmptyReviews() {
   return Array.from({ length: SB_REVIEW_BLOCKS }, (_, i) => ({
     id: `rv-${i + 1}`,
     decision: null,
     comments: "",
     signature: "",
-    signedAt: null
+    signedAt: null,
+    signedByEmail: null
   }));
 }
 // A fresh record. Everything the system already knows is filled in here, so the
@@ -5460,6 +5484,41 @@ function sbMakeThumb(file) {
     reader.readAsDataURL(file);
   });
 }
+// A signature keeps its transparency, so a scanned stamp sits on the paper
+// rather than inside a white box.
+function sbMakeSignature(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 700;
+        let w = img.width;
+        let hh = img.height;
+        if (Math.max(w, hh) > maxDim) {
+          const sc = maxDim / Math.max(w, hh);
+          w = Math.round(w * sc);
+          hh = Math.round(hh * sc);
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = hh;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, hh);
+        let out;
+        try {
+          out = canvas.toDataURL("image/png");
+        } catch (e) {
+          out = reader.result;
+        }
+        resolve(out);
+      };
+      img.onerror = () => resolve(reader.result);
+      img.src = reader.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
 // The text the AI is allowed to read. Extracted in the browser at upload time,
 // while the file is still in hand, and kept on the record so a later AI run does
 // not have to fetch the PDF again.
@@ -5488,12 +5547,15 @@ async function sbExtractPdfText(file) {
 function sbEsc(s) {
   return String(s == null ? "" : s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 }
-function sbBuildPrintHtml(rec, lang, brand, specPages) {
+function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
   const isHe = lang === "he";
   const dir = isHe ? "rtl" : "ltr";
   const L = (k) => sbEsc(sbText(SB_L[k], lang));
   const accent = brand && brand.accent || SB_ACCENT;
   const logo = brand && brand.logoUrl ? `<img class="logo" src="${brand.logoUrl}" alt="">` : "";
+  // The same footer the contacts and user-list documents print with.
+  const footImg = brand && brand.footerImg ? `<div class="footImg"><img src="${brand.footerImg}" alt=""></div>` : "";
+  const footTxt = brand && brand.footerText ? `<div class="footTxt">${sbEsc(brand.footerText)}</div>` : "";
   const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === rec.category);
   const val = (v) => sbEsc(v || "");
   const infoRow = (l1, v1, l2, v2) =>
@@ -5503,17 +5565,20 @@ function sbBuildPrintHtml(rec, lang, brand, specPages) {
     const extra = r.key === "other" && rec.otherText ? ` — ${sbEsc(rec.otherText)}` : "";
     return `<tr><td class="docName">${sbEsc(sbText(r, lang))}${extra}</td><td class="docBox">${on ? "&#10004;" : "&#9744;"}</td></tr>`;
   }).join("");
-  const reviewBlocks = (rec.reviews || []).map((rv) => {
-    const decisions = SB_DECISIONS.map((d) =>
-      `<div class="dec"><span class="box">${rv.decision === d.key ? "&#10004;" : "&#9744;"}</span> ${sbEsc(sbText(d, lang))}</div>`
-    ).join("");
-    return `<div class="revBlock"><div class="secBar">${L("review")}</div>
-      <table class="rev"><tr>
-        <td class="sig"><div class="miniLbl">${L("signature")}</div><div class="sigVal">${sbEsc(rv.signature || "")}</div></td>
-        <td class="cmt"><div class="miniLbl">${L("approvalComments")}</div><div class="cmtVal">${sbEsc(rv.comments || "")}</div></td>
-        <td class="decs">${decisions}</td>
-      </tr></table></div>`;
-  }).join("");
+  // One approval block, at the very bottom, signed by the supervision.
+  const rv = (rec.reviews || [])[0] || {};
+  const sigImg = sbSignatureOf(signatures, rv.signedByEmail);
+  const decisions = SB_DECISIONS.map((d2) =>
+    `<div class="dec"><span class="box">${rv.decision === d2.key ? "&#10004;" : "&#9744;"}</span> ${sbEsc(sbText(d2, lang))}</div>`
+  ).join("");
+  const reviewBlock = `<div class="revBlock"><div class="secBar">${L("review")} &nbsp;·&nbsp; ${L("supervision")}</div>
+    <table class="rev"><tr>
+      <td class="sig"><div class="miniLbl">${L("signature")}</div>
+        <div class="sigImg">${sigImg ? `<img src="${sigImg}" alt="">` : ""}</div>
+        <div class="sigVal">${sbEsc(rv.signature || "")}</div></td>
+      <td class="cmt"><div class="miniLbl">${L("approvalComments")}</div><div class="cmtVal">${sbEsc(rv.comments || "")}</div></td>
+      <td class="decs">${decisions}</td>
+    </tr></table></div>`;
   const img = rec.image && rec.image.thumb
     ? `<img src="${rec.image.thumb}" alt="">`
     : `<span class="noImg">${L("picture")}</span>`;
@@ -5523,46 +5588,57 @@ function sbBuildPrintHtml(rec, lang, brand, specPages) {
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body { width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.frame { border: 1.5px solid ${accent}; border-radius: 10px; padding: 8px 10px; }
-.hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding-bottom: 8px; margin-bottom: 8px; }
-.hdr .logo { max-height: 40px; max-width: 150px; object-fit: contain; }
+.frame { border: 1.5px solid ${accent}; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; min-height: calc(297mm - 18mm); }
+.hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding-bottom: 8px; margin-bottom: 4px; }
+.hdr .logo { max-height: 46px; max-width: 160px; object-fit: contain; }
 .hdr .mid { flex: 1; text-align: center; }
-.hdr .proj { font-size: 14px; font-weight: 800; color: #c0392b; }
-.hdr .ttl { font-size: 13px; font-weight: 800; color: ${accent}; letter-spacing: .4px; }
-.hdr .no { border: 1px solid ${accent}; border-radius: 6px; padding: 5px 10px; text-align: center; min-width: 96px; }
+.hdr .ttl { font-size: 17px; font-weight: 800; color: ${accent}; letter-spacing: .6px; }
+.hdr .no { border: 1px solid ${accent}; border-radius: 6px; padding: 5px 10px; text-align: center; min-width: 100px; }
 .hdr .no b { display: block; font-size: 9px; color: ${accent}; letter-spacing: .4px; }
 .hdr .no span { font-size: 12px; font-weight: 800; }
 .hdr .no i { display: block; font-style: normal; font-size: 9px; color: #6b7280; }
-.secBar { background: ${accent}; color: #fff; text-align: center; font-weight: 700; font-size: 9.5px; letter-spacing: .5px; padding: 2px 0; margin: 6px 0 0; }
+.secBar { background: ${accent}; color: #fff; text-align: center; font-weight: 700; font-size: 9.5px; letter-spacing: .5px; padding: 2px 0; margin: 7px 0 0; }
 table { width: 100%; border-collapse: collapse; }
-th, td { border: 1px solid #cfd6e0; padding: 2.5px 6px; vertical-align: middle; }
+th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
+/* One uniform row height across the whole document. The equipment rows are
+   exactly two of them, because that is where the text actually lands. */
+.info th, .info td, tbody .docName, tbody .docBox { height: 17px; }
 .info th { background: #f3f6fa; font-weight: 700; width: 17%; white-space: nowrap; text-align: ${isHe ? "right" : "left"}; }
 .info td { width: 33%; }
 .eq { table-layout: fixed; }
+.eq th, .eq td.v { height: 36px; }
 .eq th { background: #f3f6fa; font-weight: 700; width: 26%; text-align: ${isHe ? "right" : "left"}; }
-.eq td.v { width: 42%; }
-.eq td.pic { width: 36%; text-align: center; padding: 4px; }
-.eq td.pic img { max-width: 100%; max-height: 96px; object-fit: contain; }
+.eq td.v { width: 38%; }
+.eq td.pic { width: 36%; text-align: center; padding: 3px; }
+.eq td.pic img { max-width: 100%; max-height: 130px; object-fit: contain; }
 .noImg { color: #9aa3af; font-size: 9px; }
 .docName { text-align: ${isHe ? "right" : "left"}; }
 .docBox { width: 34px; text-align: center; font-size: 12px; }
-.txtBox { border: 1px solid #cfd6e0; padding: 4px 7px; min-height: 26px; white-space: pre-wrap; }
+.addWrap { flex: 1; display: flex; flex-direction: column; min-height: 96px; }
+.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 5px 7px; min-height: 46px; white-space: pre-wrap; }
+.txtBox + .txtBox { border-top: none; }
 .miniLbl { font-size: 8.5px; color: #6b7280; font-weight: 700; margin-bottom: 2px; }
-.rev td { vertical-align: top; height: 40px; }
+.rev td { vertical-align: top; height: 74px; padding: 4px 6px; }
 .rev .sig { width: 30%; }
 .rev .cmt { width: 42%; }
 .rev .decs { width: 28%; }
+.sigImg { height: 46px; display: flex; align-items: center; justify-content: center; }
+.sigImg img { max-height: 44px; max-width: 100%; object-fit: contain; }
+.sigVal { font-size: 8.5px; color: #374151; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 2px; }
 .dec { display: flex; align-items: center; gap: 5px; font-size: 9px; padding: 0; }
 .dec .box { font-size: 11px; }
 .revBlock { page-break-inside: avoid; }
-.ftr { margin-top: 6px; font-size: 8px; color: #6b7280; text-align: center; }
+.footTxt { margin-top: 8px; font-size: 9px; color: #6b7280; text-align: center; white-space: pre-line; }
+.footImg { margin-top: 8px; text-align: center; }
+.footImg img { max-width: 100%; max-height: 78px; object-fit: contain; }
+.ftr { margin-top: 5px; font-size: 8px; color: #9aa3af; text-align: center; }
 /* The attached specifications, appended after the form. One source page per
    printed page, so the whole thing prints as a single document. */
 .specPage { page-break-before: always; text-align: center; }
 .specPage .specLbl { font-size: 8px; color: #6b7280; margin-bottom: 3px; direction: ltr; text-align: center; }
 .specPage img { max-width: 100%; max-height: 268mm; object-fit: contain; border: 1px solid #e5e7eb; }
 </style></head><body><div class="frame">
-<div class="hdr">${logo}<div class="mid"><div class="proj">${val(rec.projectName)}</div><div class="ttl">EQUIPMENT / MATERIAL SUBMITTAL</div></div>
+<div class="hdr">${logo}<div class="mid"><div class="ttl">EQUIPMENT / MATERIAL SUBMITTAL</div></div>
 <div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
 
 <div class="secBar">${L("projectInfo")}</div>
@@ -5585,17 +5661,18 @@ ${infoRow(L("scope"), val(rec.scope), L("email"), val(rec.email))}
 <table>${docRows}</table>
 
 <div class="secBar">${L("additional")}</div>
+<div class="addWrap">
 <div class="txtBox" dir="ltr">${sbEsc(rec.infoEn || "")}</div>
 <div class="txtBox" dir="rtl">${sbEsc(rec.infoHe || "")}</div>
-
-${reviewBlocks}
+</div>
+${reviewBlock}
+${footTxt}${footImg}
 <div class="ftr">${sbEsc(sbNumber(rec.category, rec.seq))} &nbsp;·&nbsp; Rev.${sbEsc(rec.rev || 0)} &nbsp;·&nbsp; ${sbEsc(sbFmtDate(rec.date))}</div>
 </div>
 ${(specPages || []).map((sp) => `<div class="specPage"><div class="specLbl">${sbEsc(sp.label)}</div><img src="${sp.dataUrl}" alt=""></div>`).join("")}
 </body></html>`;
   return html;
 }
-
 // Render every attached PDF to images, so the printed document is the submittal
 // on page one and the specifications it refers to on the pages after it.
 // Nothing is stored: the combined document is built at the moment it is asked
@@ -5656,7 +5733,7 @@ async function sbRenderSpecPages(rec, onProgress) {
 
 // The window has to be opened inside the click itself or the browser blocks it,
 // so it opens on a waiting message and the content is written in once ready.
-function sbPrint(rec, lang, brand) {
+function sbPrint(rec, lang, brand, signatures) {
   const w = window.open("", "_blank");
   if (!w) return;
   const waiting = lang === "he" ? "\u05de\u05db\u05d9\u05df \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da\u2026" : "Preparing the document\u2026";
@@ -5677,7 +5754,7 @@ function sbPrint(rec, lang, brand) {
       console.warn("[awdash] spec rendering failed", e);
     }
     if (w.closed) return;
-    const html = sbBuildPrintHtml(rec, lang, brand, specPages);
+    const html = sbBuildPrintHtml(rec, lang, brand, specPages, signatures);
     w.document.open();
     w.document.write(html);
     w.document.close();
@@ -5692,7 +5769,7 @@ function sbPrint(rec, lang, brand) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onSave, onCancel, printBrand }) {
+function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onSave, onCancel, printBrand, userSignatures, currentEmail }) {
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
   const [err, setErr] = useState6(null);
@@ -5900,7 +5977,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
         { className: "sbFormHeadBtns" },
         sbH(
           "button",
-          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand) },
+          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
           sbH(Printer, { size: 14, strokeWidth: 2 }),
           " ",
           L("print")
@@ -6049,8 +6126,8 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
       )
     ),
 
-    // ------- REVIEW & APPROVAL x4
-    (d.reviews || []).map((rv, i) =>
+    // ------- REVIEW & APPROVAL — one block, signed by the supervision
+    (d.reviews || []).slice(0, 1).map((rv, i) =>
       sbH(
         "div",
         { key: rv.id || i },
@@ -6059,20 +6136,71 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
           "div",
           { className: "sbReview" },
           sbH(
-            "label",
+            "div",
             { className: "sbField" },
-            sbH("span", { className: "sbFieldLbl" }, L("signature")),
+            sbH("span", { className: "sbFieldLbl" }, `${L("signature")} — ${L("supervision")}`),
+            // The scanned stamp-and-pen of whoever signed, taken from the
+            // signature saved on their user record. The typed name and date sit
+            // underneath it, small, exactly as they print.
+            sbH(
+              "div",
+              { className: "sbSigBox" },
+              sbSignatureOf(userSignatures, rv.signedByEmail)
+                ? sbH("img", { src: sbSignatureOf(userSignatures, rv.signedByEmail), alt: "" })
+                : sbH("span", { className: "sbSigEmpty" }, rv.signedByEmail ? L("noSignatureOnFile") : "")
+            ),
             sbH("input", {
               type: "text",
               value: rv.signature || "",
               readOnly: ro,
+              placeholder: L("signature"),
               onChange: (e) => {
                 const next = (d.reviews || []).slice();
                 next[i] = { ...rv, signature: e.target.value, signedAt: e.target.value ? new Date().toISOString() : null };
                 set({ reviews: next });
               },
               style: inS
-            })
+            }),
+            ro
+              ? null
+              : sbH(
+                  "div",
+                  { className: "sbSigRow" },
+                  sbH(
+                    "button",
+                    {
+                      type: "button",
+                      className: "sbLinkBtn",
+                      onClick: () => {
+                        const next = (d.reviews || []).slice();
+                        const who = (currentEmail || "").split("@")[0] || currentEmail || "";
+                        next[i] = {
+                          ...rv,
+                          signedByEmail: (currentEmail || "").toLowerCase(),
+                          signature: rv.signature || `${who} · ${sbFmtDate(sbToday())}`,
+                          signedAt: new Date().toISOString()
+                        };
+                        set({ reviews: next });
+                      }
+                    },
+                    L("signAsMe")
+                  ),
+                  rv.signedByEmail
+                    ? sbH(
+                        "button",
+                        {
+                          type: "button",
+                          className: "sbLinkBtn muted",
+                          onClick: () => {
+                            const next = (d.reviews || []).slice();
+                            next[i] = { ...rv, signedByEmail: null, signature: "", signedAt: null };
+                            set({ reviews: next });
+                          }
+                        },
+                        L("clearSignature")
+                      )
+                    : null
+                )
           ),
           sbH(
             "label",
@@ -6331,6 +6459,8 @@ function SubmittalCard({
   viewerRole,
   submittalPerms,
   currentEmail,
+  userSignatures,
+  brandName,
   contacts,
   contactsCatalog,
   printBrand
@@ -6355,9 +6485,9 @@ function SubmittalCard({
   const projectId = project && project.id;
   const pName = (project && project.name) || projectName || "";
 
-  // The contractor line comes from the contacts tab: the company on the "main
-  // contractor" row of this project.
-  const contractorName = (() => {
+  // The contractor line is the company itself. The full row in the contacts tab
+  // carries a person, a role and a phone — none of that belongs on the form.
+  const contractorName = brandName || (() => {
     const row = (contacts || []).find((r) => r.group === "main");
     if (!row) return "";
     const cat = contactsCatalog || {};
@@ -6428,6 +6558,8 @@ function SubmittalCard({
       projectId,
       scopeOptions,
       printBrand,
+      userSignatures,
+      currentEmail,
       onSave: saveDraft,
       onCancel: () => {
         setDraft(null);
@@ -6481,7 +6613,7 @@ function SubmittalCard({
         canEdit,
         onCreate: startCreate,
         onOpen: openExisting,
-        onPrint: (s) => sbPrint(s, lang, printBrand),
+        onPrint: (s) => sbPrint(s, lang, printBrand, userSignatures),
         onNewRevision: startRevision,
         onDelete: deleteOne
       })
@@ -6632,7 +6764,7 @@ function AddUserPanel({ isRTL, projects }) {
   };
   return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הוספת משתמש" : "Add user"), /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 560, marginInline: "auto" } }, /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, isRTL ? "בחרי תפקיד ואימייל, וסמני לאילו פרויקטים לתת גישה. תישלח הזמנה במייל." : "Choose role, email, and which projects to grant. An invitation is emailed."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "center", marginTop: 12 } }, /* @__PURE__ */ React15.createElement("select", { value: role, onChange: (e) => setRole(e.target.value), style: inS }, /* @__PURE__ */ React15.createElement("option", { value: "client" }, isRTL ? "לקוח" : "Client"), /* @__PURE__ */ React15.createElement("option", { value: "contractor" }, isRTL ? "קבלן ראשי" : "Main contractor")), /* @__PURE__ */ React15.createElement("input", { type: "email", placeholder: isRTL ? "אימייל" : "Email", value: email, onChange: (e) => setEmail(e.target.value), dir: "ltr", style: { ...inS, minWidth: 240 } })), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, fontSize: 13 } }, isRTL ? "הרשאה לפרויקטים:" : "Grant access to projects:"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setProjOpen((o) => !o), style: { display: "inline-flex", alignItems: "center", justifyContent: "space-between", gap: 8, background: "#eef0f2", border: "1px solid var(--line)", borderRadius: 8, padding: "8px 14px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit", minWidth: 200 } }, /* @__PURE__ */ React15.createElement("span", null, chosenCount ? (isRTL ? chosenCount + " נבחרו" : chosenCount + " selected") : isRTL ? "בחרי פרויקטים" : "Select projects"), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 16, strokeWidth: 2, style: { transform: projOpen ? "rotate(180deg)" : "none", transition: "transform .15s" } }))), projOpen && /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 8, maxWidth: 360, marginInline: "auto", border: "1px solid var(--line)", borderRadius: 8, padding: "10px 12px", background: "#fff", textAlign: isRTL ? "right" : "left" } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "אין פרויקטים עדיין." : "No projects yet.") : /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8 } }, projects.map((p) => /* @__PURE__ */ React15.createElement("label", { key: p.id, style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: !!sel[p.id], onChange: (e) => setSel((s) => ({ ...s, [p.id]: e.target.checked })) }), /* @__PURE__ */ React15.createElement("span", null, p.name)))))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 20, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: submit, disabled: busy, style: { background: "#e9ebee", color: "#2b3440", border: "1px solid var(--line)", borderRadius: 999, padding: "10px 24px", fontWeight: 700, fontSize: 14, cursor: "pointer", fontFamily: "inherit" } }, busy ? isRTL ? "שולח…" : "Sending…" : isRTL ? "שליחת הזמנה" : "Send invitation")), msg && /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 12, fontWeight: 700, textAlign: "center", color: msg.ok ? "#1a7f4b" : "#b02a37" } }, msg.text)));
 }
-function UserListPanel({ isRTL, projects, brandLogo }) {
+function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChange }) {
   const [users, setUsers] = useState6(null);
   const [access, setAccess] = useState6([]);
   const [discMap, setDiscMap] = useState6({});
@@ -6662,6 +6794,19 @@ function UserListPanel({ isRTL, projects, brandLogo }) {
   const nameOf = (pid) => {
     const p = projects.find((x) => x.id === pid);
     return p ? p.name : pid;
+  };
+  // The scanned signature (company stamp + pen) that gets printed on the
+  // submittal this user approves.
+  const sigOf = (u) => {
+    const rec = (signatures || {})[String(u.email || "").trim().toLowerCase()];
+    return rec && rec.dataUrl || null;
+  };
+  const onSignatureFile = async (u, e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f || !onSignatureChange) return;
+    const dataUrl = await sbMakeSignature(f);
+    if (dataUrl) onSignatureChange(u.email, dataUrl);
   };
   const load = async () => {
     setErr(null);
@@ -6794,18 +6939,18 @@ function UserListPanel({ isRTL, projects, brandLogo }) {
   };
   const grayPill = { display: "inline-flex", alignItems: "center", gap: 6, background: "#e9ebee", color: "#2b3440", border: "1px solid var(--line)", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
   const th = (label) => /* @__PURE__ */ React15.createElement("th", { style: headS }, label);
-  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: load, disabled: busy, style: { position: "absolute", insetInlineEnd: 0 } }, isRTL ? "רענון" : "Refresh")), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
+  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: load, disabled: busy, style: { position: "absolute", insetInlineEnd: 0 } }, isRTL ? "רענון" : "Refresh")), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "חתימה" : "Signature"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
     const disc = discMap[(u.email || "").toLowerCase()];
-    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
+    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, sigOf(u) ? /* @__PURE__ */ React15.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React15.createElement("img", { src: sigOf(u), alt: "", style: { height: 26, maxWidth: 90, objectFit: "contain" } }), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "הסרת חתימה" : "Remove signature", onClick: () => onSignatureChange && onSignatureChange(u.email, null), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 13, lineHeight: 1, padding: 0 } }, "✕")) : /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 13, strokeWidth: 2 }), " ", isRTL ? "העלאה" : "Upload", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onSignatureFile(u, e) }))), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
   })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen((o) => !o), style: grayPill }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 15, strokeWidth: 2 }), " ", isRTL ? "עריכת מסמך ה‑PDF" : "Edit PDF document")), pdfOpen && /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 520, marginInline: "auto", marginTop: 12, border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "#fbfcfd", textAlign: isRTL ? "right" : "left" } }, /* @__PURE__ */ React15.createElement("label", { style: { display: "block", fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה" : "Footer text"), /* @__PURE__ */ React15.createElement("textarea", { value: pdfFooter, onChange: (e) => setPdfFooter(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text shown at the bottom of the document", style: { width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" } }, pdfLogo ? /* @__PURE__ */ React15.createElement("img", { src: pdfLogo, alt: "", style: { height: 34, maxWidth: 120, objectFit: "contain" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfLogo }))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } }, pdfFooterImg ? /* @__PURE__ */ React15.createElement("img", { src: pdfFooterImg, alt: "", style: { height: 40, maxWidth: 240, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfFooterImg })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "גוון המסמך" : "Document color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setPdfAccent(pal.accent), style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: pdfAccent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })))), /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center", marginTop: 14 } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen(false), style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center", marginTop: 14, flexWrap: "wrap" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportCsv, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑Excel" : "Download Excel"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportPdf, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑PDF" : "Download PDF")))));
 }
-function UserSettingsScreen({ isRTL, projects, brandLogo }) {
+function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange }) {
   const [view, setView] = useState6("menu");
   const blackBtn = (icon, labelHe, labelEn, onClick) => /* @__PURE__ */ React15.createElement("button", { type: "button", onClick, style: { display: "flex", alignItems: "center", gap: 10, width: "100%", background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer", textAlign: isRTL ? "right" : "left", fontWeight: 600, fontSize: 14, fontFamily: "inherit" } }, icon, /* @__PURE__ */ React15.createElement("span", { style: { flex: 1 } }, isRTL ? labelHe : labelEn), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }));
   const mkBack = (wide) => /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setView("menu"), style: { alignSelf: "flex-start", marginInlineStart: wide ? "-12.5%" : 0 } }, /* @__PURE__ */ React15.createElement(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }), " ", isRTL ? "חזרה" : "Back");
   const backBtn = mkBack(false);
   if (view === "add") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, backBtn, /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects }));
-  if (view === "list") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, mkBack(true), /* @__PURE__ */ React15.createElement(UserListPanel, { isRTL, projects, brandLogo }));
+  if (view === "list") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, mkBack(true), /* @__PURE__ */ React15.createElement(UserListPanel, { isRTL, projects, brandLogo, signatures, onSignatureChange }));
   if (view === "reset") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, backBtn, /* @__PURE__ */ React15.createElement(PasswordResetPanel, { isRTL }));
   return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginTop: 12, maxWidth: 480, marginInline: "auto" } }, blackBtn(/* @__PURE__ */ React15.createElement(Plus2, { size: 17, strokeWidth: 1.8 }), "הוספת משתמש", "Add user", () => setView("add")), blackBtn(/* @__PURE__ */ React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "רשימת משתמשים", "User list", () => setView("list")), blackBtn(/* @__PURE__ */ React15.createElement(Lock3, { size: 17, strokeWidth: 1.8 }), "איפוס סיסמה למשתמש", "Reset a password", () => setView("reset"))));
 }
@@ -7030,6 +7175,44 @@ function ProjectDashboardApp() {
       }
     })();
   }, [contactsCatalog, catalogLoaded, isAuthenticated]);
+  // One scanned signature (stamp + pen) per user, keyed by e-mail. Its own row
+  // so it is not rewritten every time a project changes.
+  const [userSignatures, setUserSignatures] = useState6({});
+  const [signaturesLoaded, setSignaturesLoaded] = useState6(false);
+  useEffect5(() => {
+    if (!isAuthenticated) return;
+    (async () => {
+      try {
+        const { data, error } = await supabase.from("app_state").select("value").eq("key", "user-signatures").maybeSingle();
+        if (error) throw error;
+        if (data && data.value) setUserSignatures(data.value);
+        setSignaturesLoaded(true);
+      } catch (e) {
+        console.error("[awdash] load user-signatures failed \u2014 auto-save stays OFF", e);
+      }
+    })();
+  }, [isAuthenticated]);
+  useEffect5(() => {
+    if (!isAuthenticated || !signaturesLoaded) return;
+    (async () => {
+      try {
+        const { error } = await supabase.from("app_state").upsert({ key: "user-signatures", value: userSignatures, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+        if (error) console.error("[awdash] save user-signatures failed", error);
+      } catch (e) {
+        console.error("[awdash] save user-signatures failed", e);
+      }
+    })();
+  }, [userSignatures, signaturesLoaded, isAuthenticated]);
+  const setUserSignature = (email, dataUrl) => {
+    const key = String(email || "").trim().toLowerCase();
+    if (!key) return;
+    setUserSignatures((prev) => {
+      const next = { ...prev };
+      if (dataUrl) next[key] = { dataUrl, updatedAt: (/* @__PURE__ */ new Date()).toISOString() };
+      else delete next[key];
+      return next;
+    });
+  };
   const [projectExtras, setProjectExtras] = useState6({});
   const [extrasLoaded, setExtrasLoaded] = useState6(false);
   useEffect5(() => {
@@ -8075,6 +8258,8 @@ function ProjectDashboardApp() {
         onChangeSubmittals: (next) => updateProjectExtras(activeProject.id, { submittals: next }),
         submittalPerms: activeExtras.submittalPerms || {},
         currentEmail: loggedInEmail,
+        userSignatures,
+        brandName: activeContractor.name || DEFAULT_BRAND_NAME,
         printBrand: {
           logoUrl: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL,
           accent: viewData.accent && viewData.accent.accent || "#1A559E",
@@ -8083,7 +8268,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
