@@ -1157,11 +1157,13 @@ var pdfViewer = `
           margin-top: 20px; border: 1px solid var(--line); border-radius: 12px;
           background: #fbfcfd; padding: 14px 16px;
         }
+        /* The specification panel is a working area, not a caption — it reads
+           from the start of the line like a form, not centred. */
         .sbSpecsHead {
-          display: flex; align-items: center; justify-content: center; gap: 7px;
+          display: flex; align-items: center; gap: 7px;
           font-size: 13px; font-weight: 800; color: var(--accent-ink); margin-bottom: 10px;
         }
-        .sbSpecsRow { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; }
+        .sbSpecsRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .sbAiBtn {
           display: inline-flex; align-items: center; gap: 7px;
           background: #14181f; color: #fff; border: none; border-radius: 999px;
@@ -1169,10 +1171,10 @@ var pdfViewer = `
         }
         .sbAiBtn:hover { background: #232a35; }
         .sbAiBtn[disabled] { opacity: .6; cursor: default; }
-        .sbAiHint { margin: 9px 0 0; font-size: 11.5px; font-weight: 600; color: var(--mist); text-align: center; }
-        .sbAiMsg { margin: 7px 0 0; font-size: 12px; font-weight: 700; color: var(--accent-ink); text-align: center; }
+        .sbAiHint { margin: 9px 0 0; font-size: 11.5px; font-weight: 600; color: var(--mist); }
+        .sbAiMsg { margin: 7px 0 0; font-size: 12px; font-weight: 700; color: var(--accent-ink); }
         .sbAttList { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-        .sbAttList li { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12.5px; }
+        .sbAttList li { display: flex; align-items: center; gap: 8px; font-size: 12.5px; }
         .sbInlineTag {
           background: #fdf0d5; color: #8a5a00; border-radius: 999px;
           padding: 2px 9px; font-size: 10.5px; font-weight: 800;
@@ -1183,6 +1185,28 @@ var pdfViewer = `
         }
         .sbCharsTag.poor { background: #fdecec; color: #b02a37; }
         .sbSaveRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 22px 0 6px; }
+        /* One set of specifications can describe several products, and a
+           submittal covers one. This is where that is sorted out. */
+        .sbProducts {
+          margin-top: 14px; border: 1px solid var(--accent); border-radius: 12px;
+          background: var(--accent-soft); padding: 14px 16px;
+        }
+        .sbProductsHead { font-size: 13px; font-weight: 800; color: var(--accent-ink); }
+        .sbProductList { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+        .sbProductList li {
+          display: flex; align-items: flex-start; gap: 10px; background: #fff;
+          border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px;
+        }
+        .sbProductBody { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .sbProductName { font-size: 12.5px; font-weight: 700; }
+        .sbProductMeta { font-size: 11.5px; color: var(--mist); font-weight: 600; }
+        .sbProductsRow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+        .sbProductList li.taken { border-color: var(--accent); background: var(--accent-soft); }
+        .sbTakenTag {
+          background: var(--accent); color: #fff; border-radius: 999px;
+          padding: 3px 11px; font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        .sbProductList li .sbActBtn, .sbProductList li .sbTakenTag { margin-inline-start: auto; align-self: center; }
 
         /* ---------- Contacts ---------- */
         /* Every cell centred, headers included — a deliberate rule for this
@@ -4106,6 +4130,8 @@ function CardView({
   contractorAccent,
   submittals,
   onChangeSubmittals,
+  submittalQueue,
+  onChangeQueue,
   submittalPerms,
   currentEmail,
   userSignatures,
@@ -4165,7 +4191,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -5262,21 +5288,22 @@ var SUBMITTAL_CATEGORIES = [
 // comments in the source workbook so the wording is Marcella's, not a
 // translation of the English.
 var SB_L = {
-  submittalNo: { en: "SUBMITTAL NO.", he: "מספר סבמיטל" },
-  revision: { en: "Revision", he: "גירסה" },
+  formTitle: { en: "EQUIPMENT / MATERIAL SUBMITTAL", he: "הגשת ציוד / חומרים לאישור" },
+  submittalNo: { en: "SUBMITTAL NO.", he: "מס' סבמיטל" },
+  revision: { en: "Revision", he: "מהדורה / רוויזיה" },
   projectInfo: { en: "PROJECT INFORMATION", he: "פרטי הפרויקט" },
   projectName: { en: "Project Name", he: "שם הפרויקט" },
-  date: { en: "Date", he: "תאריך הגשה" },
+  date: { en: "Date", he: "תאריך" },
   contractor: { en: "Contractor", he: "קבלן" },
   requiredApprovalDate: { en: "Required Approval Date", he: "תאריך נדרש לאישור" },
   discipline: { en: "Discipline", he: "תחום" },
-  submittedBy: { en: "Submitted By", he: "הוגש ע\"י" },
-  scope: { en: "Scope", he: "הפניה לתוכנית" },
-  email: { en: "E-mail", he: "מייל" },
+  submittedBy: { en: "Submitted By", he: "הוגש על ידי" },
+  scope: { en: "Scope", he: "תכולה" },
+  email: { en: "E-mail", he: "דוא\"ל" },
   equipment: { en: "EQUIPMENT / MATERIAL DETAILS", he: "פרטי ציוד / חומר" },
-  typeId: { en: "Type ID", he: "איפיון בתוכנית" },
+  typeId: { en: "Type ID", he: "מזהה סוג" },
   itemDescription: { en: "Item Description", he: "תיאור הפריט" },
-  modelCode: { en: "Model / Product Code", he: "דגם / מק\"ט" },
+  modelCode: { en: "Model / Product Code", he: "דגם / מק\"ט מוצר" },
   manufacturer: { en: "Manufacturer", he: "יצרן" },
   picture: { en: "Picture", he: "תמונה" },
   addPicture: { en: "Add picture", he: "העלאת תמונה" },
@@ -5284,8 +5311,8 @@ var SB_L = {
   additional: { en: "Additional Information", he: "מידע נוסף" },
   additionalEn: { en: "General information (English)", he: "מידע כללי על הציוד באנגלית" },
   additionalHe: { en: "General information (Hebrew)", he: "מידע כללי על הציוד בעברית" },
-  review: { en: "REVIEW & APPROVAL", he: "הערות ואישור" },
-  signature: { en: "Signature (Name & Date)", he: "חתימה + תאריך אישור + שם מלא" },
+  review: { en: "REVIEW & APPROVAL", he: "בדיקה ואישור" },
+  signature: { en: "Signature (Name & Date)", he: "חתימה (שם ותאריך)" },
   approvalComments: { en: "Approval Comments", he: "הערות לאישור" },
   specs: { en: "Specification files (PDF)", he: "מפרטים מצורפים (PDF)" },
   uploadSpec: { en: "Upload specification (PDF)", he: "העלאת מפרט (PDF)" },
@@ -5326,12 +5353,33 @@ var SB_L = {
   saveSignature: { en: "Save signature", he: "שמירת החתימה" },
   showSpecText: { en: "See the text the AI reads", he: "להציג את הטקסט שה‑AI קורא" },
   poorText: {
-    en: "Almost no text came out of the file — it is probably a scan (an image of a page) rather than a real text PDF, so there is nothing for the AI to read.",
-    he: "כמעט לא נשלף טקסט מהקובץ — הוא כנראה סריקה (תמונה של דף) ולא PDF עם טקסט אמיתי, ולכן אין ל‑AI מה לקרוא."
+    en: "Could not read the file either as text or as pages.",
+    he: "לא הצלחתי לקרוא את הקובץ — לא כטקסט ולא כעמודים."
   },
+  readingAsImages: {
+    en: "This file has no text in it — reading its pages as images instead\u2026",
+    he: "אין טקסט בקובץ הזה — קורא את העמודים שלו כתמונות\u2026"
+  },
+  noTextTag: { en: "no text — read as images", he: "אין טקסט — ייקרא כתמונה" },
+  foundProducts: { en: "Several products found in the specifications", he: "זוהו כמה מוצרים במפרטים" },
+  productsHint: {
+    en: "A submittal covers one product. Tick the ones to create — the first fills this form, the rest become submittals of their own, each carrying only its own pages.",
+    he: "סבמיטל אחד = מוצר אחד. סמני את מה שרלוונטי — הראשון ימלא את הטופס הזה, והשאר ייווצרו כסבמיטלים נפרדים, כל אחד עם עמודי המפרט שלו בלבד."
+  },
+  pagesLabel: { en: "pages", he: "עמודים" },
+  discard: { en: "Clear the worklist", he: "ניקוי רשימת העבודה" },
+  worklist: { en: "Worklist", he: "רשימת עבודה" },
+  worklistHint: {
+    en: "They are waiting as a worklist. Take one at a time — it leaves the list once its submittal has been sent.",
+    he: "הם ממתינים כרשימת עבודה. לוקחים אחד בכל פעם — הוא יורד מהרשימה ברגע שהסבמיטל שלו נשלח."
+  },
+  loadThis: { en: "Take this one", he: "לקחת את זה" },
+  remaining: { en: "still to do", he: "נותרו לביצוע" },
+  notRelevant: { en: "not relevant to the rest of the documents", he: "לא נמצא רלוונטי לשאר המסמכים" },
+  worklistDone: { en: "The worklist is finished.", he: "רשימת העבודה הושלמה." },
   viewOnly: { en: "View only", he: "צפייה בלבד" },
   supervision: { en: "Supervision", he: "פיקוח" },
-  signAsMe: { en: "Sign", he: "חתימה" },
+  signAsMe: { en: "Sign", he: "לחתום" },
   clearSignature: { en: "Clear signature", he: "ניקוי חתימה" },
   noSignatureOnFile: {
     en: "No signature on file for this user — upload one in the user list.",
@@ -5345,12 +5393,12 @@ var SB_NO_INFO = { en: "No information", he: "אין מידע" };
 var SB_DOC_ROWS = [
   { key: "datasheet", en: "Technical Datasheet", he: "מפרט טכני" },
   { key: "catalogue", en: "Product Catalogue", he: "קטלוג מוצר" },
-  { key: "sample", en: "Sample / Material Board", he: "דוגמא" },
-  { key: "shopDrawing", en: "Shop Drawing (SD)", he: "תוכנית ייצור (SD)" },
-  { key: "certificates", en: "Certificates and Compliance Documents", he: "תעודות תקן ואישורי התאמה" },
-  { key: "testReports", en: "Test Reports (if applicable)", he: "דוחות בדיקה במידה ונדרש" },
-  { key: "warranty", en: "Warranty Certificate", he: "תעודות אחריות" },
-  { key: "sustainability", en: "Sustainability Documentation (EPD / HPD, if applicable)", he: "מסמכי קיימות (EPD / HPD, במידת הצורך)" },
+  { key: "sample", en: "Sample / Material Board", he: "דוגמה / לוח חומרים" },
+  { key: "shopDrawing", en: "Shop Drawing (SD)", he: "תוכנית ייצור / Shop Drawing (SD)" },
+  { key: "certificates", en: "Certificates and Compliance Documents", he: "תעודות ואישורי התאמה" },
+  { key: "testReports", en: "Test Reports (if applicable)", he: "דוחות בדיקה (אם רלוונטי)" },
+  { key: "warranty", en: "Warranty Certificate", he: "תעודת אחריות" },
+  { key: "sustainability", en: "Sustainability Documentation (EPD / HPD, if applicable)", he: "מסמכי קיימות (EPD / HPD, אם רלוונטי)" },
   { key: "installation", en: "Installation Instructions", he: "הוראות התקנה" },
   { key: "other", en: "Other", he: "אחר" }
 ];
@@ -5359,7 +5407,7 @@ var SB_DOC_ROWS = [
 var SB_DECISIONS = [
   { key: "approved", en: "Approved", he: "מאושר", color: "#1a7f4b" },
   { key: "approvedNoted", en: "Approved as Noted", he: "מאושר בכפוף להערות", color: "#2f7d8f" },
-  { key: "revise", en: "Revise & Resubmit", he: "נדרש תיקון והגשה מחדש", color: "#e08a12" },
+  { key: "revise", en: "Revise & Resubmit", he: "לתקן ולהגיש מחדש", color: "#e08a12" },
   { key: "rejected", en: "Rejected", he: "נדחה", color: "#d02f2f" }
 ];
 // One approval block, the one the supervision signs. Records created when
@@ -5437,6 +5485,13 @@ function sbEmptyDocs() {
     acc[r.key] = false;
     return acc;
   }, {});
+}
+// Give a copy of the attachments that covers only the pages describing this
+// product. The file itself is stored once; only the page list differs.
+function sbScopeAttachments(atts, pages) {
+  const list = Array.isArray(pages) ? pages.map(Number).filter((n) => n >= 1) : [];
+  if (!list.length) return atts || [];
+  return (atts || []).map((a) => ({ ...a, pageList: list }));
 }
 function sbSignatureOf(registry, email) {
   const rec = (registry || {})[String(email || "").trim().toLowerCase()];
@@ -5724,7 +5779,7 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 .specPage .specLbl { font-size: 8px; color: #6b7280; margin-bottom: 3px; direction: ltr; text-align: center; }
 .specPage img { max-width: 100%; max-height: 268mm; object-fit: contain; border: 1px solid #e5e7eb; }
 </style></head><body><div class="frame">
-<div class="hdr"><div class="side">${logo}</div><div class="mid"><div class="ttl">EQUIPMENT / MATERIAL SUBMITTAL</div></div>
+<div class="hdr"><div class="side">${logo}</div><div class="mid"><div class="ttl">${L("formTitle")}</div></div>
 <div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
 
 <div class="secBar">${L("projectInfo")}</div>
@@ -5763,6 +5818,15 @@ ${(specPages || []).map((sp) => `<div class="specPage"><div class="specLbl">${sb
 // Nothing is stored: the combined document is built at the moment it is asked
 // for and lives only in the print window.
 var SB_PRINT_PAGE_CAP = 40;
+// An attachment with no page list covers the whole file. One that has a list
+// covers exactly those pages — that is how a product gets only its own spec.
+function sbPagesOf(att, numPages) {
+  const list = att && att.pageList;
+  if (!Array.isArray(list) || !list.length) {
+    return Array.from({ length: numPages }, (_, i) => i + 1);
+  }
+  return list.map(Number).filter((n) => n >= 1 && n <= numPages).sort((a, b) => a - b);
+}
 async function sbRenderSpecPages(rec, onProgress) {
   const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
   if (!atts.length) return [];
@@ -5792,8 +5856,9 @@ async function sbRenderSpecPages(rec, onProgress) {
     if (!buf) continue;
     try {
       const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-      const total = Math.min(doc.numPages, SB_PRINT_PAGE_CAP - out.length);
-      for (let i = 1; i <= total; i++) {
+      const wanted = sbPagesOf(att, doc.numPages);
+      for (const i of wanted) {
+        if (out.length >= SB_PRINT_PAGE_CAP) break;
         const page = await doc.getPage(i);
         // ~150 DPI against A4 width: readable in print without a huge payload.
         const base = page.getViewport({ scale: 1 });
@@ -5811,6 +5876,57 @@ async function sbRenderSpecPages(rec, onProgress) {
       }
     } catch (e) {
       console.warn("[awdash] could not render a spec for printing", att.name, e);
+    }
+  }
+  return out;
+}
+
+// Some specifications carry no text at all — every page is a picture (a scan,
+// or a PDF printed by a tool that rasterises everything). There is nothing to
+// extract, so the pages themselves are sent and the model reads them by eye.
+// Deliberately smaller and fewer than the print render: legible is enough.
+var SB_AI_IMAGE_PAGES = 5;
+async function sbRenderSpecImages(rec, maxPages) {
+  const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
+  if (!atts.length) return [];
+  let pdfjsLib;
+  try {
+    pdfjsLib = await loadPdfJs();
+  } catch (e) {
+    return [];
+  }
+  const out = [];
+  for (const att of atts) {
+    if (out.length >= maxPages) break;
+    let buf = null;
+    try {
+      if (att.inline && att.dataUrl) {
+        buf = await (await fetch(att.dataUrl)).arrayBuffer();
+      } else if (att.path) {
+        const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).download(att.path);
+        if (error) throw error;
+        buf = await data.arrayBuffer();
+      }
+    } catch (e) {
+      continue;
+    }
+    if (!buf) continue;
+    try {
+      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      const wanted = sbPagesOf(att, doc.numPages);
+      for (const i of wanted) {
+        if (out.length >= maxPages) break;
+        const page = await doc.getPage(i);
+        const base = page.getViewport({ scale: 1 });
+        const viewport = page.getViewport({ scale: Math.min(1000 / base.width, 2) });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        out.push({ data: canvas.toDataURL("image/jpeg", 0.72).split(",")[1], file: att.name, page: i });
+      }
+    } catch (e) {
+      console.warn("[awdash] could not rasterise a spec for the AI", att.name, e);
     }
   }
   return out;
@@ -5854,7 +5970,7 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
   const [err, setErr] = useState6(null);
@@ -5862,6 +5978,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
   const L = (k) => sbText(SB_L[k], lang);
   const set = (patch) => setD((prev) => ({ ...prev, ...patch }));
   const ro = !canEdit;
+  const isHe = lang === "he";
   // The approval block has its own lock: a reviewer who may not touch a single
   // field of the submittal is still the one who signs it.
   const roSign = !(canEdit || canSign);
@@ -5992,24 +6109,64 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
   // The AI is only allowed to read the files uploaded on this submittal. It is
   // not allowed to fill a field from general knowledge — anything it cannot
   // source from the documents comes back as "No information".
+  // A product's fields, with everything the material did not state written as
+  // "no information" rather than left blank.
+  const applyProduct = (pr) => {
+    const o = pr || {};
+    const pick = (k) => {
+      const v = o[k];
+      return v && String(v).trim() ? String(v).trim() : sbText(SB_NO_INFO, lang);
+    };
+    set({
+      typeId: d.typeId || pick("typeId"),
+      itemDescription: pick("itemDescription"),
+      modelCode: pick("modelCode"),
+      manufacturer: pick("manufacturer"),
+      infoEn: o.infoEn && String(o.infoEn).trim() ? String(o.infoEn).trim() : SB_NO_INFO.en,
+      infoHe: o.infoHe && String(o.infoHe).trim() ? String(o.infoHe).trim() : SB_NO_INFO.he,
+      docs: o.docs && typeof o.docs === "object" ? { ...d.docs, ...o.docs } : d.docs,
+      attachments: sbScopeAttachments(d.attachments, o.pages),
+      aiFilledAt: new Date().toISOString()
+    });
+  };
   const runAi = async () => {
     setAiMsg(null);
     setErr(null);
     const gathered = (d.specText || "").trim();
-    if (!gathered) {
+    if (!gathered && !(d.attachments || []).length) {
       setAiMsg(lang === "he" ? "צריך להעלות מפרט PDF קודם — ה‑AI קורא רק ממנו." : "Upload a specification PDF first — the AI reads only from it.");
-      return;
-    }
-    // Sending 80 characters of page numbers costs money and comes back empty.
-    if (gathered.length < 200) {
-      setAiMsg(`${L("poorText")} (${gathered.length})`);
       return;
     }
     setBusy("ai");
     try {
+      // Under 200 characters means the file has no usable text layer. Rather
+      // than give up, hand the model the pages as pictures.
+      let shots = [];
+      if (gathered.length < 200) {
+        setAiMsg(L("readingAsImages"));
+        shots = await sbRenderSpecImages(d, SB_AI_IMAGE_PAGES);
+        if (!shots.length) {
+          setAiMsg(`${L("poorText")} (${gathered.length})`);
+          setBusy(null);
+          return;
+        }
+      }
+      // Which file each page came from, so the model can say "this file does
+      // not belong here" by name.
+      const manifest = shots.length
+        ? Object.values(
+            shots.reduce((acc, sh, i) => {
+              acc[sh.file] = acc[sh.file] || { name: sh.file, pages: [] };
+              acc[sh.file].pages.push(i + 1);
+              return acc;
+            }, {})
+          )
+        : (d.attachments || []).map((a) => ({ name: a.name }));
       const { data, error } = await supabase.functions.invoke("submittal-ai", {
         body: {
-          specText: d.specText,
+          specText: shots.length ? "" : d.specText,
+          images: shots.map((sh) => sh.data),
+          files: manifest,
           category: d.category,
           lang,
           fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe"]
@@ -6017,21 +6174,32 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
       });
       if (error) throw error;
       const out = data || {};
-      const pick = (k) => {
-        const v = out[k];
-        return v && String(v).trim() ? String(v).trim() : sbText(SB_NO_INFO, lang);
-      };
-      set({
-        typeId: d.typeId || pick("typeId"),
-        itemDescription: pick("itemDescription"),
-        modelCode: pick("modelCode"),
-        manufacturer: pick("manufacturer"),
-        infoEn: out.infoEn && String(out.infoEn).trim() ? String(out.infoEn).trim() : SB_NO_INFO.en,
-        infoHe: out.infoHe && String(out.infoHe).trim() ? String(out.infoHe).trim() : SB_NO_INFO.he,
-        docs: out.docs && typeof out.docs === "object" ? { ...d.docs, ...out.docs } : d.docs,
-        aiFilledAt: new Date().toISOString()
-      });
-      setAiMsg(lang === "he" ? "הטופס מולא מתוך המסמכים שהועלו." : "Filled from the uploaded documents.");
+      // One submittal covers one product. If the material describes several,
+      // the list comes back and nothing is filled until it is confirmed.
+      const products = Array.isArray(out.products) && out.products.length ? out.products : [out];
+      // Anything the material carried that belongs to none of these products is
+      // named, not silently dropped.
+      const unused = (Array.isArray(out.unusedFiles) ? out.unusedFiles : []).filter(Boolean);
+      const unusedLine = unused.length
+        ? unused.map((n) => `\u00AB${n}\u00BB \u2014 ${L("notRelevant")}`).join("\n")
+        : "";
+      if (products.length > 1) {
+        // A worklist, not a batch: one product at a time, and it leaves the
+        // list once its submittal has been sent.
+        const queue = products.map((pr, i) => ({
+          id: `q-${Date.now()}-${i}`,
+          category: d.category,
+          product: pr,
+          attachments: sbScopeAttachments(d.attachments, pr.pages),
+          specText: d.specText || "",
+          scope: d.scope || ""
+        }));
+        if (onQueueChange) onQueueChange(queue);
+        setAiMsg([`${L("foundProducts")} (${products.length}). ${L("worklistHint")}`, unusedLine].filter(Boolean).join("\n"));
+      } else {
+        applyProduct(products[0]);
+        setAiMsg([lang === "he" ? "הטופס מולא מתוך המסמכים שהועלו." : "Filled from the uploaded documents.", unusedLine].filter(Boolean).join("\n"));
+      }
     } catch (ex) {
       console.warn("[awdash] submittal-ai not reachable", ex);
       const detail = ex && (ex.message || String(ex)) || "";
@@ -6195,37 +6363,22 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
       )
     ),
 
-    // ------- Additional Information
+    // ------- Additional Information. One box, like the printout: it edits the
+    //         text for the language the site is in. Switching language shows
+    //         the other version, so both still exist on the record.
     secBar("additional"),
     sbH(
-      "div",
-      { className: "sbGrid2" },
-      sbH(
-        "label",
-        { className: "sbField" },
-        sbH("span", { className: "sbFieldLbl" }, L("additionalEn")),
-        sbH("textarea", {
-          value: d.infoEn || "",
-          readOnly: ro,
-          dir: "ltr",
-          rows: 3,
-          onChange: (e) => set({ infoEn: e.target.value }),
-          style: { ...inS, resize: "vertical" }
-        })
-      ),
-      sbH(
-        "label",
-        { className: "sbField" },
-        sbH("span", { className: "sbFieldLbl" }, L("additionalHe")),
-        sbH("textarea", {
-          value: d.infoHe || "",
-          readOnly: ro,
-          dir: "rtl",
-          rows: 3,
-          onChange: (e) => set({ infoHe: e.target.value }),
-          style: { ...inS, resize: "vertical" }
-        })
-      )
+      "label",
+      { className: "sbField" },
+      sbH("span", { className: "sbFieldLbl" }, L(isHe ? "additionalHe" : "additionalEn")),
+      sbH("textarea", {
+        value: (isHe ? d.infoHe : d.infoEn) || "",
+        readOnly: ro,
+        dir: isHe ? "rtl" : "ltr",
+        rows: 6,
+        onChange: (e) => set(isHe ? { infoHe: e.target.value } : { infoEn: e.target.value }),
+        style: { ...inS, resize: "vertical" }
+      })
     ),
 
     // ------- REVIEW & APPROVAL — one block, signed by the supervision
@@ -6410,7 +6563,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
             {
               type: "button",
               className: "sbLinkBtn",
-              style: { margin: "8px auto 0" },
+              style: { marginTop: 8 },
               onClick: () => {
                 const w = window.open("", "_blank");
                 if (!w) return;
@@ -6444,7 +6597,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
                   "span",
                   { className: `sbCharsTag ${att.chars < 200 ? "poor" : ""}` },
                   att.chars < 200
-                    ? lang === "he" ? `${att.chars} תווים — כמעט אין טקסט` : `${att.chars} chars — almost no text`
+                    ? L("noTextTag")
                     : lang === "he" ? `${att.chars.toLocaleString()} תווים` : `${att.chars.toLocaleString()} chars`
                 )
               : null,
@@ -6460,6 +6613,67 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
         )
       )
     ),
+
+    // ------- the worklist: several products found in one set of specifications
+    (queue || []).length
+      ? sbH(
+          "div",
+          { className: "sbProducts" },
+          sbH("div", { className: "sbProductsHead" }, `${L("worklist")} — ${(queue || []).length} ${L("remaining")}`),
+          sbH("p", { className: "sbAiHint" }, L("worklistHint")),
+          sbH(
+            "ul",
+            { className: "sbProductList" },
+            (queue || []).map((q) =>
+              sbH(
+                "li",
+                { key: q.id, className: q.id === d.queueId ? "taken" : "" },
+                sbH(
+                  "div",
+                  { className: "sbProductBody" },
+                  sbH("span", { className: "sbProductName" }, q.product.itemDescription || q.product.modelCode || "—"),
+                  sbH(
+                    "span",
+                    { className: "sbProductMeta" },
+                    [q.product.manufacturer, q.product.modelCode].filter(Boolean).join(" · "),
+                    Array.isArray(q.product.pages) && q.product.pages.length
+                      ? ` — ${L("pagesLabel")} ${q.product.pages.join(", ")}`
+                      : ""
+                  )
+                ),
+                q.id === d.queueId
+                  ? sbH("span", { className: "sbTakenTag" }, L("open"))
+                  : ro
+                    ? null
+                    : sbH(
+                        "button",
+                        {
+                          type: "button",
+                          className: "sbActBtn",
+                          onClick: () => {
+                            applyProduct(q.product);
+                            set({ attachments: q.attachments || d.attachments, specText: q.specText || d.specText, queueId: q.id });
+                            setAiMsg(null);
+                          }
+                        },
+                        L("loadThis")
+                      )
+              )
+            )
+          ),
+          ro
+            ? null
+            : sbH(
+                "div",
+                { className: "sbProductsRow" },
+                sbH(
+                  "button",
+                  { type: "button", className: "ghostBtn small", onClick: () => onQueueChange && onQueueChange([]) },
+                  L("discard")
+                )
+              )
+        )
+      : null,
 
     // ------- save
     ro && canSign
@@ -6511,6 +6725,8 @@ function SubmittalFolder({
   canEdit,
   canSign,
   seenAt,
+  queue,
+  onTakeFromQueue,
   onCreate,
   onOpen,
   onPrint,
@@ -6544,6 +6760,45 @@ function SubmittalFolder({
           )
         )
       : sbH("p", { className: "submittalPanelNote" }, canSign ? L("viewSignOnly") : L("viewOnly")),
+    // What the AI split out of one set of specifications and is still waiting
+    // to be done. It empties itself as each one is sent.
+    canEdit && (queue || []).length
+      ? sbH(
+          "div",
+          { className: "sbProducts" },
+          sbH("div", { className: "sbProductsHead" }, `${L("worklist")} — ${queue.length} ${L("remaining")}`),
+          sbH(
+            "ul",
+            { className: "sbProductList" },
+            queue.map((q) =>
+              sbH(
+                "li",
+                { key: q.id },
+                sbH(
+                  "div",
+                  { className: "sbProductBody" },
+                  sbH("span", { className: "sbProductName" }, q.product.itemDescription || q.product.modelCode || "—"),
+                  sbH(
+                    "span",
+                    { className: "sbProductMeta" },
+                    [q.product.manufacturer, q.product.modelCode].filter(Boolean).join(" · "),
+                    Array.isArray(q.product.pages) && q.product.pages.length
+                      ? ` — ${L("pagesLabel")} ${q.product.pages.join(", ")}`
+                      : ""
+                  )
+                ),
+                sbH(
+                  "button",
+                  { type: "button", className: "sbActBtn sign", onClick: () => onTakeFromQueue && onTakeFromQueue(q) },
+                  sbH(Plus2, { size: 13, strokeWidth: 2.4 }),
+                  " ",
+                  L("loadThis")
+                )
+              )
+            )
+          )
+        )
+      : null,
     sbH("div", { className: "sbListTitle" }, L("trackingList")),
     rows.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
@@ -6655,6 +6910,8 @@ function SubmittalCard({
   project,
   submittals,
   onChangeSubmittals,
+  submittalQueue,
+  onChangeQueue,
   viewerRole,
   submittalPerms,
   currentEmail,
@@ -6764,6 +7021,11 @@ function SubmittalCard({
   const saveDraft = (rec) => {
     const exists = list.some((s) => s.id === rec.id);
     commit(exists ? list.map((s) => (s.id === rec.id ? rec : s)) : [...list, rec]);
+    // Sending is what completes a worklist item. Saving a draft leaves it on
+    // the list, because the work is not done yet.
+    if (rec.sent && rec.queueId && onChangeQueue) {
+      onChangeQueue((submittalQueue || []).filter((q) => q.id !== rec.queueId));
+    }
     setDraft(null);
     setOpenId(null);
   };
@@ -6788,6 +7050,11 @@ function SubmittalCard({
       printBrand,
       userSignatures,
       currentEmail,
+      queue: (submittalQueue || []).filter((q) => q.category === (chosen ? chosen.key : null)),
+      onQueueChange: (next) => {
+        const others = (submittalQueue || []).filter((q) => q.category !== (chosen ? chosen.key : null));
+        if (onChangeQueue) onChangeQueue([...others, ...next]);
+      },
       onSave: saveDraft,
       onCancel: () => {
         setDraft(null);
@@ -6841,6 +7108,37 @@ function SubmittalCard({
         canEdit,
         canSign,
         seenAt,
+        queue: (submittalQueue || []).filter((q) => q.category === chosen.key),
+        onTakeFromQueue: (q) => {
+          const rec = sbNewSubmittal({
+            category: chosen.key,
+            seq: sbNextSeq(list, chosen.key),
+            projectName: pName,
+            contractor: contractorName,
+            disciplineEn: chosen.en,
+            disciplineHe: chosen.he,
+            email: currentEmail || "",
+            submittedBy: (currentEmail || "").split("@")[0] || ""
+          });
+          const pr = q.product || {};
+          const val = (v, fb) => v && String(v).trim() ? String(v).trim() : fb;
+          setDraft({
+            ...rec,
+            queueId: q.id,
+            scope: q.scope || "",
+            typeId: val(pr.typeId, sbText(SB_NO_INFO, lang)),
+            itemDescription: val(pr.itemDescription, sbText(SB_NO_INFO, lang)),
+            modelCode: val(pr.modelCode, sbText(SB_NO_INFO, lang)),
+            manufacturer: val(pr.manufacturer, sbText(SB_NO_INFO, lang)),
+            infoEn: val(pr.infoEn, SB_NO_INFO.en),
+            infoHe: val(pr.infoHe, SB_NO_INFO.he),
+            docs: pr.docs && typeof pr.docs === "object" ? { ...rec.docs, ...pr.docs } : rec.docs,
+            attachments: q.attachments || [],
+            specText: q.specText || "",
+            aiFilledAt: new Date().toISOString()
+          });
+          setOpenId(rec.id);
+        },
         onCreate: startCreate,
         onOpen: openExisting,
         onPrint: (s) => sbPrint(s, lang, printBrand, userSignatures),
@@ -8604,6 +8902,8 @@ function ProjectDashboardApp() {
         contractorAccent: CONTACTS_DOC_ACCENT,
         submittals: activeExtras.submittals || [],
         onChangeSubmittals: (next) => updateProjectExtras(activeProject.id, { submittals: next }),
+        submittalQueue: activeExtras.submittalQueue || [],
+        onChangeQueue: (next) => updateProjectExtras(activeProject.id, { submittalQueue: next }),
         submittalPerms: activeExtras.submittalPerms || {},
         currentEmail: loggedInEmail,
         userSignatures,
