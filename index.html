@@ -1010,6 +1010,15 @@ var pdfViewer = `
           padding: 3px 11px; font-size: 11px; font-weight: 800; white-space: nowrap;
         }
         .sbActions { white-space: nowrap; }
+        .sbActBtn {
+          display: inline-flex; align-items: center; gap: 4px; margin: 0 2px;
+          border: 1px solid var(--line); background: #fff; color: var(--steel);
+          border-radius: 7px; padding: 4px 9px; cursor: pointer;
+          font-family: inherit; font-size: 11.5px; font-weight: 700; white-space: nowrap;
+        }
+        .sbActBtn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+        .sbActBtn.danger { padding: 4px 7px; }
+        .sbActBtn.danger:hover { background: #fdecec; border-color: #d02f2f; color: #d02f2f; }
         .sbIconBtn {
           border: 1px solid var(--line); background: #fff; color: var(--steel);
           border-radius: 7px; padding: 4px 6px; margin: 0 2px; cursor: pointer; line-height: 0;
@@ -5216,6 +5225,11 @@ var SB_L = {
   save: { en: "Save", he: "שמירה" },
   cancel: { en: "Cancel", he: "ביטול" },
   open: { en: "Open", he: "פתיחה" },
+  openPdf: { en: "PDF", he: "PDF" },
+  pdfHint: {
+    en: "The PDF opens in the browser and is never stored: the submittal on page one, the attached specifications on the pages after it.",
+    he: "ה‑PDF נפתח בדפדפן ולא נשמר בשרת: הסבמיטל בעמוד הראשון, והמפרטים המצורפים בעמודים שאחריו."
+  },
   print: { en: "Print / PDF", he: "הדפסה / PDF" },
   newRevision: { en: "New revision", he: "גירסה חדשה" },
   remove: { en: "Delete", he: "מחיקה" },
@@ -5284,6 +5298,14 @@ function sbCatCode(categoryKey) {
 }
 function sbNumber(categoryKey, seq) {
   return `${sbCatCode(categoryKey)}-${sbPad3(seq || 1)}`;
+}
+// A new revision must clear the whole family, not just the row that was
+// clicked: asking for a revision of Rev.0 while Rev.1 exists has to give Rev.2.
+function sbNextRev(list, rec) {
+  const revs = (list || [])
+    .filter((s) => s.category === rec.category && s.seq === rec.seq)
+    .map((s) => Number(s.rev) || 0);
+  return (revs.length ? Math.max.apply(null, revs) : 0) + 1;
 }
 function sbNextSeq(list, categoryKey) {
   const seqs = (list || []).filter((s) => s.category === categoryKey).map((s) => Number(s.seq) || 0);
@@ -5466,7 +5488,7 @@ async function sbExtractPdfText(file) {
 function sbEsc(s) {
   return String(s == null ? "" : s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 }
-function sbPrint(rec, lang, brand) {
+function sbBuildPrintHtml(rec, lang, brand, specPages) {
   const isHe = lang === "he";
   const dir = isHe ? "rtl" : "ltr";
   const L = (k) => sbEsc(sbText(SB_L[k], lang));
@@ -5534,6 +5556,11 @@ th, td { border: 1px solid #cfd6e0; padding: 2.5px 6px; vertical-align: middle; 
 .dec .box { font-size: 11px; }
 .revBlock { page-break-inside: avoid; }
 .ftr { margin-top: 6px; font-size: 8px; color: #6b7280; text-align: center; }
+/* The attached specifications, appended after the form. One source page per
+   printed page, so the whole thing prints as a single document. */
+.specPage { page-break-before: always; text-align: center; }
+.specPage .specLbl { font-size: 8px; color: #6b7280; margin-bottom: 3px; direction: ltr; text-align: center; }
+.specPage img { max-width: 100%; max-height: 268mm; object-fit: contain; border: 1px solid #e5e7eb; }
 </style></head><body><div class="frame">
 <div class="hdr">${logo}<div class="mid"><div class="proj">${val(rec.projectName)}</div><div class="ttl">EQUIPMENT / MATERIAL SUBMITTAL</div></div>
 <div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
@@ -5563,19 +5590,105 @@ ${infoRow(L("scope"), val(rec.scope), L("email"), val(rec.email))}
 
 ${reviewBlocks}
 <div class="ftr">${sbEsc(sbNumber(rec.category, rec.seq))} &nbsp;·&nbsp; Rev.${sbEsc(rec.rev || 0)} &nbsp;·&nbsp; ${sbEsc(sbFmtDate(rec.date))}</div>
-</div></body></html>`;
+</div>
+${(specPages || []).map((sp) => `<div class="specPage"><div class="specLbl">${sbEsc(sp.label)}</div><img src="${sp.dataUrl}" alt=""></div>`).join("")}
+</body></html>`;
+  return html;
+}
+
+// Render every attached PDF to images, so the printed document is the submittal
+// on page one and the specifications it refers to on the pages after it.
+// Nothing is stored: the combined document is built at the moment it is asked
+// for and lives only in the print window.
+var SB_PRINT_PAGE_CAP = 40;
+async function sbRenderSpecPages(rec, onProgress) {
+  const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
+  if (!atts.length) return [];
+  let pdfjsLib;
+  try {
+    pdfjsLib = await loadPdfJs();
+  } catch (e) {
+    console.warn("[awdash] no PDF.js, printing without the specs", e);
+    return [];
+  }
+  const out = [];
+  for (const att of atts) {
+    if (out.length >= SB_PRINT_PAGE_CAP) break;
+    let buf = null;
+    try {
+      if (att.inline && att.dataUrl) {
+        buf = await (await fetch(att.dataUrl)).arrayBuffer();
+      } else if (att.path) {
+        const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).download(att.path);
+        if (error) throw error;
+        buf = await data.arrayBuffer();
+      }
+    } catch (e) {
+      console.warn("[awdash] could not fetch a spec for printing", att.name, e);
+      continue;
+    }
+    if (!buf) continue;
+    try {
+      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      const total = Math.min(doc.numPages, SB_PRINT_PAGE_CAP - out.length);
+      for (let i = 1; i <= total; i++) {
+        const page = await doc.getPage(i);
+        // ~150 DPI against A4 width: readable in print without a huge payload.
+        const base = page.getViewport({ scale: 1 });
+        const scale = Math.min(1240 / base.width, 3);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        out.push({
+          label: `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0} · ${att.name} · p.${i}/${doc.numPages}`,
+          dataUrl: canvas.toDataURL("image/jpeg", 0.8)
+        });
+        if (onProgress) onProgress(out.length);
+      }
+    } catch (e) {
+      console.warn("[awdash] could not render a spec for printing", att.name, e);
+    }
+  }
+  return out;
+}
+
+// The window has to be opened inside the click itself or the browser blocks it,
+// so it opens on a waiting message and the content is written in once ready.
+function sbPrint(rec, lang, brand) {
   const w = window.open("", "_blank");
   if (!w) return;
+  const waiting = lang === "he" ? "\u05de\u05db\u05d9\u05df \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da\u2026" : "Preparing the document\u2026";
   w.document.open();
-  w.document.write(html);
+  w.document.write(`<html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;padding:60px;text-align:center;color:#6b7280"><p id="sbmsg">${sbEsc(waiting)}</p></body></html>`);
   w.document.close();
-  w.focus();
-  setTimeout(() => {
+  (async () => {
+    let specPages = [];
     try {
-      w.print();
+      specPages = await sbRenderSpecPages(rec, (n) => {
+        try {
+          const el = w.document.getElementById("sbmsg");
+          if (el) el.textContent = `${waiting} (${n})`;
+        } catch (e) {
+        }
+      });
     } catch (e) {
+      console.warn("[awdash] spec rendering failed", e);
     }
-  }, 700);
+    if (w.closed) return;
+    const html = sbBuildPrintHtml(rec, lang, brand, specPages);
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(() => {
+      try {
+        w.print();
+      } catch (e) {
+      }
+    }, specPages.length ? 1200 : 700);
+  })();
 }
 
 // ------------------------------------------------------------------- the form
@@ -5787,7 +5900,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
         { className: "sbFormHeadBtns" },
         sbH(
           "button",
-          { type: "button", className: "ghostBtn small", onClick: () => sbPrint(d, lang, printBrand) },
+          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand) },
           sbH(Printer, { size: 14, strokeWidth: 2 }),
           " ",
           L("print")
@@ -6053,6 +6166,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
             )
       ),
       sbH("p", { className: "sbAiHint" }, L("aiHint")),
+      sbH("p", { className: "sbAiHint" }, L("pdfHint")),
       aiMsg ? sbH("p", { className: "sbAiMsg" }, aiMsg) : null,
       sbH(
         "ul",
@@ -6170,26 +6284,32 @@ function SubmittalFolder({ category, lang, isRTL, list, canEdit, onCreate, onOpe
                     { className: "sbActions" },
                     sbH(
                       "button",
-                      { type: "button", className: "sbIconBtn", title: L("open"), onClick: () => onOpen(s) },
-                      sbH(canEdit ? Pencil : FileTextIcon, { size: 14, strokeWidth: 2 })
+                      { type: "button", className: "sbActBtn", onClick: () => onOpen(s) },
+                      sbH(canEdit ? Pencil : FileTextIcon, { size: 13, strokeWidth: 2 }),
+                      " ",
+                      L("open")
                     ),
                     sbH(
                       "button",
-                      { type: "button", className: "sbIconBtn", title: L("print"), onClick: () => onPrint(s) },
-                      sbH(Printer, { size: 14, strokeWidth: 2 })
+                      { type: "button", className: "sbActBtn", title: L("pdfHint"), onClick: () => onPrint(s) },
+                      sbH(Printer, { size: 13, strokeWidth: 2 }),
+                      " ",
+                      L("openPdf")
                     ),
                     canEdit
                       ? sbH(
                           "button",
-                          { type: "button", className: "sbIconBtn", title: L("newRevision"), onClick: () => onNewRevision(s) },
-                          sbH(RotateCcw, { size: 14, strokeWidth: 2 })
+                          { type: "button", className: "sbActBtn", title: L("newRevision"), onClick: () => onNewRevision(s) },
+                          sbH(RotateCcw, { size: 13, strokeWidth: 2 }),
+                          " ",
+                          `Rev.${sbNextRev(list, s)}`
                         )
                       : null,
                     canEdit
                       ? sbH(
                           "button",
-                          { type: "button", className: "sbIconBtn danger", title: L("remove"), onClick: () => onDelete(s) },
-                          sbH(Trash2, { size: 14, strokeWidth: 2 })
+                          { type: "button", className: "sbActBtn danger", title: L("remove"), onClick: () => onDelete(s) },
+                          sbH(Trash2, { size: 13, strokeWidth: 2 })
                         )
                       : null
                   )
@@ -6270,7 +6390,7 @@ function SubmittalCard({
     const rec = {
       ...s,
       id: `sb-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
-      rev: (Number(s.rev) || 0) + 1,
+      rev: sbNextRev(list, s),
       createdAt: new Date().toISOString(),
       date: sbToday(),
       requiredApprovalDate: sbAddDays(sbToday(), 4),
