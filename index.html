@@ -98,6 +98,7 @@ import {
 // Real auth + database. These two values are PUBLIC by design (protected by
 // Row Level Security) and safe to ship in the browser. The secret key and the
 // database password are never placed here.
+import { createPortal } from "react-dom";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 var SUPABASE_URL = "https://jvssavyfjuhjniqkiymo.supabase.co";
 var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9FY_yBz2KLVfVYdxPbvBHw_Xx233xC4";
@@ -619,7 +620,7 @@ var projectMeta = `
           display: flex; flex-direction: column; align-items: center; gap: 4px;
         }
         .clientLogoImg {
-          max-height: 22px; max-width: 120px; object-fit: contain; margin-bottom: 2px;
+          max-height: 46px; max-width: 190px; object-fit: contain; margin-bottom: 4px;
         }
         .metaProjectName {
           font-size: 16px; font-weight: 800; color: var(--accent);
@@ -945,8 +946,8 @@ var pdfViewer = `
 
         /* ---------- Submittal categories ---------- */
         .submittalCard { width: 100%; }
-        .submittalHead { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
-        .submittalIntro { flex: 1; margin: 0; font-size: 13px; font-weight: 600; color: var(--steel); }
+        .submittalHead { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+        .submittalIntro { flex: 1; margin: 0; font-size: 13px; font-weight: 600; color: var(--steel); text-align: center; }
         /* Same tile, hover and highlight as the project board — .dashCard is
            reused deliberately so the two screens can never drift apart. */
         /* Four to a row, so the eight categories read as the two lines they
@@ -972,7 +973,7 @@ var pdfViewer = `
           background: #fff; padding: 14px 18px;
         }
         .submittalPanelHead {
-          display: flex; align-items: center; gap: 8px;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
           font-size: 14px; font-weight: 800; color: var(--accent-ink);
         }
         .submittalPanelNote { margin: 6px 0 0; font-size: 12.5px; font-weight: 600; color: var(--mist); }
@@ -985,7 +986,7 @@ var pdfViewer = `
           font-size: 11px; font-weight: 800; line-height: 19px; text-align: center; padding: 0 5px;
         }
         .sbCreateBtn {
-          display: inline-flex; align-items: center; gap: 7px; margin-top: 12px;
+          display: inline-flex; align-items: center; gap: 7px; margin: 12px auto 0;
           background: #14181f; color: #fff; border: none; border-radius: 10px;
           padding: 10px 20px; font-weight: 700; font-size: 13.5px; cursor: pointer; font-family: inherit;
         }
@@ -993,7 +994,9 @@ var pdfViewer = `
         .sbListTitle {
           margin-top: 18px; padding-top: 12px; border-top: 1px solid var(--line-soft);
           font-size: 12.5px; font-weight: 800; color: var(--steel); letter-spacing: .3px;
+          text-align: center;
         }
+        .sbCreateWrap { display: flex; justify-content: center; }
         .sbTableWrap { overflow-x: auto; margin-top: 8px; }
         .sbTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
         .sbTable th {
@@ -1002,6 +1005,19 @@ var pdfViewer = `
         }
         .sbTable td { padding: 7px 9px; border-bottom: 1px solid var(--line-soft); text-align: center; }
         .sbTable tbody tr:hover td { background: #f8fafc; }
+        /* Approved since this browser last opened the folder. */
+        .sbTable tbody tr.sbRowNew td { background: #fff6d8; }
+        .sbTable tbody tr.sbRowNew:hover td { background: #fdf0c4; }
+        .sbNewTag {
+          display: inline-block; margin-inline-start: 6px; background: #e08a12; color: #fff;
+          border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 800; white-space: nowrap;
+        }
+        .sbDraftTag {
+          display: inline-block; margin-inline-start: 6px; background: #eef0f2; color: var(--steel);
+          border-radius: 999px; padding: 2px 9px; font-size: 10.5px; font-weight: 800; white-space: nowrap;
+        }
+        .sbActBtn.sign { background: #14181f; border-color: #14181f; color: #fff; }
+        .sbActBtn.sign:hover { background: #232a35; border-color: #232a35; color: #fff; }
         .sbNoCell { white-space: nowrap; }
         .sbNoMain { display: block; font-weight: 800; }
         .sbNoRev { display: block; font-size: 11px; color: var(--mist); font-weight: 700; }
@@ -1034,11 +1050,21 @@ var pdfViewer = `
 
         /* the form itself — one column of sections, same width as the panel */
         .sbForm { max-width: 900px; margin: 0 auto; }
+        /* While a submittal is open the form carries its own Back, which returns
+           to the folder. Two identical Back buttons stacked on top of each other
+           is just confusing, so the card's own one steps aside. */
+        .functionPage:has(.sbForm) > .functionBack { display: none; }
         .sbFormHead {
-          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-          margin-bottom: 12px;
+          display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+          gap: 12px; margin-bottom: 12px;
         }
-        .sbFormHeadBtns { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
+        .sbFormHeadSide { display: flex; align-items: center; gap: 8px; }
+        .sbFormHeadSide.start { justify-content: flex-start; }
+        .sbFormHeadSide.end { justify-content: flex-end; }
+        @media (max-width: 640px) {
+          .sbFormHead { grid-template-columns: 1fr; justify-items: center; }
+          .sbFormHeadSide.start, .sbFormHeadSide.end { justify-content: center; }
+        }
         .sbNoBox {
           border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; text-align: center; line-height: 1.25;
         }
@@ -1067,12 +1093,12 @@ var pdfViewer = `
         .sbEqFields { display: flex; flex-direction: column; gap: 10px; }
         .sbImgBox {
           position: relative; display: flex; align-items: center; justify-content: center;
-          min-height: 160px; border: 1.5px dashed var(--line); border-radius: 10px;
+          min-height: 252px; border: 1.5px dashed var(--line); border-radius: 10px;
           background: #fafbfc; cursor: pointer; overflow: hidden;
         }
         .sbImgBox.ro { cursor: default; }
         .sbImgBox:not(.ro):hover { border-color: var(--accent); background: var(--accent-soft); }
-        .sbImgBox img { max-width: 100%; max-height: 200px; object-fit: contain; display: block; }
+        .sbImgBox img { max-width: 100%; max-height: 292px; object-fit: contain; display: block; }
         .sbImgEmpty {
           display: flex; flex-direction: column; align-items: center; gap: 7px;
           color: var(--mist); font-size: 12px; font-weight: 700; text-align: center; padding: 8px;
@@ -1106,7 +1132,7 @@ var pdfViewer = `
         }
         .sbSigBox img { max-height: 56px; max-width: 100%; object-fit: contain; }
         .sbSigEmpty { font-size: 10.5px; color: var(--mist); font-weight: 600; text-align: center; padding: 0 8px; }
-        .sbSigRow { display: flex; align-items: center; gap: 12px; margin-top: 5px; }
+        .sbSigRow { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 7px; }
         .sbLinkBtn.muted { color: var(--mist); font-weight: 600; }
 
         .sbSpecs {
@@ -1675,19 +1701,35 @@ var gantt = `
 // src/styles/drawer.js
 var drawer = `
         /* ---------- Drawer / menu ---------- */
+        /* When a write to the server fails, work silently goes missing on the
+           next refresh. This makes it loud. */
+        .saveErrorBar {
+          position: absolute; top: 0; left: 0; right: 0; z-index: 90;
+          display: flex; align-items: center; gap: 10px;
+          background: #b02a37; color: #fff; padding: 10px 16px;
+          font-size: 13px; font-weight: 700;
+        }
+        .saveErrorBar span { flex: 1; }
+        .saveErrorBar button {
+          border: none; background: rgba(255,255,255,0.18); color: #fff;
+          border-radius: 999px; width: 24px; height: 24px; cursor: pointer;
+          font-size: 13px; line-height: 1; font-family: inherit;
+        }
+
         .scrim {
-          position: absolute; inset: 0; background: rgba(15,16,19,0.42);
-          opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 40;
+          position: fixed; inset: 0; background: rgba(15,16,19,0.42);
+          opacity: 0; pointer-events: none; transition: opacity .25s ease; z-index: 940;
         }
         .scrim.open { opacity: 1; pointer-events: auto; }
 
         .drawer {
-          position: absolute; top: 0; bottom: 0;
+          font-family: 'Assistant', 'Inter', sans-serif;
+          position: fixed; top: 0; bottom: 0;
           right: 0;
           width: min(380px, 92vw);
           background: var(--panel);
           color: #fff;
-          z-index: 50;
+          z-index: 950;
           display: flex; flex-direction: column;
           transform: translateX(105%);
           transition: transform .3s cubic-bezier(.2,.8,.2,1);
@@ -1703,7 +1745,9 @@ var drawer = `
           background: transparent; color: #cfd0d4; display: flex; align-items: center; justify-content: center;
           cursor: pointer;
         }
-        .drawerBody { padding: 22px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .drawerBody { padding: 22px 22px 26px; display: flex; flex-direction: column; gap: 10px; flex: 1; }
+        .drawerBottom { margin-top: auto; padding-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+        .drawerBottom .drawerSep { border-top: 1px solid rgba(255,255,255,0.12); margin: 0; }
 
         .drawerOption {
           display: flex; align-items: center; justify-content: space-between;
@@ -5177,7 +5221,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
 // every label carries both languages so the site-wide EN/HE switch flips the
 // whole document, no runtime translation.
 // -----------------------------------------------------------------------------
-import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw } from "lucide-react";
+import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw, PenLine, Stamp } from "lucide-react";
 var sbH = React15.createElement;
 var SUBMITTAL_BUCKET = "submittals";
 var SUBMITTAL_CATEGORIES = [
@@ -5244,7 +5288,19 @@ var SB_L = {
   newRevision: { en: "New revision", he: "גירסה חדשה" },
   remove: { en: "Delete", he: "מחיקה" },
   confirmDelete: { en: "Delete this submittal?", he: "למחוק את הסבמיטל הזה?" },
-  backToFolder: { en: "Back to the folder", he: "חזרה לתיקייה" },
+  back: { en: "Back", he: "חזרה" },
+  send: { en: "Send", he: "שליחה" },
+  sent: { en: "Sent", he: "נשלח" },
+  draft: { en: "Draft", he: "טיוטה" },
+  signDate: { en: "Signature date", he: "תאריך חתימה" },
+  signAction: { en: "Sign", he: "לחתום" },
+  newlyApproved: { en: "Newly approved", he: "אושר עכשיו" },
+  openDoc: { en: "Document", he: "מסמך" },
+  viewSignOnly: {
+    en: "You can open a submittal and sign it. Editing is the system administrator's.",
+    he: "אפשר לפתוח סבמיטל ולחתום עליו. העריכה שמורה למנהלת המערכת."
+  },
+  saveSignature: { en: "Save signature", he: "שמירת החתימה" },
   viewOnly: { en: "View only", he: "צפייה בלבד" },
   supervision: { en: "Supervision", he: "פיקוח" },
   signAsMe: { en: "Sign", he: "חתימה" },
@@ -5589,11 +5645,14 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
 html, body { margin: 0; padding: 0; }
 body { width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .frame { border: 1.5px solid ${accent}; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; min-height: calc(297mm - 18mm); }
-.hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding-bottom: 8px; margin-bottom: 4px; }
-.hdr .logo { max-height: 46px; max-width: 160px; object-fit: contain; }
+.hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding: 10px 0 14px; margin-bottom: 4px; min-height: 82px; }
+/* Both sides are the same fixed width, so the title sits on the centre line of
+   the page rather than on the centre of whatever the logo left over. */
+.hdr .side { width: 168px; flex: 0 0 168px; display: flex; align-items: center; }
+.hdr .logo { max-height: 56px; max-width: 168px; object-fit: contain; }
 .hdr .mid { flex: 1; text-align: center; }
-.hdr .ttl { font-size: 17px; font-weight: 800; color: ${accent}; letter-spacing: .6px; }
-.hdr .no { border: 1px solid ${accent}; border-radius: 6px; padding: 5px 10px; text-align: center; min-width: 100px; }
+.hdr .ttl { font-size: 18px; font-weight: 800; color: ${accent}; letter-spacing: .6px; }
+.hdr .no { width: 168px; flex: 0 0 168px; border: 1px solid ${accent}; border-radius: 6px; padding: 7px 10px; text-align: center; }
 .hdr .no b { display: block; font-size: 9px; color: ${accent}; letter-spacing: .4px; }
 .hdr .no span { font-size: 12px; font-weight: 800; }
 .hdr .no i { display: block; font-style: normal; font-size: 9px; color: #6b7280; }
@@ -5604,29 +5663,28 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
    exactly two of them, because that is where the text actually lands. */
 .info th, .info td, tbody .docName, tbody .docBox { height: 17px; }
 .info th { background: #f3f6fa; font-weight: 700; width: 17%; white-space: nowrap; text-align: ${isHe ? "right" : "left"}; }
-.info td { width: 33%; }
+.info td { width: 33%; text-align: center; }
 .eq { table-layout: fixed; }
 .eq th, .eq td.v { height: 36px; }
 .eq th { background: #f3f6fa; font-weight: 700; width: 26%; text-align: ${isHe ? "right" : "left"}; }
-.eq td.v { width: 38%; }
+.eq td.v { width: 38%; text-align: center; }
 .eq td.pic { width: 36%; text-align: center; padding: 3px; }
 .eq td.pic img { max-width: 100%; max-height: 130px; object-fit: contain; }
 .noImg { color: #9aa3af; font-size: 9px; }
 .docName { text-align: ${isHe ? "right" : "left"}; }
 .docBox { width: 34px; text-align: center; font-size: 12px; }
 .addWrap { flex: 1; display: flex; flex-direction: column; min-height: 96px; }
-.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 5px 7px; min-height: 46px; white-space: pre-wrap; }
-.txtBox + .txtBox { border-top: none; }
-.miniLbl { font-size: 8.5px; color: #6b7280; font-weight: 700; margin-bottom: 2px; }
-.rev td { vertical-align: top; height: 74px; padding: 4px 6px; }
+.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; white-space: pre-wrap; }
+.miniLbl { font-size: 10px; color: #6b7280; font-weight: 700; margin-bottom: 3px; }
+.rev td { vertical-align: top; height: 112px; padding: 7px 9px; font-size: 11px; }
 .rev .sig { width: 30%; }
 .rev .cmt { width: 42%; }
 .rev .decs { width: 28%; }
-.sigImg { height: 46px; display: flex; align-items: center; justify-content: center; }
-.sigImg img { max-height: 44px; max-width: 100%; object-fit: contain; }
-.sigVal { font-size: 8.5px; color: #374151; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 2px; }
-.dec { display: flex; align-items: center; gap: 5px; font-size: 9px; padding: 0; }
-.dec .box { font-size: 11px; }
+.sigImg { height: 74px; display: flex; align-items: center; justify-content: center; }
+.sigImg img { max-height: 72px; max-width: 100%; object-fit: contain; }
+.sigVal { font-size: 11px; font-weight: 600; color: #374151; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 4px; margin-top: 4px; }
+.dec { display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 2px 0; }
+.dec .box { font-size: 13px; }
 .revBlock { page-break-inside: avoid; }
 .footTxt { margin-top: 8px; font-size: 9px; color: #6b7280; text-align: center; white-space: pre-line; }
 .footImg { margin-top: 8px; text-align: center; }
@@ -5638,7 +5696,7 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 .specPage .specLbl { font-size: 8px; color: #6b7280; margin-bottom: 3px; direction: ltr; text-align: center; }
 .specPage img { max-width: 100%; max-height: 268mm; object-fit: contain; border: 1px solid #e5e7eb; }
 </style></head><body><div class="frame">
-<div class="hdr">${logo}<div class="mid"><div class="ttl">EQUIPMENT / MATERIAL SUBMITTAL</div></div>
+<div class="hdr"><div class="side">${logo}</div><div class="mid"><div class="ttl">EQUIPMENT / MATERIAL SUBMITTAL</div></div>
 <div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
 
 <div class="secBar">${L("projectInfo")}</div>
@@ -5662,8 +5720,7 @@ ${infoRow(L("scope"), val(rec.scope), L("email"), val(rec.email))}
 
 <div class="secBar">${L("additional")}</div>
 <div class="addWrap">
-<div class="txtBox" dir="ltr">${sbEsc(rec.infoEn || "")}</div>
-<div class="txtBox" dir="rtl">${sbEsc(rec.infoHe || "")}</div>
+<div class="txtBox" dir="${dir}">${sbEsc((isHe ? rec.infoHe : rec.infoEn) || "")}</div>
 </div>
 ${reviewBlock}
 ${footTxt}${footImg}
@@ -5769,7 +5826,7 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onSave, onCancel, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, printBrand, userSignatures, currentEmail }) {
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
   const [err, setErr] = useState6(null);
@@ -5777,6 +5834,9 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
   const L = (k) => sbText(SB_L[k], lang);
   const set = (patch) => setD((prev) => ({ ...prev, ...patch }));
   const ro = !canEdit;
+  // The approval block has its own lock: a reviewer who may not touch a single
+  // field of the submittal is still the one who signs it.
+  const roSign = !(canEdit || canSign);
   useEffect5(() => {
     setD(rec);
   }, [rec.id]);
@@ -5954,16 +6014,21 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
   return sbH(
     "div",
     { className: "sbForm", dir: isRTL ? "rtl" : "ltr" },
-    // ------- header
+    // ------- header. Three columns so the number box lands exactly in the
+    //         middle whatever the two sides weigh.
     sbH(
       "div",
       { className: "sbFormHead" },
       sbH(
-        "button",
-        { type: "button", className: "ghostBtn small", onClick: onCancel },
-        sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.2 }),
-        " ",
-        L("backToFolder")
+        "div",
+        { className: "sbFormHeadSide start" },
+        sbH(
+          "button",
+          { type: "button", className: "loginBack", onClick: onCancel },
+          sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }),
+          " ",
+          L("back")
+        )
       ),
       sbH(
         "div",
@@ -5974,15 +6039,15 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
       ),
       sbH(
         "div",
-        { className: "sbFormHeadBtns" },
+        { className: "sbFormHeadSide end" },
+        ro ? sbH("span", { className: "sbRoTag" }, L("viewOnly")) : null,
         sbH(
           "button",
           { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
           sbH(Printer, { size: 14, strokeWidth: 2 }),
           " ",
           L("print")
-        ),
-        ro ? sbH("span", { className: "sbRoTag" }, L("viewOnly")) : null
+        )
       )
     ),
     err ? sbH("p", { className: "sbErr" }, err) : null,
@@ -6152,7 +6217,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
             sbH("input", {
               type: "text",
               value: rv.signature || "",
-              readOnly: ro,
+              readOnly: roSign,
               placeholder: L("signature"),
               onChange: (e) => {
                 const next = (d.reviews || []).slice();
@@ -6161,7 +6226,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
               },
               style: inS
             }),
-            ro
+            roSign
               ? null
               : sbH(
                   "div",
@@ -6208,7 +6273,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
             sbH("span", { className: "sbFieldLbl" }, L("approvalComments")),
             sbH("textarea", {
               value: rv.comments || "",
-              readOnly: ro,
+              readOnly: roSign,
               rows: 2,
               onChange: (e) => {
                 const next = (d.reviews || []).slice();
@@ -6229,10 +6294,17 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
                   type: "radio",
                   name: `sb-dec-${d.id}-${i}`,
                   checked: rv.decision === dec.key,
-                  disabled: ro,
+                  disabled: roSign,
                   onChange: () => {
                     const next = (d.reviews || []).slice();
-                    next[i] = { ...rv, decision: dec.key };
+                    const who = (currentEmail || "").split("@")[0] || currentEmail || "";
+                    next[i] = {
+                      ...rv,
+                      decision: dec.key,
+                      signedAt: new Date().toISOString(),
+                      signedByEmail: rv.signedByEmail || (currentEmail || "").toLowerCase(),
+                      signature: rv.signature || `${who} · ${sbFmtDate(sbToday())}`
+                    };
                     set({ reviews: next });
                   }
                 }),
@@ -6324,19 +6396,61 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, projectId, scopeOptions, onS
     ),
 
     // ------- save
+    ro && canSign
+      ? sbH(
+          "div",
+          { className: "sbSaveRow" },
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onSave(d) }, L("saveSignature"))
+        )
+      : null,
     ro
       ? null
       : sbH(
           "div",
           { className: "sbSaveRow" },
-          sbH("button", { type: "button", className: "ghostBtn small", onClick: onCancel }, L("cancel")),
-          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onSave(d) }, L("save"))
+          sbH(
+            "button",
+            { type: "button", className: "ghostBtn small", onClick: () => onSave({ ...d, sent: false }) },
+            L("save")
+          ),
+          sbH(
+            "button",
+            { type: "button", className: "functionEditBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
+            L("send")
+          )
         )
   );
 }
 
 // ------------------------------------------------------------- folder + list
-function SubmittalFolder({ category, lang, isRTL, list, canEdit, onCreate, onOpen, onPrint, onNewRevision, onDelete }) {
+// The date a submittal actually went out, and the date it came back signed.
+function sbSignedAt(rec) {
+  const rv = (rec && rec.reviews || [])[0] || {};
+  return rv.decision && rv.signedAt ? rv.signedAt : null;
+}
+function sbIsSigned(rec) {
+  return !!sbSignedAt(rec);
+}
+// "New since I last looked": anything signed after the timestamp this browser
+// stored on the previous visit. That is what gets the yellow row.
+function sbSeenKey(email) {
+  return `submittal-seen:${String(email || "anon").toLowerCase()}`;
+}
+
+function SubmittalFolder({
+  category,
+  lang,
+  isRTL,
+  list,
+  canEdit,
+  canSign,
+  seenAt,
+  onCreate,
+  onOpen,
+  onPrint,
+  onNewRevision,
+  onDelete
+}) {
   const L = (k) => sbText(SB_L[k], lang);
   const rows = (list || [])
     .filter((s) => s.category === category.key)
@@ -6353,13 +6467,17 @@ function SubmittalFolder({ category, lang, isRTL, list, canEdit, onCreate, onOpe
     ),
     canEdit
       ? sbH(
-          "button",
-          { type: "button", className: "sbCreateBtn", onClick: onCreate },
-          sbH(Plus2, { size: 16, strokeWidth: 2.4 }),
-          " ",
-          L("create")
+          "div",
+          { className: "sbCreateWrap" },
+          sbH(
+            "button",
+            { type: "button", className: "sbCreateBtn", onClick: onCreate },
+            sbH(Plus2, { size: 16, strokeWidth: 2.4 }),
+            " ",
+            L("create")
+          )
         )
-      : sbH("p", { className: "submittalPanelNote" }, L("viewOnly")),
+      : sbH("p", { className: "submittalPanelNote" }, canSign ? L("viewSignOnly") : L("viewOnly")),
     sbH("div", { className: "sbListTitle" }, L("trackingList")),
     rows.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
@@ -6376,10 +6494,9 @@ function SubmittalFolder({ category, lang, isRTL, list, canEdit, onCreate, onOpe
                 "tr",
                 null,
                 sbH("th", null, L("submittalNo")),
-                sbH("th", null, L("itemDescription")),
-                sbH("th", null, L("manufacturer")),
+                sbH("th", null, L("typeId")),
                 sbH("th", null, L("date")),
-                sbH("th", null, L("requiredApprovalDate")),
+                sbH("th", null, L("signDate")),
                 sbH("th", null, L("status")),
                 sbH("th", null, "")
               )
@@ -6389,41 +6506,58 @@ function SubmittalFolder({ category, lang, isRTL, list, canEdit, onCreate, onOpe
               null,
               rows.map((s) => {
                 const st = sbStatusOf(s);
+                const signedAt = sbSignedAt(s);
+                // Yellow = approved since this browser last opened the folder.
+                const isNew = !!signedAt && (!seenAt || signedAt > seenAt);
                 return sbH(
                   "tr",
-                  { key: s.id },
+                  { key: s.id, className: isNew ? "sbRowNew" : "" },
                   sbH(
                     "td",
                     { className: "sbNoCell" },
                     sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
                     sbH("span", { className: "sbNoRev" }, `Rev.${s.rev || 0}`)
                   ),
-                  sbH("td", null, s.itemDescription || "—"),
-                  sbH("td", null, s.manufacturer || "—"),
-                  sbH("td", { dir: "ltr" }, sbFmtDate(s.date)),
-                  sbH("td", { dir: "ltr" }, sbFmtDate(s.requiredApprovalDate)),
+                  sbH("td", null, s.typeId || "—"),
+                  sbH("td", { dir: "ltr" }, s.sent ? sbFmtDate((s.sentAt || "").slice(0, 10) || s.date) : sbFmtDate(s.date)),
+                  sbH("td", { dir: "ltr" }, signedAt ? sbFmtDate(signedAt.slice(0, 10)) : "—"),
                   sbH(
                     "td",
                     null,
-                    sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang))
+                    sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang)),
+                    s.sent ? null : sbH("span", { className: "sbDraftTag" }, L("draft")),
+                    isNew ? sbH("span", { className: "sbNewTag" }, L("newlyApproved")) : null
                   ),
                   sbH(
                     "td",
                     { className: "sbActions" },
-                    sbH(
-                      "button",
-                      { type: "button", className: "sbActBtn", onClick: () => onOpen(s) },
-                      sbH(canEdit ? Pencil : FileTextIcon, { size: 13, strokeWidth: 2 }),
-                      " ",
-                      L("open")
-                    ),
+                    // The one icon that matters: opens the whole document —
+                    // the form we built plus the specifications uploaded for it.
                     sbH(
                       "button",
                       { type: "button", className: "sbActBtn", title: L("pdfHint"), onClick: () => onPrint(s) },
-                      sbH(Printer, { size: 13, strokeWidth: 2 }),
+                      sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
                       " ",
-                      L("openPdf")
+                      L("openDoc")
                     ),
+                    canSign && !canEdit
+                      ? sbH(
+                          "button",
+                          { type: "button", className: "sbActBtn sign", onClick: () => onOpen(s) },
+                          sbH(PenLine, { size: 13, strokeWidth: 2 }),
+                          " ",
+                          L("signAction")
+                        )
+                      : null,
+                    canEdit
+                      ? sbH(
+                          "button",
+                          { type: "button", className: "sbActBtn", onClick: () => onOpen(s) },
+                          sbH(Pencil, { size: 13, strokeWidth: 2 }),
+                          " ",
+                          L("open")
+                        )
+                      : null,
                     canEdit
                       ? sbH(
                           "button",
@@ -6448,7 +6582,6 @@ function SubmittalFolder({ category, lang, isRTL, list, canEdit, onCreate, onOpe
         )
   );
 }
-
 // --------------------------------------------------------------- the card
 function SubmittalCard({
   appIsRTL,
@@ -6476,11 +6609,39 @@ function SubmittalCard({
   const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
   const L = (k) => sbText(SB_L[k], lang);
 
-  // The admin builds. Contractor and client are view-only unless the project
-  // says otherwise — the switch lives in the project settings screen.
+  // Editing a submittal is the system administrator's, full stop. Everyone else
+  // opens it, reads it, and — if the project allows their role — signs it.
   const perms = submittalPerms || {};
-  const canEdit =
-    viewerRole === "admin" ? true : perms[viewerRole] === "edit";
+  const canEdit = viewerRole === "admin";
+  const canSign = canEdit || (perms[viewerRole] || (viewerRole === "contractor" ? "sign" : "view")) === "sign";
+
+  // The yellow marker: what was approved since this browser last opened the
+  // folder. Read once, and the clock is pushed forward straight away so the
+  // next visit compares against now.
+  const seenRef = useRef5(null);
+  const [seenAt, setSeenAt] = useState6(null);
+  useEffect5(() => {
+    let alive = true;
+    (async () => {
+      const key = sbSeenKey(currentEmail);
+      try {
+        const got = await window.storage.get(key);
+        if (alive && seenRef.current === null) {
+          seenRef.current = got && got.value || "";
+          setSeenAt(seenRef.current);
+        }
+      } catch (e) {
+        if (alive) setSeenAt("");
+      }
+      try {
+        await window.storage.set(key, new Date().toISOString());
+      } catch (e) {
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [currentEmail]);
 
   const projectId = project && project.id;
   const pName = (project && project.name) || projectName || "";
@@ -6555,6 +6716,7 @@ function SubmittalCard({
       lang,
       isRTL,
       canEdit,
+      canSign,
       projectId,
       scopeOptions,
       printBrand,
@@ -6611,6 +6773,8 @@ function SubmittalCard({
         isRTL,
         list,
         canEdit,
+        canSign,
+        seenAt,
         onCreate: startCreate,
         onOpen: openExisting,
         onPrint: (s) => sbPrint(s, lang, printBrand, userSignatures),
@@ -6962,9 +7126,11 @@ function SubmittalPermsBlock({ isRTL, perms, onChange }) {
     { key: "contractor", he: "\u05e7\u05d1\u05dc\u05df \u05e8\u05d0\u05e9\u05d9", en: "Main contractor" },
     { key: "client", he: "\u05dc\u05e7\u05d5\u05d7", en: "Client" }
   ];
+  // Editing belongs to the system administrator only. What a project decides
+  // per role is whether they may sign the submittal.
   const modes = [
     { key: "view", he: "\u05e6\u05e4\u05d9\u05d9\u05d4", en: "View" },
-    { key: "edit", he: "\u05e2\u05e8\u05d9\u05db\u05d4", en: "Edit" }
+    { key: "sign", he: "\u05d7\u05ea\u05d9\u05de\u05d4", en: "Sign" }
   ];
   return /* @__PURE__ */ React15.createElement(
     "div",
@@ -6975,7 +7141,7 @@ function SubmittalPermsBlock({ isRTL, perms, onChange }) {
       { key: r.key, style: { display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" } },
       /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 12.5, fontWeight: 600, minWidth: 104 } }, isRTL ? r.he : r.en),
       modes.map((m) => {
-        const active = (p[r.key] || "view") === m.key;
+        const active = (p[r.key] || (r.key === "contractor" ? "sign" : "view")) === m.key;
         return /* @__PURE__ */ React15.createElement(
           "button",
           {
@@ -6994,6 +7160,82 @@ function SubmittalPermsBlock({ isRTL, perms, onChange }) {
         );
       })
     ))
+  );
+}
+// Submittal administration: the signatures that go on an approved submittal.
+// Editing a submittal itself is the system administrator's alone; everyone else
+// opens it and signs it, and this is where their stamp comes from.
+function SubmittalAdminScreen({ isRTL, signatures, onSignatureChange }) {
+  const [users, setUsers] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [busy, setBusy] = useState6(false);
+  const load = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { action: "list" } });
+      if (error) throw error;
+      setUsers((data && data.users || []).filter((u) => !u.banned));
+    } catch (e) {
+      setErr(isRTL ? "\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d8\u05e2\u05d5\u05df \u05d0\u05ea \u05e8\u05e9\u05d9\u05de\u05ea \u05d4\u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd." : "Could not load the user list.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  useEffect5(() => {
+    load();
+  }, []);
+  const sigOf = (u) => {
+    const rec = (signatures || {})[String(u.email || "").trim().toLowerCase()];
+    return rec && rec.dataUrl || null;
+  };
+  const onFile = async (u, e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f || !onSignatureChange) return;
+    const dataUrl = await sbMakeSignature(f);
+    if (dataUrl) onSignatureChange(u.email, dataUrl);
+  };
+  const roleLabel = (r) => r === "admin" ? isRTL ? "\u05de\u05e0\u05d4\u05dc \u05de\u05e2\u05e8\u05db\u05ea" : "Admin" : r === "contractor" ? isRTL ? "\u05e7\u05d1\u05dc\u05df \u05e8\u05d0\u05e9\u05d9" : "Main contractor" : isRTL ? "\u05dc\u05e7\u05d5\u05d7" : "Client";
+  const cell = { padding: "9px 10px", borderBottom: "1px solid var(--line-soft)", fontSize: 13, textAlign: "center" };
+  const head = { ...cell, background: "#f3f6fa", fontWeight: 800, fontSize: 12, color: "var(--steel)" };
+  return /* @__PURE__ */ React15.createElement(
+    "section",
+    { className: "panel adminPanel adminPanelWide" },
+    /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { textAlign: "center" } }, isRTL ? "\u05e2\u05e8\u05d9\u05db\u05ea \u05e1\u05d1\u05de\u05d9\u05d8\u05dc" : "Submittal administration"),
+    /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { textAlign: "center", marginTop: 6 } }, isRTL ? "\u05d4\u05e2\u05dc\u05d0\u05ea \u05d7\u05ea\u05d9\u05de\u05d4 \u05d5\u05d7\u05d5\u05ea\u05de\u05ea \u05dc\u05db\u05dc \u05de\u05e9\u05ea\u05de\u05e9 \u05e4\u05e2\u05d9\u05dc. \u05e2\u05e8\u05d9\u05db\u05ea \u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd \u05e2\u05e6\u05de\u05dd \u05e9\u05de\u05d5\u05e8\u05d4 \u05dc\u05de\u05e0\u05d4\u05dc\u05ea \u05d4\u05de\u05e2\u05e8\u05db\u05ea \u05d1\u05dc\u05d1\u05d3." : "Upload the signature and stamp for each active user. Editing the submittals themselves stays with the system administrator."),
+    err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", textAlign: "center", marginTop: 12 } }, err) : null,
+    !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { textAlign: "center", marginTop: 14 } }, busy ? isRTL ? "\u05d8\u05d5\u05e2\u05df\u2026" : "Loading\u2026" : "") : /* @__PURE__ */ React15.createElement(
+      "div",
+      { style: { overflowX: "auto", marginTop: 14 } },
+      /* @__PURE__ */ React15.createElement(
+        "table",
+        { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr" } },
+        /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null,
+          /* @__PURE__ */ React15.createElement("th", { style: head }, isRTL ? "\u05d0\u05d9\u05de\u05d9\u05d9\u05dc" : "Email"),
+          /* @__PURE__ */ React15.createElement("th", { style: head }, isRTL ? "\u05ea\u05e4\u05e7\u05d9\u05d3" : "Role"),
+          /* @__PURE__ */ React15.createElement("th", { style: head }, isRTL ? "\u05d7\u05ea\u05d9\u05de\u05d4 \u05d5\u05d7\u05d5\u05ea\u05de\u05ea" : "Signature & stamp"))),
+        /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => /* @__PURE__ */ React15.createElement(
+          "tr",
+          { key: u.id },
+          /* @__PURE__ */ React15.createElement("td", { style: { ...cell, direction: "ltr" } }, u.email),
+          /* @__PURE__ */ React15.createElement("td", { style: cell }, roleLabel(u.role)),
+          /* @__PURE__ */ React15.createElement("td", { style: cell }, sigOf(u) ? /* @__PURE__ */ React15.createElement(
+            "span",
+            { style: { display: "inline-flex", alignItems: "center", gap: 10 } },
+            /* @__PURE__ */ React15.createElement("img", { src: sigOf(u), alt: "", style: { height: 46, maxWidth: 170, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }),
+            /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onSignatureChange && onSignatureChange(u.email, null), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\u2715")
+          ) : /* @__PURE__ */ React15.createElement(
+            "label",
+            { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
+            /* @__PURE__ */ React15.createElement(Stamp, { size: 14, strokeWidth: 2 }),
+            " ",
+            isRTL ? "\u05d4\u05e2\u05dc\u05d0\u05ea \u05d7\u05ea\u05d9\u05de\u05d4" : "Upload signature",
+            /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onFile(u, e) })
+          ))
+        )))
+      )
+    )
   );
 }
 function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, submittalPermsByProject, onSubmittalPermsChange }) {
@@ -7213,8 +7455,26 @@ function ProjectDashboardApp() {
       return next;
     });
   };
+  const [saveError, setSaveError] = useState6(null);
   const [projectExtras, setProjectExtras] = useState6({});
   const [extrasLoaded, setExtrasLoaded] = useState6(false);
+  // The schedule lives in its own row. It used to ride inside project-extras
+  // together with the photos and the uploaded documents, and that row grew
+  // large enough that the write could fail — which is exactly what "the
+  // schedule disappears after a refresh" looks like from the outside: it was
+  // never saved. In memory nothing changes; the split happens on the way out
+  // and is put back together on the way in.
+  const splitExtras = (all) => {
+    const rest = {};
+    const schedules = {};
+    Object.keys(all || {}).forEach((pid) => {
+      const entry = all[pid] || {};
+      const { scheduleData, ...others } = entry;
+      rest[pid] = others;
+      if (scheduleData) schedules[pid] = scheduleData;
+    });
+    return { rest, schedules };
+  };
   useEffect5(() => {
     if (!isAuthenticated) return;
     (async () => {
@@ -7222,22 +7482,48 @@ function ProjectDashboardApp() {
         const { data, error } = await supabase.from("app_state").select("value").eq("key", "project-extras").maybeSingle();
         console.log("[awdash] load project-extras", !!(data && data.value), error);
         if (error) throw error;
-        if (data && data.value) setProjectExtras(data.value);
+        let merged = data && data.value || {};
+        try {
+          const { data: sch, error: schErr } = await supabase.from("app_state").select("value").eq("key", "project-schedules").maybeSingle();
+          if (schErr) throw schErr;
+          if (sch && sch.value) {
+            merged = { ...merged };
+            Object.keys(sch.value).forEach((pid) => {
+              merged[pid] = { ...merged[pid] || {}, scheduleData: sch.value[pid] };
+            });
+          }
+        } catch (e2) {
+          console.error("[awdash] load project-schedules failed", e2);
+        }
+        setProjectExtras(merged);
         setExtrasLoaded(true);
       } catch (e) {
         console.error("[awdash] load project-extras failed — auto-save stays OFF to protect existing data", e);
+        setSaveError(isRTL ? "\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d8\u05e2\u05d5\u05df \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05de\u05d4\u05e9\u05e8\u05ea. \u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05d4\u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05db\u05d1\u05d5\u05d9\u05d4 \u05db\u05d3\u05d9 \u05dc\u05d0 \u05dc\u05d3\u05e8\u05d5\u05e1 \u05e0\u05ea\u05d5\u05e0\u05d9\u05dd \u05e7\u05d9\u05d9\u05de\u05d9\u05dd." : "Could not load data from the server. Auto-save is off so nothing gets overwritten.");
       }
     })();
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
     (async () => {
+      const { rest, schedules } = splitExtras(projectExtras);
+      let failed = null;
       try {
-        const { error } = await supabase.from("app_state").upsert({ key: "project-extras", value: projectExtras, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-        if (error) console.error("[awdash] save project-extras failed", error);
+        const { error } = await supabase.from("app_state").upsert({ key: "project-extras", value: rest, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+        if (error) throw error;
       } catch (e) {
         console.error("[awdash] save project-extras failed", e);
+        failed = e && e.message || String(e);
       }
+      try {
+        const { error } = await supabase.from("app_state").upsert({ key: "project-schedules", value: schedules, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+        if (error) throw error;
+      } catch (e) {
+        console.error("[awdash] save project-schedules failed", e);
+        failed = e && e.message || String(e);
+      }
+      // A silent failure here is how work goes missing. Say it out loud.
+      setSaveError(failed ? (isRTL ? "\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05e9\u05e8\u05ea \u05e0\u05db\u05e9\u05dc\u05d4" : "Saving to the server failed") + ": " + failed : null);
       try {
         await window.storage.set("project-extras", JSON.stringify(projectExtras), true);
       } catch (e) {
@@ -8268,7 +8554,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
@@ -8476,7 +8762,7 @@ function ProjectDashboardApp() {
         /* @__PURE__ */ React15.createElement("p", { className: "scheduleChangeFoot" }, isRTL ? 'הרשימה נשמרת גם ב"הערות קריטיות ללו״ז" עד ההעלאה הבאה.' : "This list is also kept in the schedule notes until the next upload."),
         /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setScheduleChangeReport(null) }, isRTL ? "הבנתי" : "Got it")
       )
-    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}` }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: "auto" } }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { style: { borderTop: "1px solid rgba(255,255,255,0.12)", marginTop: 8, marginBottom: 8 } }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: t.dir, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: t.dir, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: t.dir, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("submittals") }, /* @__PURE__ */ React15.createElement(Stamp, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "\u05e2\u05e8\u05d9\u05db\u05ea \u05e1\u05d1\u05de\u05d9\u05d8\u05dc" : "Submittal administration"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
@@ -8540,7 +8826,7 @@ function ProjectDashboardApp() {
         if (e.key === "Enter") handleLoginSubmit(e);
       }
     }
-  ))), menuView === "login-admin" && adminAuthError && /* @__PURE__ */ React15.createElement("p", { className: "fieldError" }, t.loginAdmin.wrongPassword), menuView === "login-unified" && /* @__PURE__ */ React15.createElement(LoginErrorMessage, { error: loginError, copy: t.login, className: "fieldError" }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "primaryBtn", onClick: handleLoginSubmit }, t.login.submit), menuView !== "login-admin" && /* @__PURE__ */ React15.createElement("button", { type: "button", className: "forgotLink" }, t.login.forgot))))))));
+  ))), menuView === "login-admin" && adminAuthError && /* @__PURE__ */ React15.createElement("p", { className: "fieldError" }, t.loginAdmin.wrongPassword), menuView === "login-unified" && /* @__PURE__ */ React15.createElement(LoginErrorMessage, { error: loginError, copy: t.login, className: "fieldError" }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "primaryBtn", onClick: handleLoginSubmit }, t.login.submit), menuView !== "login-admin" && /* @__PURE__ */ React15.createElement("button", { type: "button", className: "forgotLink" }, t.login.forgot))))), document.body)))));
 }
 export {
   ProjectDashboardApp as default
