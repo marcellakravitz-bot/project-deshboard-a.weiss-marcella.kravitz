@@ -185,7 +185,7 @@ var COPY = {
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "Finishes by Room", sub: "Spec Sheet by Room Number" },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, title: "LLI", sub: "List of Lacking Items", locked: true },
+      { key: "lli", icon: ClipboardList, title: "LLI", sub: "List of Lacking Items" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
@@ -304,7 +304,7 @@ var COPY = {
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "Finishes by Room", sub: "Spec Sheet by Room Number" },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, title: "LLI", sub: "List of Lacking Items", locked: true },
+      { key: "lli", icon: ClipboardList, title: "LLI", sub: "List of Lacking Items" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
@@ -415,6 +415,10 @@ var PROJECT_ACCESS_KINDS = [
   { key: "subcontractor", field: "subcontractorAccounts", role: "subcontractor" }
 ];
 var DESIGN_WIDTH = 1350;
+// On a screen wider than the design canvas the whole app grows with it, rather
+// than sitting in the middle at design size. Capped so a very wide monitor does
+// not turn the text into posters.
+var MAX_UPSCALE = 1.35;
 
 // src/config/dataSources.js
 import { Building2, DoorOpen as DoorOpen2, ClipboardList as ClipboardList2, Palette as Palette2, FileCheck2 as FileCheck22 } from "lucide-react";
@@ -987,7 +991,7 @@ var pdfViewer = `
         .submittalTile.selected .cardIcon { background: var(--accent); border-color: var(--accent); color: #fff; }
         .submittalTile.selected .cardTitle { color: var(--accent-ink); }
         .submittalPanel {
-          max-width: 900px; margin: 18px auto 0; border: 1px solid var(--line); border-radius: 12px;
+          max-width: 1180px; margin: 18px auto 0; border: 1px solid var(--line); border-radius: 12px;
           background: #fff; padding: 14px 18px;
         }
         .submittalPanelHead {
@@ -1025,6 +1029,18 @@ var pdfViewer = `
         .sbTable tbody tr:hover td { background: #f8fafc; }
         /* Approved since this browser last opened the folder. */
         .sbTable tbody tr.sbRowNew td { background: #fff6d8; }
+        /* An earlier version, shown only while its family is expanded. */
+        .sbTable tbody tr.sbRowOlder td { background: #fafbfc; color: var(--mist); }
+        .sbTable tbody tr.sbRowOlder .sbNoMain { font-weight: 600; }
+        .sbRevToggle {
+          display: inline-flex; align-items: center; gap: 2px; margin-inline-start: 5px;
+          border: 1px solid var(--line); background: #fff; color: var(--steel);
+          border-radius: 999px; padding: 0 5px 0 3px; cursor: pointer;
+          font-family: inherit; font-size: 10px; font-weight: 800; line-height: 16px;
+        }
+        .sbRevToggle:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .sbRevToggle svg { transition: transform .15s; }
+        .sbRevToggle.open svg { transform: rotate(180deg); }
         .sbTable tbody tr.sbRowNew:hover td { background: #fdf0c4; }
         .sbNewTag {
           display: inline-block; margin-inline-start: 6px; background: #e08a12; color: #fff;
@@ -1042,6 +1058,115 @@ var pdfViewer = `
         .sbStatus {
           display: inline-block; color: #fff; border-radius: 999px;
           padding: 3px 11px; font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        /* ---------- LLI ---------- */
+        .lliCard { width: 100%; }
+        .lliHead {
+          display: flex; align-items: center; justify-content: center;
+          gap: 12px; margin-bottom: 10px;
+        }
+        .lliTitle { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); }
+        .lliFilter {
+          display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px;
+        }
+        .lliChip {
+          border: 1px solid var(--line); background: #fff; color: var(--steel);
+          border-radius: 999px; padding: 5px 13px; cursor: pointer;
+          font-family: inherit; font-size: 12px; font-weight: 700;
+        }
+        .lliChip:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .lliChip.on { background: #14181f; border-color: #14181f; color: #fff; }
+        .lliBar {
+          display: flex; align-items: center; justify-content: center; gap: 16px;
+          flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; color: var(--steel);
+        }
+        .lliCount { font-weight: 800; }
+        .lliShowHidden { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; cursor: pointer; }
+        .lliNote { text-align: center; color: var(--mist); font-size: 13px; line-height: 1.6; margin: 14px 0; }
+        .lliTableWrap { overflow-x: auto; }
+        .lliTable { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
+        .lliTable th {
+          background: #f3f6fa; color: var(--steel); font-weight: 800; font-size: 11px;
+          padding: 7px 6px; border-bottom: 1px solid var(--line); text-align: center;
+        }
+        .lliTable td {
+          padding: 5px 6px; border-bottom: 1px solid var(--line-soft);
+          text-align: center; vertical-align: middle;
+        }
+        .lliTable tr.lliChapter td {
+          background: #eef2f7; font-weight: 800; font-size: 12px; color: var(--ink);
+          text-align: start; padding: 7px 10px;
+        }
+        .lliTable tr.lliOff td { opacity: .45; }
+        .lliTable .cSec { width: 130px; text-align: start; }
+        .lliTable .cMark { width: 90px; }
+        .lliTable .cDesc { width: 26%; text-align: start; }
+        .lliTable .cImg { width: 62px; }
+        .lliTable .cQty { width: 86px; }
+        .lliTable .cOrd { width: 100px; }
+        .lliTable .cPo { width: 120px; }
+        .lliTable .cEta { width: 128px; }
+        .lliTable .cSt { width: 118px; }
+        .lliTable .cAct { width: 42px; }
+        .lliCode { display: block; font-weight: 800; font-size: 11.5px; }
+        .lliSubName { display: block; font-size: 11px; color: var(--mist); font-weight: 600; line-height: 1.35; }
+        .lliIn {
+          width: 100%; border: 1px solid var(--line); border-radius: 7px;
+          padding: 5px 7px; font-family: inherit; font-size: 12px; color: var(--ink);
+          background: #fff;
+        }
+        .lliIn:focus { outline: none; border-color: var(--accent); }
+        .lliIn[readonly], .lliIn:disabled { background: #f7f8fa; color: var(--steel); }
+        .lliDesc { resize: vertical; line-height: 1.4; min-height: 40px; }
+        .lliNum { text-align: center; }
+        .lliSel { font-weight: 800; cursor: pointer; }
+        .lliDash { color: var(--mist); }
+        .lliImgBox {
+          position: relative; display: flex; align-items: center; justify-content: center;
+          width: 46px; height: 40px; margin: 0 auto; border: 1px dashed var(--line);
+          border-radius: 7px; cursor: pointer; color: var(--mist); overflow: hidden; background: #fff;
+        }
+        .lliImgBox.ro { cursor: default; }
+        .lliImgBox:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .lliImgBox img { width: 100%; height: 100%; object-fit: cover; }
+        .lliImgBusy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff9; }
+        .lliImgClear {
+          display: block; margin: 3px auto 0; border: none; background: none; cursor: pointer;
+          color: var(--mist); font-size: 13px; line-height: 1; font-family: inherit;
+        }
+        .lliOrd {
+          border: 1px solid var(--line); background: #fff; color: var(--steel);
+          border-radius: 999px; padding: 4px 10px; cursor: pointer;
+          font-family: inherit; font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        .lliOrd.on { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
+        .lliOrd:disabled { cursor: default; }
+        .lliMixed { color: #e08a12; font-weight: 900; margin-inline-start: 2px; }
+        .sbChk { margin-top: 18px; }
+        .sbChkBar { text-align: center; font-size: 12px; font-weight: 800; color: var(--steel); margin: 4px 0 6px; }
+        .sbChkTable td { text-align: center; }
+        .sbChkTable .sbChkCode { width: 96px; font-weight: 800; }
+        .sbChkTable .sbChkDesc { text-align: start; }
+        .sbChkTable tbody tr.sbChkOn td { background: #f2faf5; }
+        .sbChkMissing {
+          display: inline-block; background: #eef0f2; color: var(--steel);
+          border-radius: 999px; padding: 3px 11px; font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        .boqBlock {
+          margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line-soft);
+          border-radius: 10px; background: #fbfcfd;
+        }
+        .boqTitle { font-size: 12.5px; font-weight: 800; color: var(--steel); }
+        .boqHint { margin: 4px 0 10px; font-size: 12px; color: var(--mist); line-height: 1.5; }
+        .boqFile {
+          display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+          font-size: 12.5px; font-weight: 700; color: var(--ink);
+        }
+        .boqName { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .boqMeta { font-size: 11.5px; font-weight: 700; color: var(--mist); }
+        .boqTag {
+          background: #fdf3d6; color: #8a6a12; border-radius: 999px;
+          padding: 2px 8px; font-size: 10.5px; font-weight: 800; white-space: nowrap;
         }
         .sbActions { white-space: nowrap; }
         .sbActBtn {
@@ -1067,7 +1192,7 @@ var pdfViewer = `
         .sbLinkBtn:hover { text-decoration: underline; }
 
         /* the form itself — one column of sections, same width as the panel */
-        .sbForm { max-width: 900px; margin: 0 auto; }
+        .sbForm { max-width: 1180px; margin: 0 auto; }
         /* While a submittal is open the form carries its own Back, which returns
            to the folder. Two identical Back buttons stacked on top of each other
            is just confusing, so the card's own one steps aside. */
@@ -1077,6 +1202,19 @@ var pdfViewer = `
           gap: 12px; margin-bottom: 12px;
         }
         .sbFormHeadSide { display: flex; align-items: center; gap: 8px; }
+        /* The submittal's own language switch. The layout does not resize when
+           it is used — the page simply reads the other way. */
+        .sbLangRow { display: flex; justify-content: center; margin-bottom: 12px; }
+        .sbLangToggle {
+          display: inline-flex; background: #eef0f2; border-radius: 999px; padding: 3px;
+        }
+        .sbLangToggle button {
+          border: none; background: transparent; color: var(--steel); cursor: pointer;
+          border-radius: 999px; padding: 5px 15px; font-size: 12px; font-weight: 800;
+          font-family: inherit; letter-spacing: .04em;
+        }
+        .sbLangToggle button.active { background: #14181f; color: #fff; }
+        .sbFormHeadSide .sbLangRow { margin: 0; }
         .sbFormHeadSide.start { justify-content: flex-start; }
         .sbFormHeadSide.end { justify-content: flex-end; }
         @media (max-width: 640px) {
@@ -1094,6 +1232,11 @@ var pdfViewer = `
           padding: 4px 12px; font-size: 11.5px; font-weight: 800;
         }
         .sbErr { margin: 8px 0 0; color: #b02a37; font-size: 12.5px; font-weight: 700; text-align: center; }
+        .sbRevNote {
+          margin: 0 0 12px; text-align: center; font-size: 12.5px; font-weight: 700;
+          color: var(--accent-ink); background: var(--accent-soft);
+          border-radius: 8px; padding: 8px 12px;
+        }
         .sbSecBar {
           background: var(--accent); color: #fff; text-align: center;
           font-size: 11.5px; font-weight: 800; letter-spacing: .5px;
@@ -2637,7 +2780,7 @@ function ScaleToFit({ children }) {
     function recompute() {
       if (!outerRef.current) return;
       const width = outerRef.current.clientWidth;
-      if (width > 0) setScale(Math.min(width / DESIGN_WIDTH, 1));
+      if (width > 0) setScale(Math.min(width / DESIGN_WIDTH, MAX_UPSCALE));
       const top = outerRef.current.getBoundingClientRect().top;
       setAvailableHeight(Math.max(window.innerHeight - top, 0));
     }
@@ -2675,7 +2818,16 @@ function ScaleToFit({ children }) {
         height: Math.max(contentHeight * scale, availableHeight) || void 0
       }
     },
-    /* @__PURE__ */ React.createElement("div", { style: { width: DESIGN_WIDTH * scale, margin: "0 auto" } }, /* @__PURE__ */ React.createElement(
+    /* @__PURE__ */ React.createElement("div", { style: {
+      width: DESIGN_WIDTH * scale,
+      margin: "0 auto",
+      // The page is <html dir="rtl">, so a block narrower than its parent is
+      // laid out against the RIGHT edge. The scale below grows from the LEFT,
+      // so the app was pushed off the right of the screen. Anchoring this one
+      // wrapper to ltr puts the un-scaled box at the left, where the transform
+      // starts. The app's own direction is set on .appRoot and is unaffected.
+      direction: "ltr"
+    } }, /* @__PURE__ */ React.createElement(
       "div",
       {
         ref: innerRef,
@@ -4135,7 +4287,10 @@ function CardView({
   submittalPerms,
   currentEmail,
   userSignatures,
-  brandName
+  brandName,
+  boqData,
+  lliRows,
+  onChangeLliRows
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -4154,11 +4309,12 @@ function CardView({
   const isPhotos = cardKey === "photos";
   const isContacts = cardKey === "contacts";
   const isSubmittal = cardKey === "submittal";
+  const isLli = cardKey === "lli";
   const showRooms = !!roomsDataSource;
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
-  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
     FinishesByRoomCard,
     {
       dataSource: roomsDataSource,
@@ -4180,7 +4336,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -4191,7 +4347,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -5260,6 +5416,524 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   );
 }
 
+// src/lib/boq.js
+// -----------------------------------------------------------------------------
+// The bill of quantities. Marcella's file numbers every line CC.SS.IIII:
+//   08.00.0000  chapter      (מתקני חשמל)
+//   08.01.0000  sub-chapter  (כבלים)
+//   08.01.0010  item         (a specific cable)
+// The Hebrew workbook writes the item with three digits and the English one with
+// four — same item, so the three numbers are compared, never the string.
+//
+// The sub-chapter is also the grouping she asked for: "all the cables as one
+// item, ducts by type and not by cross-section". That grouping is already in the
+// file; there is nothing to invent.
+// -----------------------------------------------------------------------------
+var BOQ_NOTE_UNITS = ["הערה", "note", "notes"];
+// Sub-chapters that are works or admin, not something anyone orders. Hidden by
+// default; every row can be shown or hidden by hand afterwards.
+var BOQ_SKIP_SUB = [
+  /^\s*כללי/, /^\s*General\b/i,
+  /^\s*בדיקות/, /^\s*Tests?\b/i,
+  /שירות\s*,?\s*אחריות/, /Service\b.*Warrant/i,
+  /אינטגרציה/, /Integration\b/i,
+  /עבודות\s*יומיות/, /Incidental\b/i
+];
+var LLI_STATUSES = [
+  { key: "pending", en: "Awaiting", he: "ממתין" },
+  { key: "partial", en: "Partly supplied", he: "סופק חלקית" },
+  { key: "supplied", en: "Supplied", he: "סופק" }
+];
+// Which submittal folder a BOQ chapter belongs to. Chapter numbering is a local
+// convention, so this is a starting point and not a law.
+var BOQ_CHAPTER_CATEGORY = {
+  6: "architecture", 7: "plumbing", 8: "electrical", 9: "architecture",
+  10: "flooring", 11: "cladding", 12: "architecture", 15: "hvac",
+  22: "architecture", 29: "architecture", 30: "architecture"
+};
+// Lighting lives inside the electrical chapter, in these sub-chapters.
+var BOQ_LIGHTING_SUBS = [11, 12, 23];
+
+function boqIsHebrew(v) {
+  return /[֐-׿]/.test(String(v || ""));
+}
+function boqCode(v) {
+  const m = String(v == null ? "" : v).trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,4})$/);
+  if (!m) return null;
+  return { c: Number(m[1]), s: Number(m[2]), i: Number(m[3]) };
+}
+function boqKey(c, s, i) {
+  return `${c}.${s}.${i}`;
+}
+function boqSubKey(c, s) {
+  return `${String(c).padStart(2, "0")}.${String(s).padStart(2, "0")}`;
+}
+function boqIsNote(unit) {
+  const u = String(unit || "").trim().toLowerCase();
+  return !u || BOQ_NOTE_UNITS.indexOf(u) >= 0;
+}
+function boqNum(v) {
+  const n = Number(String(v == null ? "" : v).replace(/[^\d.\-]/g, ""));
+  return isFinite(n) ? n : 0;
+}
+
+// Pull the four columns out of a sheet given as an array of arrays. The code
+// column is found from the data itself, so a stray title row above the header
+// changes nothing.
+function boqRowsFromAoa(aoa) {
+  let codeCol = -1;
+  for (const row of aoa || []) {
+    for (let c = 0; c < (row || []).length; c++) {
+      if (boqCode(row[c])) { codeCol = c; break; }
+    }
+    if (codeCol >= 0) break;
+  }
+  if (codeCol < 0) return [];
+  const out = [];
+  for (const row of aoa || []) {
+    const code = boqCode((row || [])[codeCol]);
+    if (!code) continue;
+    out.push({
+      ...code,
+      desc: String((row[codeCol + 1] == null ? "" : row[codeCol + 1])).trim().replace(/\s+/g, " "),
+      unit: String((row[codeCol + 2] == null ? "" : row[codeCol + 2])).trim(),
+      qty: row[codeCol + 3] == null || row[codeCol + 3] === "" ? null : boqNum(row[codeCol + 3])
+    });
+  }
+  return out;
+}
+
+async function boqReadFile(file) {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX3.read(buf, { type: "array" });
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const aoa = XLSX3.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
+  const rows = boqRowsFromAoa(aoa);
+  // The language of the file is decided by the descriptions, not by the file
+  // name — either workbook may be uploaded first.
+  const hebrew = rows.filter((r) => boqIsHebrew(r.desc)).length;
+  return { lang: hebrew > rows.length / 2 ? "he" : "en", rows, sheetName: wb.SheetNames[0] };
+}
+
+// One tree from one or two workbooks. Whatever language is missing simply falls
+// back to the other, so a single-language BOQ works too.
+function boqBuild(sources) {
+  const byCode = {};
+  (sources || []).forEach((src) => {
+    const lang = src.lang === "he" ? "he" : "en";
+    (src.rows || []).forEach((r) => {
+      const k = boqKey(r.c, r.s, r.i);
+      const cur = byCode[k] || { c: r.c, s: r.s, i: r.i, en: "", he: "", unit: "", qty: null };
+      if (!cur[lang]) cur[lang] = r.desc;
+      if (!cur.unit && r.unit) cur.unit = r.unit;
+      if (cur.qty == null && r.qty != null) cur.qty = r.qty;
+      byCode[k] = cur;
+    });
+  });
+  const all = Object.keys(byCode).map((k) => byCode[k]);
+  const text = (r) => ({ en: r.en || r.he || "", he: r.he || r.en || "" });
+
+  const chapters = [];
+  const chapterOf = {};
+  all.filter((r) => r.s === 0 && r.i === 0).forEach((r) => {
+    // A chapter number can repeat (07 "Plumbing work" then 07 "General"); the
+    // first one carries the name.
+    if (chapterOf[r.c]) return;
+    const t = text(r);
+    const ch = { c: r.c, code: String(r.c).padStart(2, "0"), en: t.en, he: t.he, subs: [] };
+    chapterOf[r.c] = ch;
+    chapters.push(ch);
+  });
+  const subOf = {};
+  all.filter((r) => r.s > 0 && r.i === 0).forEach((r) => {
+    const ch = chapterOf[r.c] || (() => {
+      const made = { c: r.c, code: String(r.c).padStart(2, "0"), en: "", he: "", subs: [] };
+      chapterOf[r.c] = made;
+      chapters.push(made);
+      return made;
+    })();
+    const t = text(r);
+    const sub = { c: r.c, s: r.s, code: boqSubKey(r.c, r.s), en: t.en, he: t.he, items: [], unit: "", qty: 0 };
+    subOf[sub.code] = sub;
+    ch.subs.push(sub);
+  });
+  all.filter((r) => r.i > 0).forEach((r) => {
+    const sub = subOf[boqSubKey(r.c, r.s)];
+    if (!sub) return;
+    const t = text(r);
+    sub.items.push({ code: `${sub.code}.${String(r.i).padStart(4, "0")}`, en: t.en, he: t.he, unit: r.unit, qty: r.qty });
+  });
+  // The quantity of the group is the sum of the lines that share the commonest
+  // unit. Mixing metres and units into one number would be a lie.
+  chapters.forEach((ch) => ch.subs.forEach((sub) => {
+    const counts = {};
+    sub.items.filter((it) => !boqIsNote(it.unit)).forEach((it) => {
+      counts[it.unit] = (counts[it.unit] || 0) + 1;
+    });
+    const units = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+    sub.unit = units[0] || "";
+    sub.mixedUnits = units.length > 1;
+    sub.qty = sub.items.filter((it) => it.unit === sub.unit).reduce((sum, it) => sum + (it.qty || 0), 0);
+    sub.orderable = sub.items.some((it) => !boqIsNote(it.unit)) &&
+      !BOQ_SKIP_SUB.some((re) => re.test(sub.he) || re.test(sub.en));
+  }));
+  chapters.sort((a, b) => a.c - b.c);
+  chapters.forEach((ch) => ch.subs.sort((a, b) => a.s - b.s));
+  return { chapters, builtAt: new Date().toISOString() };
+}
+
+// The units are written in Hebrew in both of her workbooks, so the English view
+// translates the handful that appear rather than showing מ"ר to an English reader.
+var BOQ_UNITS = {
+  "מטר": "m", "מ\"ר": "m²", "מ\"ק": "m³", "יח'": "unit", "יח\u05F3": "unit",
+  "קומפ'": "lump", "קומפ\u05F3": "lump", "נק'": "point", "נק\u05F3": "point",
+  "הערה": "note", "ש\"ע": "equiv.", "סכום": "sum", "ק\"ג": "kg", "טון": "ton"
+};
+function boqUnit(unit, lang) {
+  const u = String(unit || "").trim();
+  if (!u || lang === "he") return u;
+  return BOQ_UNITS[u] || u;
+}
+function boqCategoryOf(sub) {
+  if (sub.c === 8 && BOQ_LIGHTING_SUBS.indexOf(sub.s) >= 0) return "lighting";
+  return BOQ_CHAPTER_CATEGORY[sub.c] || null;
+}
+function boqText(node, lang) {
+  return (lang === "he" ? node.he : node.en) || node.en || node.he || "";
+}
+
+// src/cards/LliCard.jsx
+// -----------------------------------------------------------------------------
+// LLI — the control table for ordering equipment and materials. The rows come
+// from the bill of quantities (one row per sub-chapter, which is exactly the
+// grouping the BOQ already carries); everything a person fills in lives beside
+// them, keyed by the same code, so re-uploading a BOQ never wipes it.
+// A project with no BOQ (a lump-sum contract) builds its rows by hand.
+// -----------------------------------------------------------------------------
+function lliBlankRow() {
+  return { typeMark: "", desc: "", image: null, qtyActual: "", ordered: false, po: "", eta: "", status: "pending", hidden: false };
+}
+function lliRowOf(rows, code) {
+  return { ...lliBlankRow(), ...(rows || {})[code] || {} };
+}
+function lliStatusLabel(key, lang) {
+  const st = LLI_STATUSES.find((s) => s.key === key) || LLI_STATUSES[0];
+  return lang === "he" ? st.he : st.en;
+}
+function lliStatusColor(key, ordered) {
+  if (key === "supplied") return "#1a7f4b";
+  if (key === "partial") return "#e08a12";
+  return ordered ? "#3a7bd5" : "#9aa3af";
+}
+var LLI_L = {
+  title: { en: "LLI — order control", he: "LLI — מעקב הזמנות" },
+  noBoq: {
+    en: "No bill of quantities uploaded for this project yet. Upload one in project settings, or build the list by hand below.",
+    he: "עדיין לא הועלה כתב כמויות לפרויקט הזה. אפשר להעלות אותו בהגדרות הפרויקט, או לבנות את הרשימה ידנית כאן."
+  },
+  allCats: { en: "All categories", he: "כל הקטגוריות" },
+  section: { en: "BOQ item", he: "סעיף בכתב הכמויות" },
+  typeMark: { en: "Type mark", he: "איפיון" },
+  desc: { en: "Description", he: "תיאור הסעיף" },
+  image: { en: "Photo", he: "תמונה" },
+  qtyContract: { en: "Contract qty", he: "כמות חוזה" },
+  qtyActual: { en: "Actual qty", he: "כמות בפועל" },
+  ordered: { en: "Ordered", he: "הוזמן" },
+  notOrdered: { en: "Not ordered", he: "לא הוזמן" },
+  po: { en: "Purchase order", he: "הזמנת רכש" },
+  eta: { en: "Delivery date", he: "מועד אספקה" },
+  status: { en: "Supply status", he: "סטטוס סופק" },
+  hide: { en: "Not for ordering", he: "לא להזמנה" },
+  showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
+  addRow: { en: "Add a row", he: "הוספת שורה" },
+  manual: { en: "Manual", he: "ידני" },
+  empty: { en: "Nothing to order in this category.", he: "אין פריטים להזמנה בקטגוריה הזו." },
+  ordersOf: { en: "ordered", he: "הוזמנו" },
+  rowsOf: { en: "rows", he: "שורות" },
+  restore: { en: "Restore", he: "החזרה" }
+};
+
+function LliCard({ appIsRTL, boqData, rows, onChangeRows, canEdit, projectId }) {
+  const [langOverride, setLangOverride] = useState6(null);
+  const lang = langOverride || (appIsRTL ? "he" : "en");
+  const isRTL = lang === "he";
+  const [cat, setCat] = useState6("all");
+  const [showHidden, setShowHidden] = useState6(false);
+  const [busyRow, setBusyRow] = useState6(null);
+  const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
+
+  const data = rows || {};
+  const patch = (code, next) => {
+    if (!onChangeRows) return;
+    onChangeRows({ ...data, [code]: { ...lliRowOf(data, code), ...next } });
+  };
+
+  // The rows the BOQ gives us, plus whatever was added by hand.
+  const boqRows = (((boqData || {}).chapters) || []).flatMap((ch) =>
+    ch.subs.map((sub) => ({
+      code: sub.code,
+      chapter: ch,
+      sub,
+      source: "boq",
+      category: boqCategoryOf(sub),
+      title: boqText(sub, lang),
+      unit: sub.unit,
+      qty: sub.qty,
+      defaultHidden: !sub.orderable
+    }))
+  );
+  const manualRows = Object.keys(data)
+    .filter((k) => k.indexOf("m-") === 0)
+    .map((k) => ({
+      code: k,
+      chapter: null,
+      sub: null,
+      source: "manual",
+      category: (data[k] || {}).category || null,
+      title: (data[k] || {}).desc || "",
+      unit: (data[k] || {}).unit || "",
+      qty: null,
+      defaultHidden: false
+    }));
+  const all = boqRows.concat(manualRows);
+  const isHidden = (r) => {
+    const saved = (data[r.code] || {}).hidden;
+    return saved === void 0 ? r.defaultHidden : !!saved;
+  };
+  const visible = all.filter((r) => (cat === "all" || r.category === cat) && (showHidden || !isHidden(r)));
+  const orderedCount = visible.filter((r) => lliRowOf(data, r.code).ordered).length;
+
+  // Grouped under their chapter, in BOQ order; manual rows come last.
+  const groups = [];
+  visible.forEach((r) => {
+    const key = r.chapter ? r.chapter.code : "manual";
+    let g = groups.find((x) => x.key === key);
+    if (!g) {
+      g = { key, title: r.chapter ? `${r.chapter.code} · ${boqText(r.chapter, lang)}` : L("manual"), rows: [] };
+      groups.push(g);
+    }
+    g.rows.push(r);
+  });
+
+  const onImage = async (code, e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusyRow(code);
+    try {
+      const thumb = await sbMakeThumb(f, 640);
+      patch(code, { image: thumb });
+    } catch (ex) {
+      console.warn("[awdash] lli image failed", ex);
+    } finally {
+      setBusyRow(null);
+    }
+  };
+  const addManual = () => {
+    const n = Object.keys(data).filter((k) => k.indexOf("m-") === 0).length + 1;
+    patch(`m-${Date.now()}`, { ...lliBlankRow(), desc: "", category: cat === "all" ? null : cat, manualIndex: n });
+  };
+
+  const catChip = (key, label) =>
+    sbH(
+      "button",
+      { key, type: "button", className: `lliChip ${cat === key ? "on" : ""}`, onClick: () => setCat(key) },
+      label
+    );
+
+  return sbH(
+    "div",
+    { className: "lliCard", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "lliHead" },
+      sbH("h2", { className: "lliTitle" }, L("title")),
+      sbH(
+        "div",
+        { className: "sbLangToggle" },
+        sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
+        sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
+      )
+    ),
+    // The category filter is the first thing on the page, on purpose.
+    sbH(
+      "div",
+      { className: "lliFilter" },
+      catChip("all", L("allCats")),
+      SUBMITTAL_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
+    ),
+    sbH(
+      "div",
+      { className: "lliBar" },
+      sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${orderedCount} ${L("ordersOf")}`),
+      sbH(
+        "label",
+        { className: "lliShowHidden" },
+        sbH("input", { type: "checkbox", checked: showHidden, onChange: (e) => setShowHidden(e.target.checked) }),
+        " ",
+        L("showHidden")
+      ),
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null
+    ),
+    !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
+    groups.length === 0
+      ? sbH("p", { className: "lliNote" }, L("empty"))
+      : sbH(
+          "div",
+          { className: "lliTableWrap" },
+          sbH(
+            "table",
+            { className: "lliTable" },
+            sbH(
+              "thead",
+              null,
+              sbH(
+                "tr",
+                null,
+                sbH("th", { className: "cSec" }, L("section")),
+                sbH("th", { className: "cMark" }, L("typeMark")),
+                sbH("th", { className: "cDesc" }, L("desc")),
+                sbH("th", { className: "cImg" }, L("image")),
+                sbH("th", { className: "cQty" }, L("qtyContract")),
+                sbH("th", { className: "cQty" }, L("qtyActual")),
+                sbH("th", { className: "cOrd" }, L("ordered")),
+                sbH("th", { className: "cPo" }, L("po")),
+                sbH("th", { className: "cEta" }, L("eta")),
+                sbH("th", { className: "cSt" }, L("status")),
+                canEdit ? sbH("th", { className: "cAct" }, "") : null
+              )
+            ),
+            groups.map((g) =>
+              sbH(
+                "tbody",
+                { key: g.key },
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 11 : 10 }, g.title)),
+                g.rows.map((r) => {
+                  const v = lliRowOf(data, r.code);
+                  const hidden = isHidden(r);
+                  return sbH(
+                    "tr",
+                    { key: r.code, className: hidden ? "lliOff" : "" },
+                    sbH(
+                      "td",
+                      { className: "cSec" },
+                      sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
+                      r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cMark" },
+                      sbH("input", { type: "text", className: "lliIn", value: v.typeMark, readOnly: !canEdit, onChange: (e) => patch(r.code, { typeMark: e.target.value }) })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cDesc" },
+                      sbH("textarea", {
+                        className: "lliIn lliDesc",
+                        rows: 2,
+                        // The BOQ wording is the default; she overwrites it with
+                        // whatever was actually chosen.
+                        value: v.desc || r.title,
+                        readOnly: !canEdit,
+                        onChange: (e) => patch(r.code, { desc: e.target.value })
+                      })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cImg" },
+                      sbH(
+                        "label",
+                        { className: `lliImgBox ${canEdit ? "" : "ro"}` },
+                        v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
+                        busyRow === r.code ? sbH("span", { className: "lliImgBusy" }, "…") : null,
+                        canEdit ? sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onImage(r.code, e) }) : null
+                      ),
+                      v.image && canEdit
+                        ? sbH("button", { type: "button", className: "lliImgClear", onClick: () => patch(r.code, { image: null }) }, "×")
+                        : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cQty", dir: "ltr" },
+                      r.qty ? `${r.qty}${r.unit ? ` ${boqUnit(r.unit, lang)}` : ""}` : "—",
+                      r.sub && r.sub.mixedUnits ? sbH("span", { className: "lliMixed", title: "mixed units" }, "*") : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cQty" },
+                      sbH("input", { type: "text", className: "lliIn lliNum", dir: "ltr", value: v.qtyActual, readOnly: !canEdit, onChange: (e) => patch(r.code, { qtyActual: e.target.value }) })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cOrd" },
+                      sbH(
+                        "button",
+                        {
+                          type: "button",
+                          className: `lliOrd ${v.ordered ? "on" : ""}`,
+                          disabled: !canEdit,
+                          onClick: () => patch(r.code, { ordered: !v.ordered })
+                        },
+                        v.ordered ? L("ordered") : L("notOrdered")
+                      )
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cPo" },
+                      // The order number only makes sense once it was ordered.
+                      v.ordered
+                        ? sbH("input", { type: "text", className: "lliIn", dir: "ltr", value: v.po, readOnly: !canEdit, onChange: (e) => patch(r.code, { po: e.target.value }) })
+                        : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cEta" },
+                      v.ordered
+                        ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.eta, readOnly: !canEdit, onChange: (e) => patch(r.code, { eta: e.target.value }) })
+                        : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cSt" },
+                      v.ordered
+                        ? sbH(
+                            "select",
+                            {
+                              className: "lliIn lliSel",
+                              value: v.status,
+                              disabled: !canEdit,
+                              style: { color: lliStatusColor(v.status, v.ordered) },
+                              onChange: (e) => patch(r.code, { status: e.target.value })
+                            },
+                            LLI_STATUSES.map((st) => sbH("option", { key: st.key, value: st.key }, lang === "he" ? st.he : st.en))
+                          )
+                        : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cAct" },
+                          sbH(
+                            "button",
+                            {
+                              type: "button",
+                              className: "sbIconBtn",
+                              title: hidden ? L("restore") : L("hide"),
+                              onClick: () => patch(r.code, { hidden: !hidden })
+                            },
+                            sbH(hidden ? RotateCcw : Trash2, { size: 14, strokeWidth: 2 })
+                          )
+                        )
+                      : null
+                  );
+                })
+              )
+            )
+          )
+        )
+  );
+}
+
 // src/cards/SubmittalCard.jsx
 // -----------------------------------------------------------------------------
 // Submittal folders. Eight categories, each one a folder that holds its own
@@ -5276,13 +5950,140 @@ var SUBMITTAL_BUCKET = "submittals";
 var SUBMITTAL_CATEGORIES = [
   { key: "architecture", en: "Architecture", he: "אדריכלות", icon: Building23 },
   { key: "flooring", en: "Flooring", he: "ריצוף", icon: Grid3x32 },
-  { key: "cladding", en: "Cladding", he: "חיפוי", icon: Layers2 },
+  // Her own catalogue calls this chapter "גמרים / Finishes"; the key stays
+  // "cladding" so every submittal already numbered Cladding-00x keeps its name.
+  { key: "cladding", en: "Finishes", he: "גמרים", code: "Cladding", icon: Layers2 },
   { key: "ceiling", en: "Ceiling", he: "תקרה", icon: PanelTop2 },
   { key: "electrical", en: "Electrical", he: "חשמל", icon: Zap2 },
   { key: "lighting", en: "Lighting", he: "תאורה", icon: Lightbulb2 },
   { key: "hvac", en: "HVAC", he: "מיזוג אוויר", icon: AirVent2 },
   { key: "plumbing", en: "Plumbing", he: "אינסטלציה", icon: Droplets2 }
 ];
+
+// The sub-category catalogue, exactly as Marcella supplied it (18.8.26,
+// "תת קטגוריה לסבמיטלים.xlsx"). English first, Hebrew second — the English term
+// is what gets stored, so switching the language never rewrites the record.
+// Her sheet had one row where the English column had slipped one place to the
+// right (Whiteboards under Electrical); the Hebrew column is the authority and
+// the four values on that row were put back: Cables / LED Profiles /
+// VRF-VRV Units / Sinks.
+var SB_SUBCATS = {
+  architecture: [
+    ["Glass", "זכוכית"],
+    ["Mirrors", "מראות"],
+    ["Films & Graphics", "ציפויים ומדבקות"],
+    ["Whiteboards", "לוחות מחיקים"],
+    ["Curtains & Blinds", "וילונות והצללה"],
+    ["Internal Signage", "שילוט פנים"],
+    ["External Signage", "שילוט חוץ"],
+    ["Wall Protection", "הגנות קיר"],
+    ["Architectural Accessories", "אביזרים אדריכליים"]
+  ],
+  flooring: [
+    ["LVT", "LVT"],
+    ["Carpets", "שטיחים"],
+    ["Carpet Tiles", "אריחי שטיח"],
+    ["Porcelain Tiles", "גרניט פורצלן"],
+    ["Ceramic Tiles", "קרמיקה"],
+    ["Raised Access Flooring", "רצפה צפה"],
+    ["Communication Room Flooring", "ריצוף חדרי תקשורת"],
+    ["Flooring Adhesives", "דבקים לריצוף"],
+    ["Underlay", "שכבות תשתית"]
+  ],
+  cladding: [
+    ["Paints", "צבעים"],
+    ["Wall Cladding", "חיפויי קיר"],
+    ["Acoustic Panels", "פנלים אקוסטיים"],
+    ["Tiles", "אריחים"],
+    ["Grout", "רובה"],
+    ["Sealants", "חומרי איטום"],
+    ["Adhesives", "דבקים"],
+    ["Skirting", "פנלים / סוקלים"],
+    ["Decorative Finishes", "גמרים דקורטיביים"]
+  ],
+  ceiling: [
+    ["Acoustic Ceiling Tiles", "אריחי תקרה אקוסטית"],
+    ["Ceiling Grid", "גריד תקרה"],
+    ["Metal Ceilings", "תקרות מתכת"],
+    ["Acoustic Baffles", "באפלים אקוסטיים"],
+    ["Suspension Systems", "מערכות תלייה"],
+    ["Access Panels", "פתחי שירות"]
+  ],
+  electrical: [
+    ["Electrical Panels", "לוחות חשמל"],
+    ["UPS", "UPS"],
+    ["Cables", "כבלים"],
+    ["Cable Trays", "תעלות כבלים"],
+    ["Sockets", "שקעים"],
+    ["Floor Boxes", "קופסאות רצפה"],
+    ["Switches", "מפסקים"],
+    ["Transformers", "שנאים"],
+    ["Earthing Equipment", "ציוד הארקה"],
+    ["Emergency Power Equipment", "ציוד חשמל חירום"],
+    ["BMS", "בקרת מבנה BMS"],
+    ["BMS Controllers", "בקרי BMS"],
+    ["BMS Sensors", "חיישני BMS"],
+    ["Actuators", "אקטואטורים"],
+    ["BMS Control Panels", "לוחות בקרת מבנה"],
+    ["Communication Gateways", "ממשקי תקשורת / Gateways"]
+  ],
+  lighting: [
+    ["Lighting Fixtures", "גופי תאורה"],
+    ["Emergency Lighting", "תאורת חירום"],
+    ["LED Profiles", "פרופילי LED"],
+    ["Drivers", "דרייברים"],
+    ["DALI Components", "רכיבי DALI"],
+    ["Lighting Control", "בקרת תאורה"],
+    ["Sensors", "חיישנים"]
+  ],
+  hvac: [
+    ["FCU Units", "יחידות מיזוג FCU"],
+    ["AHU Units", "יחידות AHU"],
+    ["VRF/VRV Units", "יחידות VRF/VRV"],
+    ["Fans", "מפוחים"],
+    ["Grilles & Diffusers", "גרילים ומפזרים"],
+    ["Dampers", "דמפרים"],
+    ["Fire & Smoke Dampers", "דמפרי אש ועשן"],
+    ["Control Valves", "ברזי בקרה"],
+    ["Pumps", "משאבות"],
+    ["Piping", "צנרת"],
+    ["Ductwork", "תעלות אוויר"],
+    ["Insulation", "בידוד"],
+    ["Thermostats", "תרמוסטטים"]
+  ],
+  plumbing: [
+    ["Sanitary Fixtures", "כלים סניטריים"],
+    ["Faucets", "ברזים"],
+    ["Sinks", "כיורים"],
+    ["Toilets", "אסלות"],
+    ["Urinals", "משתנות"],
+    ["Drains", "נקזים"],
+    ["Traps", "סיפונים"],
+    ["Backflow Preventers", "מז״ח"],
+    ["Pumps", "משאבות"],
+    ["Water Softeners", "מרככי מים"],
+    ["Pipes & Fittings", "צנרת ואביזרים"],
+    ["Valves", "מגופים"]
+  ]
+};
+function sbSubcats(catKey) {
+  return SB_SUBCATS[catKey] || [];
+}
+// Whatever the person typed or picked, store the English term when it is one of
+// ours, so the value survives a language switch.
+function sbSubcatCanon(input, catKey) {
+  const v = String(input || "").trim();
+  if (!v) return "";
+  const hit = sbSubcats(catKey).find((r) => r[0] === v || r[1] === v);
+  return hit ? hit[0] : v;
+}
+function sbSubcatLabel(value, catKey, lang) {
+  const v = String(value || "").trim();
+  if (!v) return "";
+  const hit = sbSubcats(catKey).find((r) => r[0] === v || r[1] === v);
+  if (!hit) return v;
+  return lang === "he" ? hit[1] : hit[0];
+}
 
 // Every label in the sheet, in both languages. The Hebrew comes from the cell
 // comments in the source workbook so the wording is Marcella's, not a
@@ -5299,6 +6100,7 @@ var SB_L = {
   discipline: { en: "Discipline", he: "תחום" },
   submittedBy: { en: "Submitted By", he: "הוגש על ידי" },
   scope: { en: "Scope", he: "תכולה" },
+  subCategory: { en: "Sub-category", he: "תת קטגוריה" },
   email: { en: "E-mail", he: "דוא\"ל" },
   equipment: { en: "EQUIPMENT / MATERIAL DETAILS", he: "פרטי ציוד / חומר" },
   typeId: { en: "Type ID", he: "מזהה סוג" },
@@ -5324,6 +6126,21 @@ var SB_L = {
   create: { en: "Create submittal", he: "צור סבמיטל" },
   noSubmittals: { en: "No submittals in this folder yet.", he: "עדיין אין סבמיטלים בתיקייה הזו." },
   trackingList: { en: "Tracking list", he: "רשימת מעקב" },
+  checklist: { en: "Checklist from the bill of quantities", he: "צ׳ק‑ליסט מכתב הכמויות" },
+  checklistHint: {
+    en: "Every group in this discipline that needs an approval. A green line already has one.",
+    he: "כל קבוצה בתחום הזה שדורשת אישור. שורה ירוקה כבר הוגשה."
+  },
+  checklistNone: {
+    en: "No bill of quantities uploaded for this project, so there is nothing to check against yet.",
+    he: "עדיין לא הועלה כתב כמויות לפרויקט, ולכן אין מול מה לבדוק."
+  },
+  checklistEmpty: { en: "The bill of quantities has nothing in this discipline.", he: "אין בכתב הכמויות פריטים בתחום הזה." },
+  chkItem: { en: "BOQ item", he: "סעיף בכתב הכמויות" },
+  chkDesc: { en: "Description", he: "תיאור" },
+  chkSubmittal: { en: "Submittal", he: "סבמיטל" },
+  chkMissing: { en: "Not submitted", he: "טרם הוגש" },
+  chkDone: { en: "submitted", he: "הוגשו" },
   status: { en: "Status", he: "סטטוס" },
   actions: { en: "", he: "" },
   save: { en: "Save", he: "שמירה" },
@@ -5377,6 +6194,11 @@ var SB_L = {
   remaining: { en: "still to do", he: "נותרו לביצוע" },
   notRelevant: { en: "not relevant to the rest of the documents", he: "לא נמצא רלוונטי לשאר המסמכים" },
   worklistDone: { en: "The worklist is finished.", he: "רשימת העבודה הושלמה." },
+  olderVersions: { en: "Earlier versions", he: "גירסאות קודמות" },
+  newVersionNote: {
+    en: "This submittal was already sent, so editing it opens a new version.",
+    he: "הסבמיטל הזה כבר נשלח, ולכן עריכה שלו פותחת גירסה חדשה."
+  },
   viewOnly: { en: "View only", he: "צפייה בלבד" },
   supervision: { en: "Supervision", he: "פיקוח" },
   signAsMe: { en: "Sign", he: "לחתום" },
@@ -5445,7 +6267,9 @@ function sbFmtDate(iso) {
 // Plumbing-001, Plumbing-002 ... and the revision sits underneath it.
 function sbCatCode(categoryKey) {
   const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === categoryKey);
-  return (cat ? cat.en : categoryKey || "General").replace(/[^A-Za-z0-9]/g, "");
+  // `code` exists so a folder can be renamed without renumbering documents that
+  // already went out: the label may change, the serial prefix may not.
+  return (cat ? cat.code || cat.en : categoryKey || "General").replace(/[^A-Za-z0-9]/g, "");
 }
 function sbNumber(categoryKey, seq) {
   return `${sbCatCode(categoryKey)}-${sbPad3(seq || 1)}`;
@@ -5528,6 +6352,7 @@ function sbNewSubmittal(opts) {
     submittedBy: opts.submittedBy || "",
     email: opts.email || "",
     scope: "",
+    subCategory: "",
     typeId: "",
     itemDescription: "",
     modelCode: "",
@@ -5683,6 +6508,16 @@ async function sbExtractPdfText(file) {
 }
 
 // ------------------------------------------------------------------- printing
+// The browser offers the document title as the file name when the person
+// chooses "Save as PDF", so the title is the file name we want.
+function sbPrintName(rec) {
+  const parts = [
+    sanitizeFileNamePart(rec.projectName || ""),
+    `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0}`,
+    sbFmtDate(rec.date).replace(/\//g, ".")
+  ].filter(Boolean);
+  return parts.join(" - ");
+}
 function sbEsc(s) {
   return String(s == null ? "" : s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
 }
@@ -5718,15 +6553,19 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
       <td class="cmt"><div class="miniLbl">${L("approvalComments")}</div><div class="cmtVal">${sbEsc(rv.comments || "")}</div></td>
       <td class="decs">${decisions}</td>
     </tr></table></div>`;
+  // The free-text box keeps the same size as every other value until there is
+  // too much of it to fit, and then steps down inside its own area.
+  const infoLen = ((isHe ? rec.infoHe : rec.infoEn) || "").length;
+  const infoSize = infoLen > 1400 ? 8 : infoLen > 900 ? 9 : infoLen > 500 ? 10 : 11;
   const img = rec.image && rec.image.thumb
     ? `<img src="${rec.image.thumb}" alt="">`
     : `<span class="noImg">${L("picture")}</span>`;
-  const html = `<html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbNumber(rec.category, rec.seq))}</title><style>
+  const html = `<html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbPrintName(rec))}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
 @page { size: A4 portrait; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body { width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; --val: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .frame { border: 1.5px solid ${accent}; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; min-height: calc(297mm - 18mm); }
 .hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding: 10px 0 14px; margin-bottom: 4px; min-height: 82px; }
 /* Both sides are the same fixed width, so the title sits on the centre line of
@@ -5746,20 +6585,20 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
    exactly two of them, because that is where the text actually lands. */
 .info th, .info td, tbody .docName, tbody .docBox { height: 17px; }
 .info th { background: #f3f6fa; font-weight: 700; width: 17%; white-space: nowrap; text-align: ${isHe ? "right" : "left"}; }
-.info td { width: 33%; text-align: center; }
+.info td { width: 33%; text-align: center; font-size: var(--val); }
 .eq { table-layout: fixed; }
 .eq th, .eq td.v { height: 36px; }
 .eq th { background: #f3f6fa; font-weight: 700; width: 26%; text-align: ${isHe ? "right" : "left"}; }
-.eq td.v { width: 38%; text-align: center; }
+.eq td.v { width: 38%; text-align: center; font-size: var(--val); }
 .eq td.pic { width: 36%; text-align: center; padding: 3px; }
 .eq td.pic img { max-width: 100%; max-height: 130px; object-fit: contain; }
 .noImg { color: #9aa3af; font-size: 9px; }
-.docName { text-align: ${isHe ? "right" : "left"}; }
+.docName { text-align: ${isHe ? "right" : "left"}; font-size: var(--val); }
 .docBox { width: 34px; text-align: center; font-size: 12px; }
 .addWrap { flex: 1; display: flex; flex-direction: column; min-height: 96px; }
-.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; white-space: pre-wrap; }
+.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; white-space: pre-wrap; font-size: ${infoSize}px; line-height: 1.45; }
 .miniLbl { font-size: 10px; color: #6b7280; font-weight: 700; margin-bottom: 3px; }
-.rev td { vertical-align: top; height: 112px; padding: 7px 9px; font-size: 11px; }
+.rev td { vertical-align: top; height: 112px; padding: 7px 9px; font-size: var(--val); }
 .rev .sig { width: 30%; }
 .rev .cmt { width: 42%; }
 .rev .decs { width: 28%; }
@@ -5787,7 +6626,7 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 ${infoRow(L("projectName"), val(rec.projectName), L("date"), sbEsc(sbFmtDate(rec.date)))}
 ${infoRow(L("contractor"), val(rec.contractor), L("requiredApprovalDate"), sbEsc(sbFmtDate(rec.requiredApprovalDate)))}
 ${infoRow(L("discipline"), sbEsc(cat ? sbText(cat, lang) : rec.discipline), L("submittedBy"), val(rec.submittedBy))}
-${infoRow(L("scope"), val(rec.scope), L("email"), val(rec.email))}
+${infoRow(L("subCategory"), sbEsc(sbSubcatLabel(rec.subCategory || rec.scope, rec.category, lang)), L("email"), val(rec.email))}
 </table>
 
 <div class="secBar">${L("equipment")}</div>
@@ -5970,7 +6809,7 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
   const [err, setErr] = useState6(null);
@@ -6125,6 +6964,12 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
       infoEn: o.infoEn && String(o.infoEn).trim() ? String(o.infoEn).trim() : SB_NO_INFO.en,
       infoHe: o.infoHe && String(o.infoHe).trim() ? String(o.infoHe).trim() : SB_NO_INFO.he,
       docs: o.docs && typeof o.docs === "object" ? { ...d.docs, ...o.docs } : d.docs,
+      // Only if the model picked one of ours; anything else is ignored rather
+      // than written into the form.
+      subCategory: (() => {
+        const c = sbSubcatCanon(o.subCategory || "", d.category);
+        return sbSubcats(d.category).some((r) => r[0] === c) ? c : d.subCategory || "";
+      })(),
       attachments: sbScopeAttachments(d.attachments, o.pages),
       aiFilledAt: new Date().toISOString()
     });
@@ -6169,7 +7014,10 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
           files: manifest,
           category: d.category,
           lang,
-          fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe"]
+          // The catalogue for this discipline. The model may only choose from
+          // it, so the field stays a real sub-category and not a free phrase.
+          subCategories: sbSubcats(d.category).map((r) => r[0]),
+          fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
         }
       });
       if (error) throw error;
@@ -6192,7 +7040,8 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
           product: pr,
           attachments: sbScopeAttachments(d.attachments, pr.pages),
           specText: d.specText || "",
-          scope: d.scope || ""
+          scope: d.scope || "",
+          subCategory: d.subCategory || ""
         }));
         if (onQueueChange) onQueueChange(queue);
         setAiMsg([`${L("foundProducts")} (${products.length}). ${L("worklistHint")}`, unusedLine].filter(Boolean).join("\n"));
@@ -6246,6 +7095,7 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
         "div",
         { className: "sbFormHeadSide end" },
         ro ? sbH("span", { className: "sbRoTag" }, L("viewOnly")) : null,
+        langSwitch || null,
         sbH(
           "button",
           { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
@@ -6255,6 +7105,9 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
         )
       )
     ),
+    typeof d.fromRev === "number" && !d.sent
+      ? sbH("p", { className: "sbRevNote" }, `${L("newVersionNote")} Rev.${d.fromRev} → Rev.${d.rev}`)
+      : null,
     err ? sbH("p", { className: "sbErr" }, err) : null,
 
     // ------- PROJECT INFORMATION
@@ -6281,7 +7134,27 @@ function SubmittalForm({ rec, lang, isRTL, canEdit, canSign, projectId, scopeOpt
         })
       ),
       field("submittedBy"),
-      field("scope", { list: scopeOptions }),
+      // Sub-category: picked from the catalogue for this discipline, but still
+      // typeable — a product nobody foresaw must not be blocked by a list.
+      sbH(
+        "label",
+        { className: "sbField" },
+        sbH("span", { className: "sbFieldLbl" }, L("subCategory")),
+        sbH("input", {
+          type: "text",
+          value: sbSubcatLabel(d.subCategory || d.scope, d.category, lang),
+          readOnly: ro,
+          onChange: (e) => set({ subCategory: sbSubcatCanon(e.target.value, d.category) }),
+          style: inS,
+          list: "sb-list-subcat"
+        }),
+        sbH(
+          "datalist",
+          { id: "sb-list-subcat" },
+          sbSubcats(d.category).map((r) => sbH("option", { key: r[0], value: lang === "he" ? r[1] : r[0] })),
+          (scopeOptions || []).map((v) => sbH("option", { key: `x-${v}`, value: v }))
+        )
+      ),
       field("email", { type: "email", dir: "ltr" })
     ),
 
@@ -6731,13 +7604,38 @@ function SubmittalFolder({
   onOpen,
   onPrint,
   onNewRevision,
-  onDelete
+  onDelete,
+  boqData
 }) {
   const L = (k) => sbText(SB_L[k], lang);
-  const rows = (list || [])
-    .filter((s) => s.category === category.key)
-    .slice()
-    .sort((a, b) => (b.seq - a.seq) || (b.rev - a.rev));
+  // One line per serial — the latest revision. The earlier ones live behind the
+  // little arrow next to it, because that is history, not work in progress.
+  const [openFamily, setOpenFamily] = useState6(null);
+  const families = (() => {
+    const bySeq = {};
+    (list || []).filter((s) => s.category === category.key).forEach((s) => {
+      const k = String(s.seq);
+      bySeq[k] = bySeq[k] || [];
+      bySeq[k].push(s);
+    });
+    return Object.keys(bySeq)
+      .map((k) => {
+        const all = bySeq[k].slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0));
+        return { seq: Number(k), latest: all[0], older: all.slice(1) };
+      })
+      .sort((a, b) => b.seq - a.seq);
+  })();
+  const rows = families.flatMap((f) =>
+    openFamily === f.seq ? [f.latest, ...f.older] : [f.latest]
+  );
+  const olderCountOf = (s) => {
+    const f = families.find((x) => x.seq === s.seq);
+    return f && f.latest.id === s.id ? f.older.length : 0;
+  };
+  const isOlder = (s) => {
+    const f = families.find((x) => x.seq === s.seq);
+    return !!(f && f.latest.id !== s.id);
+  };
   return sbH(
     "div",
     { className: "submittalPanel", dir: isRTL ? "rtl" : "ltr" },
@@ -6799,6 +7697,72 @@ function SubmittalFolder({
           )
         )
       : null,
+    // The checklist: what this discipline owes, straight from the BOQ, with the
+    // submittal that answers each line. Matching is by sub-category, because
+    // that is the field both sides share.
+    (() => {
+      const subs = (((boqData || {}).chapters) || [])
+        .flatMap((ch) => ch.subs)
+        .filter((sub) => sub.orderable && boqCategoryOf(sub) === category.key);
+      const done = (list || []).filter((s) => s.category === category.key && s.sent);
+      // Matched on the exact sub-category, in either language. A looser rule
+      // (any line containing the word "cables") ticked off several lines at
+      // once, which is worse than leaving them open.
+      const norm = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
+      const matchOf = (sub) => {
+        const names = [norm(boqText(sub, "en")), norm(boqText(sub, "he"))].filter(Boolean);
+        return done.find((s) => {
+          const picked = [
+            norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "en")),
+            norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "he"))
+          ].filter(Boolean);
+          return picked.some((c) => names.indexOf(c) >= 0);
+        }) || null;
+      };
+      const rowsChk = subs.map((sub) => ({ sub, hit: matchOf(sub) }));
+      const hits = rowsChk.filter((r) => r.hit).length;
+      return sbH(
+        "div",
+        { className: "sbChk" },
+        sbH("div", { className: "sbListTitle" }, L("checklist")),
+        !boqData
+          ? sbH("p", { className: "submittalPanelNote" }, L("checklistNone"))
+          : rowsChk.length === 0
+            ? sbH("p", { className: "submittalPanelNote" }, L("checklistEmpty"))
+            : sbH(
+                React15.Fragment,
+                null,
+                sbH("p", { className: "sbChkBar" }, `${hits}/${rowsChk.length} ${L("chkDone")}`),
+                sbH(
+                  "div",
+                  { className: "sbTableWrap" },
+                  sbH(
+                    "table",
+                    { className: "sbTable sbChkTable" },
+                    sbH("thead", null, sbH("tr", null,
+                      sbH("th", null, L("chkItem")),
+                      sbH("th", null, L("chkDesc")),
+                      sbH("th", null, L("chkSubmittal")),
+                      sbH("th", null, L("status"))
+                    )),
+                    sbH("tbody", null, rowsChk.map((r) => {
+                      const st = r.hit ? sbStatusOf(r.hit) : null;
+                      return sbH(
+                        "tr",
+                        { key: r.sub.code, className: r.hit ? "sbChkOn" : "" },
+                        sbH("td", { dir: "ltr", className: "sbChkCode" }, r.sub.code),
+                        sbH("td", { className: "sbChkDesc" }, boqText(r.sub, lang)),
+                        sbH("td", null, r.hit ? `${sbNumber(r.hit.category, r.hit.seq)} Rev.${r.hit.rev || 0}` : "—"),
+                        sbH("td", null, r.hit
+                          ? sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang))
+                          : sbH("span", { className: "sbChkMissing" }, L("chkMissing")))
+                      );
+                    }))
+                  )
+                )
+              )
+      );
+    })(),
     sbH("div", { className: "sbListTitle" }, L("trackingList")),
     rows.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
@@ -6830,14 +7794,32 @@ function SubmittalFolder({
                 const signedAt = sbSignedAt(s);
                 // Yellow = approved since this browser last opened the folder.
                 const isNew = !!signedAt && (!seenAt || signedAt > seenAt);
+                const older = olderCountOf(s);
                 return sbH(
                   "tr",
-                  { key: s.id, className: isNew ? "sbRowNew" : "" },
+                  { key: s.id, className: `${isNew ? "sbRowNew" : ""} ${isOlder(s) ? "sbRowOlder" : ""}`.trim() },
                   sbH(
                     "td",
                     { className: "sbNoCell" },
                     sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
-                    sbH("span", { className: "sbNoRev" }, `Rev.${s.rev || 0}`)
+                    sbH(
+                      "span",
+                      { className: "sbNoRev" },
+                      `Rev.${s.rev || 0}`,
+                      older
+                        ? sbH(
+                            "button",
+                            {
+                              type: "button",
+                              className: `sbRevToggle ${openFamily === s.seq ? "open" : ""}`,
+                              title: L("olderVersions"),
+                              onClick: () => setOpenFamily(openFamily === s.seq ? null : s.seq)
+                            },
+                            sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }),
+                            older
+                          )
+                        : null
+                    )
                   ),
                   sbH("td", null, s.typeId || "—"),
                   sbH("td", { dir: "ltr" }, s.sent ? sbFmtDate((s.sentAt || "").slice(0, 10) || s.date) : sbFmtDate(s.date)),
@@ -6919,11 +7901,15 @@ function SubmittalCard({
   brandName,
   contacts,
   contactsCatalog,
-  printBrand
+  printBrand,
+  boqData
 }) {
-  // Language follows the site switch in the top bar — no second toggle here.
-  const lang = appIsRTL ? "he" : "en";
-  const isRTL = appIsRTL;
+  // The submittal has its own language switch. It starts from the site-wide
+  // one and then belongs to this screen: the boxes keep their size, only the
+  // direction and the wording change.
+  const [langOverride, setLangOverride] = useState6(null);
+  const lang = langOverride || (appIsRTL ? "he" : "en");
+  const isRTL = lang === "he";
   const [selected, setSelected] = useState6(null);
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6(null);
@@ -6931,6 +7917,24 @@ function SubmittalCard({
   const label = (c) => sbText(c, lang);
   const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
   const L = (k) => sbText(SB_L[k], lang);
+  const langSwitch = sbH(
+    "div",
+    { className: "sbLangRow" },
+    sbH(
+      "div",
+      { className: "sbLangToggle", dir: "ltr" },
+      sbH(
+        "button",
+        { type: "button", className: lang === "en" ? "active" : "", onClick: () => setLangOverride("en") },
+        "EN"
+      ),
+      sbH(
+        "button",
+        { type: "button", className: lang === "he" ? "active" : "", onClick: () => setLangOverride("he") },
+        "HE"
+      )
+    )
+  );
 
   // Editing a submittal is the system administrator's, full stop. Everyone else
   // opens it, reads it, and — if the project allows their role — signs it.
@@ -6979,9 +7983,9 @@ function SubmittalCard({
     return fromCatalog || bilingual(row.company, lang) || "";
   })();
 
-  // The Scope dropdown offers whatever has already been typed on this project,
-  // so the wording stays consistent between submittals.
-  const scopeOptions = Array.from(new Set(list.map((s) => (s.scope || "").trim()).filter(Boolean)));
+  // Alongside the catalogue, the dropdown also offers anything already typed on
+  // this project, so a term she invented once stays consistent afterwards.
+  const scopeOptions = Array.from(new Set(list.map((s) => (s.subCategory || s.scope || "").trim()).filter(Boolean)));
 
   const commit = (next) => {
     if (onChangeSubmittals) onChangeSubmittals(next);
@@ -7009,12 +8013,22 @@ function SubmittalCard({
       date: sbToday(),
       requiredApprovalDate: sbAddDays(sbToday(), 4),
       reviews: sbEmptyReviews(),
-      aiFilledAt: null
+      sent: false,
+      sentAt: null,
+      aiFilledAt: null,
+      fromRev: Number(s.rev) || 0
     };
     setDraft(rec);
     setOpenId(rec.id);
   };
   const openExisting = (s) => {
+    // A sent submittal is a document that went out. Correcting it is a new
+    // version, not a rewrite of what the approver already saw. A draft has not
+    // gone anywhere, so it is simply edited.
+    if (s.sent && canEdit) {
+      startRevision(s);
+      return;
+    }
     setDraft(s);
     setOpenId(s.id);
   };
@@ -7043,6 +8057,7 @@ function SubmittalCard({
       rec: draft,
       lang,
       isRTL,
+      langSwitch,
       canEdit,
       canSign,
       projectId,
@@ -7075,6 +8090,7 @@ function SubmittalCard({
         isRTL ? "בחרו קטגוריה להגשת אישורי חומרים ודגימות." : "Choose a category to submit material and sample approvals."
       )
     ),
+    langSwitch,
     sbH(
       "div",
       // The grid keeps a fixed direction so the tiles never jump to the other
@@ -7104,6 +8120,7 @@ function SubmittalCard({
         category: chosen,
         lang,
         isRTL,
+        boqData,
         list,
         canEdit,
         canSign,
@@ -7126,6 +8143,7 @@ function SubmittalCard({
             ...rec,
             queueId: q.id,
             scope: q.scope || "",
+            subCategory: sbSubcatCanon(pr.subCategory || q.subCategory || "", rec.category),
             typeId: val(pr.typeId, sbText(SB_NO_INFO, lang)),
             itemDescription: val(pr.itemDescription, sbText(SB_NO_INFO, lang)),
             modelCode: val(pr.modelCode, sbText(SB_NO_INFO, lang)),
@@ -7602,7 +8620,99 @@ function SubmittalAdminScreen({ isRTL, signatures, onSignatureChange }) {
     )
   );
 }
-function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, submittalPermsByProject, onSubmittalPermsChange }) {
+
+// The bill of quantities for one project. It is the source the submittal
+// checklist and the LLI table will be built from, so it is stored whole and
+// untouched — parsing happens later, against the real file.
+function BoqUploadBlock({ isRTL, projectId, boq, onChange }) {
+  const [busy, setBusy] = useState6(false);
+  const [err, setErr] = useState6(null);
+  const t = (he, en) => (isRTL ? he : en);
+  const onFile = async (e) => {
+    const picked = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!picked.length) return;
+    setErr(null);
+    setBusy(true);
+    try {
+      const files = [];
+      const parsed = [];
+      for (const f of picked) {
+        const read = await boqReadFile(f);
+        if (!read.rows.length) throw new Error(t(`לא נמצאו סעיפים ב‑${f.name}`, `No priced items found in ${f.name}`));
+        const stored = await sbUploadFile(projectId, "boq", f);
+        files.push({
+          name: f.name,
+          size: f.size,
+          lang: read.lang,
+          lines: read.rows.length,
+          path: stored.path || null,
+          dataUrl: stored.dataUrl || null,
+          uploadedAt: new Date().toISOString()
+        });
+        parsed.push(read);
+      }
+      // Both languages can be picked together; whichever is missing simply
+      // falls back to the other when the table is drawn.
+      onChange({ files, data: boqBuild(parsed) });
+    } catch (ex) {
+      setErr(ex && (ex.message || String(ex)) || t("ההעלאה נכשלה", "Upload failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return sbH(
+    "div",
+    { className: "boqBlock" },
+    sbH("div", { className: "boqTitle" }, t("כתב כמויות (BOQ)", "Bill of quantities (BOQ)")),
+    sbH(
+      "p",
+      { className: "boqHint" },
+      t(
+        "קובץ אקסל לכל פרויקט — אפשר לבחור את שני הקבצים יחד, עברית ואנגלית, והם ימוזגו לפי מספרי הסעיפים. ממנו נבנית טבלת ה‑LLI והצ׳ק‑ליסט של הסבמיטלים.",
+        "One Excel per project — pick the Hebrew and English files together and they are merged by item number. The LLI table and the submittal checklist are built from it."
+      )
+    ),
+    ((boq || {}).files || []).map((f) =>
+      sbH(
+        "div",
+        { className: "boqFile", key: f.name },
+        sbH(FileTextIcon, { size: 15, strokeWidth: 2 }),
+        sbH("span", { className: "boqName" }, f.name),
+        sbH("span", { className: "boqMeta", dir: "ltr" }, `${f.lang === "he" ? "HE" : "EN"} · ${f.lines} · ${sbFmtDate((f.uploadedAt || "").slice(0, 10))}`),
+        f.path ? null : sbH("span", { className: "boqTag" }, t("לא באחסון", "not in storage"))
+      )
+    ),
+    boq && boq.chapters
+      ? sbH("p", { className: "boqHint" }, `${boq.chapters} ${t("פרקים", "chapters")} · ${boq.subs} ${t("קבוצות להזמנה", "orderable groups")}`)
+      : null,
+    boq
+      ? sbH(
+          "button",
+          { type: "button", className: "sbLinkBtn", onClick: () => onChange(null) },
+          sbH(Trash2, { size: 13, strokeWidth: 2 }),
+          " ",
+          t("הסרת כתב הכמויות", "Remove the BOQ")
+        )
+      : null,
+    sbH(
+      "label",
+      { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
+      sbH(Upload4, { size: 14, strokeWidth: 2 }),
+      " ",
+      busy ? t("מעלה…", "Uploading…") : boq ? t("החלפת הקבצים", "Replace files") : t("העלאת כתב כמויות", "Upload BOQ"),
+      sbH("input", {
+        type: "file",
+        multiple: true,
+        accept: ".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv",
+        style: { display: "none" },
+        onChange: onFile
+      })
+    ),
+    err ? sbH("p", { className: "sbErr" }, err) : null
+  );
+}
+function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, submittalPermsByProject, onSubmittalPermsChange, boqByProject, onBoqChange }) {
   const inS = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff", width: "100%" };
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6({ name: "", floorsFrom: "", floorsTo: "", startDate: "", endDate: "", clientLogoUrl: null, accent: null });
@@ -7627,7 +8737,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, [1, 2, 3, 4, 5].map((n) => /* @__PURE__ */ React15.createElement("button", { key: n, type: "button", style: { flex: 1, minWidth: 108, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#eef0f2", border: "1px solid var(--line-soft)", borderRadius: 8, padding: "10px 8px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), (isRTL ? "לעלות " : "Upload ") + n))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, [1, 2, 3, 4].map((n) => /* @__PURE__ */ React15.createElement("button", { key: n, type: "button", style: { flex: 1, minWidth: 108, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#eef0f2", border: "1px solid var(--line-soft)", borderRadius: 8, padding: "10px 8px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), (isRTL ? "לעלות " : "Upload ") + n))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -7826,16 +8936,22 @@ function ProjectDashboardApp() {
   // schedule disappears after a refresh" looks like from the outside: it was
   // never saved. In memory nothing changes; the split happens on the way out
   // and is put back together on the way in.
+  // The bill of quantities and the LLI rows travel the same way and for the same
+  // reason: a parsed BOQ is hundreds of rows and an LLI row can carry a photo.
   const splitExtras = (all) => {
     const rest = {};
     const schedules = {};
+    const boqs = {};
+    const llis = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, ...others } = entry;
+      const { scheduleData, boqData, lliRows, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
+      if (boqData) boqs[pid] = boqData;
+      if (lliRows) llis[pid] = lliRows;
     });
-    return { rest, schedules };
+    return { rest, schedules, boqs, llis };
   };
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -7855,6 +8971,19 @@ function ProjectDashboardApp() {
         } catch (e2) {
           console.error("[awdash] load project-schedules failed", e2);
         }
+        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"]]) {
+          try {
+            const side = await loadAppState(key);
+            if (side) {
+              merged = { ...merged };
+              Object.keys(side).forEach((pid) => {
+                merged[pid] = { ...merged[pid] || {}, [field]: side[pid] };
+              });
+            }
+          } catch (e3) {
+            console.error(`[awdash] load ${key} failed`, e3);
+          }
+        }
         setProjectExtras(merged);
         setExtrasLoaded(true);
       } catch (e) {
@@ -7866,7 +8995,7 @@ function ProjectDashboardApp() {
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
     (async () => {
-      const { rest, schedules } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis } = splitExtras(projectExtras);
       let failed = null;
       try {
         const { error } = await supabase.from("app_state").upsert({ key: "project-extras", value: rest, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
@@ -7881,6 +9010,15 @@ function ProjectDashboardApp() {
       } catch (e) {
         console.error("[awdash] save project-schedules failed", e);
         failed = e && e.message || String(e);
+      }
+      for (const [key, value] of [["project-boq", boqs], ["project-lli", llis]]) {
+        try {
+          const { error } = await supabase.from("app_state").upsert({ key, value, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+          if (error) throw error;
+        } catch (e) {
+          console.error(`[awdash] save ${key} failed`, e);
+          failed = e && e.message || String(e);
+        }
       }
       // A silent failure here is how work goes missing. Say it out loud.
       setSaveError(failed ? (isRTL ? "\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05e9\u05e8\u05ea \u05e0\u05db\u05e9\u05dc\u05d4" : "Saving to the server failed") + ": " + failed : null);
@@ -7902,6 +9040,18 @@ function ProjectDashboardApp() {
   const setSubmittalPerms = (projectId, perms) => updateProjectExtras(projectId, { submittalPerms: perms });
   const submittalPermsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
     acc[pid] = projectExtras[pid] && projectExtras[pid].submittalPerms || {};
+    return acc;
+  }, {});
+  // The bill of quantities, one per project. Only the record travels here — the
+  // workbook itself sits in Storage.
+  const setProjectBoq = (projectId, next) => updateProjectExtras(projectId, {
+    // The record is small and rides along with the project; the parsed tree is
+    // hundreds of rows and gets its own row on the way out.
+    boq: next ? { files: next.files, chapters: (next.data.chapters || []).length, subs: (next.data.chapters || []).reduce((n, c) => n + c.subs.filter((x) => x.orderable).length, 0) } : null,
+    boqData: next ? next.data : null
+  });
+  const boqByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    acc[pid] = projectExtras[pid] && projectExtras[pid].boq || null;
     return acc;
   }, {});
   const contactVisibilityByProject = Object.keys(projectExtras).reduce((acc, pid) => {
@@ -8905,6 +10055,9 @@ function ProjectDashboardApp() {
         submittalQueue: activeExtras.submittalQueue || [],
         onChangeQueue: (next) => updateProjectExtras(activeProject.id, { submittalQueue: next }),
         submittalPerms: activeExtras.submittalPerms || {},
+        boqData: activeExtras.boqData || null,
+        lliRows: activeExtras.lliRows || {},
+        onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
         currentEmail: loggedInEmail,
         userSignatures,
         brandName: activeContractor.name || DEFAULT_BRAND_NAME,
@@ -8916,7 +10069,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms, boqByProject, onBoqChange: setProjectBoq }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
