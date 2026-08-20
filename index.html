@@ -8505,7 +8505,7 @@ function SubmittalFolder({
     // A draft has not been submitted to anyone. Only the administrator, who is
     // the one writing it, sees it in the list at all.
     (list || [])
-      .filter((s) => s.category === category.key && (canEdit || s.sent))
+      .filter((s) => s.category === category.key)
       .forEach((s) => {
       const k = String(s.seq);
       bySeq[k] = bySeq[k] || [];
@@ -8986,6 +8986,10 @@ function SubmittalCard({
   // Alongside the catalogue, the dropdown also offers anything already typed on
   // this project, so a term she invented once stays consistent afterwards.
   const scopeOptions = Array.from(new Set(list.map((s) => (s.subCategory || s.scope || "").trim()).filter(Boolean)));
+  // A draft has not been submitted to anyone. Only the administrator, who is the
+  // one writing it, sees it at all — not in the list, not in the count on the
+  // tile, not in the checklist.
+  const visibleList = canEdit ? list : (list || []).filter((s) => s.sent);
 
   const commit = (next) => {
     if (onChangeSubmittals) onChangeSubmittals(next);
@@ -9130,7 +9134,7 @@ function SubmittalCard({
       // tile switches direction, and it stays inside its own tile.
       { className: "submittalGrid", dir: "rtl" },
       SUBMITTAL_CATEGORIES.map((c) => {
-        const count = list.filter((s) => s.category === c.key).length;
+        const count = visibleList.filter((s) => s.category === c.key).length;
         return sbH(
           "button",
           {
@@ -9154,7 +9158,7 @@ function SubmittalCard({
         isRTL,
         boqData,
         boqFlags,
-        list,
+        list: visibleList,
         canEdit,
         canSign,
         seenAt,
@@ -10176,6 +10180,12 @@ function ProjectDashboardApp() {
   const [isAuthenticated, setIsAuthenticated] = useState6(false);
   const [authRole, setAuthRole] = useState6(null);
   const [appRole, setAppRole] = useState6(null);
+  // Only the administrator writes. A client or a contractor reads the same rows
+  // and may not touch them, and the database says so — so without this the app
+  // fired an upsert on their behalf on every load and the row-level policy
+  // rejected it, which surfaced as a red "saving failed" bar over a screen
+  // where they had changed precisely nothing.
+  const canWriteServer = appRole === "admin";
   const [setPwMode, setSetPwMode] = useState6(false);
   const [newPw, setNewPw] = useState6("");
   const [newPw2, setNewPw2] = useState6("");
@@ -10222,6 +10232,7 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !stateLoaded) return;
+    if (!canWriteServer) return;
     (async () => {
       console.log("[awdash] save system-state attempt, hasProjects:", awdashHasProjects(contractors));
       if (!awdashHasProjects(contractors)) {
@@ -10265,6 +10276,7 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !catalogLoaded) return;
+    if (!canWriteServer) return;
     (async () => {
       try {
         const { error } = await supabase.from("app_state").upsert({ key: "contacts-catalog", value: contactsCatalog, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
@@ -10292,6 +10304,7 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !signaturesLoaded) return;
+    if (!canWriteServer) return;
     (async () => {
       try {
         const { error } = await supabase.from("app_state").upsert({ key: "user-signatures", value: userSignatures, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
@@ -10380,6 +10393,7 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
+    if (!canWriteServer) return;
     (async () => {
       const { rest, schedules, boqs, llis, flagOverrides } = splitExtras(projectExtras);
       let failed = null;
@@ -10510,29 +10524,15 @@ function ProjectDashboardApp() {
     setLoginError(null);
     setTimeout(() => setMenuView("options"), 250);
   };
-  const handleLoginSubmit = async (e) => {
-    e.preventDefault();
-    if (menuView === "login-admin") {
-      if (form.password !== SYSTEM_ADMIN_PASSWORD) {
-        setAdminAuthError(true);
-        return;
-      }
-      setAdminAuthError(false);
-      setForm({ email: "", password: "" });
-      setSystemAdminSection(null);
-      setMenuView("systemAdminMenu");
-      return;
-    }
-    const email = form.email.trim().toLowerCase();
-    const password = form.password;
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        console.error("[awdash] auth error:", error && error.message, error && error.status);
-        setLoginError("wrong");
-        return;
-      }
-      if (data && data.user) {
+  // Everything that happens once a user is known: work out the role, decide
+  // what they may see, and land them somewhere. Signing in runs it, and so does
+  // arriving with a session that is already valid — which is what a page
+  // refresh is. Without that second caller a refresh threw people back to the
+  // login screen although they were still signed in.
+  const enterApp = async (user, typedPassword) => {
+    const email = String(user.email || "").trim().toLowerCase();
+    const data = { user };
+    const password = typedPassword == null ? "" : typedPassword;
         let role = "client";
         const metaRole = data.user && data.user.app_metadata && data.user.app_metadata.role;
         console.log("[awdash] app_metadata role ->", metaRole);
@@ -10599,7 +10599,32 @@ function ProjectDashboardApp() {
           if (target) setSelectedProjectId(target.id);
           setView(target ? "dashboard" : "projectPicker");
         }
-        closeMenu();
+    closeMenu();
+  };
+  const handleLoginSubmit = async (e) => {
+    e.preventDefault();
+    if (menuView === "login-admin") {
+      if (form.password !== SYSTEM_ADMIN_PASSWORD) {
+        setAdminAuthError(true);
+        return;
+      }
+      setAdminAuthError(false);
+      setForm({ email: "", password: "" });
+      setSystemAdminSection(null);
+      setMenuView("systemAdminMenu");
+      return;
+    }
+    const email = form.email.trim().toLowerCase();
+    const password = form.password;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        console.error("[awdash] auth error:", error && error.message, error && error.status);
+        setLoginError("wrong");
+        return;
+      }
+      if (data && data.user) {
+        await enterApp(data.user, password);
         return;
       }
     } catch (e1) {
@@ -10792,6 +10817,27 @@ function ProjectDashboardApp() {
     setOpenCardKey(null);
     setMenuOpen(false);
   };
+  // A refresh is not a logout. Supabase keeps the session in the browser, so on
+  // boot we ask whether one is still valid and, if it is, walk the same path a
+  // fresh sign-in walks. The password is unknown here, which is exactly right:
+  // someone returning to a page they were already using has clearly been past
+  // the first-sign-in screen.
+  useEffect5(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase.auth.getSession();
+        const user = data && data.session && data.session.user;
+        if (!user || cancelled) return;
+        if (AWDASH_LOOKS_LIKE_INVITE) return;
+        console.log("[awdash] restoring session for", user.email);
+        await enterApp(user, null);
+      } catch (e) {
+        console.warn("[awdash] could not restore the session", e);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
   useEffect5(() => {
     const looksLikeInvite = AWDASH_LOOKS_LIKE_INVITE;
     console.log("[awdash] invite/recovery check:", looksLikeInvite, "captured:", AWDASH_INITIAL_URL);
