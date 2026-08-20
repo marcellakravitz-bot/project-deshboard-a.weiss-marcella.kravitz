@@ -1267,7 +1267,11 @@ var pdfViewer = `
         }
         .sigPadRow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
         .sigPadRow .functionEditBtn:disabled { opacity: .45; cursor: default; }
-        .sbChkPills { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+        /* The pills sit in a box INSIDE the cell. Putting display:flex on a
+           <td> takes that cell out of the table's own layout, and the row's
+           bottom border then stops matching its neighbours — which is what made
+           the separator lines look stepped instead of straight. */
+        .sbChkPillWrap { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; align-items: center; }
         .sbChkPill {
           border: 1px solid var(--line); border-width: 1px 1px 1px 3px; background: #fff;
           color: var(--ink); border-radius: 7px; padding: 3px 8px; cursor: pointer;
@@ -8787,9 +8791,13 @@ function SubmittalFolder({
                         sbH(
                           "td",
                           { className: "sbChkPills" },
-                          r.count
-                            ? rowsChk.length && [...r.own, ...r.lines.flatMap((l) => l.hits)].map(pill)
-                            : sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
+                          sbH(
+                            "div",
+                            { className: "sbChkPillWrap" },
+                            r.count
+                              ? [...r.own, ...r.lines.flatMap((l) => l.hits)].map(pill)
+                              : sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
+                          )
                         ),
                         sbH("td", { className: "sbChkAct" }, addBtn(r.sub.code, r.sub, "", r.own))
                       );
@@ -8820,7 +8828,11 @@ function SubmittalFolder({
                           sbH(
                             "td",
                             { className: "sbChkPills" },
-                            l.hits.length ? l.hits.map(pill) : sbH("span", { className: "sbChkDash" }, "—")
+                            sbH(
+                              "div",
+                              { className: "sbChkPillWrap" },
+                              l.hits.length ? l.hits.map(pill) : sbH("span", { className: "sbChkDash" }, "—")
+                            )
                           ),
                           sbH("td", { className: "sbChkAct" }, addBtn(l.item.code, l.node, "", l.hits))
                         );
