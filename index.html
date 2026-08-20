@@ -185,7 +185,7 @@ var COPY = {
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "Finishes by Room", sub: "Spec Sheet by Room Number" },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, title: "LLI", sub: "List of Lacking Items" },
+      { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
@@ -304,7 +304,7 @@ var COPY = {
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "Finishes by Room", sub: "Spec Sheet by Room Number" },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, title: "LLI", sub: "List of Lacking Items" },
+      { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
@@ -1141,6 +1141,10 @@ var pdfViewer = `
         }
         .lliOrd.on { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
         .lliOrd:disabled { cursor: default; }
+        .lliLongTag {
+          display: inline-block; margin-top: 3px; background: #fdf0d6; color: #8a6a12;
+          border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 800; white-space: nowrap;
+        }
         .lliMixed { color: #e08a12; font-weight: 900; margin-inline-start: 2px; }
         .sbChk { margin-top: 18px; }
         .sbChkBar { text-align: center; font-size: 12px; font-weight: 800; color: var(--steel); margin: 4px 0 6px; }
@@ -1148,10 +1152,137 @@ var pdfViewer = `
         .sbChkTable .sbChkCode { width: 96px; font-weight: 800; }
         .sbChkTable .sbChkDesc { text-align: start; }
         .sbChkTable tbody tr.sbChkOn td { background: #f2faf5; }
+        /* ---------- the reviewer's page ---------- */
+        /* The page is a flex item with auto inline margins, so it shrinks to fit
+           its content — and an iframe has almost no intrinsic width. A definite
+           width in design pixels gives the document room to be read. */
+        .sbReviewPage { width: 1180px; max-width: 100%; margin: 0 auto; }
+        .sbDocFrame {
+          display: block; width: 100%; height: 1140px; border: 1px solid var(--line);
+          border-radius: 10px; background: #fff; margin-top: 10px;
+        }
+        .sbSignPanel {
+          margin-top: 16px; border: 1px solid var(--line); border-radius: 10px;
+          overflow: hidden; background: #fff;
+        }
+        .sbSignPanel .sbSecBar { margin: 0; }
+        .sbSignPanel .sbField, .sbSignPanel .sbDecisions, .sbSignRow, .sbSignPanel .sbSaveRow { padding: 0 14px; }
+        .sbSignPanel .sbDecisions { padding-top: 12px; }
+        .sbSignPanel .sbField { margin-top: 10px; }
+        .sbDecRowWide { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+        .sbSignRow {
+          display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+          justify-content: center; margin-top: 14px;
+        }
+        .sbSignBtn {
+          display: inline-flex; align-items: center; gap: 7px; background: #14181f;
+          border: 1px solid #14181f; color: #fff; border-radius: 10px; padding: 10px 20px;
+          cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 800;
+        }
+        .sbSignBtn:hover { background: #232a35; }
+        .sbSignedBox {
+          display: flex; align-items: center; gap: 10px; border: 1px solid var(--line);
+          border-radius: 10px; padding: 8px 12px; background: #fbfcfd;
+        }
+        .sbSignedBox img { height: 46px; max-width: 190px; object-fit: contain; }
+        .sbSignedMeta { display: flex; flex-direction: column; font-size: 11px; font-weight: 700; color: var(--mist); }
+        .sbSignHint { text-align: center; font-size: 12px; color: var(--mist); margin: 0 0 14px; }
+        .sbSignPanel .sbSaveRow { padding-bottom: 14px; }
+
+        /* ---------- the pad ---------- */
+        .sigPadScrim {
+          position: fixed; inset: 0; z-index: 1200; background: rgba(16,18,22,.55);
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .sigPad {
+          background: #fff; border-radius: 14px; padding: 18px 20px 16px;
+          width: min(560px, 100%); box-shadow: 0 18px 60px rgba(0,0,0,.28);
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .sigPadTitle { font-size: 15px; font-weight: 800; color: var(--ink); }
+        .sigPadHint { margin: 4px 0 12px; font-size: 12.5px; color: var(--mist); }
+        .sigCanvas {
+          display: block; width: 100%; height: 210px; border: 2px dashed var(--line);
+          border-radius: 10px; background: #fff; touch-action: none; cursor: crosshair;
+        }
+        .sigPadRow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+        .sigPadRow .functionEditBtn:disabled { opacity: .45; cursor: default; }
+        .sbChkPills { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+        .sbChkPill {
+          border: 1px solid var(--line); border-width: 1px 1px 1px 3px; background: #fff;
+          color: var(--ink); border-radius: 7px; padding: 3px 8px; cursor: pointer;
+          font-family: inherit; font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        .sbChkPill:hover { background: var(--accent-soft); }
+        .sbChkPill.draft { color: var(--mist); border-style: dashed; }
+        .sbChkAdd {
+          display: inline-flex; align-items: center; gap: 3px; border: 1px solid var(--line);
+          background: #fff; color: var(--steel); border-radius: 7px; padding: 4px 9px;
+          cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        .sbChkAdd:hover { background: #14181f; border-color: #14181f; color: #fff; }
+        .sbChkAct { width: 104px; }
+        .sbChkTable tr.sbChkLine td { background: #fbfcfd; }
+        .sbChkTable tr.sbChkLine .sbChkCode { padding-inline-start: 22px; font-weight: 700; color: var(--steel); }
+        .sbChkSpec {
+          display: inline-block; margin-inline-start: 8px; border-radius: 999px;
+          padding: 1px 8px; font-size: 10px; font-weight: 800; white-space: nowrap;
+          background: #eef2f7; color: var(--steel);
+        }
+        .sbChkSpec.eq { background: #eaf6ef; color: #1a7f4b; }
+        .sbChkDash { color: var(--mist); }
         .sbChkMissing {
           display: inline-block; background: #eef0f2; color: var(--steel);
           border-radius: 999px; padding: 3px 11px; font-size: 11px; font-weight: 800; white-space: nowrap;
         }
+        /* ---------- BOQ routing table ---------- */
+        .boqClassWrap { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: #fff; }
+        .boqClassHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .boqClassHead h3 { margin: 0; font-size: 14px; font-weight: 800; color: var(--ink); }
+        .boqClassBar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
+        .boqSel { width: auto; min-width: 190px; }
+        .boqSearch { width: auto; min-width: 150px; }
+        .boqCounts { margin: 2px 0 8px; font-size: 12px; font-weight: 700; color: var(--steel); }
+        .boqCountPart { unicode-bidi: isolate; }
+        .boqCountPart + .boqCountPart::before { content: " · "; color: var(--mist); unicode-bidi: isolate; }
+        .boqEdited { color: var(--accent-ink); }
+        .boqStage { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--steel); }
+        .boqWarn { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #8a6a12; line-height: 1.5; }
+        .boqClassScroll { max-height: 460px; overflow: auto; border: 1px solid var(--line-soft); border-radius: 8px; }
+        .boqClassTable { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .boqClassTable th {
+          position: sticky; top: 0; z-index: 1; background: #f3f6fa; color: var(--steel);
+          font-weight: 800; font-size: 11px; padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: center;
+        }
+        .boqClassTable td { padding: 5px 6px; border-bottom: 1px solid var(--line-soft); text-align: center; vertical-align: middle; }
+        .boqClassTable tr.boqRowUser td { background: #f4f8ff; }
+        .boqClassTable .cCode { width: 118px; text-align: start; }
+        .boqClassTable .cDesc { text-align: start; }
+        .boqClassTable .cUnit { width: 58px; }
+        .boqClassTable .cQ { width: 62px; }
+        .boqClassTable .cFlag { width: 74px; }
+        .boqClassTable .cUndo { width: 36px; }
+        .boqRowCode { display: block; font-weight: 800; font-size: 11.5px; }
+        .boqRowSub { display: block; font-size: 10.5px; color: var(--mist); font-weight: 600; }
+        .boqBulk { display: flex; gap: 3px; justify-content: center; margin-top: 3px; }
+        .boqBulk button {
+          border: 1px solid var(--line); background: #fff; color: var(--mist);
+          border-radius: 5px; width: 18px; height: 16px; line-height: 1; cursor: pointer;
+          font-family: inherit; font-size: 10px; font-weight: 800; padding: 0;
+        }
+        .boqBulk button:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .boqTick {
+          width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line);
+          background: #fff; color: transparent; cursor: pointer; font-family: inherit;
+          font-size: 13px; font-weight: 900; line-height: 1; padding: 0;
+        }
+        .boqTick:hover { border-color: var(--accent); }
+        .boqTick.on { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
+        .boqTick.on.sd { background: #3a7bd5; border-color: #3a7bd5; }
+        .boqTick.on.lli { background: #14181f; border-color: #14181f; }
+        .boqTick.on.longLead { background: #e08a12; border-color: #e08a12; }
+        .boqActions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
         .boqBlock {
           margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line-soft);
           border-radius: 10px; background: #fbfcfd;
@@ -4289,6 +4420,7 @@ function CardView({
   userSignatures,
   brandName,
   boqData,
+  boqFlags,
   lliRows,
   onChangeLliRows
 }) {
@@ -4347,7 +4479,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -5594,12 +5726,197 @@ function boqUnit(unit, lang) {
   if (!u || lang === "he") return u;
   return BOQ_UNITS[u] || u;
 }
+// "Thermokir or equivalent" means one submittal can cover the lot; a line that
+// names a single product without that phrase needs its own.
+function boqIsEquivalent(item) {
+  const t = `${(item && item.he) || ""} ${(item && item.en) || ""}`;
+  return /ש["\u05F4]ע|שווה\s*ערך|ש\.ע\.|or\s+equivalent|or\s+equal|approved\s+equal/i.test(t);
+}
 function boqCategoryOf(sub) {
   if (sub.c === 8 && BOQ_LIGHTING_SUBS.indexOf(sub.s) >= 0) return "lighting";
   return BOQ_CHAPTER_CATEGORY[sub.c] || null;
 }
 function boqText(node, lang) {
   return (lang === "he" ? node.he : node.en) || node.en || node.he || "";
+}
+
+// src/lib/boq-classify.js
+// -----------------------------------------------------------------------------
+// Every priced line in the bill of quantities carries up to three flags, and one
+// line can carry all three:
+//
+//   SUBMITTAL — WHAT. Which product, manufacturer, model, colour, certificate.
+//   SD        — HOW.  A drawing the supplier or contractor must produce and get
+//                     approved before fabricating or building.
+//   LLI       — WHEN. In this office the LLI table is the ordering status board:
+//                     everything that is actually ordered from a supplier and
+//                     tracked until it lands. Long lead items are the subset of
+//                     those whose approval + fabrication + delivery threaten the
+//                     programme, and they carry an extra "long lead" mark.
+//
+// An electrical panel is all three. Wall paint is a submittal and nothing else.
+// A staircase is an SD. Demolition is none of them.
+//
+// The classification runs ONCE, when the bill of quantities is uploaded, and is
+// stored with it. Local rules settle the obvious lines for free; the rest go to
+// the model in batches. It is deliberately generous — a wrong tick that Marcella
+// removes is cheaper than a missing line she never sees.
+// -----------------------------------------------------------------------------
+var BOQ_FLAG_KEYS = ["submittal", "sd", "lli"];
+// Chapters that are execution from end to end. Nothing in them is ordered,
+// approved as a product, or drawn for fabrication.
+var BOQ_WORK_CHAPTERS = [24, 80];
+var BOQ_RULES_SD = [
+  /תכנון\s*וביצוע/, /תכנון\s*וייצור/, /לתכנן/, /פריסת/, /פריסה/, /חד\s*[-־]?\s*קווי/,
+  /לוח(ות)?\s*חשמל/, /מדרגות/, /מעקה/, /בהתאמה\s*אישית/, /מותאם\s*אישית/, /חירוץ/,
+  /shop\s*drawing/i, /fabricat/i, /custom[- ]made/i, /bespoke/i, /joinery/i, /millwork/i
+];
+// The subset of ordered items whose lead time is the risk. These get the extra
+// mark inside the LLI table, not a separate tab.
+var BOQ_RULES_LONGLEAD = [
+  /לוח(ות)?\s*חשמל/, /גופ[יה]\s*תאורה/, /יחיד(ה|ות)\s*(מיזוג|טיפול)/, /מזגן/, /צ׳ילר/, /צ'ילר/,
+  /AHU/i, /FCU/i, /VRF/i, /VRV/i, /מעלית/, /גנרטור/, /UPS/i, /שנא(י|ים)/, /מיובא/, /יבוא/,
+  /דלת(ות)?\s*(אש|אקוסטי|מתכת|פח)/, /מערכת\s*(גילוי|כיבוי|כריזה|בקרה)/
+];
+// A line that is plainly the act of doing something, with no product in it.
+var BOQ_RULES_WORKONLY = [
+  /^\s*פירוק/, /^\s*הריסה/, /^\s*חציב/, /^\s*ניסור/, /^\s*עבודות\s*יומיות/,
+  /^\s*בדיקות/, /^\s*בדיקה\s/, /^\s*הכנה\s/, /^\s*ניקיון/, /^\s*שירות\s*,?\s*אחריות/,
+  /^\s*Dismantl/i, /^\s*Demolit/i, /^\s*Test(s|ing)?\b/i, /^\s*Cleaning/i
+];
+
+function boqFlagsEmpty() {
+  return { submittal: false, sd: false, lli: false, longLead: false };
+}
+function boqAnyFlag(f) {
+  return !!(f && (f.submittal || f.sd || f.lli));
+}
+// What the local rules can settle without asking anyone. Returns null when the
+// line is genuinely uncertain, and that is what gets sent to the model.
+function boqRuleFlags(chapterNo, item, subName) {
+  const text = `${item.he || ""} ${item.en || ""}`;
+  if (boqIsNote(item.unit)) return { ...boqFlagsEmpty(), settled: true, source: "rule" };
+  if (BOQ_WORK_CHAPTERS.indexOf(chapterNo) >= 0) return { ...boqFlagsEmpty(), settled: true, source: "rule" };
+  // A whole sub-chapter that is admin or works — כללי, בדיקות, שירות ואחריות —
+  // routes nowhere, whatever its individual lines say.
+  if (subName && BOQ_SKIP_SUB.some((re) => re.test(subName))) {
+    return { ...boqFlagsEmpty(), settled: true, source: "rule" };
+  }
+  if (BOQ_RULES_WORKONLY.some((re) => re.test(text))) return { ...boqFlagsEmpty(), settled: true, source: "rule" };
+  const sd = BOQ_RULES_SD.some((re) => re.test(text));
+  const longLead = BOQ_RULES_LONGLEAD.some((re) => re.test(text));
+  if (sd || longLead) {
+    // Anything worth drawing or worth chasing is also worth approving, and a
+    // long lead item is by definition something that gets ordered.
+    return { submittal: true, sd, lli: longLead, longLead, settled: true, source: "rule" };
+  }
+  return null;
+}
+
+// Everything the model is asked to decide, in the smallest form that still
+// carries the meaning: the number, the unit and the description.
+// When there is no answer — the service is not deployed, or a batch failed —
+// the line is ticked for approval and for ordering. Generous on purpose: a tick
+// Marcella removes costs her a click, a missing line costs her an item.
+function boqFallbackFlags(source) {
+  return { submittal: true, sd: false, lli: true, longLead: false, source };
+}
+function boqClassifyPayload(rows) {
+  return rows.map((r) => ({
+    code: r.code,
+    unit: r.unit || "",
+    text: (r.he || r.en || "").slice(0, 160)
+  }));
+}
+// "SDLX" -> submittal + shop drawing + ordered + long lead.
+function boqParseFlagString(s) {
+  const v = String(s || "").toUpperCase();
+  const longLead = v.indexOf("X") >= 0;
+  return {
+    submittal: v.indexOf("S") >= 0,
+    sd: v.indexOf("D") >= 0,
+    // A long lead item is ordered by definition, whatever the model wrote.
+    lli: v.indexOf("L") >= 0 || longLead,
+    longLead
+  };
+}
+
+// The whole pass. `ask` is the function that reaches the model; when it is not
+// available the rules alone stand and the caller says so.
+async function boqClassify(tree, ask, onProgress) {
+  const out = {};
+  const pending = [];
+  (tree.chapters || []).forEach((ch) => {
+    ch.subs.forEach((sub) => {
+      sub.items.forEach((item) => {
+        const ruled = boqRuleFlags(ch.c, item, `${sub.he || ""} ${sub.en || ""}`);
+        if (ruled) {
+          out[item.code] = { submittal: ruled.submittal, sd: ruled.sd, lli: ruled.lli, longLead: !!ruled.longLead, source: "rule" };
+        } else {
+          pending.push({ ...item, chapter: ch.c, chapterName: boqText(ch, "he"), subName: boqText(sub, "he") });
+        }
+      });
+    });
+  });
+  let asked = 0;
+  if (ask && pending.length) {
+    const BATCH = 80;
+    for (let i = 0; i < pending.length; i += BATCH) {
+      const batch = pending.slice(i, i + BATCH);
+      if (onProgress) onProgress(Math.min(i + batch.length, pending.length), pending.length);
+      let answer = null;
+      try {
+        answer = await ask(boqClassifyPayload(batch));
+      } catch (e) {
+        console.warn("[awdash] boq classify batch failed", e);
+      }
+      batch.forEach((item) => {
+        const raw = answer && answer[item.code];
+        if (raw == null) {
+          out[item.code] = boqFallbackFlags("fallback");
+          return;
+        }
+        out[item.code] = { ...boqParseFlagString(raw), source: "ai" };
+        asked++;
+      });
+    }
+  } else {
+    pending.forEach((item) => {
+      out[item.code] = boqFallbackFlags("rules-only");
+    });
+  }
+  return { flags: out, ruled: Object.keys(out).length - pending.length, asked, pending: pending.length };
+}
+
+// What the screens read. A hand edit always wins over the automatic pass, and it
+// is stored apart so re-uploading the workbook never overwrites a decision.
+function boqFlagsOf(auto, overrides, code) {
+  const o = (overrides || {})[code];
+  if (o) return { submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli, longLead: !!o.longLead, source: "user" };
+  const a = (auto || {})[code];
+  if (a) return { submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli, longLead: !!a.longLead, source: a.source || "auto" };
+  return { ...boqFlagsEmpty(), source: "none" };
+}
+// A group is in a tab when any of its lines is.
+function boqSubFlags(sub, auto, overrides) {
+  const acc = boqFlagsEmpty();
+  (sub.items || []).forEach((item) => {
+    const f = boqFlagsOf(auto, overrides, item.code);
+    BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) acc[k] = true; });
+  });
+  return acc;
+}
+function boqCountFlags(tree, auto, overrides) {
+  const c = { submittal: 0, sd: 0, lli: 0, none: 0, notes: 0, total: 0 };
+  (tree && tree.chapters || []).forEach((ch) => ch.subs.forEach((sub) => sub.items.forEach((item) => {
+    c.total++;
+    if (boqIsNote(item.unit)) { c.notes++; return; }
+    const f = boqFlagsOf(auto, overrides, item.code);
+    let any = false;
+    BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) { c[k]++; any = true; } });
+    if (!any) c.none++;
+  })));
+  return c;
 }
 
 // src/cards/LliCard.jsx
@@ -5627,9 +5944,15 @@ function lliStatusColor(key, ordered) {
 }
 var LLI_L = {
   title: { en: "LLI — order control", he: "LLI — מעקב הזמנות" },
+  longLead: { en: "Long lead", he: "אספקה ארוכה" },
+  onlyLong: { en: "Only long lead", he: "רק אספקה ארוכה" },
   noBoq: {
     en: "No bill of quantities uploaded for this project yet. Upload one in project settings, or build the list by hand below.",
     he: "עדיין לא הועלה כתב כמויות לפרויקט הזה. אפשר להעלות אותו בהגדרות הפרויקט, או לבנות את הרשימה ידנית כאן."
+  },
+  emptyRouted: {
+    en: "Nothing in this category is routed to the ordering board. The routing table in project settings decides that.",
+    he: "אין בקטגוריה הזו פריט שמשויך למעקב ההזמנות. טבלת הסיווג בהגדרות הפרויקט קובעת את זה."
   },
   allCats: { en: "All categories", he: "כל הקטגוריות" },
   section: { en: "BOQ item", he: "סעיף בכתב הכמויות" },
@@ -5653,12 +5976,13 @@ var LLI_L = {
   restore: { en: "Restore", he: "החזרה" }
 };
 
-function LliCard({ appIsRTL, boqData, rows, onChangeRows, canEdit, projectId }) {
+function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId }) {
   const [langOverride, setLangOverride] = useState6(null);
   const lang = langOverride || (appIsRTL ? "he" : "en");
   const isRTL = lang === "he";
   const [cat, setCat] = useState6("all");
   const [showHidden, setShowHidden] = useState6(false);
+  const [onlyLong, setOnlyLong] = useState6(false);
   const [busyRow, setBusyRow] = useState6(null);
   const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
 
@@ -5669,18 +5993,26 @@ function LliCard({ appIsRTL, boqData, rows, onChangeRows, canEdit, projectId }) 
   };
 
   // The rows the BOQ gives us, plus whatever was added by hand.
+  const auto = (boqData || {}).flags || {};
   const boqRows = (((boqData || {}).chapters) || []).flatMap((ch) =>
-    ch.subs.map((sub) => ({
-      code: sub.code,
-      chapter: ch,
-      sub,
-      source: "boq",
-      category: boqCategoryOf(sub),
-      title: boqText(sub, lang),
-      unit: sub.unit,
-      qty: sub.qty,
-      defaultHidden: !sub.orderable
-    }))
+    ch.subs.map((sub) => {
+      // The routing table decides who belongs here: a group is on the ordering
+      // board when any of its lines is ticked LLI.
+      const f = boqSubFlags(sub, auto, boqFlags);
+      return {
+        code: sub.code,
+        chapter: ch,
+        sub,
+        source: "boq",
+        category: boqCategoryOf(sub),
+        title: boqText(sub, lang),
+        unit: sub.unit,
+        qty: sub.qty,
+        longLead: f.longLead,
+        routed: f.lli,
+        defaultHidden: !f.lli
+      };
+    })
   );
   const manualRows = Object.keys(data)
     .filter((k) => k.indexOf("m-") === 0)
@@ -5700,7 +6032,11 @@ function LliCard({ appIsRTL, boqData, rows, onChangeRows, canEdit, projectId }) 
     const saved = (data[r.code] || {}).hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
-  const visible = all.filter((r) => (cat === "all" || r.category === cat) && (showHidden || !isHidden(r)));
+  const visible = all.filter((r) =>
+    (cat === "all" || r.category === cat) &&
+    (showHidden || !isHidden(r)) &&
+    (!onlyLong || r.longLead)
+  );
   const orderedCount = visible.filter((r) => lliRowOf(data, r.code).ordered).length;
 
   // Grouped under their chapter, in BOQ order; manual rows come last.
@@ -5769,6 +6105,13 @@ function LliCard({ appIsRTL, boqData, rows, onChangeRows, canEdit, projectId }) 
       sbH(
         "label",
         { className: "lliShowHidden" },
+        sbH("input", { type: "checkbox", checked: onlyLong, onChange: (e) => setOnlyLong(e.target.checked) }),
+        " ",
+        L("onlyLong")
+      ),
+      sbH(
+        "label",
+        { className: "lliShowHidden" },
         sbH("input", { type: "checkbox", checked: showHidden, onChange: (e) => setShowHidden(e.target.checked) }),
         " ",
         L("showHidden")
@@ -5818,7 +6161,8 @@ function LliCard({ appIsRTL, boqData, rows, onChangeRows, canEdit, projectId }) 
                       "td",
                       { className: "cSec" },
                       sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
-                      r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null
+                      r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null,
+                      r.longLead ? sbH("span", { className: "lliLongTag" }, L("longLead")) : null
                     ),
                     sbH(
                       "td",
@@ -6140,6 +6484,10 @@ var SB_L = {
   chkDesc: { en: "Description", he: "תיאור" },
   chkSubmittal: { en: "Submittal", he: "סבמיטל" },
   chkMissing: { en: "Not submitted", he: "טרם הוגש" },
+  chkAdd: { en: "Submittal", he: "סבמיטל" },
+  chkLines: { en: "The BOQ lines under this group", he: "שורות כתב הכמויות שתחת הקבוצה" },
+  chkEquiv: { en: "or equivalent", he: "שו״ע" },
+  chkSpecific: { en: "specific product", he: "ציוד ספציפי" },
   chkDone: { en: "submitted", he: "הוגשו" },
   status: { en: "Status", he: "סטטוס" },
   actions: { en: "", he: "" },
@@ -6168,6 +6516,13 @@ var SB_L = {
     he: "אפשר לפתוח סבמיטל ולחתום עליו. העריכה שמורה למנהלת המערכת."
   },
   saveSignature: { en: "Save signature", he: "שמירת החתימה" },
+  signHere: { en: "Sign", he: "חתימה" },
+  signAgain: { en: "Sign again", he: "חתימה מחדש" },
+  signNeedBoth: {
+    en: "Choose a decision and sign, and the approval is filed onto the document.",
+    he: "בוחרים החלטה, חותמים — והאישור מוטבע על המסמך."
+  },
+  digitalSig: { en: "Digitally signed", he: "נחתם דיגיטלית" },
   showSpecText: { en: "See the text the AI reads", he: "להציג את הטקסט שה‑AI קורא" },
   poorText: {
     en: "Could not read the file either as text or as pages.",
@@ -6320,6 +6675,13 @@ function sbScopeAttachments(atts, pages) {
 function sbSignatureOf(registry, email) {
   const rec = (registry || {})[String(email || "").trim().toLowerCase()];
   return rec && rec.dataUrl || null;
+}
+// What actually goes on the document: the signature drawn on the approval
+// itself. The old per-user library is only a fallback, for approvals filed
+// before there was anything to draw on.
+function sbReviewSignature(rv, registry) {
+  if (rv && rv.signatureImage) return rv.signatureImage;
+  return sbSignatureOf(registry, rv && rv.signedByEmail);
 }
 function sbEmptyReviews() {
   return Array.from({ length: SB_REVIEW_BLOCKS }, (_, i) => ({
@@ -6541,7 +6903,7 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
   }).join("");
   // One approval block, at the very bottom, signed by the supervision.
   const rv = (rec.reviews || [])[0] || {};
-  const sigImg = sbSignatureOf(signatures, rv.signedByEmail);
+  const sigImg = sbReviewSignature(rv, signatures);
   const decisions = SB_DECISIONS.map((d2) =>
     `<div class="dec"><span class="box">${rv.decision === d2.key ? "&#10004;" : "&#9744;"}</span> ${sbEsc(sbText(d2, lang))}</div>`
   ).join("");
@@ -6549,7 +6911,8 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
     <table class="rev"><tr>
       <td class="sig"><div class="miniLbl">${L("signature")}</div>
         <div class="sigImg">${sigImg ? `<img src="${sigImg}" alt="">` : ""}</div>
-        <div class="sigVal">${sbEsc(rv.signature || "")}</div></td>
+        <div class="sigVal">${sbEsc(rv.signature || "")}</div>
+        ${rv.signedByEmail ? `<div class="sigStamp" dir="ltr">${L("digitalSig")} · ${sbEsc(rv.signedByEmail)} · ${sbEsc(sbFmtDate((rv.signedAt || "").slice(0, 10)))}${rv.signedAt ? ` ${sbEsc(rv.signedAt.slice(11, 16))}` : ""}</div>` : ""}</td>
       <td class="cmt"><div class="miniLbl">${L("approvalComments")}</div><div class="cmtVal">${sbEsc(rv.comments || "")}</div></td>
       <td class="decs">${decisions}</td>
     </tr></table></div>`;
@@ -6605,6 +6968,7 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 .sigImg { height: 74px; display: flex; align-items: center; justify-content: center; }
 .sigImg img { max-height: 72px; max-width: 100%; object-fit: contain; }
 .sigVal { font-size: 11px; font-weight: 600; color: #374151; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 4px; margin-top: 4px; }
+.sigStamp { font-size: 8px; font-weight: 600; color: #6b7280; text-align: center; margin-top: 2px; letter-spacing: .2px; }
 .dec { display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 2px 0; }
 .dec .box { font-size: 13px; }
 .revBlock { page-break-inside: avoid; }
@@ -7590,6 +7954,337 @@ function sbSeenKey(email) {
   return `submittal-seen:${String(email || "anon").toLowerCase()}`;
 }
 
+// src/components/SignaturePad.jsx
+// -----------------------------------------------------------------------------
+// A box to sign in, with a mouse or a finger. Pointer events cover both, so
+// there is no separate touch path to keep working. What comes out is a PNG with
+// a transparent background, trimmed to the ink, so it drops onto the form the
+// way a stamp would.
+// -----------------------------------------------------------------------------
+function SignaturePad({ isRTL, onCancel, onDone }) {
+  const canvasRef = useRef5(null);
+  const [dirty, setDirty] = useState6(false);
+  const t = (he, en) => (isRTL ? he : en);
+
+  useEffect5(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    // Draw at the device's own resolution, or the line looks like a staircase
+    // on a phone and the saved image comes out soft.
+    const ratio = window.devicePixelRatio || 1;
+    const rect = c.getBoundingClientRect();
+    c.width = Math.round(rect.width * ratio);
+    c.height = Math.round(rect.height * ratio);
+    const ctx = c.getContext("2d");
+    ctx.scale(ratio, ratio);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#14181f";
+  }, []);
+
+  const pos = (e) => {
+    const rect = canvasRef.current.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  };
+  const start = (e) => {
+    const c = canvasRef.current;
+    const ctx = c.getContext("2d");
+    const { x, y } = pos(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    c.__drawing = true;
+    setDirty(true);
+    // Capture keeps the stroke alive if the pointer wanders off the box, but a
+    // browser that refuses the call must not take the whole stroke with it.
+    try {
+      if (e.pointerId != null && c.setPointerCapture) c.setPointerCapture(e.pointerId);
+    } catch (err) {
+      // no capture; drawing still works while the pointer is over the canvas
+    }
+  };
+  const move = (e) => {
+    const c = canvasRef.current;
+    if (!c || !c.__drawing) return;
+    e.preventDefault();
+    const ctx = c.getContext("2d");
+    const { x, y } = pos(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+  };
+  const end = (e) => {
+    const c = canvasRef.current;
+    if (!c) return;
+    c.__drawing = false;
+    if (e && e.pointerId != null && c.hasPointerCapture && c.hasPointerCapture(e.pointerId)) {
+      c.releasePointerCapture(e.pointerId);
+    }
+  };
+  const clear = () => {
+    const c = canvasRef.current;
+    const ctx = c.getContext("2d");
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, c.width, c.height);
+    ctx.restore();
+    setDirty(false);
+  };
+  // Crop to the ink before saving: a signature drawn in the corner should not
+  // arrive on the form as a mostly-empty rectangle.
+  const done = () => {
+    const c = canvasRef.current;
+    const ctx = c.getContext("2d");
+    const img = ctx.getImageData(0, 0, c.width, c.height);
+    let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
+    for (let y = 0; y < c.height; y++) {
+      for (let x = 0; x < c.width; x++) {
+        if (img.data[(y * c.width + x) * 4 + 3] > 8) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    if (maxX < 0) return;
+    const pad = Math.round(6 * (window.devicePixelRatio || 1));
+    minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad);
+    maxX = Math.min(c.width - 1, maxX + pad); maxY = Math.min(c.height - 1, maxY + pad);
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+    const out = document.createElement("canvas");
+    out.width = w;
+    out.height = h;
+    out.getContext("2d").drawImage(c, minX, minY, w, h, 0, 0, w, h);
+    // PNG, not JPEG: the background has to stay transparent.
+    onDone(out.toDataURL("image/png"));
+  };
+
+  // Straight onto the body. The whole app sits inside a scaled box, and
+  // `position: fixed` inside a transformed ancestor anchors to that box, not to
+  // the window — the pad came out above the top of the screen. Outside .appRoot
+  // it inherits neither direction nor font, so both are set here.
+  return createPortal(
+    sbH(
+      "div",
+      { className: "sigPadScrim", onClick: onCancel, dir: isRTL ? "rtl" : "ltr" },
+      sbH(
+        "div",
+        { className: "sigPad", onClick: (e) => e.stopPropagation(), dir: isRTL ? "rtl" : "ltr" },
+        sbH("div", { className: "sigPadTitle" }, t("חתימה", "Signature")),
+        sbH("p", { className: "sigPadHint" }, t("חתמי בתוך המסגרת — בעכבר או באצבע.", "Sign inside the frame — with a mouse or a finger.")),
+        sbH("canvas", {
+          ref: canvasRef,
+          className: "sigCanvas",
+          onPointerDown: start,
+          onPointerMove: move,
+          onPointerUp: end,
+          onPointerLeave: end,
+          onPointerCancel: end
+        }),
+        sbH(
+          "div",
+          { className: "sigPadRow" },
+          sbH("button", { type: "button", className: "sbLinkBtn muted", onClick: clear }, t("ניקוי", "Clear")),
+          sbH("span", { style: { flex: 1 } }),
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: onCancel }, t("ביטול", "Cancel")),
+          sbH(
+            "button",
+            { type: "button", className: "functionEditBtn", disabled: !dirty, onClick: done },
+            t("אישור החתימה", "Confirm signature")
+          )
+        )
+      )
+    ),
+    document.body
+  );
+}
+
+// src/cards/SubmittalReview.jsx
+// -----------------------------------------------------------------------------
+// What a client or the main contractor sees when they open a submittal: the
+// document exactly as it prints, on screen, and underneath it the decision and
+// a place to sign. They never see the editing form — there is nothing here for
+// them to change.
+// -----------------------------------------------------------------------------
+function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, userSignatures, currentEmail, onSave, onCancel }) {
+  const L = (k) => sbText(SB_L[k], lang);
+  const [d, setD] = useState6(rec);
+  const [padOpen, setPadOpen] = useState6(false);
+  useEffect5(() => { setD(rec); }, [rec && rec.id]);
+
+  const inS = {
+    padding: "7px 9px",
+    border: "1px solid var(--line)",
+    borderRadius: 7,
+    fontSize: 13,
+    background: "#fff",
+    width: "100%",
+    fontFamily: "inherit",
+    color: "inherit"
+  };
+  const rv = (d.reviews || [])[0] || {};
+  const setReview = (patch) => {
+    const next = (d.reviews || []).slice();
+    next[0] = { ...rv, ...patch };
+    setD({ ...d, reviews: next });
+  };
+  // The document is rebuilt from the record on every change, so the moment a
+  // decision is ticked or a signature is drawn it is visible in the page above.
+  // The same HTML the printer gets, with one screen-only touch: the A4 page is
+  // a fixed width, so on a wide screen it would sit against the edge.
+  const docHtml = sbBuildPrintHtml(d, lang, printBrand, [], userSignatures).replace(
+    "</head>",
+    "<style>@media screen{body{display:flex;justify-content:center;background:#f6f6f7}}</style></head>"
+  );
+  const signed = !!(rv.signatureImage || rv.signedByEmail);
+
+  const applySignature = (dataUrl) => {
+    setPadOpen(false);
+    const who = (currentEmail || "").split("@")[0] || currentEmail || "";
+    setReview({
+      signatureImage: dataUrl,
+      signedByEmail: (currentEmail || "").toLowerCase(),
+      signature: rv.signature || who,
+      signedAt: new Date().toISOString()
+    });
+  };
+
+  return sbH(
+    "div",
+    { className: "sbReviewPage", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "sbFormHead" },
+      sbH(
+        "div",
+        { className: "sbFormHeadSide start" },
+        sbH(
+          "button",
+          { type: "button", className: "loginBack", onClick: onCancel },
+          sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }),
+          " ",
+          L("back")
+        )
+      ),
+      sbH(
+        "div",
+        { className: "sbNoBox" },
+        sbH("b", null, L("submittalNo")),
+        sbH("span", null, sbNumber(d.category, d.seq)),
+        sbH("i", null, `Rev.${d.rev || 0}`)
+      ),
+      sbH(
+        "div",
+        { className: "sbFormHeadSide end" },
+        langSwitch || null,
+        sbH(
+          "button",
+          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
+          sbH(Printer, { size: 14, strokeWidth: 2 }),
+          " ",
+          L("print")
+        )
+      )
+    ),
+    // The document itself. An iframe because it is the very same HTML that goes
+    // to the printer — one source, so what is signed on screen and what comes
+    // out of the printer cannot drift apart.
+    sbH("iframe", { className: "sbDocFrame", title: sbPrintName(d), srcDoc: docHtml }),
+
+    canSign
+      ? sbH(
+          "div",
+          { className: "sbSignPanel" },
+          sbH("div", { className: "sbSecBar" }, `${L("review")} · ${L("supervision")}`),
+          sbH(
+            "div",
+            { className: "sbDecisions sbDecRowWide" },
+            SB_DECISIONS.map((dec) =>
+              sbH(
+                "label",
+                { key: dec.key, className: "sbDecRow" },
+                sbH("input", {
+                  type: "radio",
+                  name: `sb-rev-${d.id}`,
+                  checked: rv.decision === dec.key,
+                  onChange: () => setReview({ decision: dec.key })
+                }),
+                sbH("span", { style: { color: dec.color, fontWeight: 700 } }, sbText(dec, lang))
+              )
+            )
+          ),
+          sbH(
+            "label",
+            { className: "sbField" },
+            sbH("span", { className: "sbFieldLbl" }, L("approvalComments")),
+            sbH("textarea", {
+              value: rv.comments || "",
+              rows: 2,
+              onChange: (e) => setReview({ comments: e.target.value }),
+              style: { ...inS, resize: "vertical" }
+            })
+          ),
+          sbH(
+            "div",
+            { className: "sbSignRow" },
+            signed
+              ? sbH(
+                  "div",
+                  { className: "sbSignedBox" },
+                  rv.signatureImage ? sbH("img", { src: rv.signatureImage, alt: "" }) : null,
+                  sbH(
+                    "div",
+                    { className: "sbSignedMeta", dir: "ltr" },
+                    sbH("span", null, rv.signedByEmail || ""),
+                    sbH("span", null, rv.signedAt ? `${sbFmtDate(rv.signedAt.slice(0, 10))} ${rv.signedAt.slice(11, 16)}` : "")
+                  ),
+                  sbH(
+                    "button",
+                    {
+                      type: "button",
+                      className: "sbLinkBtn muted",
+                      onClick: () => setReview({ signatureImage: null, signedByEmail: null, signature: "", signedAt: null })
+                    },
+                    L("clearSignature")
+                  )
+                )
+              : null,
+            sbH(
+              "button",
+              { type: "button", className: "sbSignBtn", onClick: () => setPadOpen(true) },
+              sbH(PenLine, { size: 15, strokeWidth: 2 }),
+              " ",
+              signed ? L("signAgain") : L("signHere")
+            )
+          ),
+          // Nothing is filed until the decision is made: an unsigned tick means
+          // nothing, and a signature with no decision says nothing.
+          sbH(
+            "div",
+            { className: "sbSaveRow" },
+            sbH(
+              "button",
+              {
+                type: "button",
+                className: "functionEditBtn",
+                disabled: !rv.decision || !signed,
+                onClick: () => onSave(d)
+              },
+              L("saveSignature")
+            )
+          ),
+          !rv.decision || !signed
+            ? sbH("p", { className: "sbSignHint" }, L("signNeedBoth"))
+            : null
+        )
+      : null,
+    padOpen
+      ? sbH(SignaturePad, { isRTL, onCancel: () => setPadOpen(false), onDone: applySignature })
+      : null
+  );
+}
+
 function SubmittalFolder({
   category,
   lang,
@@ -7605,15 +8300,22 @@ function SubmittalFolder({
   onPrint,
   onNewRevision,
   onDelete,
-  boqData
+  boqData,
+  boqFlags
 }) {
   const L = (k) => sbText(SB_L[k], lang);
+  // Which checklist group is opened out into its BOQ lines.
+  const [openChk, setOpenChk] = useState6(null);
   // One line per serial — the latest revision. The earlier ones live behind the
   // little arrow next to it, because that is history, not work in progress.
   const [openFamily, setOpenFamily] = useState6(null);
   const families = (() => {
     const bySeq = {};
-    (list || []).filter((s) => s.category === category.key).forEach((s) => {
+    // A draft has not been submitted to anyone. Only the administrator, who is
+    // the one writing it, sees it in the list at all.
+    (list || [])
+      .filter((s) => s.category === category.key && (canEdit || s.sent))
+      .forEach((s) => {
       const k = String(s.seq);
       bySeq[k] = bySeq[k] || [];
       bySeq[k].push(s);
@@ -7651,7 +8353,7 @@ function SubmittalFolder({
           { className: "sbCreateWrap" },
           sbH(
             "button",
-            { type: "button", className: "sbCreateBtn", onClick: onCreate },
+            { type: "button", className: "sbCreateBtn", onClick: () => onCreate() },
             sbH(Plus2, { size: 16, strokeWidth: 2.4 }),
             " ",
             L("create")
@@ -7697,30 +8399,70 @@ function SubmittalFolder({
           )
         )
       : null,
-    // The checklist: what this discipline owes, straight from the BOQ, with the
-    // submittal that answers each line. Matching is by sub-category, because
-    // that is the field both sides share.
+    // The checklist: what this discipline owes, straight from the routing table.
+    // One row per group; open a row to see the actual lines of the bill of
+    // quantities under it, and start a submittal from any of them. A group can
+    // carry several submittals, because a group is several products.
     (() => {
-      const subs = (((boqData || {}).chapters) || [])
+      const auto = (boqData || {}).flags || {};
+      const groups = (((boqData || {}).chapters) || [])
         .flatMap((ch) => ch.subs)
-        .filter((sub) => sub.orderable && boqCategoryOf(sub) === category.key);
-      const done = (list || []).filter((s) => s.category === category.key && s.sent);
-      // Matched on the exact sub-category, in either language. A looser rule
-      // (any line containing the word "cables") ticked off several lines at
-      // once, which is worse than leaving them open.
+        .filter((sub) => boqCategoryOf(sub) === category.key && boqSubFlags(sub, auto, boqFlags).submittal);
+      const mine = (list || []).filter((s) => s.category === category.key);
       const norm = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
-      const matchOf = (sub) => {
-        const names = [norm(boqText(sub, "en")), norm(boqText(sub, "he"))].filter(Boolean);
-        return done.find((s) => {
+      // Attached by the item number the submittal was started from. Records made
+      // before the bill of quantities existed still match on an exact
+      // sub-category, so nothing that was already filed goes missing.
+      const attached = (code, node) => {
+        const names = node ? [norm(boqText(node, "en")), norm(boqText(node, "he"))].filter(Boolean) : [];
+        return mine.filter((s) => {
+          if (s.boqCode) return s.boqCode === code;
+          if (!names.length) return false;
           const picked = [
             norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "en")),
             norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "he"))
           ].filter(Boolean);
           return picked.some((c) => names.indexOf(c) >= 0);
-        }) || null;
+        });
       };
-      const rowsChk = subs.map((sub) => ({ sub, hit: matchOf(sub) }));
-      const hits = rowsChk.filter((r) => r.hit).length;
+      const rowsChk = groups.map((sub) => {
+        const lines = (sub.items || []).filter(
+          (item) => !boqIsNote(item.unit) && boqFlagsOf(auto, boqFlags, item.code).submittal
+        );
+        const own = attached(sub.code, sub);
+        const perLine = lines.map((item) => ({ item, hits: attached(item.code, item) }));
+        const all = own.concat(perLine.flatMap((l) => l.hits));
+        return { sub, lines: perLine, own, count: all.length };
+      });
+      const hits = rowsChk.filter((r) => r.count > 0).length;
+      const pill = (s) =>
+        sbH(
+          "button",
+          {
+            type: "button",
+            key: s.id,
+            className: `sbChkPill ${s.sent ? "" : "draft"}`,
+            style: s.sent ? { borderColor: sbStatusColor(sbStatusOf(s)) } : null,
+            title: sbStatusLabel(sbStatusOf(s), lang),
+            onClick: () => onOpen(s)
+          },
+          `${sbNumber(s.category, s.seq)} Rev.${s.rev || 0}`
+        );
+      const addBtn = (code, node, subCat) =>
+        canEdit
+          ? sbH(
+              "button",
+              {
+                type: "button",
+                className: "sbChkAdd",
+                title: L("chkAdd"),
+                onClick: () => onCreate({ code, text: node ? boqText(node, lang) : "", subCategory: subCat || "" })
+              },
+              sbH(Plus2, { size: 12, strokeWidth: 2.6 }),
+              " ",
+              L("chkAdd")
+            )
+          : null;
       return sbH(
         "div",
         { className: "sbChk" },
@@ -7743,20 +8485,67 @@ function SubmittalFolder({
                       sbH("th", null, L("chkItem")),
                       sbH("th", null, L("chkDesc")),
                       sbH("th", null, L("chkSubmittal")),
-                      sbH("th", null, L("status"))
+                      sbH("th", null, "")
                     )),
-                    sbH("tbody", null, rowsChk.map((r) => {
-                      const st = r.hit ? sbStatusOf(r.hit) : null;
-                      return sbH(
+                    sbH("tbody", null, rowsChk.flatMap((r) => {
+                      const open = openChk === r.sub.code;
+                      const head = sbH(
                         "tr",
-                        { key: r.sub.code, className: r.hit ? "sbChkOn" : "" },
-                        sbH("td", { dir: "ltr", className: "sbChkCode" }, r.sub.code),
+                        { key: r.sub.code, className: r.count ? "sbChkOn" : "" },
+                        sbH(
+                          "td",
+                          { dir: "ltr", className: "sbChkCode" },
+                          r.sub.code,
+                          r.lines.length
+                            ? sbH(
+                                "button",
+                                {
+                                  type: "button",
+                                  className: `sbRevToggle ${open ? "open" : ""}`,
+                                  title: L("chkLines"),
+                                  onClick: () => setOpenChk(open ? null : r.sub.code)
+                                },
+                                sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }),
+                                r.lines.length
+                              )
+                            : null
+                        ),
                         sbH("td", { className: "sbChkDesc" }, boqText(r.sub, lang)),
-                        sbH("td", null, r.hit ? `${sbNumber(r.hit.category, r.hit.seq)} Rev.${r.hit.rev || 0}` : "—"),
-                        sbH("td", null, r.hit
-                          ? sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang))
-                          : sbH("span", { className: "sbChkMissing" }, L("chkMissing")))
+                        sbH(
+                          "td",
+                          { className: "sbChkPills" },
+                          r.count
+                            ? rowsChk.length && [...r.own, ...r.lines.flatMap((l) => l.hits)].map(pill)
+                            : sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
+                        ),
+                        sbH("td", { className: "sbChkAct" }, addBtn(r.sub.code, r.sub, ""))
                       );
+                      if (!open) return [head];
+                      const kids = r.lines.map((l) => {
+                        const eq = boqIsEquivalent(l.item);
+                        return sbH(
+                          "tr",
+                          { key: l.item.code, className: "sbChkLine" },
+                          sbH("td", { dir: "ltr", className: "sbChkCode" }, l.item.code),
+                          sbH(
+                            "td",
+                            { className: "sbChkDesc" },
+                            boqText(l.item, lang),
+                            sbH(
+                              "span",
+                              { className: `sbChkSpec ${eq ? "eq" : ""}` },
+                              eq ? L("chkEquiv") : L("chkSpecific")
+                            )
+                          ),
+                          sbH(
+                            "td",
+                            { className: "sbChkPills" },
+                            l.hits.length ? l.hits.map(pill) : sbH("span", { className: "sbChkDash" }, "—")
+                          ),
+                          sbH("td", { className: "sbChkAct" }, addBtn(l.item.code, l.item, ""))
+                        );
+                      });
+                      return [head, ...kids];
                     }))
                   )
                 )
@@ -7902,7 +8691,8 @@ function SubmittalCard({
   contacts,
   contactsCatalog,
   printBrand,
-  boqData
+  boqData,
+  boqFlags
 }) {
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
@@ -7990,7 +8780,11 @@ function SubmittalCard({
   const commit = (next) => {
     if (onChangeSubmittals) onChangeSubmittals(next);
   };
-  const startCreate = () => {
+  // `preset` arrives when the submittal is started from a line of the bill of
+  // quantities: it carries the item number it answers and the wording to start
+  // from. Started from the button at the top it is empty, and the submittal
+  // belongs to no BOQ line at all — which is exactly what that button is for.
+  const startCreate = (preset) => {
     const rec = sbNewSubmittal({
       category: chosen.key,
       seq: sbNextSeq(list, chosen.key),
@@ -8001,8 +8795,17 @@ function SubmittalCard({
       email: currentEmail || "",
       submittedBy: (currentEmail || "").split("@")[0] || ""
     });
-    setDraft(rec);
-    setOpenId(rec.id);
+    const withPreset = preset
+      ? {
+          ...rec,
+          boqCode: preset.code || "",
+          boqText: preset.text || "",
+          subCategory: preset.subCategory || rec.subCategory || "",
+          itemDescription: preset.text || rec.itemDescription
+        }
+      : rec;
+    setDraft(withPreset);
+    setOpenId(withPreset.id);
   };
   const startRevision = (s) => {
     const rec = {
@@ -8053,6 +8856,25 @@ function SubmittalCard({
   // While a submittal is open, the whole card is the form — the tiles would
   // only be noise on a page this dense.
   if (openId && draft) {
+    // Anyone who is not the administrator gets the finished document, not the
+    // editing form. There is nothing on this screen for them to change.
+    if (!canEdit) {
+      return sbH(SubmittalReview, {
+        rec: draft,
+        lang,
+        isRTL,
+        langSwitch,
+        canSign,
+        printBrand,
+        userSignatures,
+        currentEmail,
+        onSave: saveDraft,
+        onCancel: () => {
+          setDraft(null);
+          setOpenId(null);
+        }
+      });
+    }
     return sbH(SubmittalForm, {
       rec: draft,
       lang,
@@ -8121,6 +8943,7 @@ function SubmittalCard({
         lang,
         isRTL,
         boqData,
+        boqFlags,
         list,
         canEdit,
         canSign,
@@ -8624,8 +9447,252 @@ function SubmittalAdminScreen({ isRTL, signatures, onSignatureChange }) {
 // The bill of quantities for one project. It is the source the submittal
 // checklist and the LLI table will be built from, so it is stored whole and
 // untouched — parsing happens later, against the real file.
-function BoqUploadBlock({ isRTL, projectId, boq, onChange }) {
+// src/screens/BoqClassifyTable.jsx
+// -----------------------------------------------------------------------------
+// One table, opened once after the workbook is uploaded: every priced line with
+// three ticks — Submittal, SD, LLI — and a long-lead mark on the ordered ones.
+// The automatic pass fills it in generously; this screen is where that gets
+// corrected. A hand edit is stored apart from the parsed file, so re-uploading
+// the workbook never undoes a decision.
+// -----------------------------------------------------------------------------
+var BOQ_T = {
+  title: { en: "Bill of quantities — routing", he: "סיווג כתב הכמויות" },
+  hint: {
+    en: "Each line can go to more than one tab. The automatic pass ticks generously; remove what does not belong.",
+    he: "כל שורה יכולה ללכת ליותר מלשונית אחת. הסיווג האוטומטי מסמן בנדיבות — מה שלא שייך, פשוט הורידי."
+  },
+  submittal: { en: "Submittal", he: "סבמיטל" },
+  sd: { en: "SD", he: "SD" },
+  lli: { en: "LLI", he: "LLI" },
+  longLead: { en: "Long lead", he: "אספקה ארוכה" },
+  code: { en: "Item", he: "סעיף" },
+  desc: { en: "Description", he: "תיאור" },
+  unit: { en: "Unit", he: "יח׳" },
+  qty: { en: "Qty", he: "כמות" },
+  all: { en: "All chapters", he: "כל הפרקים" },
+  onlyFlagged: { en: "Only ticked lines", he: "רק שורות מסומנות" },
+  onlyOpen: { en: "Only untouched lines", he: "רק שורות שלא נגעתי בהן" },
+  search: { en: "Search", he: "חיפוש" },
+  notes: { en: "notes", he: "הערות" },
+  none: { en: "not routed", he: "לא משויך" },
+  edited: { en: "edited by hand", he: "נערכו ידנית" },
+  reset: { en: "Undo my edits on this line", he: "ביטול העריכה בשורה" },
+  empty: { en: "No line matches this filter.", he: "אין שורה שמתאימה לסינון." },
+  close: { en: "Close", he: "סגירה" },
+  open: { en: "Open the routing table", he: "פתיחת טבלת הסיווג" }
+};
+
+function BoqClassifyTable({ isRTL, tree, overrides, onChange, onClose }) {
+  const lang = isRTL ? "he" : "en";
+  const L = (k) => sbText(BOQ_T[k], lang);
+  const [chapter, setChapter] = useState6("all");
+  const [onlyFlagged, setOnlyFlagged] = useState6(false);
+  const [q, setQ] = useState6("");
+  const auto = (tree || {}).flags || {};
+
+  const rows = [];
+  ((tree || {}).chapters || []).forEach((ch) => {
+    ch.subs.forEach((sub) => {
+      sub.items.forEach((item) => {
+        if (boqIsNote(item.unit)) return;
+        rows.push({ ch, sub, item });
+      });
+    });
+  });
+  const needle = q.trim().toLowerCase();
+  const shown = rows.filter((r) => {
+    if (chapter !== "all" && String(r.ch.c) !== chapter) return false;
+    if (onlyFlagged && !boqAnyFlag(boqFlagsOf(auto, overrides, r.item.code))) return false;
+    if (needle) {
+      const hay = `${r.item.code} ${r.item.he} ${r.item.en} ${r.sub.he} ${r.sub.en}`.toLowerCase();
+      if (hay.indexOf(needle) < 0) return false;
+    }
+    return true;
+  });
+  const counts = boqCountFlags(tree, auto, overrides);
+  const editedCount = Object.keys(overrides || {}).length;
+
+  const toggle = (code, key) => {
+    const cur = boqFlagsOf(auto, overrides, code);
+    const next = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead };
+    next[key] = !next[key];
+    // A long lead item is ordered by definition; unticking the order unticks it.
+    if (key === "longLead" && next.longLead) next.lli = true;
+    if (key === "lli" && !next.lli) next.longLead = false;
+    onChange({ ...overrides || {}, [code]: next });
+  };
+  const resetRow = (code) => {
+    const next = { ...overrides || {} };
+    delete next[code];
+    onChange(next);
+  };
+  // Tick or clear a whole column for everything currently on screen — with six
+  // hundred lines, going one by one is not a plan.
+  const bulk = (key, value) => {
+    const next = { ...overrides || {} };
+    shown.forEach((r) => {
+      const cur = boqFlagsOf(auto, overrides, r.item.code);
+      const f = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead };
+      f[key] = value;
+      if (key === "longLead" && value) f.lli = true;
+      if (key === "lli" && !value) f.longLead = false;
+      next[r.item.code] = f;
+    });
+    onChange(next);
+  };
+
+  const tick = (code, key, on) =>
+    sbH(
+      "button",
+      {
+        type: "button",
+        className: `boqTick ${on ? "on" : ""} ${key}`,
+        title: L(key),
+        onClick: () => toggle(code, key)
+      },
+      on ? "✓" : ""
+    );
+
+  const colHead = (key) =>
+    sbH(
+      "th",
+      { className: `cFlag ${key}` },
+      sbH("span", null, L(key)),
+      sbH(
+        "span",
+        { className: "boqBulk" },
+        sbH("button", { type: "button", title: "✓", onClick: () => bulk(key, true) }, "✓"),
+        sbH("button", { type: "button", title: "✗", onClick: () => bulk(key, false) }, "✗")
+      )
+    );
+
+  return sbH(
+    "div",
+    { className: "boqClassWrap", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "boqClassHead" },
+      sbH("h3", null, L("title")),
+      sbH("button", { type: "button", className: "ghostBtn small", onClick: onClose }, L("close"))
+    ),
+    sbH("p", { className: "boqHint" }, L("hint")),
+    sbH(
+      "div",
+      { className: "boqClassBar" },
+      sbH(
+        "select",
+        { className: "lliIn boqSel", value: chapter, onChange: (e) => setChapter(e.target.value) },
+        sbH("option", { value: "all" }, L("all")),
+        ((tree || {}).chapters || []).map((ch) =>
+          sbH("option", { key: ch.c, value: String(ch.c) }, `${ch.code} · ${boqText(ch, lang)}`)
+        )
+      ),
+      sbH("input", {
+        type: "text",
+        className: "lliIn boqSearch",
+        placeholder: L("search"),
+        value: q,
+        onChange: (e) => setQ(e.target.value)
+      }),
+      sbH(
+        "label",
+        { className: "lliShowHidden" },
+        sbH("input", { type: "checkbox", checked: onlyFlagged, onChange: (e) => setOnlyFlagged(e.target.checked) }),
+        " ",
+        L("onlyFlagged")
+      )
+    ),
+    // Each count is its own isolated box: a bare string of "464 סבמיטל · 10 SD"
+    // gets reordered by the bidi algorithm and the numbers end up against the
+    // wrong words.
+    sbH(
+      "p",
+      { className: "boqCounts" },
+      [
+        [counts.submittal, L("submittal")],
+        [counts.sd, L("sd")],
+        [counts.lli, L("lli")],
+        [counts.none, L("none")],
+        [counts.notes, L("notes")]
+      ].map(([n, label]) =>
+        sbH("span", { key: label, className: "boqCountPart" }, `${n} ${label}`)
+      ),
+      editedCount
+        ? sbH("span", { className: "boqCountPart boqEdited" }, `${editedCount} ${L("edited")}`)
+        : null
+    ),
+    shown.length === 0
+      ? sbH("p", { className: "lliNote" }, L("empty"))
+      : sbH(
+          "div",
+          { className: "boqClassScroll" },
+          sbH(
+            "table",
+            { className: "boqClassTable" },
+            sbH(
+              "thead",
+              null,
+              sbH(
+                "tr",
+                null,
+                sbH("th", { className: "cCode" }, L("code")),
+                sbH("th", { className: "cDesc" }, L("desc")),
+                sbH("th", { className: "cUnit" }, L("unit")),
+                sbH("th", { className: "cQ" }, L("qty")),
+                colHead("submittal"),
+                colHead("sd"),
+                colHead("lli"),
+                colHead("longLead"),
+                sbH("th", { className: "cUndo" }, "")
+              )
+            ),
+            sbH(
+              "tbody",
+              null,
+              shown.slice(0, 800).map((r) => {
+                const f = boqFlagsOf(auto, overrides, r.item.code);
+                return sbH(
+                  "tr",
+                  { key: r.item.code, className: f.source === "user" ? "boqRowUser" : "" },
+                  sbH(
+                    "td",
+                    { className: "cCode", dir: "ltr" },
+                    sbH("span", { className: "boqRowCode" }, r.item.code),
+                    sbH("span", { className: "boqRowSub" }, boqText(r.sub, lang))
+                  ),
+                  sbH("td", { className: "cDesc" }, boqText(r.item, lang)),
+                  sbH("td", { className: "cUnit" }, boqUnit(r.item.unit, lang)),
+                  sbH("td", { className: "cQ", dir: "ltr" }, r.item.qty == null ? "—" : r.item.qty),
+                  sbH("td", { className: "cFlag" }, tick(r.item.code, "submittal", f.submittal)),
+                  sbH("td", { className: "cFlag" }, tick(r.item.code, "sd", f.sd)),
+                  sbH("td", { className: "cFlag" }, tick(r.item.code, "lli", f.lli)),
+                  sbH("td", { className: "cFlag" }, tick(r.item.code, "longLead", f.longLead)),
+                  sbH(
+                    "td",
+                    { className: "cUndo" },
+                    f.source === "user"
+                      ? sbH(
+                          "button",
+                          { type: "button", className: "sbIconBtn", title: L("reset"), onClick: () => resetRow(r.item.code) },
+                          sbH(RotateCcw, { size: 13, strokeWidth: 2 })
+                        )
+                      : null
+                  )
+                );
+              })
+            )
+          ),
+          shown.length > 800
+            ? sbH("p", { className: "lliNote" }, `… ${shown.length - 800}`)
+            : null
+        )
+  );
+}
+
+function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, onOverridesChange }) {
   const [busy, setBusy] = useState6(false);
+  const [tableOpen, setTableOpen] = useState6(false);
+  const [stage, setStage] = useState6(null);
   const [err, setErr] = useState6(null);
   const t = (he, en) => (isRTL ? he : en);
   const onFile = async (e) => {
@@ -8654,11 +9721,35 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange }) {
       }
       // Both languages can be picked together; whichever is missing simply
       // falls back to the other when the table is drawn.
-      onChange({ files, data: boqBuild(parsed) });
+      const tree = boqBuild(parsed);
+      // The classification runs here, once. Local rules settle the obvious
+      // lines for nothing; the rest go to the model in batches of eighty.
+      setStage(t("מסווג את הסעיפים…", "Classifying the items…"));
+      const ask = async (rows) => {
+        const { data, error } = await supabase.functions.invoke("submittal-ai", {
+          body: { mode: "classify", lines: rows }
+        });
+        if (error) throw error;
+        if (!data || !data.flags) throw new Error(data && data.error || "no_flags");
+        return data.flags;
+      };
+      let aiReached = true;
+      const probe = async (rows) => {
+        try {
+          return await ask(rows);
+        } catch (e) {
+          aiReached = false;
+          throw e;
+        }
+      };
+      const res = await boqClassify(tree, aiReached ? probe : null, (done, total) =>
+        setStage(`${t("מסווג את הסעיפים", "Classifying")} ${done}/${total}`));
+      onChange({ files, data: tree, flags: res.flags, aiReached, stats: res });
     } catch (ex) {
       setErr(ex && (ex.message || String(ex)) || t("ההעלאה נכשלה", "Upload failed"));
     } finally {
       setBusy(false);
+      setStage(null);
     }
   };
   return sbH(
@@ -8688,12 +9779,30 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange }) {
       : null,
     boq
       ? sbH(
-          "button",
-          { type: "button", className: "sbLinkBtn", onClick: () => onChange(null) },
-          sbH(Trash2, { size: 13, strokeWidth: 2 }),
-          " ",
-          t("הסרת כתב הכמויות", "Remove the BOQ")
+          "div",
+          { className: "boqActions" },
+          sbH(
+            "button",
+            { type: "button", className: "ghostBtn small", onClick: () => setTableOpen(!tableOpen) },
+            t(tableOpen ? "סגירת טבלת הסיווג" : "פתיחת טבלת הסיווג", tableOpen ? "Close the routing table" : "Open the routing table")
+          ),
+          sbH(
+            "button",
+            { type: "button", className: "sbLinkBtn", onClick: () => onChange(null) },
+            sbH(Trash2, { size: 13, strokeWidth: 2 }),
+            " ",
+            t("הסרת כתב הכמויות", "Remove the BOQ")
+          )
         )
+      : null,
+    boq && tableOpen && boqData
+      ? sbH(BoqClassifyTable, {
+          isRTL,
+          tree: boqData,
+          overrides,
+          onChange: onOverridesChange,
+          onClose: () => setTableOpen(false)
+        })
       : null,
     sbH(
       "label",
@@ -8709,10 +9818,21 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange }) {
         onChange: onFile
       })
     ),
+    busy && stage ? sbH("p", { className: "boqStage" }, stage) : null,
+    boq && boq.aiReached === false
+      ? sbH(
+          "p",
+          { className: "boqWarn" },
+          t(
+            "הסיווג נעשה בחוקים מקומיים בלבד — שירות ה‑AI לא נענה. כדאי לעבור על טבלת הסיווג.",
+            "Classified by local rules only — the AI service did not answer. Worth going through the classification table."
+          )
+        )
+      : null,
     err ? sbH("p", { className: "sbErr" }, err) : null
   );
 }
-function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, submittalPermsByProject, onSubmittalPermsChange, boqByProject, onBoqChange }) {
+function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, submittalPermsByProject, onSubmittalPermsChange, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange }) {
   const inS = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff", width: "100%" };
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6({ name: "", floorsFrom: "", floorsTo: "", startDate: "", endDate: "", clientLogoUrl: null, accent: null });
@@ -8737,7 +9857,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, [1, 2, 3, 4].map((n) => /* @__PURE__ */ React15.createElement("button", { key: n, type: "button", style: { flex: 1, minWidth: 108, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#eef0f2", border: "1px solid var(--line-soft)", borderRadius: 8, padding: "10px 8px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), (isRTL ? "לעלות " : "Upload ") + n))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, [1, 2, 3, 4].map((n) => /* @__PURE__ */ React15.createElement("button", { key: n, type: "button", style: { flex: 1, minWidth: 108, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#eef0f2", border: "1px solid var(--line-soft)", borderRadius: 8, padding: "10px 8px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), (isRTL ? "לעלות " : "Upload ") + n))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -8943,15 +10063,17 @@ function ProjectDashboardApp() {
     const schedules = {};
     const boqs = {};
     const llis = {};
+    const flagOverrides = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, ...others } = entry;
+      const { scheduleData, boqData, lliRows, boqFlagOverrides, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
       if (lliRows) llis[pid] = lliRows;
+      if (boqFlagOverrides) flagOverrides[pid] = boqFlagOverrides;
     });
-    return { rest, schedules, boqs, llis };
+    return { rest, schedules, boqs, llis, flagOverrides };
   };
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -8971,7 +10093,7 @@ function ProjectDashboardApp() {
         } catch (e2) {
           console.error("[awdash] load project-schedules failed", e2);
         }
-        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"]]) {
+        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"], ["project-boq-flags", "boqFlagOverrides"]]) {
           try {
             const side = await loadAppState(key);
             if (side) {
@@ -8995,7 +10117,7 @@ function ProjectDashboardApp() {
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
     (async () => {
-      const { rest, schedules, boqs, llis } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, flagOverrides } = splitExtras(projectExtras);
       let failed = null;
       try {
         const { error } = await supabase.from("app_state").upsert({ key: "project-extras", value: rest, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
@@ -9011,7 +10133,7 @@ function ProjectDashboardApp() {
         console.error("[awdash] save project-schedules failed", e);
         failed = e && e.message || String(e);
       }
-      for (const [key, value] of [["project-boq", boqs], ["project-lli", llis]]) {
+      for (const [key, value] of [["project-boq", boqs], ["project-lli", llis], ["project-boq-flags", flagOverrides]]) {
         try {
           const { error } = await supabase.from("app_state").upsert({ key, value, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
           if (error) throw error;
@@ -9047,11 +10169,34 @@ function ProjectDashboardApp() {
   const setProjectBoq = (projectId, next) => updateProjectExtras(projectId, {
     // The record is small and rides along with the project; the parsed tree is
     // hundreds of rows and gets its own row on the way out.
-    boq: next ? { files: next.files, chapters: (next.data.chapters || []).length, subs: (next.data.chapters || []).reduce((n, c) => n + c.subs.filter((x) => x.orderable).length, 0) } : null,
-    boqData: next ? next.data : null
+    boq: next
+      ? {
+          files: next.files,
+          chapters: (next.data.chapters || []).length,
+          subs: (next.data.chapters || []).reduce((n, c) => n + c.subs.filter((x) => x.orderable).length, 0),
+          aiReached: next.aiReached !== false,
+          classifiedAt: new Date().toISOString()
+        }
+      : null,
+    boqData: next ? { ...next.data, flags: next.flags || {} } : null
+    // boqFlagOverrides is deliberately NOT cleared here: a decision taken by
+    // hand must survive a new upload of the workbook.
   });
+  const setBoqFlagOverride = (projectId, code, flags) => {
+    const cur = (projectExtras[projectId] || {}).boqFlagOverrides || {};
+    updateProjectExtras(projectId, { boqFlagOverrides: { ...cur, [code]: flags } });
+  };
+  const setBoqFlagOverrides = (projectId, next) => updateProjectExtras(projectId, { boqFlagOverrides: next });
+  const boqOverridesByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    acc[pid] = projectExtras[pid] && projectExtras[pid].boqFlagOverrides || {};
+    return acc;
+  }, {});
   const boqByProject = Object.keys(projectExtras).reduce((acc, pid) => {
     acc[pid] = projectExtras[pid] && projectExtras[pid].boq || null;
+    return acc;
+  }, {});
+  const boqDataByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    acc[pid] = projectExtras[pid] && projectExtras[pid].boqData || null;
     return acc;
   }, {});
   const contactVisibilityByProject = Object.keys(projectExtras).reduce((acc, pid) => {
@@ -10056,6 +11201,7 @@ function ProjectDashboardApp() {
         onChangeQueue: (next) => updateProjectExtras(activeProject.id, { submittalQueue: next }),
         submittalPerms: activeExtras.submittalPerms || {},
         boqData: activeExtras.boqData || null,
+        boqFlags: activeExtras.boqFlagOverrides || {},
         lliRows: activeExtras.lliRows || {},
         onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
         currentEmail: loggedInEmail,
@@ -10069,7 +11215,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms, boqByProject, onBoqChange: setProjectBoq }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
@@ -10277,7 +11423,7 @@ function ProjectDashboardApp() {
         /* @__PURE__ */ React15.createElement("p", { className: "scheduleChangeFoot" }, isRTL ? 'הרשימה נשמרת גם ב"הערות קריטיות ללו״ז" עד ההעלאה הבאה.' : "This list is also kept in the schedule notes until the next upload."),
         /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setScheduleChangeReport(null) }, isRTL ? "הבנתי" : "Got it")
       )
-    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: t.dir, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: t.dir, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: t.dir, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("submittals") }, /* @__PURE__ */ React15.createElement(Stamp, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "\u05e2\u05e8\u05d9\u05db\u05ea \u05e1\u05d1\u05de\u05d9\u05d8\u05dc" : "Submittal administration"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: t.dir, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: t.dir, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: t.dir, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
