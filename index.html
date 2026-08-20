@@ -1189,6 +1189,25 @@ var pdfViewer = `
         .sbSignHint { text-align: center; font-size: 12px; color: var(--mist); margin: 0 0 14px; }
         .sbSignPanel .sbSaveRow { padding-bottom: 14px; }
 
+        .pickPwScrim {
+          position: fixed; inset: 0; z-index: 1300; background: rgba(16,18,22,.62);
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .pickPw {
+          background: #fff; border-radius: 14px; padding: 24px 26px 20px;
+          width: min(430px, 100%); box-shadow: 0 18px 60px rgba(0,0,0,.3);
+          display: flex; flex-direction: column; gap: 10px;
+        }
+        .pickPw h3 { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); }
+        .pickPwHint { margin: 0; font-size: 13px; color: var(--steel); line-height: 1.6; }
+        .pickPwEmail {
+          margin: 0; font-size: 12.5px; font-weight: 800; color: var(--accent-ink);
+          background: #f3f6fa; border-radius: 8px; padding: 7px 10px; text-align: center;
+        }
+        .pickPwErr { margin: 0; font-size: 12.5px; font-weight: 700; color: #b02a37; }
+        .pickPw .functionEditBtn { margin-top: 6px; }
+        .pickPw .functionEditBtn:disabled { opacity: .45; cursor: default; }
         /* ---------- the pad ---------- */
         .sigPadScrim {
           position: fixed; inset: 0; z-index: 1200; background: rgba(16,18,22,.55);
@@ -1231,56 +1250,107 @@ var pdfViewer = `
           background: #eef2f7; color: var(--steel);
         }
         .sbChkSpec.eq { background: #eaf6ef; color: #1a7f4b; }
+        .sbChkCount {
+          display: inline-block; margin-inline-start: 7px; background: #eef2f7; color: var(--steel);
+          border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 800; white-space: nowrap;
+        }
         .sbChkDash { color: var(--mist); }
         .sbChkMissing {
           display: inline-block; background: #eef0f2; color: var(--steel);
           border-radius: 999px; padding: 3px 11px; font-size: 11px; font-weight: 800; white-space: nowrap;
         }
         /* ---------- BOQ routing table ---------- */
-        .boqClassWrap { margin-top: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; background: #fff; }
-        .boqClassHead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .boqClassHead h3 { margin: 0; font-size: 14px; font-weight: 800; color: var(--ink); }
-        .boqClassBar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin: 8px 0; }
-        .boqSel { width: auto; min-width: 190px; }
-        .boqSearch { width: auto; min-width: 150px; }
-        .boqCounts { margin: 2px 0 8px; font-size: 12px; font-weight: 700; color: var(--steel); }
+        .boqModalScrim {
+          position: fixed; inset: 0; z-index: 1100; background: rgba(16,18,22,.5);
+          display: flex; align-items: center; justify-content: center; padding: 22px;
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .boqModal {
+          background: #fff; border-radius: 14px; width: 100%; height: 100%;
+          max-width: 1500px; display: flex; flex-direction: column; overflow: hidden;
+          box-shadow: 0 24px 70px rgba(0,0,0,.3);
+        }
+        .boqModalHead {
+          position: relative; display: flex; align-items: center; gap: 14px;
+          padding: 14px 18px; border-bottom: 1px solid var(--line);
+        }
+        .boqModalHead h3 { margin: 0; font-size: 15px; font-weight: 800; color: var(--ink); white-space: nowrap; }
+        .boqModalSearch {
+          flex: 1; max-width: 520px; margin: 0 auto; border: 1px solid var(--line);
+          border-radius: 999px; padding: 8px 16px; font-family: inherit; font-size: 13px;
+          background: #f7f8fa; color: var(--ink);
+        }
+        .boqModalSearch:focus { outline: none; border-color: var(--accent); background: #fff; }
+        .boqModalX {
+          border: none; background: none; cursor: pointer; color: var(--steel);
+          line-height: 0; padding: 6px; border-radius: 8px;
+        }
+        .boqModalX:hover { background: var(--accent-soft); color: var(--accent-ink); }
+        .boqModalBar {
+          display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+          padding: 10px 18px; border-bottom: 1px solid var(--line-soft); background: #fbfcfd;
+        }
+        .boqModalBar .boqHint { flex: 1; margin: 0; min-width: 240px; }
+        .boqModalBody { flex: 1; overflow: auto; padding: 10px 18px 18px; }
+        .boqModalFoot {
+          display: flex; align-items: center; justify-content: center; gap: 14px;
+          padding: 12px 18px; border-top: 1px solid var(--line); background: #fbfcfd;
+        }
+        .boqDirty { font-size: 12px; font-weight: 700; color: #8a6a12; }
+        .boqModalFoot .functionEditBtn:disabled { opacity: .45; cursor: default; }
+
+        .boqChap { border: 1px solid var(--line-soft); border-radius: 10px; margin-bottom: 8px; overflow: hidden; }
+        .boqChapHead {
+          display: flex; align-items: center; gap: 10px; width: 100%;
+          background: #f3f6fa; border: none; padding: 10px 14px; cursor: pointer;
+          font-family: inherit; font-size: 13px; font-weight: 800; color: var(--ink); text-align: start;
+        }
+        .boqChapHead:hover { background: #e9eef6; }
+        .boqChapHead svg { transition: transform .15s; color: var(--steel); flex-shrink: 0; }
+        .boqChapHead.open svg { transform: rotate(180deg); }
+        .boqChapName { flex: 1; }
+        .boqChapCount {
+          background: #dfe6ef; color: var(--steel); border-radius: 999px;
+          padding: 1px 9px; font-size: 11px; font-weight: 800;
+        }
+        .boqHint { margin: 4px 0 10px; font-size: 12px; color: var(--mist); line-height: 1.5; }
+        .boqCounts { margin: 0; font-size: 12px; font-weight: 700; color: var(--steel); }
         .boqCountPart { unicode-bidi: isolate; }
         .boqCountPart + .boqCountPart::before { content: " · "; color: var(--mist); unicode-bidi: isolate; }
         .boqEdited { color: var(--accent-ink); }
         .boqStage { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--steel); }
         .boqWarn { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #8a6a12; line-height: 1.5; }
-        .boqClassScroll { max-height: 460px; overflow: auto; border: 1px solid var(--line-soft); border-radius: 8px; }
         .boqClassTable { width: 100%; border-collapse: collapse; font-size: 12px; }
         .boqClassTable th {
-          position: sticky; top: 0; z-index: 1; background: #f3f6fa; color: var(--steel);
-          font-weight: 800; font-size: 11px; padding: 6px 6px; border-bottom: 1px solid var(--line); text-align: center;
+          position: sticky; top: 0; z-index: 1; background: #14315c; color: #fff;
+          font-weight: 800; font-size: 11px; padding: 7px 6px; text-align: center;
         }
         .boqClassTable td { padding: 5px 6px; border-bottom: 1px solid var(--line-soft); text-align: center; vertical-align: middle; }
         .boqClassTable tr.boqRowUser td { background: #f4f8ff; }
-        .boqClassTable .cCode { width: 118px; text-align: start; }
+        .boqClassTable .cCode { width: 122px; text-align: start; }
         .boqClassTable .cDesc { text-align: start; }
+        .boqClassTable .cGroup { width: 170px; }
         .boqClassTable .cUnit { width: 58px; }
         .boqClassTable .cQ { width: 62px; }
-        .boqClassTable .cFlag { width: 74px; }
-        .boqClassTable .cUndo { width: 36px; }
+        .boqClassTable .cFlag { width: 76px; }
+        .boqGroupIn { font-size: 11.5px; font-weight: 700; padding: 4px 7px; }
         .boqRowCode { display: block; font-weight: 800; font-size: 11.5px; }
         .boqRowSub { display: block; font-size: 10.5px; color: var(--mist); font-weight: 600; }
         .boqBulk { display: flex; gap: 3px; justify-content: center; margin-top: 3px; }
         .boqBulk button {
-          border: 1px solid var(--line); background: #fff; color: var(--mist);
+          border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.12); color: #fff;
           border-radius: 5px; width: 18px; height: 16px; line-height: 1; cursor: pointer;
           font-family: inherit; font-size: 10px; font-weight: 800; padding: 0;
         }
-        .boqBulk button:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .boqBulk button:hover { background: rgba(255,255,255,.28); }
         .boqTick {
           width: 22px; height: 22px; border-radius: 6px; border: 1px solid var(--line);
           background: #fff; color: transparent; cursor: pointer; font-family: inherit;
           font-size: 13px; font-weight: 900; line-height: 1; padding: 0;
         }
-        .boqTick:hover { border-color: var(--accent); }
+        .boqTick:hover { border-color: #1a7f4b; }
+        /* One colour for all three routes: a tick is a tick. */
         .boqTick.on { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
-        .boqTick.on.sd { background: #3a7bd5; border-color: #3a7bd5; }
-        .boqTick.on.lli { background: #14181f; border-color: #14181f; }
         .boqTick.on.longLead { background: #e08a12; border-color: #e08a12; }
         .boqActions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
         .boqBlock {
@@ -5828,6 +5898,15 @@ function boqClassifyPayload(rows) {
     text: (r.he || r.en || "").slice(0, 160)
   }));
 }
+// The model answers either "SDLX" or { f: "SDLX", g: "צנרת פלדה" }. The group
+// name is the thing one approval covers: steel pipe in eight diameters is one
+// piping specification, not eight submittals.
+function boqParseAnswer(raw) {
+  if (raw && typeof raw === "object") {
+    return { ...boqParseFlagString(raw.f), group: String(raw.g || "").trim() };
+  }
+  return { ...boqParseFlagString(raw), group: "" };
+}
 // "SDLX" -> submittal + shop drawing + ordered + long lead.
 function boqParseFlagString(s) {
   const v = String(s || "").toUpperCase();
@@ -5876,7 +5955,7 @@ async function boqClassify(tree, ask, onProgress) {
           out[item.code] = boqFallbackFlags("fallback");
           return;
         }
-        out[item.code] = { ...boqParseFlagString(raw), source: "ai" };
+        out[item.code] = { ...boqParseAnswer(raw), source: "ai" };
         asked++;
       });
     }
@@ -5891,11 +5970,33 @@ async function boqClassify(tree, ask, onProgress) {
 // What the screens read. A hand edit always wins over the automatic pass, and it
 // is stored apart so re-uploading the workbook never overwrites a decision.
 function boqFlagsOf(auto, overrides, code) {
-  const o = (overrides || {})[code];
-  if (o) return { submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli, longLead: !!o.longLead, source: "user" };
   const a = (auto || {})[code];
-  if (a) return { submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli, longLead: !!a.longLead, source: a.source || "auto" };
-  return { ...boqFlagsEmpty(), source: "none" };
+  const o = (overrides || {})[code];
+  const group = (o && o.group) || (a && a.group) || "";
+  if (o) return { submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli, longLead: !!o.longLead, group, source: "user" };
+  if (a) return { submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli, longLead: !!a.longLead, group, source: a.source || "auto" };
+  return { ...boqFlagsEmpty(), group, source: "none" };
+}
+// The families inside one sub-chapter: one entry per thing that gets approved
+// once. Without a group name from the model a line stands on its own.
+function boqGroupsOf(sub, auto, overrides, flagKey) {
+  const out = [];
+  (sub.items || []).forEach((item) => {
+    if (boqIsNote(item.unit)) return;
+    const f = boqFlagsOf(auto, overrides, item.code);
+    if (flagKey && !f[flagKey]) return;
+    const name = f.group || "";
+    const key = name || item.code;
+    let g = out.find((x) => x.key === key);
+    if (!g) {
+      g = { key, name, items: [], flags: boqFlagsEmpty() };
+      out.push(g);
+    }
+    g.items.push(item);
+    BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) g.flags[k] = true; });
+    if (f.longLead) g.flags.longLead = true;
+  });
+  return out;
 }
 // A group is in a tab when any of its lines is.
 function boqSubFlags(sub, auto, overrides) {
@@ -6485,7 +6586,8 @@ var SB_L = {
   chkSubmittal: { en: "Submittal", he: "סבמיטל" },
   chkMissing: { en: "Not submitted", he: "טרם הוגש" },
   chkAdd: { en: "Submittal", he: "סבמיטל" },
-  chkLines: { en: "The BOQ lines under this group", he: "שורות כתב הכמויות שתחת הקבוצה" },
+  chkLines: { en: "What needs approving under this group", he: "מה דורש אישור תחת הקבוצה" },
+  chkLinesShort: { en: "lines", he: "שורות" },
   chkEquiv: { en: "or equivalent", he: "שו״ע" },
   chkSpecific: { en: "specific product", he: "ציוד ספציפי" },
   chkDone: { en: "submitted", he: "הוגשו" },
@@ -7954,6 +8056,95 @@ function sbSeenKey(email) {
   return `submittal-seen:${String(email || "anon").toLowerCase()}`;
 }
 
+
+// src/components/PickPasswordModal.jsx
+// -----------------------------------------------------------------------------
+// The first sign-in. The invitation gives the address itself as the opening
+// password, because a corporate mail filter will often strip the invitation
+// link and leave the person with no way in at all. So the link is not the way
+// in — it is only a courtesy — and this is where a real password gets chosen.
+// It cannot be closed and cannot be skipped.
+// -----------------------------------------------------------------------------
+function PickPasswordModal({ isRTL, email, onDone }) {
+  const [pw, setPw] = useState6("");
+  const [pw2, setPw2] = useState6("");
+  const [busy, setBusy] = useState6(false);
+  const [err, setErr] = useState6(null);
+  const t = (he, en) => (isRTL ? he : en);
+  const tooShort = pw.length > 0 && pw.length < 8;
+  const sameAsEmail = pw.trim().toLowerCase() === String(email || "").trim().toLowerCase();
+  const mismatch = pw2.length > 0 && pw !== pw2;
+  const ready = pw.length >= 8 && pw === pw2 && !sameAsEmail;
+
+  const save = async () => {
+    setErr(null);
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: pw,
+        data: { must_change_password: false, password_set_at: new Date().toISOString() }
+      });
+      if (error) throw error;
+      onDone();
+    } catch (e) {
+      setErr(e && e.message || t("השמירה נכשלה", "Could not save the password"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const field = (label, value, set, auto) =>
+    sbH(
+      "label",
+      { className: "sbField" },
+      sbH("span", { className: "sbFieldLbl" }, label),
+      sbH("input", {
+        type: "password",
+        value,
+        autoComplete: auto,
+        dir: "ltr",
+        onChange: (e) => set(e.target.value),
+        style: {
+          padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8,
+          fontSize: 14, width: "100%", fontFamily: "inherit"
+        }
+      })
+    );
+
+  return createPortal(
+    sbH(
+      "div",
+      { className: "pickPwScrim", dir: isRTL ? "rtl" : "ltr" },
+      sbH(
+        "div",
+        { className: "pickPw" },
+        sbH("h3", null, t("בחירת סיסמה", "Choose your password")),
+        sbH(
+          "p",
+          { className: "pickPwHint" },
+          t(
+            "נכנסת עם כתובת המייל כסיסמה זמנית. בחרי עכשיו סיסמה קבועה — לפחות 8 תווים, ולא כתובת המייל.",
+            "You signed in with your address as a temporary password. Choose a permanent one now — at least 8 characters, and not your address."
+          )
+        ),
+        sbH("p", { className: "pickPwEmail", dir: "ltr" }, email || ""),
+        field(t("סיסמה חדשה", "New password"), pw, setPw, "new-password"),
+        field(t("שוב, לוודא", "Repeat it"), pw2, setPw2, "new-password"),
+        tooShort ? sbH("p", { className: "pickPwErr" }, t("לפחות 8 תווים.", "At least 8 characters.")) : null,
+        sameAsEmail && pw ? sbH("p", { className: "pickPwErr" }, t("זו הסיסמה הזמנית — צריך אחרת.", "That is the temporary one — pick a different password.")) : null,
+        mismatch ? sbH("p", { className: "pickPwErr" }, t("שתי הסיסמאות לא זהות.", "The two do not match.")) : null,
+        err ? sbH("p", { className: "pickPwErr" }, err) : null,
+        sbH(
+          "button",
+          { type: "button", className: "functionEditBtn", disabled: !ready || busy, onClick: save },
+          busy ? t("שומר…", "Saving…") : t("שמירה והמשך", "Save and continue")
+        )
+      )
+    ),
+    document.body
+  );
+}
+
 // src/components/SignaturePad.jsx
 // -----------------------------------------------------------------------------
 // A box to sign in, with a mouse or a finger. Pointer events cover both, so
@@ -8426,11 +8617,23 @@ function SubmittalFolder({
         });
       };
       const rowsChk = groups.map((sub) => {
-        const lines = (sub.items || []).filter(
-          (item) => !boqIsNote(item.unit) && boqFlagsOf(auto, boqFlags, item.code).submittal
-        );
+        // One line per thing that gets approved once — steel pipe in eight
+        // diameters is one specification, not eight submittals. The families
+        // come from the routing table; a line with no family stands alone.
+        const fams = boqGroupsOf(sub, auto, boqFlags, "submittal");
         const own = attached(sub.code, sub);
-        const perLine = lines.map((item) => ({ item, hits: attached(item.code, item) }));
+        const perLine = fams.map((fam) => {
+          const code = `${sub.code}#${fam.key}`;
+          const node = { he: fam.name || fam.items[0].he, en: fam.name || fam.items[0].en };
+          return {
+            item: { ...fam.items[0], code, groupName: fam.name, count: fam.items.length },
+            // A family of several lines is shown by its group code; a line that
+            // stands alone keeps its own item number.
+            label: fam.name ? sub.code : fam.items[0].code,
+            node,
+            hits: attached(code, node)
+          };
+        });
         const all = own.concat(perLine.flatMap((l) => l.hits));
         return { sub, lines: perLine, own, count: all.length };
       });
@@ -8526,11 +8729,18 @@ function SubmittalFolder({
                         return sbH(
                           "tr",
                           { key: l.item.code, className: "sbChkLine" },
-                          sbH("td", { dir: "ltr", className: "sbChkCode" }, l.item.code),
+                          sbH(
+                            "td",
+                            { dir: "ltr", className: "sbChkCode" },
+                            l.label,
+                            l.item.count > 1
+                              ? sbH("span", { className: "sbChkCount" }, `${l.item.count} ${L("chkLinesShort")}`)
+                              : null
+                          ),
                           sbH(
                             "td",
                             { className: "sbChkDesc" },
-                            boqText(l.item, lang),
+                            boqText(l.node, lang),
                             sbH(
                               "span",
                               { className: `sbChkSpec ${eq ? "eq" : ""}` },
@@ -8542,7 +8752,7 @@ function SubmittalFolder({
                             { className: "sbChkPills" },
                             l.hits.length ? l.hits.map(pill) : sbH("span", { className: "sbChkDash" }, "—")
                           ),
-                          sbH("td", { className: "sbChkAct" }, addBtn(l.item.code, l.item, ""))
+                          sbH("td", { className: "sbChkAct" }, addBtn(l.item.code, l.node, ""))
                         );
                       });
                       return [head, ...kids];
@@ -9041,11 +9251,30 @@ function PasswordResetPanel({ isRTL }) {
     setBusy(true);
     setMsg(null);
     try {
-      const redirectTo = window.location.origin + window.location.pathname;
-      const { error } = await supabase.auth.resetPasswordForEmail(clean, { redirectTo });
-      if (error) setMsg({ ok: false, text: error.message });
+      // Not a reset link: a corporate mail filter strips those, and then the
+      // person is locked out with nothing to click. The password goes back to
+      // being their own address, and the app makes them choose a new one the
+      // moment they sign in with it.
+      const { data, error } = await supabase.functions.invoke("admin-create-user", {
+        body: { action: "resetTemp", email: clean }
+      });
+      let detail = null;
+      if (error) {
+        detail = error.message;
+        try {
+          const b = await error.context.json();
+          if (b && b.error) detail = b.error;
+        } catch (e2) {
+        }
+      } else if (data && data.error) detail = data.error;
+      if (detail) setMsg({ ok: false, text: detail });
       else {
-        setMsg({ ok: true, text: (isRTL ? "נשלח מייל לאיפוס סיסמה ל: " : "Password reset email sent to: ") + clean });
+        setMsg({
+          ok: true,
+          text: (isRTL
+            ? "הסיסמה אופסה. הכניסה הבאה של המשתמש: שם משתמש וסיסמה הם כתובת המייל — "
+            : "Password reset. They sign in with their address as both name and password — ") + clean
+        });
         setEmail("");
       }
     } catch (e) {
@@ -9308,9 +9537,9 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
   };
   const grayPill = { display: "inline-flex", alignItems: "center", gap: 6, background: "#e9ebee", color: "#2b3440", border: "1px solid var(--line)", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
   const th = (label) => /* @__PURE__ */ React15.createElement("th", { style: headS }, label);
-  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: load, disabled: busy, style: { position: "absolute", insetInlineEnd: 0 } }, isRTL ? "רענון" : "Refresh")), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "חתימה" : "Signature"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
+  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), ), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
     const disc = discMap[(u.email || "").toLowerCase()];
-    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, sigOf(u) ? /* @__PURE__ */ React15.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 } }, /* @__PURE__ */ React15.createElement("img", { src: sigOf(u), alt: "", style: { height: 26, maxWidth: 90, objectFit: "contain" } }), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "הסרת חתימה" : "Remove signature", onClick: () => onSignatureChange && onSignatureChange(u.email, null), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 13, lineHeight: 1, padding: 0 } }, "✕")) : /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 13, strokeWidth: 2 }), " ", isRTL ? "העלאה" : "Upload", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onSignatureFile(u, e) }))), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
+    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
   })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen((o) => !o), style: grayPill }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 15, strokeWidth: 2 }), " ", isRTL ? "עריכת מסמך ה‑PDF" : "Edit PDF document")), pdfOpen && /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 520, marginInline: "auto", marginTop: 12, border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "#fbfcfd", textAlign: isRTL ? "right" : "left" } }, /* @__PURE__ */ React15.createElement("label", { style: { display: "block", fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה" : "Footer text"), /* @__PURE__ */ React15.createElement("textarea", { value: pdfFooter, onChange: (e) => setPdfFooter(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text shown at the bottom of the document", style: { width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" } }, pdfLogo ? /* @__PURE__ */ React15.createElement("img", { src: pdfLogo, alt: "", style: { height: 34, maxWidth: 120, objectFit: "contain" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfLogo }))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } }, pdfFooterImg ? /* @__PURE__ */ React15.createElement("img", { src: pdfFooterImg, alt: "", style: { height: 40, maxWidth: 240, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfFooterImg })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "גוון המסמך" : "Document color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setPdfAccent(pal.accent), style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: pdfAccent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })))), /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center", marginTop: 14 } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen(false), style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center", marginTop: 14, flexWrap: "wrap" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportCsv, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑Excel" : "Download Excel"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportPdf, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑PDF" : "Download PDF")))));
 }
 function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange }) {
@@ -9473,6 +9702,10 @@ var BOQ_T = {
   onlyFlagged: { en: "Only ticked lines", he: "רק שורות מסומנות" },
   onlyOpen: { en: "Only untouched lines", he: "רק שורות שלא נגעתי בהן" },
   search: { en: "Search", he: "חיפוש" },
+  searchAll: { en: "Search the whole bill of quantities", he: "חיפוש בכל כתב הכמויות" },
+  group: { en: "One approval covers", he: "אישור אחד מכסה" },
+  save: { en: "Save", he: "שמירה" },
+  unsaved: { en: "unsaved changes", he: "יש שינויים שלא נשמרו" },
   notes: { en: "notes", he: "הערות" },
   none: { en: "not routed", he: "לא משויך" },
   edited: { en: "edited by hand", he: "נערכו ידנית" },
@@ -9482,210 +9715,238 @@ var BOQ_T = {
   open: { en: "Open the routing table", he: "פתיחת טבלת הסיווג" }
 };
 
-function BoqClassifyTable({ isRTL, tree, overrides, onChange, onClose }) {
-  const lang = isRTL ? "he" : "en";
+function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose }) {
+  // The window carries its own language, like the submittal and the LLI table.
+  const [langOverride, setLangOverride] = useState6(null);
+  const lang = langOverride || (appIsRTL ? "he" : "en");
+  const isRTL = lang === "he";
   const L = (k) => sbText(BOQ_T[k], lang);
-  const [chapter, setChapter] = useState6("all");
+  const auto = (tree || {}).flags || {};
+  // Edits live here until Save is pressed, so closing with the X leaves the
+  // routing exactly as it was.
+  const [draft, setDraft] = useState6(overrides || {});
+  const [openCh, setOpenCh] = useState6(null);
   const [onlyFlagged, setOnlyFlagged] = useState6(false);
   const [q, setQ] = useState6("");
-  const auto = (tree || {}).flags || {};
+  const dirty = JSON.stringify(draft) !== JSON.stringify(overrides || {});
 
-  const rows = [];
-  ((tree || {}).chapters || []).forEach((ch) => {
-    ch.subs.forEach((sub) => {
-      sub.items.forEach((item) => {
-        if (boqIsNote(item.unit)) return;
-        rows.push({ ch, sub, item });
-      });
-    });
-  });
   const needle = q.trim().toLowerCase();
-  const shown = rows.filter((r) => {
-    if (chapter !== "all" && String(r.ch.c) !== chapter) return false;
-    if (onlyFlagged && !boqAnyFlag(boqFlagsOf(auto, overrides, r.item.code))) return false;
-    if (needle) {
-      const hay = `${r.item.code} ${r.item.he} ${r.item.en} ${r.sub.he} ${r.sub.en}`.toLowerCase();
-      if (hay.indexOf(needle) < 0) return false;
-    }
-    return true;
-  });
-  const counts = boqCountFlags(tree, auto, overrides);
-  const editedCount = Object.keys(overrides || {}).length;
+  const matches = (r) => {
+    if (onlyFlagged && !boqAnyFlag(boqFlagsOf(auto, draft, r.item.code))) return false;
+    if (!needle) return true;
+    const f = boqFlagsOf(auto, draft, r.item.code);
+    const hay = `${r.item.code} ${r.item.he} ${r.item.en} ${r.sub.he} ${r.sub.en} ${r.ch.he} ${r.ch.en} ${f.group}`.toLowerCase();
+    return hay.indexOf(needle) >= 0;
+  };
+  // Chapter by chapter, each with its own count, so nothing is drawn until it
+  // is opened — six hundred rows at once is a slow, unreadable wall.
+  const chapters = ((tree || {}).chapters || []).map((ch) => {
+    const rows = [];
+    ch.subs.forEach((sub) => sub.items.forEach((item) => {
+      if (boqIsNote(item.unit)) return;
+      const r = { ch, sub, item };
+      if (matches(r)) rows.push(r);
+    }));
+    return { ch, rows };
+  }).filter((c) => c.rows.length);
+  // A search should land on what it found, without a second click.
+  const openKeys = needle ? chapters.map((c) => c.ch.c) : (openCh == null ? [] : [openCh]);
 
+  const counts = boqCountFlags(tree, auto, draft);
   const toggle = (code, key) => {
-    const cur = boqFlagsOf(auto, overrides, code);
-    const next = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead };
+    const cur = boqFlagsOf(auto, draft, code);
+    const next = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead, group: cur.group };
     next[key] = !next[key];
-    // A long lead item is ordered by definition; unticking the order unticks it.
     if (key === "longLead" && next.longLead) next.lli = true;
     if (key === "lli" && !next.lli) next.longLead = false;
-    onChange({ ...overrides || {}, [code]: next });
+    setDraft({ ...draft, [code]: next });
   };
-  const resetRow = (code) => {
-    const next = { ...overrides || {} };
-    delete next[code];
-    onChange(next);
-  };
-  // Tick or clear a whole column for everything currently on screen — with six
-  // hundred lines, going one by one is not a plan.
-  const bulk = (key, value) => {
-    const next = { ...overrides || {} };
-    shown.forEach((r) => {
-      const cur = boqFlagsOf(auto, overrides, r.item.code);
-      const f = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead };
+  const bulk = (rows, key, value) => {
+    const next = { ...draft };
+    rows.forEach((r) => {
+      const cur = boqFlagsOf(auto, draft, r.item.code);
+      const f = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead, group: cur.group };
       f[key] = value;
       if (key === "longLead" && value) f.lli = true;
       if (key === "lli" && !value) f.longLead = false;
       next[r.item.code] = f;
     });
-    onChange(next);
+    setDraft(next);
   };
 
   const tick = (code, key, on) =>
     sbH(
       "button",
-      {
-        type: "button",
-        className: `boqTick ${on ? "on" : ""} ${key}`,
-        title: L(key),
-        onClick: () => toggle(code, key)
-      },
+      { type: "button", className: `boqTick ${on ? "on" : ""} ${key}`, title: L(key), onClick: () => toggle(code, key) },
       on ? "✓" : ""
     );
-
-  const colHead = (key) =>
+  const bulkBtns = (rows, key) =>
     sbH(
-      "th",
-      { className: `cFlag ${key}` },
-      sbH("span", null, L(key)),
-      sbH(
-        "span",
-        { className: "boqBulk" },
-        sbH("button", { type: "button", title: "✓", onClick: () => bulk(key, true) }, "✓"),
-        sbH("button", { type: "button", title: "✗", onClick: () => bulk(key, false) }, "✗")
-      )
+      "span",
+      { className: "boqBulk" },
+      sbH("button", { type: "button", title: "✓", onClick: () => bulk(rows, key, true) }, "✓"),
+      sbH("button", { type: "button", title: "✗", onClick: () => bulk(rows, key, false) }, "✗")
     );
 
-  return sbH(
-    "div",
-    { className: "boqClassWrap", dir: isRTL ? "rtl" : "ltr" },
+  return createPortal(
     sbH(
       "div",
-      { className: "boqClassHead" },
-      sbH("h3", null, L("title")),
-      sbH("button", { type: "button", className: "ghostBtn small", onClick: onClose }, L("close"))
-    ),
-    sbH("p", { className: "boqHint" }, L("hint")),
-    sbH(
-      "div",
-      { className: "boqClassBar" },
+      { className: "boqModalScrim", dir: isRTL ? "rtl" : "ltr" },
       sbH(
-        "select",
-        { className: "lliIn boqSel", value: chapter, onChange: (e) => setChapter(e.target.value) },
-        sbH("option", { value: "all" }, L("all")),
-        ((tree || {}).chapters || []).map((ch) =>
-          sbH("option", { key: ch.c, value: String(ch.c) }, `${ch.code} · ${boqText(ch, lang)}`)
-        )
-      ),
-      sbH("input", {
-        type: "text",
-        className: "lliIn boqSearch",
-        placeholder: L("search"),
-        value: q,
-        onChange: (e) => setQ(e.target.value)
-      }),
-      sbH(
-        "label",
-        { className: "lliShowHidden" },
-        sbH("input", { type: "checkbox", checked: onlyFlagged, onChange: (e) => setOnlyFlagged(e.target.checked) }),
-        " ",
-        L("onlyFlagged")
-      )
-    ),
-    // Each count is its own isolated box: a bare string of "464 סבמיטל · 10 SD"
-    // gets reordered by the bidi algorithm and the numbers end up against the
-    // wrong words.
-    sbH(
-      "p",
-      { className: "boqCounts" },
-      [
-        [counts.submittal, L("submittal")],
-        [counts.sd, L("sd")],
-        [counts.lli, L("lli")],
-        [counts.none, L("none")],
-        [counts.notes, L("notes")]
-      ].map(([n, label]) =>
-        sbH("span", { key: label, className: "boqCountPart" }, `${n} ${label}`)
-      ),
-      editedCount
-        ? sbH("span", { className: "boqCountPart boqEdited" }, `${editedCount} ${L("edited")}`)
-        : null
-    ),
-    shown.length === 0
-      ? sbH("p", { className: "lliNote" }, L("empty"))
-      : sbH(
+        "div",
+        { className: "boqModal" },
+        sbH(
           "div",
-          { className: "boqClassScroll" },
+          { className: "boqModalHead" },
+          // The cross comes first in the markup so that in Hebrew it lands in the
+          // top corner nearest the reader — top right — and in English, top left.
           sbH(
-            "table",
-            { className: "boqClassTable" },
-            sbH(
-              "thead",
-              null,
-              sbH(
-                "tr",
-                null,
-                sbH("th", { className: "cCode" }, L("code")),
-                sbH("th", { className: "cDesc" }, L("desc")),
-                sbH("th", { className: "cUnit" }, L("unit")),
-                sbH("th", { className: "cQ" }, L("qty")),
-                colHead("submittal"),
-                colHead("sd"),
-                colHead("lli"),
-                colHead("longLead"),
-                sbH("th", { className: "cUndo" }, "")
-              )
-            ),
-            sbH(
-              "tbody",
-              null,
-              shown.slice(0, 800).map((r) => {
-                const f = boqFlagsOf(auto, overrides, r.item.code);
+            "button",
+            { type: "button", className: "boqModalX", title: L("close"), onClick: onClose },
+            sbH(X4, { size: 18, strokeWidth: 2.2 })
+          ),
+          sbH("h3", null, L("title")),
+          sbH("input", {
+            type: "search",
+            className: "boqModalSearch",
+            placeholder: L("searchAll"),
+            value: q,
+            onChange: (e) => setQ(e.target.value)
+          }),
+          sbH(
+            "div",
+            { className: "sbLangToggle" },
+            sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
+            sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
+          )
+        ),
+        sbH(
+          "div",
+          { className: "boqModalBar" },
+          sbH("span", { className: "boqHint" }, L("hint")),
+          sbH(
+            "label",
+            { className: "lliShowHidden" },
+            sbH("input", { type: "checkbox", checked: onlyFlagged, onChange: (e) => setOnlyFlagged(e.target.checked) }),
+            " ",
+            L("onlyFlagged")
+          ),
+          sbH(
+            "p",
+            { className: "boqCounts" },
+            [
+              [counts.submittal, L("submittal")],
+              [counts.sd, L("sd")],
+              [counts.lli, L("lli")],
+              [counts.none, L("none")],
+              [counts.notes, L("notes")]
+            ].map(([n, label]) => sbH("span", { key: label, className: "boqCountPart" }, `${n} ${label}`))
+          )
+        ),
+        sbH(
+          "div",
+          { className: "boqModalBody" },
+          chapters.length === 0
+            ? sbH("p", { className: "lliNote" }, L("empty"))
+            : chapters.map(({ ch, rows }) => {
+                const open = openKeys.indexOf(ch.c) >= 0;
                 return sbH(
-                  "tr",
-                  { key: r.item.code, className: f.source === "user" ? "boqRowUser" : "" },
+                  "div",
+                  { key: ch.c, className: "boqChap" },
                   sbH(
-                    "td",
-                    { className: "cCode", dir: "ltr" },
-                    sbH("span", { className: "boqRowCode" }, r.item.code),
-                    sbH("span", { className: "boqRowSub" }, boqText(r.sub, lang))
+                    "button",
+                    {
+                      type: "button",
+                      className: `boqChapHead ${open ? "open" : ""}`,
+                      onClick: () => setOpenCh(open && openCh === ch.c ? null : ch.c)
+                    },
+                    sbH(ChevronDown2, { size: 16, strokeWidth: 2.4 }),
+                    sbH("span", { className: "boqChapName" }, `${ch.code} · ${boqText(ch, lang)}`),
+                    sbH("span", { className: "boqChapCount" }, rows.length)
                   ),
-                  sbH("td", { className: "cDesc" }, boqText(r.item, lang)),
-                  sbH("td", { className: "cUnit" }, boqUnit(r.item.unit, lang)),
-                  sbH("td", { className: "cQ", dir: "ltr" }, r.item.qty == null ? "—" : r.item.qty),
-                  sbH("td", { className: "cFlag" }, tick(r.item.code, "submittal", f.submittal)),
-                  sbH("td", { className: "cFlag" }, tick(r.item.code, "sd", f.sd)),
-                  sbH("td", { className: "cFlag" }, tick(r.item.code, "lli", f.lli)),
-                  sbH("td", { className: "cFlag" }, tick(r.item.code, "longLead", f.longLead)),
-                  sbH(
-                    "td",
-                    { className: "cUndo" },
-                    f.source === "user"
-                      ? sbH(
-                          "button",
-                          { type: "button", className: "sbIconBtn", title: L("reset"), onClick: () => resetRow(r.item.code) },
-                          sbH(RotateCcw, { size: 13, strokeWidth: 2 })
+                  open
+                    ? sbH(
+                        "table",
+                        { className: "boqClassTable" },
+                        sbH(
+                          "thead",
+                          null,
+                          sbH(
+                            "tr",
+                            null,
+                            sbH("th", { className: "cCode" }, L("code")),
+                            sbH("th", { className: "cDesc" }, L("desc")),
+                            sbH("th", { className: "cGroup" }, L("group")),
+                            sbH("th", { className: "cUnit" }, L("unit")),
+                            sbH("th", { className: "cQ" }, L("qty")),
+                            ["submittal", "sd", "lli", "longLead"].map((k) =>
+                              sbH("th", { key: k, className: `cFlag ${k}` }, sbH("span", null, L(k)), bulkBtns(rows, k))
+                            )
+                          )
+                        ),
+                        sbH(
+                          "tbody",
+                          null,
+                          rows.map((r) => {
+                            const f = boqFlagsOf(auto, draft, r.item.code);
+                            return sbH(
+                              "tr",
+                              { key: r.item.code, className: f.source === "user" ? "boqRowUser" : "" },
+                              sbH(
+                                "td",
+                                { className: "cCode", dir: "ltr" },
+                                sbH("span", { className: "boqRowCode" }, r.item.code),
+                                sbH("span", { className: "boqRowSub" }, boqText(r.sub, lang))
+                              ),
+                              sbH("td", { className: "cDesc" }, boqText(r.item, lang)),
+                              // The family this line belongs to. Steel pipe in eight
+                              // diameters is one specification, so eight lines carry
+                              // one name and the checklist asks for one submittal.
+                              sbH(
+                                "td",
+                                { className: "cGroup" },
+                                sbH("input", {
+                                  type: "text",
+                                  className: "lliIn boqGroupIn",
+                                  value: f.group,
+                                  placeholder: boqText(r.sub, lang),
+                                  onChange: (e) =>
+                                    setDraft({
+                                      ...draft,
+                                      [r.item.code]: {
+                                        submittal: f.submittal, sd: f.sd, lli: f.lli, longLead: f.longLead,
+                                        group: e.target.value
+                                      }
+                                    })
+                                })
+                              ),
+                              sbH("td", { className: "cUnit" }, boqUnit(r.item.unit, lang)),
+                              sbH("td", { className: "cQ", dir: "ltr" }, r.item.qty == null ? "—" : r.item.qty),
+                              sbH("td", { className: "cFlag" }, tick(r.item.code, "submittal", f.submittal)),
+                              sbH("td", { className: "cFlag" }, tick(r.item.code, "sd", f.sd)),
+                              sbH("td", { className: "cFlag" }, tick(r.item.code, "lli", f.lli)),
+                              sbH("td", { className: "cFlag" }, tick(r.item.code, "longLead", f.longLead))
+                            );
+                          })
                         )
-                      : null
-                  )
+                      )
+                    : null
                 );
               })
-            )
-          ),
-          shown.length > 800
-            ? sbH("p", { className: "lliNote" }, `… ${shown.length - 800}`)
-            : null
+        ),
+        sbH(
+          "div",
+          { className: "boqModalFoot" },
+          dirty ? sbH("span", { className: "boqDirty" }, L("unsaved")) : null,
+          sbH(
+            "button",
+            { type: "button", className: "functionEditBtn", disabled: !dirty, onClick: () => { onChange(draft); onClose(); } },
+            L("save")
+          )
         )
+      )
+    ),
+    document.body
   );
 }
 
@@ -9857,7 +10118,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 12, flexWrap: "wrap" } }, [1, 2, 3, 4].map((n) => /* @__PURE__ */ React15.createElement("button", { key: n, type: "button", style: { flex: 1, minWidth: 108, display: "flex", alignItems: "center", justifyContent: "center", gap: 6, background: "#eef0f2", border: "1px solid var(--line-soft)", borderRadius: 8, padding: "10px 8px", fontSize: 13, fontWeight: 600, color: "var(--steel)", cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), (isRTL ? "לעלות " : "Upload ") + n))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -9921,6 +10182,9 @@ function ProjectDashboardApp() {
   const [pwMsg, setPwMsg] = useState6(null);
   const pwDoneRef = useRef5(false);
   const [showDisclaimer, setShowDisclaimer] = useState6(false);
+  // The first sign-in, when the password is still the address itself.
+  const [showPickPassword, setShowPickPassword] = useState6(false);
+  const [pendingDisclaimer, setPendingDisclaimer] = useState6(false);
   const [disclaimerChecked, setDisclaimerChecked] = useState6(false);
   const [sessionGrants, setSessionGrants] = useState6([]);
   const [loggedInEmail, setLoggedInEmail] = useState6(null);
@@ -10300,8 +10564,19 @@ function ProjectDashboardApp() {
         setIsAuthenticated(true);
         setLoggedInEmail(email);
         setAppRole(role);
+        // A corporate mail filter often strips the invitation link, so the
+        // invitation says instead: your first password is your own address.
+        // Anyone who signs in with exactly that has not chosen a password yet,
+        // and is asked for one before anything else happens. The disclaimer
+        // waits until they have.
+        const mustPick = password.trim().toLowerCase() === email ||
+          !!(data.user && data.user.user_metadata && data.user.user_metadata.must_change_password);
         const disclaimerOk = data.user && data.user.user_metadata && data.user.user_metadata.disclaimer_version === DISCLAIMER_VERSION;
-        if ((role === "contractor" || role === "client") && !disclaimerOk) {
+        const needsDisclaimer = (role === "contractor" || role === "client") && !disclaimerOk;
+        if (mustPick) {
+          setPendingDisclaimer(needsDisclaimer);
+          setShowPickPassword(true);
+        } else if (needsDisclaimer) {
           setDisclaimerChecked(false);
           setShowDisclaimer(true);
         }
@@ -11423,7 +11698,18 @@ function ProjectDashboardApp() {
         /* @__PURE__ */ React15.createElement("p", { className: "scheduleChangeFoot" }, isRTL ? 'הרשימה נשמרת גם ב"הערות קריטיות ללו״ז" עד ההעלאה הבאה.' : "This list is also kept in the schedule notes until the next upload."),
         /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setScheduleChangeReport(null) }, isRTL ? "הבנתי" : "Got it")
       )
-    ), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: t.dir, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: t.dir, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: t.dir, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+    ), showPickPassword && /* @__PURE__ */ React15.createElement(PickPasswordModal, {
+      isRTL,
+      email: loggedInEmail,
+      onDone: () => {
+        setShowPickPassword(false);
+        if (pendingDisclaimer) {
+          setDisclaimerChecked(false);
+          setShowDisclaimer(true);
+          setPendingDisclaimer(false);
+        }
+      }
+    }), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: t.dir, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: t.dir, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: t.dir, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
