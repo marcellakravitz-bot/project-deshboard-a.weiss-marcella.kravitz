@@ -1148,9 +1148,23 @@ var pdfViewer = `
         .lliMixed { color: #e08a12; font-weight: 900; margin-inline-start: 2px; }
         .sbChk { margin-top: 18px; }
         .sbChkBar { text-align: center; font-size: 12px; font-weight: 800; color: var(--steel); margin: 4px 0 6px; }
+        /* Fixed layout, and every width declared: a checklist line can carry a
+           three-line paragraph from the bill of quantities, and with automatic
+           layout that one row decided the width of the whole table — so opening
+           a group made every row jump sideways. */
+        .sbChkTable { table-layout: fixed; }
         .sbChkTable td { text-align: center; }
-        .sbChkTable .sbChkCode { width: 96px; font-weight: 800; }
-        .sbChkTable .sbChkDesc { text-align: start; }
+        .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 150px; }
+        .sbChkTable th.cPills, .sbChkTable td.sbChkPills { width: 210px; }
+        .sbChkTable th.cAct, .sbChkTable td.sbChkAct { width: 118px; }
+        .sbChkTable .sbChkCode { font-weight: 800; }
+        .sbChkTable .sbChkDesc { text-align: start; overflow-wrap: anywhere; }
+        /* Three lines is enough to recognise the item; the full wording is on
+           the row as a tooltip. */
+        .sbChkDescText {
+          display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+          overflow: hidden; line-height: 1.45;
+        }
         .sbChkTable tbody tr.sbChkOn td { background: #f2faf5; }
         /* ---------- the reviewer's page ---------- */
         /* The page is a flex item with auto inline margins, so it shrinks to fit
@@ -1241,7 +1255,7 @@ var pdfViewer = `
           cursor: pointer; font-family: inherit; font-size: 11px; font-weight: 800; white-space: nowrap;
         }
         .sbChkAdd:hover { background: #14181f; border-color: #14181f; color: #fff; }
-        .sbChkAct { width: 104px; }
+
         .sbChkTable tr.sbChkLine td { background: #fbfcfd; }
         .sbChkTable tr.sbChkLine .sbChkCode { padding-inline-start: 22px; font-weight: 700; color: var(--steel); }
         .sbChkSpec {
@@ -6571,6 +6585,7 @@ var SB_L = {
   create: { en: "Create submittal", he: "צור סבמיטל" },
   noSubmittals: { en: "No submittals in this folder yet.", he: "עדיין אין סבמיטלים בתיקייה הזו." },
   trackingList: { en: "Tracking list", he: "רשימת מעקב" },
+  submittalList: { en: "Submittal list", he: "רשימת סבמיטלים" },
   checklist: { en: "Checklist from the bill of quantities", he: "צ׳ק‑ליסט מכתב הכמויות" },
   checklistHint: {
     en: "Every group in this discipline that needs an approval. A green line already has one.",
@@ -8550,7 +8565,7 @@ function SubmittalFolder({
             L("create")
           )
         )
-      : sbH("p", { className: "submittalPanelNote" }, canSign ? L("viewSignOnly") : L("viewOnly")),
+      : null,
     // What the AI split out of one set of specifications and is still waiting
     // to be done. It empties itself as each one is sent.
     canEdit && (queue || []).length
@@ -8666,6 +8681,7 @@ function SubmittalFolder({
               L("chkAdd")
             )
           : null;
+      if (!canEdit) return null;
       return sbH(
         "div",
         { className: "sbChk" },
@@ -8684,11 +8700,15 @@ function SubmittalFolder({
                   sbH(
                     "table",
                     { className: "sbTable sbChkTable" },
+                    // The widths live on the header row because the table is
+                    // laid out fixed: opening a group must not be allowed to
+                    // re-measure every column and shift the rows under the
+                    // cursor.
                     sbH("thead", null, sbH("tr", null,
-                      sbH("th", null, L("chkItem")),
-                      sbH("th", null, L("chkDesc")),
-                      sbH("th", null, L("chkSubmittal")),
-                      sbH("th", null, "")
+                      sbH("th", { className: "cCode" }, L("chkItem")),
+                      sbH("th", { className: "cDesc" }, L("chkDesc")),
+                      sbH("th", { className: "cPills" }, L("chkSubmittal")),
+                      sbH("th", { className: "cAct" }, "")
                     )),
                     sbH("tbody", null, rowsChk.flatMap((r) => {
                       const open = openChk === r.sub.code;
@@ -8739,8 +8759,8 @@ function SubmittalFolder({
                           ),
                           sbH(
                             "td",
-                            { className: "sbChkDesc" },
-                            boqText(l.node, lang),
+                            { className: "sbChkDesc", title: boqText(l.node, lang) },
+                            sbH("span", { className: "sbChkDescText" }, boqText(l.node, lang)),
                             sbH(
                               "span",
                               { className: `sbChkSpec ${eq ? "eq" : ""}` },
@@ -8762,7 +8782,7 @@ function SubmittalFolder({
               )
       );
     })(),
-    sbH("div", { className: "sbListTitle" }, L("trackingList")),
+    sbH("div", { className: "sbListTitle" }, canEdit ? L("trackingList") : L("submittalList")),
     rows.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
       : sbH(
