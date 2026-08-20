@@ -171,7 +171,8 @@ import {
   FileQuestion,
   Leaf,
   Users,
-  Camera
+  Camera,
+  Ruler
 } from "lucide-react";
 var COPY = {
   he: {
@@ -199,6 +200,7 @@ var COPY = {
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
       { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
+      { key: "sd", icon: Ruler, title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
       { key: "contacts", icon: Users, title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
@@ -318,6 +320,7 @@ var COPY = {
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
       { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
+      { key: "sd", icon: Ruler, title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
       { key: "contacts", icon: Users, title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
@@ -1030,7 +1033,10 @@ var pdfViewer = `
           font-size: 12.5px; font-weight: 800; color: var(--steel); letter-spacing: .3px;
           text-align: center;
         }
-        .sbCreateWrap { display: flex; justify-content: center; }
+        /* Stacked, not side by side: "create" stays the centred primary action
+           it was asked to be, and the bulk option sits quietly under it. */
+        .sbCreateWrap { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+        .sbBulkBtn { cursor: pointer; font-family: inherit; }
         .sbTableWrap { overflow-x: auto; margin-top: 8px; }
         .sbTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
         .sbTable th {
@@ -1172,6 +1178,23 @@ var pdfViewer = `
           border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 800; white-space: nowrap;
         }
         .lliMixed { color: #e08a12; font-weight: 900; margin-inline-start: 2px; }
+        /* ---------- SD (shop drawings) ---------- */
+        .sdTable .cSec { width: 150px; text-align: start; }
+        .sdTable .cDwg { width: 105px; }
+        .sdTable .cDesc { width: 24%; text-align: start; }
+        .sdTable .cOwner { width: 120px; }
+        .sdTable .cStat { width: 150px; }
+        .sdTable .cDate { width: 128px; }
+        .sdTable .cFile { width: 92px; }
+        .sdTable .cAct { width: 42px; }
+        .sdSel { font-size: 11.5px; }
+        .sdFileCell { display: flex; align-items: center; justify-content: center; gap: 2px; }
+        .sdUpBtn {
+          display: inline-flex; align-items: center; justify-content: center;
+          border: 1px dashed var(--line); border-radius: 7px; padding: 4px 9px;
+          font-size: 11px; font-weight: 800; color: var(--steel); cursor: pointer; background: #fff;
+        }
+        .sdUpBtn:hover { border-color: var(--accent); color: var(--accent-ink); }
         .sbChk { margin-top: 18px; }
         .sbChkBar { text-align: center; font-size: 12px; font-weight: 800; color: var(--steel); margin: 4px 0 6px; }
         /* Fixed layout, and every width declared: a checklist line can carry a
@@ -1226,6 +1249,13 @@ var pdfViewer = `
         }
         .sbSignedBox img { height: 46px; max-width: 190px; object-fit: contain; }
         .sbSignedMeta { display: flex; flex-direction: column; font-size: 11px; font-weight: 700; color: var(--mist); }
+        .sbClosedBar {
+          display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+          margin-top: 16px; padding: 12px 16px; border: 1px solid #cfe3d6;
+          border-radius: 10px; background: #f2faf5; color: #14532d;
+          font-size: 13px; font-weight: 800;
+        }
+        .sbClosedNote { font-weight: 600; color: var(--steel); }
         .sbSignHint { text-align: center; font-size: 12px; color: var(--mist); margin: 0 0 14px; }
         .sbSignPanel .sbSaveRow { padding-bottom: 14px; }
 
@@ -4553,6 +4583,8 @@ function CardView({
   boqFlags,
   lliRows,
   onChangeLliRows,
+  sdRows,
+  onChangeSdRows,
   userPerms
 }) {
   const [editOpen, setEditOpen] = useState5(false);
@@ -4573,11 +4605,12 @@ function CardView({
   const isContacts = cardKey === "contacts";
   const isSubmittal = cardKey === "submittal";
   const isLli = cardKey === "lli";
+  const isSd = cardKey === "sd";
   const showRooms = !!roomsDataSource;
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
-  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
     FinishesByRoomCard,
     {
       dataSource: roomsDataSource,
@@ -4599,7 +4632,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -4610,7 +4643,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -6440,6 +6473,358 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   );
 }
 
+// src/cards/SdCard.jsx
+// -----------------------------------------------------------------------------
+// SD — shop drawings. The third of the three boards, and the one that answers
+// HOW: a staircase, a bulkhead, a duct run are not chosen from a catalogue, they
+// are drawn, approved and only then built.
+//
+// The rows come from the same routing table as the other two boards: a group is
+// here when any of its lines is ticked SD. Everything a person fills in lives
+// beside the bill of quantities, keyed by the same code, so re-uploading the BOQ
+// never wipes it. A project with no BOQ builds its list by hand.
+// -----------------------------------------------------------------------------
+var SD_STATUSES = [
+  { key: "required", en: "Required", he: "נדרש", color: "#9aa3af" },
+  { key: "drafting", en: "In preparation", he: "בהכנה", color: "#3a7bd5" },
+  { key: "submitted", en: "Submitted", he: "הוגש", color: "#7a5cd6" },
+  { key: "approvedNoted", en: "Approved as noted", he: "מאושר בכפוף להערות", color: "#e08a12" },
+  { key: "approved", en: "Approved", he: "מאושר", color: "#1a7f4b" },
+  { key: "revise", en: "Resubmit", he: "הגשה מחדש", color: "#c0392b" }
+];
+var SD_DONE = ["approved", "approvedNoted"];
+function sdStatus(key) {
+  return SD_STATUSES.find((s) => s.key === key) || SD_STATUSES[0];
+}
+function sdBlankRow() {
+  return { dwgNo: "", desc: "", owner: "", status: "required", submittedAt: "", approvedAt: "", file: null, hidden: false };
+}
+function sdRowOf(rows, code) {
+  return { ...sdBlankRow(), ...(rows || {})[code] || {} };
+}
+var SD_L = {
+  title: { en: "SD — shop drawings", he: "SD — תוכניות ייצור" },
+  allCats: { en: "All categories", he: "כל הקטגוריות" },
+  section: { en: "BOQ item", he: "סעיף בכתב הכמויות" },
+  dwgNo: { en: "Drawing no.", he: "מספר תוכנית" },
+  desc: { en: "Description", he: "תיאור" },
+  owner: { en: "In the hands of", he: "מי מטפל" },
+  status: { en: "Status", he: "סטטוס" },
+  submittedAt: { en: "Submitted", he: "תאריך הגשה" },
+  approvedAt: { en: "Approved", he: "תאריך אישור" },
+  file: { en: "Drawing", he: "קובץ" },
+  upload: { en: "Upload", he: "העלאה" },
+  open: { en: "Open", he: "פתיחה" },
+  remove: { en: "Remove the file", he: "הסרת הקובץ" },
+  hide: { en: "Not a shop drawing", he: "לא נדרשת תוכנית" },
+  restore: { en: "Restore", he: "החזרה" },
+  showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
+  onlyOpen: { en: "Only what is still open", he: "רק מה שעדיין פתוח" },
+  addRow: { en: "Add a row", he: "הוספת שורה" },
+  manual: { en: "Manual", he: "ידני" },
+  rowsOf: { en: "drawings", he: "תוכניות" },
+  approvedOf: { en: "approved", he: "אושרו" },
+  empty: { en: "Nothing in this category needs a shop drawing.", he: "אין בקטגוריה הזו סעיף שדורש תוכנית ייצור." },
+  noBoq: {
+    en: "No bill of quantities uploaded for this project yet. Upload one in project settings, or build the list by hand below.",
+    he: "עדיין לא הועלה כתב כמויות לפרויקט הזה. אפשר להעלות אותו בהגדרות הפרויקט, או לבנות את הרשימה ידנית כאן."
+  }
+};
+
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId }) {
+  const [langOverride, setLangOverride] = useState6(null);
+  const lang = langOverride || (appIsRTL ? "he" : "en");
+  const isRTL = lang === "he";
+  const [cat, setCat] = useState6("all");
+  const [showHidden, setShowHidden] = useState6(false);
+  const [onlyOpen, setOnlyOpen] = useState6(false);
+  const [busyRow, setBusyRow] = useState6(null);
+  const L = (k) => sbText(SD_L[k] || { en: k, he: k }, lang);
+
+  const data = rows || {};
+  const patch = (code, next) => {
+    if (!onChangeRows) return;
+    onChangeRows({ ...data, [code]: { ...sdRowOf(data, code), ...next } });
+  };
+
+  const auto = (boqData || {}).flags || {};
+  const boqRows = (((boqData || {}).chapters) || []).flatMap((ch) =>
+    ch.subs.map((sub) => {
+      const f = boqSubFlags(sub, auto, boqFlags);
+      return {
+        code: sub.code,
+        chapter: ch,
+        sub,
+        source: "boq",
+        category: boqCategoryOf(sub),
+        title: boqText(sub, lang),
+        routed: f.sd,
+        defaultHidden: !f.sd
+      };
+    })
+  );
+  const manualRows = Object.keys(data)
+    .filter((k) => k.indexOf("s-") === 0)
+    .map((k) => ({
+      code: k,
+      chapter: null,
+      sub: null,
+      source: "manual",
+      category: (data[k] || {}).category || null,
+      title: (data[k] || {}).desc || "",
+      defaultHidden: false
+    }));
+  const all = boqRows.concat(manualRows);
+  const isHidden = (r) => {
+    const saved = (data[r.code] || {}).hidden;
+    return saved === void 0 ? r.defaultHidden : !!saved;
+  };
+  const isDone = (r) => SD_DONE.indexOf(sdRowOf(data, r.code).status) >= 0;
+  const visible = all.filter((r) =>
+    (cat === "all" || r.category === cat) &&
+    (showHidden || !isHidden(r)) &&
+    (!onlyOpen || !isDone(r))
+  );
+  const doneCount = all.filter((r) => (showHidden || !isHidden(r)) && (cat === "all" || r.category === cat) && isDone(r)).length;
+
+  const groups = [];
+  visible.forEach((r) => {
+    const key = r.chapter ? r.chapter.code : "manual";
+    let g = groups.find((x) => x.key === key);
+    if (!g) {
+      g = { key, title: r.chapter ? `${r.chapter.code} · ${boqText(r.chapter, lang)}` : L("manual"), rows: [] };
+      groups.push(g);
+    }
+    g.rows.push(r);
+  });
+
+  // A drawing is a file like any other submittal attachment and travels the same
+  // road: the storage bucket first, an inline copy only if the bucket is out.
+  const onFile = async (code, e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusyRow(code);
+    try {
+      const stored = await sbUploadFile(projectId, `sd-${code}`, f);
+      patch(code, { file: { ...stored, name: f.name, size: f.size } });
+    } catch (ex) {
+      console.warn("[awdash] sd file upload failed", ex);
+    } finally {
+      setBusyRow(null);
+    }
+  };
+  const openFile = async (att) => {
+    const url = await sbFileUrl(att);
+    if (url) window.open(url, "_blank", "noopener");
+  };
+  const addManual = () => {
+    patch(`s-${Date.now()}`, { ...sdBlankRow(), category: cat === "all" ? null : cat });
+  };
+
+  const catChip = (key, label) =>
+    sbH(
+      "button",
+      { key, type: "button", className: `lliChip ${cat === key ? "on" : ""}`, onClick: () => setCat(key) },
+      label
+    );
+
+  return sbH(
+    "div",
+    { className: "lliCard sdCard", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "lliHead" },
+      sbH("h2", { className: "lliTitle" }, L("title")),
+      sbH(
+        "div",
+        { className: "sbLangToggle" },
+        sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
+        sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
+      )
+    ),
+    sbH(
+      "div",
+      { className: "lliFilter" },
+      catChip("all", L("allCats")),
+      SUBMITTAL_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
+    ),
+    sbH(
+      "div",
+      { className: "lliBar" },
+      sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${doneCount} ${L("approvedOf")}`),
+      sbH(
+        "label",
+        { className: "lliShowHidden" },
+        sbH("input", { type: "checkbox", checked: onlyOpen, onChange: (e) => setOnlyOpen(e.target.checked) }),
+        " ",
+        L("onlyOpen")
+      ),
+      sbH(
+        "label",
+        { className: "lliShowHidden" },
+        sbH("input", { type: "checkbox", checked: showHidden, onChange: (e) => setShowHidden(e.target.checked) }),
+        " ",
+        L("showHidden")
+      ),
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null
+    ),
+    !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
+    groups.length === 0
+      ? sbH("p", { className: "lliNote" }, L("empty"))
+      : sbH(
+          "div",
+          { className: "lliTableWrap" },
+          sbH(
+            "table",
+            { className: "lliTable sdTable" },
+            sbH(
+              "thead",
+              null,
+              sbH(
+                "tr",
+                null,
+                sbH("th", { className: "cSec" }, L("section")),
+                sbH("th", { className: "cDwg" }, L("dwgNo")),
+                sbH("th", { className: "cDesc" }, L("desc")),
+                sbH("th", { className: "cOwner" }, L("owner")),
+                sbH("th", { className: "cStat" }, L("status")),
+                sbH("th", { className: "cDate" }, L("submittedAt")),
+                sbH("th", { className: "cDate" }, L("approvedAt")),
+                sbH("th", { className: "cFile" }, L("file")),
+                canEdit ? sbH("th", { className: "cAct" }, "") : null
+              )
+            ),
+            groups.map((g) =>
+              sbH(
+                "tbody",
+                { key: g.key },
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 9 : 8 }, g.title)),
+                g.rows.map((r) => {
+                  const v = sdRowOf(data, r.code);
+                  const hidden = isHidden(r);
+                  const st = sdStatus(v.status);
+                  const done = SD_DONE.indexOf(v.status) >= 0;
+                  return sbH(
+                    "tr",
+                    { key: r.code, className: hidden ? "lliOff" : "" },
+                    sbH(
+                      "td",
+                      { className: "cSec" },
+                      sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
+                      r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cDwg" },
+                      sbH("input", { type: "text", className: "lliIn", dir: "ltr", value: v.dwgNo, readOnly: !canEdit, onChange: (e) => patch(r.code, { dwgNo: e.target.value }) })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cDesc" },
+                      sbH("textarea", {
+                        className: "lliIn lliDesc",
+                        rows: 2,
+                        value: v.desc || r.title,
+                        readOnly: !canEdit,
+                        onChange: (e) => patch(r.code, { desc: e.target.value })
+                      })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cOwner" },
+                      sbH("input", { type: "text", className: "lliIn", value: v.owner, readOnly: !canEdit, onChange: (e) => patch(r.code, { owner: e.target.value }) })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cStat" },
+                      sbH(
+                        "select",
+                        {
+                          className: "lliIn lliSel sdSel",
+                          value: v.status,
+                          disabled: !canEdit,
+                          style: { color: st.color },
+                          onChange: (e) => {
+                            const next = e.target.value;
+                            const p = { status: next };
+                            // Dates that write themselves are dates that are
+                            // actually there when someone comes looking.
+                            const today = new Date().toISOString().slice(0, 10);
+                            if (next === "submitted" && !v.submittedAt) p.submittedAt = today;
+                            if (SD_DONE.indexOf(next) >= 0 && !v.approvedAt) p.approvedAt = today;
+                            patch(r.code, p);
+                          }
+                        },
+                        SD_STATUSES.map((s) => sbH("option", { key: s.key, value: s.key }, lang === "he" ? s.he : s.en))
+                      )
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cDate" },
+                      sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.submittedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { submittedAt: e.target.value }) })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cDate" },
+                      // An approval date before there is an approval is a promise,
+                      // not a fact, so the box only opens once the status says so.
+                      done
+                        ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.approvedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { approvedAt: e.target.value }) })
+                        : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cFile" },
+                      v.file
+                        ? sbH(
+                            "div",
+                            { className: "sdFileCell" },
+                            sbH(
+                              "button",
+                              { type: "button", className: "sbLinkBtn", title: v.file.name || "", onClick: () => openFile(v.file) },
+                              sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
+                              " ",
+                              L("open")
+                            ),
+                            canEdit
+                              ? sbH("button", { type: "button", className: "lliImgClear", title: L("remove"), onClick: () => patch(r.code, { file: null }) }, "×")
+                              : null
+                          )
+                        : canEdit
+                          ? sbH(
+                              "label",
+                              { className: "sdUpBtn" },
+                              busyRow === r.code ? "…" : L("upload"),
+                              sbH("input", { type: "file", accept: "application/pdf,image/*", style: { display: "none" }, onChange: (e) => onFile(r.code, e) })
+                            )
+                          : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cAct" },
+                          sbH(
+                            "button",
+                            {
+                              type: "button",
+                              className: "sbIconBtn",
+                              title: hidden ? L("restore") : L("hide"),
+                              onClick: () => patch(r.code, { hidden: !hidden })
+                            },
+                            sbH(hidden ? RotateCcw : Trash2, { size: 14, strokeWidth: 2 })
+                          )
+                        )
+                      : null
+                  );
+                })
+              )
+            )
+          )
+        )
+  );
+}
+
 // src/cards/SubmittalCard.jsx
 // -----------------------------------------------------------------------------
 // Submittal folders. Eight categories, each one a folder that holds its own
@@ -6632,6 +7017,12 @@ var SB_L = {
   create: { en: "Create submittal", he: "צור סבמיטל" },
   noSubmittals: { en: "No submittals in this folder yet.", he: "עדיין אין סבמיטלים בתיקייה הזו." },
   trackingList: { en: "Tracking list", he: "רשימת מעקב" },
+  bulkCreate: { en: "Several at once", he: "כמה טפסים יחד" },
+  bulkHint: {
+    en: "Pick several files — each one becomes its own submittal, with that file already attached.",
+    he: "בוחרים כמה קבצים — כל אחד הופך לסבמיטל משלו, עם הקובץ שלו כבר מצורף."
+  },
+  bulkWorking: { en: "Creating", he: "יוצר" },
   submittalList: { en: "Submittal list", he: "רשימת סבמיטלים" },
   checklist: { en: "Checklist from the bill of quantities", he: "צ׳ק‑ליסט מכתב הכמויות" },
   checklistHint: {
@@ -6682,6 +7073,18 @@ var SB_L = {
   },
   saveSignature: { en: "Save signature", he: "שמירת החתימה" },
   signHere: { en: "Sign", he: "חתימה" },
+  required: { en: "required", he: "חובה" },
+  commentsPlaceholder: { en: "What has to change, or what the approval is conditional on", he: "מה נדרש לתקן, או במה מותנה האישור" },
+  fileDecision: { en: "File the decision", he: "רישום ההחלטה" },
+  pickDecision: { en: "Choose one of the four.", he: "בוחרים אחת מארבע האפשרויות." },
+  needComment: { en: "This decision needs a note.", he: "ההחלטה הזו דורשת הערה." },
+  needSignature: { en: "Sign, and the decision can be filed.", he: "חותמים, ואפשר לרשום את ההחלטה." },
+  filingCloses: { en: "Filing closes the document. It can be printed afterwards, not changed.", he: "רישום ההחלטה סוגר את המסמך. אפשר יהיה להדפיס אותו, לא לשנות." },
+  closedOn: { en: "Closed on", he: "נסגר בתאריך" },
+  closedNote: { en: "Printing only — the decision has been filed.", he: "הדפסה בלבד — ההחלטה נרשמה." },
+  closed: { en: "Closed", he: "סגור" },
+  signColumn: { en: "Sign", he: "חתימה" },
+  printPdf: { en: "Print / PDF", he: "הדפסה / PDF" },
   signAgain: { en: "Sign again", he: "חתימה מחדש" },
   signNeedBoth: {
     en: "Choose a decision and sign, and the approval is filed onto the document.",
@@ -6749,8 +7152,8 @@ var SB_DOC_ROWS = [
 var SB_DECISIONS = [
   { key: "approved", en: "Approved", he: "מאושר", color: "#1a7f4b" },
   { key: "approvedNoted", en: "Approved as Noted", he: "מאושר בכפוף להערות", color: "#2f7d8f" },
-  { key: "revise", en: "Revise & Resubmit", he: "לתקן ולהגיש מחדש", color: "#e08a12" },
-  { key: "rejected", en: "Rejected", he: "נדחה", color: "#d02f2f" }
+  { key: "revise", en: "Revise & Resubmit", he: "הגשה חדשה בכפוף להערות", color: "#e08a12" },
+  { key: "rejected", en: "Rejected", he: "לא מאושר", color: "#d02f2f" }
 ];
 // One approval block, the one the supervision signs. Records created when
 // there were four still open: only the first block is shown and printed.
@@ -8110,6 +8513,15 @@ function sbSignedAt(rec) {
   const rv = (rec && rec.reviews || [])[0] || {};
   return rv.decision && rv.signedAt ? rv.signedAt : null;
 }
+// A filed decision closes the document: it can be printed, not reopened.
+function sbIsClosed(rec) {
+  if (!rec) return false;
+  if (rec.closedAt) return true;
+  // Records approved before the closing rule existed: a decision that was
+  // signed is just as final.
+  const rv = (rec.reviews || [])[0] || {};
+  return !!(rv.decision && rv.signedAt);
+}
 function sbIsSigned(rec) {
   return !!sbSignedAt(rec);
 }
@@ -8385,13 +8797,22 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
   };
   // The document is rebuilt from the record on every change, so the moment a
   // decision is ticked or a signature is drawn it is visible in the page above.
-  // The same HTML the printer gets, with one screen-only touch: the A4 page is
-  // a fixed width, so on a wide screen it would sit against the edge.
   const docHtml = sbBuildPrintHtml(d, lang, printBrand, [], userSignatures).replace(
     "</head>",
     "<style>@media screen{body{display:flex;justify-content:center;background:#f6f6f7}}</style></head>"
   );
   const signed = !!(rv.signatureImage || rv.signedByEmail);
+  // Read from the record as it was handed to us, never from the working copy:
+  // signing sets a date, and judging the copy would make the page consider
+  // itself closed the instant the pen came off the pad — before the decision
+  // had been filed at all.
+  const closed = sbIsClosed(rec);
+  // What each decision asks for before it can be filed. A rejection is a
+  // statement, not a negotiation: it is recorded and the document closes.
+  const needsComment = rv.decision === "approvedNoted" || rv.decision === "revise";
+  const needsSignature = !!rv.decision && rv.decision !== "rejected";
+  const commentOk = !needsComment || String(rv.comments || "").trim().length > 0;
+  const ready = !!rv.decision && commentOk && (!needsSignature || signed);
 
   const applySignature = (dataUrl) => {
     setPadOpen(false);
@@ -8403,136 +8824,160 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
       signedAt: new Date().toISOString()
     });
   };
+  // Filing closes the document. From here it can be printed and nothing else —
+  // an approval that can be quietly changed afterwards is not an approval.
+  const file = () => onSave({ ...d, closedAt: new Date().toISOString() });
+
+  const head = sbH(
+    "div",
+    { className: "sbFormHead" },
+    sbH(
+      "div",
+      { className: "sbFormHeadSide start" },
+      sbH(
+        "button",
+        { type: "button", className: "loginBack", onClick: onCancel },
+        sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }),
+        " ",
+        L("back")
+      )
+    ),
+    sbH(
+      "div",
+      { className: "sbNoBox" },
+      sbH("b", null, L("submittalNo")),
+      sbH("span", null, sbNumber(d.category, d.seq)),
+      sbH("i", null, `Rev.${d.rev || 0}`)
+    ),
+    sbH(
+      "div",
+      { className: "sbFormHeadSide end" },
+      langSwitch || null,
+      sbH(
+        "button",
+        { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
+        sbH(Printer, { size: 14, strokeWidth: 2 }),
+        " ",
+        L("print")
+      )
+    )
+  );
 
   return sbH(
     "div",
     { className: "sbReviewPage", dir: isRTL ? "rtl" : "ltr" },
-    sbH(
-      "div",
-      { className: "sbFormHead" },
-      sbH(
-        "div",
-        { className: "sbFormHeadSide start" },
-        sbH(
-          "button",
-          { type: "button", className: "loginBack", onClick: onCancel },
-          sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }),
-          " ",
-          L("back")
-        )
-      ),
-      sbH(
-        "div",
-        { className: "sbNoBox" },
-        sbH("b", null, L("submittalNo")),
-        sbH("span", null, sbNumber(d.category, d.seq)),
-        sbH("i", null, `Rev.${d.rev || 0}`)
-      ),
-      sbH(
-        "div",
-        { className: "sbFormHeadSide end" },
-        langSwitch || null,
-        sbH(
-          "button",
-          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
-          sbH(Printer, { size: 14, strokeWidth: 2 }),
-          " ",
-          L("print")
-        )
-      )
-    ),
+    head,
     // The document itself. An iframe because it is the very same HTML that goes
     // to the printer — one source, so what is signed on screen and what comes
     // out of the printer cannot drift apart.
     sbH("iframe", { className: "sbDocFrame", title: sbPrintName(d), srcDoc: docHtml }),
 
-    canSign
+    closed
       ? sbH(
           "div",
-          { className: "sbSignPanel" },
-          sbH("div", { className: "sbSecBar" }, `${L("review")} · ${L("supervision")}`),
-          sbH(
+          { className: "sbClosedBar" },
+          sbH(Stamp, { size: 16, strokeWidth: 2 }),
+          " ",
+          sbH("span", null, `${L("closedOn")} ${sbFmtDate((d.closedAt || rv.signedAt || "").slice(0, 10))} · ${sbStatusLabel(sbStatusOf(d), lang)}`),
+          sbH("span", { className: "sbClosedNote" }, L("closedNote"))
+        )
+      : canSign
+        ? sbH(
             "div",
-            { className: "sbDecisions sbDecRowWide" },
-            SB_DECISIONS.map((dec) =>
-              sbH(
-                "label",
-                { key: dec.key, className: "sbDecRow" },
-                sbH("input", {
-                  type: "radio",
-                  name: `sb-rev-${d.id}`,
-                  checked: rv.decision === dec.key,
-                  onChange: () => setReview({ decision: dec.key })
-                }),
-                sbH("span", { style: { color: dec.color, fontWeight: 700 } }, sbText(dec, lang))
+            { className: "sbSignPanel" },
+            sbH("div", { className: "sbSecBar" }, `${L("review")} · ${L("supervision")}`),
+            sbH(
+              "div",
+              { className: "sbDecisions sbDecRowWide" },
+              SB_DECISIONS.map((dec) =>
+                sbH(
+                  "label",
+                  { key: dec.key, className: "sbDecRow" },
+                  sbH("input", {
+                    type: "radio",
+                    name: `sb-rev-${d.id}`,
+                    checked: rv.decision === dec.key,
+                    onChange: () => setReview({ decision: dec.key })
+                  }),
+                  sbH("span", { style: { color: dec.color, fontWeight: 700 } }, sbText(dec, lang))
+                )
               )
-            )
-          ),
-          sbH(
-            "label",
-            { className: "sbField" },
-            sbH("span", { className: "sbFieldLbl" }, L("approvalComments")),
-            sbH("textarea", {
-              value: rv.comments || "",
-              rows: 2,
-              onChange: (e) => setReview({ comments: e.target.value }),
-              style: { ...inS, resize: "vertical" }
-            })
-          ),
-          sbH(
-            "div",
-            { className: "sbSignRow" },
-            signed
+            ),
+            // The comment box appears for the two decisions that are answers to
+            // something: "as noted" and "resubmit" both mean there is a note,
+            // and a note nobody wrote helps nobody.
+            needsComment
+              ? sbH(
+                  "label",
+                  { className: "sbField" },
+                  sbH("span", { className: "sbFieldLbl" }, `${L("approvalComments")} — ${L("required")}`),
+                  sbH("textarea", {
+                    value: rv.comments || "",
+                    rows: 3,
+                    autoFocus: true,
+                    placeholder: L("commentsPlaceholder"),
+                    onChange: (e) => setReview({ comments: e.target.value }),
+                    style: { ...inS, resize: "vertical" }
+                  })
+                )
+              : null,
+            needsSignature
               ? sbH(
                   "div",
-                  { className: "sbSignedBox" },
-                  rv.signatureImage ? sbH("img", { src: rv.signatureImage, alt: "" }) : null,
-                  sbH(
-                    "div",
-                    { className: "sbSignedMeta", dir: "ltr" },
-                    sbH("span", null, rv.signedByEmail || ""),
-                    sbH("span", null, rv.signedAt ? `${sbFmtDate(rv.signedAt.slice(0, 10))} ${rv.signedAt.slice(11, 16)}` : "")
-                  ),
+                  { className: "sbSignRow" },
+                  signed
+                    ? sbH(
+                        "div",
+                        { className: "sbSignedBox" },
+                        rv.signatureImage ? sbH("img", { src: rv.signatureImage, alt: "" }) : null,
+                        sbH(
+                          "div",
+                          { className: "sbSignedMeta", dir: "ltr" },
+                          sbH("span", null, rv.signedByEmail || ""),
+                          sbH("span", null, rv.signedAt ? `${sbFmtDate(rv.signedAt.slice(0, 10))} ${rv.signedAt.slice(11, 16)}` : "")
+                        ),
+                        sbH(
+                          "button",
+                          {
+                            type: "button",
+                            className: "sbLinkBtn muted",
+                            onClick: () => setReview({ signatureImage: null, signedByEmail: null, signature: "", signedAt: null })
+                          },
+                          L("clearSignature")
+                        )
+                      )
+                    : null,
                   sbH(
                     "button",
-                    {
-                      type: "button",
-                      className: "sbLinkBtn muted",
-                      onClick: () => setReview({ signatureImage: null, signedByEmail: null, signature: "", signedAt: null })
-                    },
-                    L("clearSignature")
+                    { type: "button", className: "sbSignBtn", onClick: () => setPadOpen(true) },
+                    sbH(PenLine, { size: 15, strokeWidth: 2 }),
+                    " ",
+                    signed ? L("signAgain") : L("signHere")
                   )
                 )
               : null,
             sbH(
-              "button",
-              { type: "button", className: "sbSignBtn", onClick: () => setPadOpen(true) },
-              sbH(PenLine, { size: 15, strokeWidth: 2 }),
-              " ",
-              signed ? L("signAgain") : L("signHere")
-            )
-          ),
-          // Nothing is filed until the decision is made: an unsigned tick means
-          // nothing, and a signature with no decision says nothing.
-          sbH(
-            "div",
-            { className: "sbSaveRow" },
+              "div",
+              { className: "sbSaveRow" },
+              sbH(
+                "button",
+                { type: "button", className: "functionEditBtn", disabled: !ready, onClick: file },
+                L("fileDecision")
+              )
+            ),
             sbH(
-              "button",
-              {
-                type: "button",
-                className: "functionEditBtn",
-                disabled: !rv.decision || !signed,
-                onClick: () => onSave(d)
-              },
-              L("saveSignature")
+              "p",
+              { className: "sbSignHint" },
+              !rv.decision
+                ? L("pickDecision")
+                : !commentOk
+                  ? L("needComment")
+                  : needsSignature && !signed
+                    ? L("needSignature")
+                    : L("filingCloses")
             )
-          ),
-          !rv.decision || !signed
-            ? sbH("p", { className: "sbSignHint" }, L("signNeedBoth"))
-            : null
-        )
-      : null,
+          )
+        : null,
     padOpen
       ? sbH(SignaturePad, { isRTL, onCancel: () => setPadOpen(false), onDone: applySignature })
       : null
@@ -8554,10 +8999,25 @@ function SubmittalFolder({
   onPrint,
   onNewRevision,
   onDelete,
+  onBulkCreate,
   boqData,
   boqFlags
 }) {
   const L = (k) => sbText(SB_L[k], lang);
+  const [bulkBusy, setBulkBusy] = useState6(null);
+  // One file, one submittal. The serial runs on as they are made, so the
+  // numbers come out in the order the files were picked.
+  const onBulk = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length || !onBulkCreate) return;
+    setBulkBusy(`${L("bulkWorking")} 0/${files.length}`);
+    try {
+      await onBulkCreate(files, (done) => setBulkBusy(`${L("bulkWorking")} ${done}/${files.length}`));
+    } finally {
+      setBulkBusy(null);
+    }
+  };
   // Which checklist group is opened out into its BOQ lines.
   const [openChk, setOpenChk] = useState6(null);
   // One line per serial — the latest revision. The earlier ones live behind the
@@ -8611,6 +9071,23 @@ function SubmittalFolder({
             sbH(Plus2, { size: 16, strokeWidth: 2.4 }),
             " ",
             L("create")
+          ),
+          // Several at once: one submittal per file, each with its file already
+          // attached. Beats opening the form eight times to attach eight
+          // specifications and nothing else.
+          sbH(
+            "label",
+            { className: "ghostBtn small sbBulkBtn", title: sbText(SB_L.bulkHint, lang) },
+            sbH(Upload4, { size: 14, strokeWidth: 2 }),
+            " ",
+            bulkBusy || L("bulkCreate"),
+            sbH("input", {
+              type: "file",
+              accept: "application/pdf,image/*",
+              multiple: true,
+              style: { display: "none" },
+              onChange: onBulk
+            })
           )
         )
       : null,
@@ -8904,7 +9381,23 @@ function SubmittalFolder({
                   ),
                   sbH("td", null, s.typeId || "—"),
                   sbH("td", { dir: "ltr" }, s.sent ? sbFmtDate((s.sentAt || "").slice(0, 10) || s.date) : sbFmtDate(s.date)),
-                  sbH("td", { dir: "ltr" }, signedAt ? sbFmtDate(signedAt.slice(0, 10)) : "—"),
+                  // Signed: the date. Not signed, and this person may sign:
+                  // the way in sits exactly where the date will end up.
+                  sbH(
+                    "td",
+                    { dir: signedAt ? "ltr" : void 0 },
+                    signedAt
+                      ? sbFmtDate(signedAt.slice(0, 10))
+                      : canSign && !canEdit
+                        ? sbH(
+                            "button",
+                            { type: "button", className: "sbActBtn sign", onClick: () => onOpen(s) },
+                            sbH(PenLine, { size: 13, strokeWidth: 2 }),
+                            " ",
+                            L("signColumn")
+                          )
+                        : "—"
+                  ),
                   sbH(
                     "td",
                     { className: "sbStatusCell" },
@@ -8924,19 +9417,11 @@ function SubmittalFolder({
                     sbH(
                       "button",
                       { type: "button", className: "sbActBtn", title: L("pdfHint"), onClick: () => onPrint(s) },
-                      sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
+                      sbH(canEdit ? FileTextIcon : Printer, { size: 13, strokeWidth: 2 }),
                       " ",
-                      L("openDoc")
+                      canEdit ? L("openDoc") : L("printPdf")
                     ),
-                    canSign && !canEdit
-                      ? sbH(
-                          "button",
-                          { type: "button", className: "sbActBtn sign", onClick: () => onOpen(s) },
-                          sbH(PenLine, { size: 13, strokeWidth: 2 }),
-                          " ",
-                          L("signAction")
-                        )
-                      : null,
+
                     canEdit
                       ? sbH(
                           "button",
@@ -9292,6 +9777,41 @@ function SubmittalCard({
           setOpenId(rec.id);
         },
         onCreate: startCreate,
+        // One submittal per file, each with its own serial and its own file
+        // already attached. They land as drafts: the numbers exist, the papers
+        // are in place, and the filling in happens afterwards.
+        onBulkCreate: async (files, onProgress) => {
+          const made = [];
+          for (let i = 0; i < files.length; i++) {
+            const f = files[i];
+            const rec = sbNewSubmittal({
+              category: chosen.key,
+              seq: sbNextSeq(list.concat(made), chosen.key),
+              projectName: pName,
+              contractor: contractorName,
+              disciplineEn: chosen.en,
+              disciplineHe: chosen.he,
+              email: currentEmail || "",
+              submittedBy: (currentEmail || "").split("@")[0] || ""
+            });
+            try {
+              const stored = await sbUploadFile(projectId, rec.id, f);
+              const isImage = /^image\//.test(f.type || "");
+              if (isImage) {
+                rec.image = { ...stored, name: f.name, thumb: await sbMakeThumb(f) };
+              } else {
+                const text = await sbExtractPdfText(f).catch(() => "");
+                rec.attachments = [{ ...stored, name: f.name, size: f.size }];
+                rec.specText = text || "";
+              }
+            } catch (ex) {
+              console.warn("[awdash] bulk create: could not store", f.name, ex);
+            }
+            made.push(rec);
+            if (onProgress) onProgress(i + 1);
+          }
+          if (made.length) commit((list || []).concat(made));
+        },
         onOpen: openExisting,
         onPrint: (s) => sbPrint(s, lang, printBrand, userSignatures),
         onNewRevision: startRevision,
@@ -9518,7 +10038,21 @@ setMsg({ ok: true, text: (isRTL ? "נשלחה הזמנה במייל ל: " : "Inv
     ))
   ), msg && /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 12, fontWeight: 700, textAlign: "center", color: msg.ok ? "#1a7f4b" : "#b02a37" } }, msg.text)));
 }
-function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChange }) {
+function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms }) {
+  // What was switched on when the account was created, and where it is changed
+  // afterwards. The same tick reads the value and sets it — there is one place
+  // this lives, not two that can disagree.
+  const permTick = (u, key) => {
+    const email = String(u.email || "").trim().toLowerCase();
+    if (u.role === "admin") return /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "\u2014");
+    const on = !!((userPerms || {})[email] || {})[key];
+    return /* @__PURE__ */ React15.createElement("button", {
+      type: "button",
+      className: `boqTick ${on ? "on" : ""}`,
+      title: isRTL ? "לחיצה משנה את ההרשאה" : "Click to change",
+      onClick: () => setUserPerms && setUserPerms(email, { [key]: !on })
+    }, on ? "\u2713" : "");
+  };
   const [users, setUsers] = useState6(null);
   const [access, setAccess] = useState6([]);
   const [discMap, setDiscMap] = useState6({});
@@ -9693,18 +10227,18 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
   };
   const grayPill = { display: "inline-flex", alignItems: "center", gap: 6, background: "#e9ebee", color: "#2b3440", border: "1px solid var(--line)", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
   const th = (label) => /* @__PURE__ */ React15.createElement("th", { style: headS }, label);
-  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), ), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
+  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), ), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "חתימה Submittal" : "Signs Submittal"), th(isRTL ? "חתימה SD" : "Signs SD"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
     const disc = discMap[(u.email || "").toLowerCase()];
-    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
+    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSubmittal")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSd")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
   })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen((o) => !o), style: grayPill }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 15, strokeWidth: 2 }), " ", isRTL ? "עריכת מסמך ה‑PDF" : "Edit PDF document")), pdfOpen && /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 520, marginInline: "auto", marginTop: 12, border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "#fbfcfd", textAlign: isRTL ? "right" : "left" } }, /* @__PURE__ */ React15.createElement("label", { style: { display: "block", fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה" : "Footer text"), /* @__PURE__ */ React15.createElement("textarea", { value: pdfFooter, onChange: (e) => setPdfFooter(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text shown at the bottom of the document", style: { width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" } }, pdfLogo ? /* @__PURE__ */ React15.createElement("img", { src: pdfLogo, alt: "", style: { height: 34, maxWidth: 120, objectFit: "contain" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfLogo }))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } }, pdfFooterImg ? /* @__PURE__ */ React15.createElement("img", { src: pdfFooterImg, alt: "", style: { height: 40, maxWidth: 240, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfFooterImg })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "גוון המסמך" : "Document color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setPdfAccent(pal.accent), style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: pdfAccent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })))), /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center", marginTop: 14 } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen(false), style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center", marginTop: 14, flexWrap: "wrap" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportCsv, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑Excel" : "Download Excel"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportPdf, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑PDF" : "Download PDF")))));
 }
-function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange, setUserPerms }) {
+function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms }) {
   const [view, setView] = useState6("menu");
   const blackBtn = (icon, labelHe, labelEn, onClick) => /* @__PURE__ */ React15.createElement("button", { type: "button", onClick, style: { display: "flex", alignItems: "center", gap: 10, width: "100%", background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", cursor: "pointer", textAlign: isRTL ? "right" : "left", fontWeight: 600, fontSize: 14, fontFamily: "inherit" } }, icon, /* @__PURE__ */ React15.createElement("span", { style: { flex: 1 } }, isRTL ? labelHe : labelEn), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }));
   const mkBack = (wide) => /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setView("menu"), style: { alignSelf: "flex-start", marginInlineStart: wide ? "-12.5%" : 0 } }, /* @__PURE__ */ React15.createElement(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }), " ", isRTL ? "חזרה" : "Back");
   const backBtn = mkBack(false);
   if (view === "add") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, backBtn, /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects, setUserPerms }));
-  if (view === "list") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, mkBack(true), /* @__PURE__ */ React15.createElement(UserListPanel, { isRTL, projects, brandLogo, signatures, onSignatureChange }));
+  if (view === "list") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, mkBack(true), /* @__PURE__ */ React15.createElement(UserListPanel, { isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms }));
   if (view === "reset") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, backBtn, /* @__PURE__ */ React15.createElement(PasswordResetPanel, { isRTL }));
   return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, marginTop: 12, maxWidth: 480, marginInline: "auto" } }, blackBtn(/* @__PURE__ */ React15.createElement(Plus2, { size: 17, strokeWidth: 1.8 }), "הוספת משתמש", "Add user", () => setView("add")), blackBtn(/* @__PURE__ */ React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "רשימת משתמשים", "User list", () => setView("list")), blackBtn(/* @__PURE__ */ React15.createElement(Lock3, { size: 17, strokeWidth: 1.8 }), "איפוס סיסמה למשתמש", "Reset a password", () => setView("reset"))));
 }
@@ -10332,12 +10866,33 @@ function ProjectDashboardApp() {
   const [isAuthenticated, setIsAuthenticated] = useState6(false);
   const [authRole, setAuthRole] = useState6(null);
   const [appRole, setAppRole] = useState6(null);
-  // Only the administrator writes. A client or a contractor reads the same rows
-  // and may not touch them, and the database says so — so without this the app
-  // fired an upsert on their behalf on every load and the row-level policy
-  // rejected it, which surfaced as a red "saving failed" bar over a screen
-  // where they had changed precisely nothing.
+  // Who may write which row, and when.
+  //
+  // Almost everything is the administrator's: the catalogue, the users, the
+  // bill of quantities, the routing. A client or a contractor has exactly one
+  // reason to write — filing a decision on a submittal — and that lives in
+  // `project-extras`. Letting the app upsert every row on their behalf is what
+  // produced the red "saving failed" bar on a screen where they had changed
+  // nothing at all.
+  //
+  // On top of that, no row is written unless its contents actually changed.
+  // The old code saved on every load, which is both noise and, for a row that
+  // did not exist yet, an INSERT that the row-level policy refuses.
+  const VIEWER_WRITABLE = ["project-extras", "project-schedules"];
   const canWriteServer = appRole === "admin";
+  const lastWritten = useRef5({});
+  const saveAppState = async (key, value) => {
+    if (!canWriteServer && VIEWER_WRITABLE.indexOf(key) < 0) return null;
+    const json = JSON.stringify(value ?? null);
+    if (lastWritten.current[key] === json) return null;
+    const { error } = await supabase.from("app_state").upsert({ key, value, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+    if (error) throw error;
+    lastWritten.current[key] = json;
+    return true;
+  };
+  const rememberLoaded = (key, value) => {
+    lastWritten.current[key] = JSON.stringify(value ?? null);
+  };
   const [setPwMode, setSetPwMode] = useState6(false);
   const [newPw, setNewPw] = useState6("");
   const [newPw2, setNewPw2] = useState6("");
@@ -10384,7 +10939,6 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !stateLoaded) return;
-    if (!canWriteServer) return;
     (async () => {
       console.log("[awdash] save system-state attempt, hasProjects:", awdashHasProjects(contractors));
       if (!awdashHasProjects(contractors)) {
@@ -10398,9 +10952,7 @@ function ProjectDashboardApp() {
         }
       }
       try {
-        const { error } = await supabase.from("app_state").upsert({ key: "system-state", value: contractors, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-        if (error) console.error("[awdash] save system-state failed", error);
-        else console.log("[awdash] save system-state OK");
+        await saveAppState("system-state", contractors);
       } catch (e) {
         console.error("[awdash] save system-state failed", e);
       }
@@ -10418,6 +10970,7 @@ function ProjectDashboardApp() {
     (async () => {
       try {
         const value = await loadAppState("contacts-catalog");
+        rememberLoaded("contacts-catalog", value);
         if (value) setContactsCatalog(mergeContactCatalog(value, buildContactCatalogSeed()));
         setCatalogLoaded(true);
       } catch (e) {
@@ -10428,11 +10981,9 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !catalogLoaded) return;
-    if (!canWriteServer) return;
     (async () => {
       try {
-        const { error } = await supabase.from("app_state").upsert({ key: "contacts-catalog", value: contactsCatalog, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-        if (error) console.error("[awdash] save contacts-catalog failed", error);
+        await saveAppState("contacts-catalog", contactsCatalog);
       } catch (e) {
         console.error("[awdash] save contacts-catalog failed", e);
       }
@@ -10447,6 +10998,7 @@ function ProjectDashboardApp() {
     (async () => {
       try {
         const value = await loadAppState("user-signatures");
+        rememberLoaded("user-signatures", value);
         if (value) setUserSignatures(value);
         setSignaturesLoaded(true);
       } catch (e) {
@@ -10456,11 +11008,9 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !signaturesLoaded) return;
-    if (!canWriteServer) return;
     (async () => {
       try {
-        const { error } = await supabase.from("app_state").upsert({ key: "user-signatures", value: userSignatures, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-        if (error) console.error("[awdash] save user-signatures failed", error);
+        await saveAppState("user-signatures", userSignatures);
       } catch (e) {
         console.error("[awdash] save user-signatures failed", e);
       }
@@ -10486,6 +11036,7 @@ function ProjectDashboardApp() {
     (async () => {
       try {
         const value = await loadAppState("user-perms");
+        rememberLoaded("user-perms", value);
         if (value) setUserPermsState(value);
         setUserPermsLoaded(true);
       } catch (e) {
@@ -10495,11 +11046,9 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !userPermsLoaded) return;
-    if (!canWriteServer) return;
     (async () => {
       try {
-        const { error } = await supabase.from("app_state").upsert({ key: "user-perms", value: userPerms, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-        if (error) console.error("[awdash] save user-perms failed", error);
+        await saveAppState("user-perms", userPerms);
       } catch (e) {
         console.error("[awdash] save user-perms failed", e);
       }
@@ -10526,27 +11075,31 @@ function ProjectDashboardApp() {
     const schedules = {};
     const boqs = {};
     const llis = {};
+    const sds = {};
     const flagOverrides = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, boqFlagOverrides, ...others } = entry;
+      const { scheduleData, boqData, lliRows, sdRows, boqFlagOverrides, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
       if (lliRows) llis[pid] = lliRows;
+      if (sdRows) sds[pid] = sdRows;
       if (boqFlagOverrides) flagOverrides[pid] = boqFlagOverrides;
     });
-    return { rest, schedules, boqs, llis, flagOverrides };
+    return { rest, schedules, boqs, llis, sds, flagOverrides };
   };
   useEffect5(() => {
     if (!isAuthenticated) return;
     (async () => {
       try {
         const value = await loadAppState("project-extras");
+        rememberLoaded("project-extras", value);
         console.log("[awdash] load project-extras", !!value);
         let merged = value || {};
         try {
           const sch = await loadAppState("project-schedules");
+          rememberLoaded("project-schedules", sch);
           if (sch) {
             merged = { ...merged };
             Object.keys(sch).forEach((pid) => {
@@ -10556,9 +11109,10 @@ function ProjectDashboardApp() {
         } catch (e2) {
           console.error("[awdash] load project-schedules failed", e2);
         }
-        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"], ["project-boq-flags", "boqFlagOverrides"]]) {
+        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"], ["project-sd", "sdRows"], ["project-boq-flags", "boqFlagOverrides"]]) {
           try {
             const side = await loadAppState(key);
+            rememberLoaded(key, side);
             if (side) {
               merged = { ...merged };
               Object.keys(side).forEach((pid) => {
@@ -10579,28 +11133,19 @@ function ProjectDashboardApp() {
   }, [isAuthenticated]);
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
-    if (!canWriteServer) return;
     (async () => {
-      const { rest, schedules, boqs, llis, flagOverrides } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, sds, flagOverrides } = splitExtras(projectExtras);
       let failed = null;
-      try {
-        const { error } = await supabase.from("app_state").upsert({ key: "project-extras", value: rest, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-        if (error) throw error;
-      } catch (e) {
-        console.error("[awdash] save project-extras failed", e);
-        failed = e && e.message || String(e);
-      }
-      try {
-        const { error } = await supabase.from("app_state").upsert({ key: "project-schedules", value: schedules, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-        if (error) throw error;
-      } catch (e) {
-        console.error("[awdash] save project-schedules failed", e);
-        failed = e && e.message || String(e);
-      }
-      for (const [key, value] of [["project-boq", boqs], ["project-lli", llis], ["project-boq-flags", flagOverrides]]) {
+      for (const [key, value] of [
+        ["project-extras", rest],
+        ["project-schedules", schedules],
+        ["project-boq", boqs],
+        ["project-lli", llis],
+        ["project-sd", sds],
+        ["project-boq-flags", flagOverrides]
+      ]) {
         try {
-          const { error } = await supabase.from("app_state").upsert({ key, value, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-          if (error) throw error;
+          await saveAppState(key, value);
         } catch (e) {
           console.error(`[awdash] save ${key} failed`, e);
           failed = e && e.message || String(e);
@@ -11714,6 +12259,8 @@ function ProjectDashboardApp() {
         userPerms,
         lliRows: activeExtras.lliRows || {},
         onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
+        sdRows: activeExtras.sdRows || {},
+        onChangeSdRows: (next) => updateProjectExtras(activeProject.id, { sdRows: next }),
         currentEmail: loggedInEmail,
         userSignatures,
         brandName: activeContractor.name || DEFAULT_BRAND_NAME,
@@ -11725,7 +12272,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL, setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL, setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
