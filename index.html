@@ -86,7 +86,8 @@ import {
   Database,
   Users as Users2,
   CalendarClock as CalendarClock2,
-  LifeBuoy
+  LifeBuoy,
+  Search as Search2
 } from "lucide-react";
 import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon } from "lucide-react";
 import {
@@ -196,7 +197,7 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
-      { key: "rooms", icon: DoorOpen, title: "Finishes by Room", sub: "Spec Sheet by Room Number" },
+      { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
       { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
@@ -316,7 +317,7 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
-      { key: "rooms", icon: DoorOpen, title: "Finishes by Room", sub: "Spec Sheet by Room Number" },
+      { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
       { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
@@ -419,6 +420,9 @@ var COPY = {
 
 // src/config/constants.js
 var DEFAULT_BRAND_NAME = "A. Weiss";
+// Printed at the bottom of the login screen and in the side menu. When a screen
+// looks wrong, this is the first thing to read: it says which file is running.
+var APP_BUILD = "21.8.2026 \u00b7 build 9";
 // Fallback used by initialsFromName() when there is no contractor name yet.
 // It was referenced but never defined, which threw a ReferenceError.
 var DEFAULT_BRAND_INITIALS = "AW";
@@ -1178,6 +1182,95 @@ var pdfViewer = `
           border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 800; white-space: nowrap;
         }
         .lliMixed { color: #e08a12; font-weight: 900; margin-inline-start: 2px; }
+        .blockRule { height: 1px; background: var(--line); margin: 18px 0 14px; }
+        .plansBlock { }
+        .plansPending {
+          display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
+          margin-top: 10px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px;
+          background: #fafbfc;
+        }
+        .plansPendName { font-size: 12px; font-weight: 700; color: var(--ink); }
+        .plansConfirm { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: var(--steel); cursor: pointer; }
+        .plansNote { color: #1a7f4b; font-weight: 700; }
+        .buildStamp { display: block; margin-top: 3px; font-size: 10.5px; color: var(--mist); letter-spacing: .3px; }
+        /* ---------- search by room ---------- */
+        .roomsCard { width: 100%; }
+        .roomsHead {
+          display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+          gap: 12px; margin-bottom: 6px;
+        }
+        .roomsHead .loginBack { justify-self: start; }
+        .roomsHead .sbLangToggle { justify-self: end; }
+        .roomsTitle { margin: 0; font-size: 17px; font-weight: 800; color: var(--ink); text-align: center; }
+        .roomsHero {
+          display: flex; flex-direction: column; align-items: center; gap: 12px;
+          padding: 34px 16px 26px; text-align: center;
+        }
+        .roomsHero.compact { padding: 14px 16px 12px; gap: 9px; }
+        .roomsLead { margin: 0; font-size: 14px; color: var(--steel); line-height: 1.6; }
+        .roomsSearch { display: flex; gap: 8px; align-items: center; }
+        .roomsInput {
+          width: 260px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px;
+          font-family: inherit; font-size: 20px; font-weight: 800; text-align: center;
+          letter-spacing: 1px; color: var(--ink); background: #fff;
+        }
+        .roomsInput:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+        .roomsGo {
+          display: inline-flex; align-items: center; gap: 6px; border: none; cursor: pointer;
+          background: #14181f; color: #fff; border-radius: 12px; padding: 14px 20px;
+          font-family: inherit; font-size: 14px; font-weight: 800;
+        }
+        .roomsStat { margin: 0; font-size: 12px; font-weight: 800; color: var(--steel); }
+        .roomsDot { margin: 0 7px; color: var(--mist); }
+        .roomsMiss { margin: 8px 0; font-size: 13px; color: var(--mist); line-height: 1.6; text-align: center; }
+        .roomsChips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 780px; }
+        .roomsChips .lliChip { font-size: 12px; padding: 5px 12px; }
+        .roomsMore { align-self: center; font-size: 12px; font-weight: 800; color: var(--mist); }
+        .roomsEditBtn { margin-top: 4px; }
+        .roomsBody { max-width: 940px; margin: 0 auto; padding-bottom: 20px; }
+        .roomsBanner {
+          display: flex; align-items: baseline; gap: 10px; justify-content: center;
+          padding: 12px 16px; border-radius: 12px; background: #f3f6fa; margin-bottom: 16px;
+        }
+        .roomsBanner span { font-size: 12px; font-weight: 800; color: var(--steel); letter-spacing: .5px; text-transform: uppercase; }
+        .roomsBanner b { font-size: 26px; font-weight: 900; color: var(--ink); line-height: 1; }
+        .roomsBanner i { font-style: normal; font-size: 12px; color: var(--mist); font-weight: 700; }
+        .roomsSec { margin-bottom: 18px; }
+        .roomsSecHead {
+          margin: 0 0 6px; font-size: 13px; font-weight: 800; color: #fff;
+          background: #14315c; border-radius: 8px; padding: 7px 12px; text-align: start;
+        }
+        .roomsTable { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+        .roomsTable th {
+          background: #f7f8fa; color: var(--steel); font-weight: 800; font-size: 11px;
+          padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: start;
+        }
+        .roomsTable td {
+          padding: 9px 10px; border-bottom: 1px solid var(--line-soft);
+          text-align: start; vertical-align: middle; line-height: 1.5;
+        }
+        .roomsTable .cMk { width: 120px; font-weight: 800; }
+        .roomsTable .cNm { width: 24%; }
+        .roomsTable .cIm { width: 92px; text-align: center; }
+        .roomsImg { width: 68px; height: 50px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line); display: block; }
+        .roomsColBar {
+          display: flex; align-items: center; justify-content: center; gap: 14px;
+          flex-wrap: wrap; margin: 6px 0 10px; font-size: 12px; color: var(--steel);
+        }
+        .roomsColLbl { font-weight: 800; }
+        .roomsColTick { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; cursor: pointer; }
+        .roomsMarkSearch {
+          border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px;
+          font-family: inherit; font-size: 12px; min-width: 220px; background: #fff; color: inherit;
+        }
+        .roomsMarkSearch:focus { outline: none; border-color: var(--accent); }
+        .marksTable .cCat { width: 130px; text-align: start; }
+        .marksTable .cMk { width: 110px; }
+        .marksTable .cNm { width: 20%; }
+        .marksTable .cDs { width: 28%; text-align: start; }
+        .marksTable .cIm { width: 70px; }
+        .marksTable .cRm { width: 160px; font-size: 11px; color: var(--mist); }
+        .marksTable .cAct { width: 42px; }
         /* ---------- SD (shop drawings) ---------- */
         .sdTable .cSec { width: 150px; text-align: start; }
         .sdTable .cDwg { width: 105px; }
@@ -4585,6 +4678,8 @@ function CardView({
   onChangeLliRows,
   sdRows,
   onChangeSdRows,
+  roomsData,
+  onChangeRoomsData,
   userPerms
 }) {
   const [editOpen, setEditOpen] = useState5(false);
@@ -4606,16 +4701,19 @@ function CardView({
   const isSubmittal = cardKey === "submittal";
   const isLli = cardKey === "lli";
   const isSd = cardKey === "sd";
-  const showRooms = !!roomsDataSource;
+  const showRooms = cardKey === "rooms";
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
-    FinishesByRoomCard,
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || showRooms ? "wide" : ""}` }, /* @__PURE__ */ React14.createElement("button", { className: "loginBack functionBack", onClick: onBack }, /* @__PURE__ */ React14.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), showRooms && /* @__PURE__ */ React14.createElement(
+    RoomsCard,
     {
-      dataSource: roomsDataSource,
+      appIsRTL: isRTL,
+      data: roomsData,
+      onChange: onChangeRoomsData,
       canEdit,
-      onChangeTable
+      projectId: project.id,
+      projectName: project.name
     }
   ), showSchedule && /* @__PURE__ */ React14.createElement(
     ProjectScheduleCard,
@@ -6822,6 +6920,530 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
             )
           )
         )
+  );
+}
+
+// src/rooms/rooms.js
+// -----------------------------------------------------------------------------
+// Search by room number.
+//
+// The drawings say, in a hundred places, "this room has floor F-01, ceiling
+// C-03, fitting L-12". That is a thousand lines in a spreadsheet and useless to
+// read. What a person actually wants is one room at a time: type 214, and see
+// what is in room 214.
+//
+// So the data is kept in two halves that are joined only when a room is asked
+// for. `rows` are the occurrences — room, category, mark — and there are many.
+// `marks` are the specifications — one entry per mark, whatever the AI first
+// read, and whatever was corrected afterwards by hand. Correct a mark once and
+// every room that carries it changes with it, which is the whole point.
+// -----------------------------------------------------------------------------
+var ROOM_CATEGORIES = [
+  { key: "flooring", he: "ריצוף", en: "Flooring" },
+  { key: "cladding", he: "חיפוי", en: "Wall cladding" },
+  { key: "ceiling", he: "תקרה", en: "Ceiling" },
+  { key: "lighting", he: "גופי תאורה", en: "Light fittings" },
+  { key: "grilles", he: "גרילים", en: "Grilles" },
+  { key: "hvac", he: "יחידת מיזוג אוויר", en: "HVAC unit" },
+  { key: "joinery", he: "נגרות", en: "Joinery" },
+  { key: "other", he: "אחר", en: "Other" }
+];
+// What the letter in front of a mark usually means. A local convention, so it is
+// a starting point and not a law — anything unrecognised lands in "other" and
+// can be moved by hand.
+var ROOM_MARK_PREFIX = {
+  F: "flooring", FL: "flooring", FF: "flooring", R: "flooring",
+  W: "cladding", WC: "cladding", CL: "cladding", WF: "cladding",
+  C: "ceiling", CE: "ceiling", CG: "ceiling",
+  L: "lighting", LF: "lighting", LT: "lighting",
+  G: "grilles", GR: "grilles", GL: "grilles",
+  AC: "hvac", FCU: "hvac", VRF: "hvac", AHU: "hvac",
+  J: "joinery", WD: "joinery", CB: "joinery"
+};
+var ROOM_COLUMNS = [
+  { key: "mark", he: "מס׳ איפיון", en: "Mark", fixed: true },
+  { key: "name", he: "שם האיפיון", en: "Name" },
+  { key: "desc", he: "תיאור איפיון", en: "Description" },
+  { key: "image", he: "תמונה", en: "Photo" }
+];
+function roomCatLabel(key, lang) {
+  const c = ROOM_CATEGORIES.find((x) => x.key === key);
+  return c ? (lang === "he" ? c.he : c.en) : key;
+}
+function roomMarkKey(cat, mark) {
+  return `${cat}|${String(mark || "").trim().toUpperCase()}`;
+}
+// The category a mark belongs to, read off its prefix.
+function roomCatOfMark(mark) {
+  const m = String(mark || "").trim().toUpperCase().match(/^([A-Z]{1,3})\s*[-. ]?\s*\d/);
+  if (!m) return "other";
+  return ROOM_MARK_PREFIX[m[1]] || "other";
+}
+function roomsBlank() {
+  return { rows: [], marks: {}, columns: { name: true, desc: true, image: true }, source: null };
+}
+function roomsMarkOf(data, key) {
+  const [cat, mark] = String(key).split("|");
+  return { cat, mark, name: "", desc: "", image: null, hidden: false, ...((data || {}).marks || {})[key] || {} };
+}
+// Room -> category -> marks, built once per render of the card.
+function roomsIndex(data) {
+  const byRoom = {};
+  ((data || {}).rows || []).forEach((r) => {
+    const room = String(r.room || "").trim();
+    if (!room) return;
+    const cat = r.cat || roomCatOfMark(r.mark);
+    const key = roomMarkKey(cat, r.mark);
+    if (((data.marks || {})[key] || {}).hidden) return;
+    if (!byRoom[room]) byRoom[room] = {};
+    if (!byRoom[room][cat]) byRoom[room][cat] = [];
+    if (byRoom[room][cat].indexOf(key) < 0) byRoom[room][cat].push(key);
+  });
+  const rooms = Object.keys(byRoom).sort((a, b) => {
+    const na = Number(a.replace(/\D/g, "")), nb = Number(b.replace(/\D/g, ""));
+    if (isFinite(na) && isFinite(nb) && na !== nb) return na - nb;
+    return a.localeCompare(b);
+  });
+  return { byRoom, rooms };
+}
+// Every distinct mark, in category order — the list that is opened for editing.
+function roomsAllMarks(data) {
+  const seen = {};
+  ((data || {}).rows || []).forEach((r) => {
+    const cat = r.cat || roomCatOfMark(r.mark);
+    const key = roomMarkKey(cat, r.mark);
+    if (!seen[key]) seen[key] = { key, cat, mark: String(r.mark || "").trim(), rooms: [] };
+    const room = String(r.room || "").trim();
+    if (room && seen[key].rooms.indexOf(room) < 0) seen[key].rooms.push(room);
+  });
+  Object.keys((data || {}).marks || {}).forEach((key) => {
+    if (seen[key]) return;
+    const m = roomsMarkOf(data, key);
+    seen[key] = { key, cat: m.cat, mark: m.mark, rooms: [] };
+  });
+  const order = ROOM_CATEGORIES.map((c) => c.key);
+  return Object.keys(seen).map((k) => seen[k]).sort((a, b) => {
+    const d = order.indexOf(a.cat) - order.indexOf(b.cat);
+    return d || a.mark.localeCompare(b.mark, undefined, { numeric: true });
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Reading the drawings.
+//
+// A DXF is a text file of group-code pairs, and every piece of writing on the
+// drawing is in there with the coordinates it sits at. That is enough to do the
+// join without an AI at all: the room number is the nearest label to the mark.
+// A .rvt cannot be read here at all — it is a closed binary format — so the
+// screen asks for a DXF or IFC export instead of pretending.
+// ---------------------------------------------------------------------------
+function dxfLabels(text) {
+  const lines = String(text || "").split(/\r?\n/);
+  const out = [];
+  let cur = null;
+  for (let i = 0; i + 1 < lines.length; i += 2) {
+    const code = lines[i].trim();
+    const val = lines[i + 1];
+    if (code === "0") {
+      if (cur && cur.text) out.push(cur);
+      const t = String(val || "").trim().toUpperCase();
+      cur = t === "TEXT" || t === "MTEXT" ? { text: "", x: 0, y: 0 } : null;
+      continue;
+    }
+    if (!cur) continue;
+    if (code === "1" || code === "3") cur.text += String(val || "");
+    else if (code === "10") cur.x = Number(val) || 0;
+    else if (code === "20") cur.y = Number(val) || 0;
+  }
+  if (cur && cur.text) out.push(cur);
+  // MTEXT carries formatting codes inline; strip them, they are not writing.
+  return out
+    .map((l) => ({ ...l, text: l.text.replace(/\\[A-Za-z][^;]*;/g, "").replace(/[{}]/g, "").trim() }))
+    .filter((l) => l.text);
+}
+var ROOM_NUM_RE = /^[A-Z]?\d{2,4}[A-Z]?$/;
+var ROOM_MARK_RE = /^[A-Z]{1,3}\s*[-.]?\s*\d{1,3}[A-Z]?$/;
+// Pair every mark with the room label nearest to it. Plain geometry, no guessing.
+function roomsFromLabels(labels) {
+  const rooms = [], marks = [];
+  (labels || []).forEach((l) => {
+    const t = l.text.trim().toUpperCase();
+    if (ROOM_NUM_RE.test(t) && !ROOM_MARK_RE.test(t)) rooms.push({ ...l, text: t });
+    // A drawing is covered in codes that look like marks and are not: A-101 is
+    // the sheet number, not a floor finish. Only a prefix that names a trade is
+    // taken, because a wrong row here is read as fact and built.
+    else if (ROOM_MARK_RE.test(t) && roomCatOfMark(t) !== "other") marks.push({ ...l, text: t.replace(/\s+/g, "") });
+  });
+  const rows = [];
+  marks.forEach((m) => {
+    let best = null, bestD = Infinity;
+    rooms.forEach((r) => {
+      const d = (r.x - m.x) * (r.x - m.x) + (r.y - m.y) * (r.y - m.y);
+      if (d < bestD) { bestD = d; best = r; }
+    });
+    if (!best) return;
+    rows.push({ room: best.text, cat: roomCatOfMark(m.text), mark: m.text });
+  });
+  // The same mark can be written five times in one room; it is one line.
+  const seen = {};
+  return rows.filter((r) => {
+    const k = `${r.room}|${r.cat}|${r.mark}`;
+    if (seen[k]) return false;
+    seen[k] = true;
+    return true;
+  });
+}
+function ifcRoomNames(text) {
+  const out = [];
+  String(text || "").split(/;\s*\n?/).forEach((line) => {
+    if (!/IFCSPACE\s*\(/i.test(line)) return;
+    const q = line.match(/'([^']*)'/g) || [];
+    q.forEach((raw) => {
+      const v = raw.slice(1, -1).trim().toUpperCase();
+      if (ROOM_NUM_RE.test(v) && out.indexOf(v) < 0) out.push(v);
+    });
+  });
+  return out;
+}
+async function plansReadFile(file) {
+  const name = String(file.name || "").toLowerCase();
+  if (/\.rvt$/.test(name)) {
+    throw new Error("RVT_NOT_READABLE");
+  }
+  if (/\.dxf$/.test(name)) {
+    const text = await file.text();
+    const labels = dxfLabels(text);
+    return { kind: "dxf", labels, rows: roomsFromLabels(labels), text: labels.map((l) => l.text).join("\n") };
+  }
+  if (/\.ifc$/.test(name)) {
+    const text = await file.text();
+    return { kind: "ifc", labels: [], rows: [], rooms: ifcRoomNames(text), text: text.slice(0, 200000) };
+  }
+  if (/\.pdf$/.test(name)) {
+    const text = await sbExtractPdfText(file).catch(() => "");
+    return { kind: "pdf", labels: [], rows: [], text };
+  }
+  throw new Error("UNSUPPORTED_PLAN_FILE");
+}
+
+// ---------------------------------------------------------------------------
+// The spreadsheet. Four columns, exactly the ones she named, so the file that
+// comes out and the file that goes back in are the same shape.
+// ---------------------------------------------------------------------------
+var ROOMS_XLSX_HEAD = ["מספר חדר", "קטגוריה", "מס׳ איפיון", "תיאור איפיון"];
+function roomsToSheet(data, lang) {
+  const aoa = [ROOMS_XLSX_HEAD];
+  ((data || {}).rows || []).forEach((r) => {
+    const cat = r.cat || roomCatOfMark(r.mark);
+    const m = roomsMarkOf(data, roomMarkKey(cat, r.mark));
+    aoa.push([r.room, roomCatLabel(cat, lang || "he"), r.mark, m.desc || m.name || ""]);
+  });
+  return aoa;
+}
+function roomsFromSheet(aoa) {
+  const rows = [], marks = {};
+  let start = 0;
+  const head = (aoa[0] || []).map((c) => String(c || "").trim());
+  if (head.some((c) => /חדר|room/i.test(c))) start = 1;
+  for (let i = start; i < (aoa || []).length; i++) {
+    const [room, catRaw, mark, desc] = (aoa[i] || []).map((c) => String(c == null ? "" : c).trim());
+    if (!room || !mark) continue;
+    const found = ROOM_CATEGORIES.find((c) => c.he === catRaw || c.en.toLowerCase() === catRaw.toLowerCase() || c.key === catRaw);
+    const cat = found ? found.key : roomCatOfMark(mark);
+    rows.push({ room, cat, mark });
+    const key = roomMarkKey(cat, mark);
+    if (desc && !marks[key]) marks[key] = { cat, mark, name: "", desc, image: null };
+  }
+  return { rows, marks };
+}
+
+// src/cards/RoomsCard.jsx
+// -----------------------------------------------------------------------------
+// The room screen: a landing page with one question on it, and the answer
+// underneath — one table per category, in the order a person walks a room.
+// -----------------------------------------------------------------------------
+var ROOMS_L = {
+  title: { en: "Search by room", he: "חיפוש לפי חדר" },
+  lead: { en: "Type a room number to see what is specified in it.", he: "הקלידו מספר חדר כדי לראות מה מאופיין בו." },
+  placeholder: { en: "Room number", he: "מספר חדר" },
+  search: { en: "Search", he: "חיפוש" },
+  noData: {
+    en: "No drawings have been read for this project yet. Upload them in project settings.",
+    he: "עדיין לא נקראו תוכניות לפרויקט הזה. אפשר להעלות אותן בהגדרות הפרויקט."
+  },
+  notFound: { en: "No room by that number.", he: "אין חדר במספר הזה." },
+  roomsCount: { en: "rooms", he: "חדרים" },
+  marksCount: { en: "specifications", he: "איפיונים" },
+  room: { en: "Room", he: "חדר" },
+  back: { en: "Another room", he: "חדר אחר" },
+  editList: { en: "Open the list for editing", he: "פתיחת רשימה לעריכה" },
+  editTitle: { en: "Specifications", he: "רשימת האיפיונים" },
+  shownToClient: { en: "Columns shown to the client", he: "עמודות שמוצגות ללקוח" },
+  markCol: { en: "Mark", he: "מס׳ איפיון" },
+  nameCol: { en: "Name", he: "שם האיפיון" },
+  descCol: { en: "Description", he: "תיאור איפיון" },
+  imageCol: { en: "Photo", he: "תמונה" },
+  catCol: { en: "Category", he: "קטגוריה" },
+  roomsCol: { en: "In rooms", he: "בחדרים" },
+  hide: { en: "Hide from the room screen", he: "להסתיר ממסך החדר" },
+  restore: { en: "Restore", he: "החזרה" },
+  showHidden: { en: "Show hidden", he: "הצגת מוסתרים" },
+  searchMarks: { en: "Search a mark or a description", he: "חיפוש איפיון או תיאור" },
+  empty: { en: "Nothing specified in this room.", he: "לא מאופיין דבר בחדר הזה." },
+  suggestions: { en: "Rooms in this project", he: "חדרים בפרויקט" },
+  noPhoto: { en: "—", he: "—" }
+};
+
+function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }) {
+  const [langOverride, setLangOverride] = useState6(null);
+  const lang = langOverride || (appIsRTL ? "he" : "en");
+  const isRTL = lang === "he";
+  const L = (k) => sbText(ROOMS_L[k] || { en: k, he: k }, lang);
+  const [query, setQuery] = useState6("");
+  const [room, setRoom] = useState6(null);
+  const [view, setView] = useState6("search");
+  const [markQuery, setMarkQuery] = useState6("");
+  const [showHidden, setShowHidden] = useState6(false);
+  const [busy, setBusy] = useState6(null);
+
+  const d = data || roomsBlank();
+  const idx = roomsIndex(d);
+  const cols = { mark: true, ...(d.columns || {}) };
+  const patchMark = (key, next) => {
+    if (!onChange) return;
+    onChange({ ...d, marks: { ...(d.marks || {}), [key]: { ...roomsMarkOf(d, key), ...next } } });
+  };
+  const setCol = (key, on) => {
+    if (!onChange) return;
+    onChange({ ...d, columns: { ...(d.columns || {}), [key]: on } });
+  };
+  const onMarkImage = async (key, e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusy(key);
+    try {
+      patchMark(key, { image: await sbMakeThumb(f, 640) });
+    } catch (ex) {
+      console.warn("[awdash] room mark image failed", ex);
+    } finally {
+      setBusy(null);
+    }
+  };
+  const go = (value) => {
+    const v = String(value == null ? query : value).trim().toUpperCase();
+    setQuery(v);
+    setRoom(v && idx.byRoom[v] ? v : v ? "__none__" : null);
+    setView("search");
+  };
+
+  const langSwitch = sbH(
+    "div",
+    { className: "sbLangToggle" },
+    sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
+    sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
+  );
+
+  // ---- the list of specifications, one row per mark ------------------------
+  if (view === "marks") {
+    const all = roomsAllMarks(d).filter((m) => {
+      const v = roomsMarkOf(d, m.key);
+      if (!showHidden && v.hidden) return false;
+      if (!markQuery.trim()) return true;
+      const q = markQuery.trim().toLowerCase();
+      return (m.mark + " " + (v.name || "") + " " + (v.desc || "")).toLowerCase().indexOf(q) >= 0;
+    });
+    return sbH(
+      "div",
+      { className: "roomsCard", dir: isRTL ? "rtl" : "ltr" },
+      sbH(
+        "div",
+        { className: "roomsHead" },
+        sbH("button", { type: "button", className: "loginBack", onClick: () => setView("search") },
+          sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }), " ", L("back")),
+        sbH("h2", { className: "roomsTitle" }, L("editTitle")),
+        langSwitch
+      ),
+      sbH(
+        "div",
+        { className: "roomsColBar" },
+        sbH("span", { className: "roomsColLbl" }, `${L("shownToClient")}:`),
+        ROOM_COLUMNS.filter((c) => !c.fixed).map((c) =>
+          sbH(
+            "label",
+            { key: c.key, className: "roomsColTick" },
+            sbH("input", {
+              type: "checkbox",
+              checked: cols[c.key] !== false,
+              disabled: !canEdit,
+              onChange: (e) => setCol(c.key, e.target.checked)
+            }),
+            " ",
+            sbText(c, lang)
+          )
+        ),
+        sbH("input", {
+          type: "search",
+          className: "roomsMarkSearch",
+          placeholder: L("searchMarks"),
+          value: markQuery,
+          onChange: (e) => setMarkQuery(e.target.value)
+        }),
+        sbH(
+          "label",
+          { className: "roomsColTick" },
+          sbH("input", { type: "checkbox", checked: showHidden, onChange: (e) => setShowHidden(e.target.checked) }),
+          " ",
+          L("showHidden")
+        )
+      ),
+      sbH(
+        "div",
+        { className: "lliTableWrap" },
+        sbH(
+          "table",
+          { className: "lliTable marksTable" },
+          sbH("thead", null, sbH("tr", null,
+            sbH("th", { className: "cCat" }, L("catCol")),
+            sbH("th", { className: "cMk" }, L("markCol")),
+            sbH("th", { className: "cNm" }, L("nameCol")),
+            sbH("th", { className: "cDs" }, L("descCol")),
+            sbH("th", { className: "cIm" }, L("imageCol")),
+            sbH("th", { className: "cRm" }, L("roomsCol")),
+            canEdit ? sbH("th", { className: "cAct" }, "") : null
+          )),
+          sbH("tbody", null, all.map((m) => {
+            const v = roomsMarkOf(d, m.key);
+            return sbH(
+              "tr",
+              { key: m.key, className: v.hidden ? "lliOff" : "" },
+              sbH("td", { className: "cCat" }, roomCatLabel(m.cat, lang)),
+              sbH("td", { className: "cMk", dir: "ltr" }, sbH("b", null, m.mark)),
+              sbH("td", { className: "cNm" }, sbH("input", {
+                type: "text", className: "lliIn", value: v.name, readOnly: !canEdit,
+                onChange: (e) => patchMark(m.key, { name: e.target.value })
+              })),
+              sbH("td", { className: "cDs" }, sbH("textarea", {
+                className: "lliIn lliDesc", rows: 2, value: v.desc, readOnly: !canEdit,
+                onChange: (e) => patchMark(m.key, { desc: e.target.value })
+              })),
+              sbH("td", { className: "cIm" },
+                sbH("label", { className: `lliImgBox ${canEdit ? "" : "ro"}` },
+                  v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
+                  busy === m.key ? sbH("span", { className: "lliImgBusy" }, "…") : null,
+                  canEdit ? sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onMarkImage(m.key, e) }) : null
+                ),
+                v.image && canEdit ? sbH("button", { type: "button", className: "lliImgClear", onClick: () => patchMark(m.key, { image: null }) }, "×") : null
+              ),
+              sbH("td", { className: "cRm", dir: "ltr" }, m.rooms.length ? m.rooms.slice(0, 6).join(", ") + (m.rooms.length > 6 ? ` +${m.rooms.length - 6}` : "") : "—"),
+              canEdit ? sbH("td", { className: "cAct" }, sbH("button", {
+                type: "button", className: "sbIconBtn", title: v.hidden ? L("restore") : L("hide"),
+                onClick: () => patchMark(m.key, { hidden: !v.hidden })
+              }, sbH(v.hidden ? RotateCcw : Trash2, { size: 14, strokeWidth: 2 }))) : null
+            );
+          }))
+        )
+      )
+    );
+  }
+
+  // ---- one room ------------------------------------------------------------
+  const cats = room && room !== "__none__" ? ROOM_CATEGORIES.filter((c) => (idx.byRoom[room] || {})[c.key]) : [];
+  const roomBody = room === "__none__"
+    ? sbH("p", { className: "roomsMiss" }, L("notFound"))
+    : cats.length === 0
+      ? sbH("p", { className: "roomsMiss" }, L("empty"))
+      : cats.map((c) =>
+          sbH(
+            "section",
+            { key: c.key, className: "roomsSec" },
+            sbH("h3", { className: "roomsSecHead" }, sbText(c, lang)),
+            sbH(
+              "table",
+              { className: "roomsTable" },
+              sbH("thead", null, sbH("tr", null,
+                sbH("th", { className: "cMk" }, L("markCol")),
+                cols.name !== false ? sbH("th", { className: "cNm" }, L("nameCol")) : null,
+                cols.desc !== false ? sbH("th", { className: "cDs" }, L("descCol")) : null,
+                cols.image !== false ? sbH("th", { className: "cIm" }, L("imageCol")) : null
+              )),
+              sbH("tbody", null, (idx.byRoom[room][c.key] || []).map((key) => {
+                const v = roomsMarkOf(d, key);
+                return sbH(
+                  "tr",
+                  { key },
+                  sbH("td", { className: "cMk", dir: "ltr" }, sbH("b", null, v.mark)),
+                  cols.name !== false ? sbH("td", { className: "cNm" }, v.name || "—") : null,
+                  cols.desc !== false ? sbH("td", { className: "cDs" }, v.desc || "—") : null,
+                  cols.image !== false
+                    ? sbH("td", { className: "cIm" }, v.image
+                        ? sbH("img", { className: "roomsImg", src: v.image, alt: "" })
+                        : sbH("span", { className: "lliDash" }, L("noPhoto")))
+                    : null
+                );
+              }))
+            )
+          )
+        );
+
+  return sbH(
+    "div",
+    { className: "roomsCard", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "roomsHead" },
+      room ? sbH("button", { type: "button", className: "loginBack", onClick: () => { setRoom(null); setQuery(""); } },
+        sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }), " ", L("back")) : sbH("span", null),
+      sbH("h2", { className: "roomsTitle" }, L("title")),
+      langSwitch
+    ),
+    // The landing page. One question, in the middle, and nothing else competing
+    // with it for attention.
+    sbH(
+      "div",
+      { className: `roomsHero ${room ? "compact" : ""}` },
+      room ? null : sbH("p", { className: "roomsLead" }, L("lead")),
+      sbH(
+        "form",
+        { className: "roomsSearch", onSubmit: (e) => { e.preventDefault(); go(); } },
+        sbH("input", {
+          type: "search",
+          className: "roomsInput",
+          dir: "ltr",
+          autoFocus: !room,
+          placeholder: L("placeholder"),
+          value: query,
+          onChange: (e) => setQuery(e.target.value)
+        }),
+        sbH("button", { type: "submit", className: "roomsGo" }, sbH(Search2, { size: 15, strokeWidth: 2.2 }), " ", L("search"))
+      ),
+      idx.rooms.length
+        ? sbH("p", { className: "roomsStat" },
+            sbH("span", { className: "boqCountPart" }, `${idx.rooms.length} ${L("roomsCount")}`),
+            sbH("span", { className: "roomsDot" }, "\u00b7"),
+            sbH("span", { className: "boqCountPart" }, `${roomsAllMarks(d).length} ${L("marksCount")}`))
+        : sbH("p", { className: "roomsMiss" }, L("noData")),
+      !room && idx.rooms.length
+        ? sbH("div", { className: "roomsChips" },
+            idx.rooms.slice(0, 24).map((r) => sbH("button", { key: r, type: "button", className: "lliChip", onClick: () => go(r) }, r)),
+            idx.rooms.length > 24 ? sbH("span", { className: "roomsMore" }, `+${idx.rooms.length - 24}`) : null)
+        : null,
+      canEdit
+        ? sbH("button", { type: "button", className: "ghostBtn small roomsEditBtn", onClick: () => setView("marks") },
+            sbH(Pencil, { size: 14, strokeWidth: 2 }), " ", L("editList"))
+        : null
+    ),
+    room
+      ? sbH(
+          "div",
+          { className: "roomsBody" },
+          room !== "__none__"
+            ? sbH("div", { className: "roomsBanner" }, sbH("span", null, L("room")), sbH("b", { dir: "ltr" }, room),
+                projectName ? sbH("i", null, projectName) : null)
+            : null,
+          roomBody
+        )
+      : null
   );
 }
 
@@ -9509,17 +10131,14 @@ function SubmittalCard({
   );
 
   // Editing a submittal is the system administrator's, full stop. Everyone else
-  // opens it, reads it, and — if the project allows their role — signs it.
-  const perms = submittalPerms || {};
+  // opens it, reads it, and — if their own account allows it — signs it.
   const canEdit = viewerRole === "admin";
-  // Two gates, and both have to open: the project decides whether this role may
-  // sign at all, and the person's own account decides whether they may. An
-  // account created before that switch existed has no record, and for those the
-  // project setting alone still governs — nobody loses a right they had.
-  const projectAllows = (perms[viewerRole] || (viewerRole === "contractor" ? "sign" : "view")) === "sign";
+  // One gate, and it belongs to the person: the switch on their own account.
+  // The old per-project setting is gone — it silently overruled accounts that
+  // had been given the right, which is how a signer ends up unable to sign.
   const myPerms = (userPerms || {})[String(currentEmail || "").trim().toLowerCase()];
   const personAllows = myPerms ? !!myPerms.signSubmittal : true;
-  const canSign = canEdit || (projectAllows && personAllows);
+  const canSign = canEdit || personAllows;
 
   // The yellow marker: what was approved since this browser last opened the
   // folder. Read once, and the clock is pushed forward straight away so the
@@ -10783,7 +11402,319 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
     err ? sbH("p", { className: "sbErr" }, err) : null
   );
 }
-function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, submittalPermsByProject, onSubmittalPermsChange, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange }) {
+// src/admin/PlansUploadBlock.jsx
+// -----------------------------------------------------------------------------
+// The drawings, and what is read out of them. This lives under the bill of
+// quantities in project settings and belongs to the system administrator alone.
+//
+// Three steps on purpose — choose, confirm, save — because reading drawings
+// rewrites the room screen, and that is not something to do by brushing against
+// a file input.
+// -----------------------------------------------------------------------------
+var PLAN_ACCEPT = ".dxf,.ifc,.pdf,.rvt";
+
+function PlansUploadBlock({ isRTL, projectId, plans, onPlansChange, rooms, onRoomsChange }) {
+  const t = (he, en) => (isRTL ? he : en);
+  const [picked, setPicked] = useState6([]);
+  const [confirmed, setConfirmed] = useState6(false);
+  const [busy, setBusy] = useState6(false);
+  const [stage, setStage] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [note, setNote] = useState6(null);
+  const held = useRef5({});
+
+  const files = (plans || {}).files || [];
+  const roomCount = rooms ? roomsIndex(rooms).rooms.length : 0;
+  const markCount = rooms ? roomsAllMarks(rooms).length : 0;
+
+  const onPick = (e) => {
+    const list = Array.from(e.target.files || []);
+    e.target.value = "";
+    setErr(null);
+    setNote(null);
+    const bad = list.find((f) => /\.rvt$/i.test(f.name || ""));
+    if (bad) {
+      // Being straight about this is kinder than a spinner that never ends: a
+      // .rvt is a closed binary and nothing in a browser can open it.
+      setErr(t(
+        "קובץ Revit (.rvt) לא ניתן לקריאה בדפדפן — זה פורמט סגור. יש לייצא מ‑Revit ל‑DXF או ל‑IFC ולהעלות את הייצוא.",
+        "A Revit .rvt file cannot be read in a browser — it is a closed format. Export it from Revit to DXF or IFC and upload that."
+      ));
+      return;
+    }
+    setPicked(list);
+    setConfirmed(false);
+  };
+
+  const save = async () => {
+    if (!picked.length || !confirmed) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const out = [];
+      for (const f of picked) {
+        setStage(t(`מעלה ${f.name}…`, `Uploading ${f.name}…`));
+        const stored = await sbUploadFile(projectId, "plans", f);
+        held.current[f.name] = f;
+        out.push({
+          name: f.name,
+          size: f.size,
+          kind: (f.name.split(".").pop() || "").toLowerCase(),
+          path: stored.path || null,
+          dataUrl: stored.dataUrl || null,
+          uploadedAt: new Date().toISOString()
+        });
+      }
+      onPlansChange({ files: (plans && plans.files || []).concat(out) });
+      setPicked([]);
+      setConfirmed(false);
+      setNote(t("נשמר. אפשר להריץ קריאת AI.", "Saved. The AI reading can be run now."));
+    } catch (ex) {
+      setErr(ex && (ex.message || String(ex)) || t("השמירה נכשלה", "Save failed"));
+    } finally {
+      setBusy(false);
+      setStage(null);
+    }
+  };
+
+  // A saved plan is in storage; getting it back is a signed URL and a fetch.
+  // Files still in hand from this session skip the round trip.
+  const fileOf = async (entry) => {
+    if (held.current[entry.name]) return held.current[entry.name];
+    const url = await sbFileUrl(entry);
+    if (!url) throw new Error(t(`לא הצלחתי להוריד את ${entry.name}`, `Could not download ${entry.name}`));
+    const blob = await (await fetch(url)).blob();
+    const f = new File([blob], entry.name, { type: blob.type });
+    held.current[entry.name] = f;
+    return f;
+  };
+
+  // An answer that is missing the very thing it was asked for is not an answer.
+  // Without this check an empty reply reads as success and the screen claims a
+  // reading that never happened.
+  const askAi = async (payload, expect) => {
+    const { data, error } = await supabase.functions.invoke("submittal-ai", { body: { mode: "rooms", ...payload } });
+    if (error) throw error;
+    if (!data || data.error) throw new Error(data && data.error || "no_answer");
+    if (expect && !data[expect]) throw new Error("no_" + expect);
+    return data;
+  };
+
+  const readAi = async () => {
+    if (!files.length) return;
+    setBusy(true);
+    setErr(null);
+    setNote(null);
+    let aiReached = true;
+    try {
+      let rows = [];
+      const digests = [];
+      for (const entry of files) {
+        setStage(t(`קורא ${entry.name}…`, `Reading ${entry.name}…`));
+        const f = await fileOf(entry);
+        const read = await plansReadFile(f);
+        if (read.rows && read.rows.length) rows = rows.concat(read.rows);
+        if (read.text) digests.push(read.text.slice(0, 60000));
+      }
+      // A DXF gives the pairing for nothing — the room label nearest the mark.
+      // A PDF or an IFC gives only writing, and there the model does the pairing.
+      if (!rows.length && digests.length) {
+        setStage(t("מבקש מה‑AI לזהות חדרים ואיפיונים…", "Asking the AI to find rooms and marks…"));
+        try {
+          const res = await askAi({ task: "rows", text: digests.join("\n---\n").slice(0, 90000) }, "rows");
+          rows = (res.rows || []).map((r) => ({
+            room: String(r.room || "").trim().toUpperCase(),
+            cat: r.cat || roomCatOfMark(r.mark),
+            mark: String(r.mark || "").trim().toUpperCase()
+          })).filter((r) => r.room && r.mark);
+        } catch (e) {
+          aiReached = false;
+        }
+      }
+      if (!rows.length) {
+        throw new Error(t(
+          "לא זוהו חדרים ואיפיונים בקבצים האלה. ב‑DXF הקריאה מבוססת על הכתוביות והמיקום שלהן; ב‑PDF היא תלויה בשירות ה‑AI.",
+          "No rooms and marks were found in these files. In a DXF the reading is based on the labels and where they sit; in a PDF it depends on the AI service."
+        ));
+      }
+      // Whatever was already corrected by hand stays corrected; the model fills
+      // in only what is still empty.
+      const merged = { ...(rooms || roomsBlank()), rows };
+      const marks = { ...(merged.marks || {}) };
+      const need = roomsAllMarks({ rows, marks }).filter((m) => {
+        const cur = marks[m.key] || {};
+        return !cur.desc && !cur.name;
+      });
+      if (need.length) {
+        setStage(t(`מתאר ${need.length} איפיונים…`, `Describing ${need.length} marks…`));
+        try {
+          const res = await askAi({ task: "marks", marks: need.map((m) => ({ mark: m.mark, cat: m.cat })) }, "marks");
+          Object.keys(res.marks || {}).forEach((mk) => {
+            const v = res.marks[mk] || {};
+            const cat = v.cat || roomCatOfMark(mk);
+            const key = roomMarkKey(cat, mk);
+            marks[key] = { cat, mark: mk, name: v.name || "", desc: v.desc || "", image: null, ...(marks[key] || {}) };
+          });
+        } catch (e) {
+          aiReached = false;
+        }
+      }
+      merged.marks = marks;
+      merged.source = { fileName: files.map((f) => f.name).join(", "), at: new Date().toISOString(), mode: aiReached ? "ai" : "geometry" };
+      onRoomsChange(merged);
+      setNote(aiReached
+        ? t("הקריאה הושלמה.", "The reading is done.")
+        : t("הקריאה הושלמה מהתוכניות עצמן. שירות ה‑AI לא נענה, כך שהתיאורים ריקים וצריך למלא אותם ברשימת האיפיונים.",
+            "Read from the drawings themselves. The AI service did not answer, so the descriptions are empty and need filling in on the specifications list."));
+    } catch (ex) {
+      setErr(ex && (ex.message || String(ex)) || t("הקריאה נכשלה", "The reading failed"));
+    } finally {
+      setBusy(false);
+      setStage(null);
+    }
+  };
+
+  const downloadXlsx = () => {
+    const aoa = roomsToSheet(rooms, isRTL ? "he" : "en");
+    const ws = XLSX3.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 14 }, { wch: 20 }, { wch: 16 }, { wch: 52 }];
+    const wb = XLSX3.utils.book_new();
+    XLSX3.utils.book_append_sheet(wb, ws, isRTL ? "לפי חדר" : "By room");
+    wb.Workbook = { Views: [{ RTL: isRTL }] };
+    const out = XLSX3.write(wb, { bookType: "xlsx", type: "array" });
+    const url = URL.createObjectURL(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    triggerDownload(url, `${sanitizeFileNamePart("rooms")}.xlsx`);
+    setTimeout(() => URL.revokeObjectURL(url), 1e3);
+  };
+
+  const uploadXlsx = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusy(true);
+    setErr(null);
+    setNote(null);
+    try {
+      const wb = XLSX3.read(await f.arrayBuffer(), { type: "array" });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const aoa = XLSX3.utils.sheet_to_json(ws, { header: 1, raw: false, defval: "" });
+      const parsed = roomsFromSheet(aoa);
+      if (!parsed.rows.length) throw new Error(t("לא נמצאו שורות בקובץ", "No rows found in the file"));
+      // The spreadsheet replaces the reading, not the corrections: a photo and a
+      // name that were set by hand belong to the mark and stay with it.
+      const keep = (rooms || {}).marks || {};
+      const marks = { ...parsed.marks };
+      Object.keys(keep).forEach((k) => { marks[k] = { ...marks[k] || {}, ...keep[k] }; });
+      onRoomsChange({
+        ...(rooms || roomsBlank()),
+        rows: parsed.rows,
+        marks,
+        source: { fileName: f.name, at: new Date().toISOString(), mode: "xlsx" }
+      });
+      setNote(t(`נקלטו ${parsed.rows.length} שורות.`, `${parsed.rows.length} rows taken in.`));
+    } catch (ex) {
+      setErr(ex && (ex.message || String(ex)) || t("הקליטה נכשלה", "Import failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return sbH(
+    "div",
+    { className: "boqBlock plansBlock" },
+    sbH("div", { className: "boqTitle" }, t("תוכניות — חיפוש לפי חדר", "Drawings — search by room")),
+    sbH(
+      "p",
+      { className: "boqHint" },
+      t(
+        "DXF או IFC (ייצוא מ‑Revit), או PDF. הקריאה מזהה מספרי חדרים ואיפיונים ובונה מהם את מסך החיפוש לפי חדר. קובץ ‎.rvt‎ עצמו אינו ניתן לקריאה בדפדפן.",
+        "DXF or IFC (a Revit export), or PDF. The reading finds room numbers and marks and builds the by-room screen from them. A .rvt file itself cannot be read in a browser."
+      )
+    ),
+    files.map((f) =>
+      sbH(
+        "div",
+        { className: "boqFile", key: f.name + f.uploadedAt },
+        sbH(FileTextIcon, { size: 15, strokeWidth: 2 }),
+        sbH("span", { className: "boqName" }, f.name),
+        sbH("span", { className: "boqMeta", dir: "ltr" }, `${(f.kind || "").toUpperCase()} · ${sbFmtDate((f.uploadedAt || "").slice(0, 10))}`),
+        sbH(
+          "button",
+          {
+            type: "button",
+            className: "sbLinkBtn muted",
+            onClick: () => onPlansChange({ files: files.filter((x) => x !== f) })
+          },
+          sbH(Trash2, { size: 13, strokeWidth: 2 })
+        )
+      )
+    ),
+    // choose → confirm → save
+    sbH(
+      "label",
+      { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
+      sbH(Upload4, { size: 14, strokeWidth: 2 }),
+      " ",
+      t("בחירת תוכניות", "Choose drawings"),
+      sbH("input", { type: "file", multiple: true, accept: PLAN_ACCEPT, style: { display: "none" }, onChange: onPick })
+    ),
+    picked.length
+      ? sbH(
+          "div",
+          { className: "plansPending" },
+          picked.map((f) => sbH("div", { className: "plansPendName", key: f.name, dir: "ltr" }, f.name)),
+          sbH(
+            "label",
+            { className: "plansConfirm" },
+            sbH("input", { type: "checkbox", checked: confirmed, onChange: (e) => setConfirmed(e.target.checked) }),
+            " ",
+            t("אישור — התוכניות האלה שייכות לפרויקט הזה", "Confirm — these drawings belong to this project")
+          ),
+          sbH(
+            "button",
+            { type: "button", className: "functionEditBtn", disabled: !confirmed || busy, onClick: save },
+            busy ? t("שומר…", "Saving…") : t("שמירה", "Save")
+          )
+        )
+      : null,
+    // and only once something is saved, the reading
+    files.length
+      ? sbH(
+          "div",
+          { className: "boqActions" },
+          sbH(
+            "button",
+            { type: "button", className: "functionEditBtn", disabled: busy, onClick: readAi },
+            sbH(Sparkles, { size: 14, strokeWidth: 2 }),
+            " ",
+            t("קריאת AI של התוכניות", "AI reading of the drawings")
+          ),
+          rooms
+            ? sbH("button", { type: "button", className: "ghostBtn small", onClick: downloadXlsx },
+                sbH(Download2, { size: 14, strokeWidth: 2 }), " ", t("הורדת טבלת אקסל", "Download the spreadsheet"))
+            : null,
+          sbH(
+            "label",
+            { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
+            sbH(Upload4, { size: 14, strokeWidth: 2 }),
+            " ",
+            t("העלאת אקסל במקום קריאת AI", "Upload a spreadsheet instead"),
+            sbH("input", { type: "file", accept: ".xlsx,.xls,.csv", style: { display: "none" }, onChange: uploadXlsx })
+          )
+        )
+      : null,
+    rooms
+      ? sbH("p", { className: "boqHint" },
+          `${roomCount} ${t("חדרים", "rooms")} · ${markCount} ${t("איפיונים", "specifications")}` +
+          ((rooms.source && rooms.source.mode) ? ` · ${rooms.source.mode}` : ""))
+      : null,
+    busy && stage ? sbH("p", { className: "boqStage" }, stage) : null,
+    note ? sbH("p", { className: "boqHint plansNote" }, note) : null,
+    err ? sbH("p", { className: "sbErr" }, err) : null
+  );
+}
+
+function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange, plansByProject, onPlansChange, roomsByProject, onRoomsChange }) {
   const inS = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff", width: "100%" };
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6({ name: "", floorsFrom: "", floorsTo: "", startDate: "", endDate: "", clientLogoUrl: null, accent: null });
@@ -10808,7 +11739,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(SubmittalPermsBlock, { isRTL, perms: (submittalPermsByProject || {})[p.id] || {}, onChange: (next) => onSubmittalPermsChange && onSubmittalPermsChange(p.id, next) }), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { className: "blockRule" }), /* @__PURE__ */ React15.createElement(PlansUploadBlock, { isRTL, projectId: p.id, plans: (plansByProject || {})[p.id] || null, onPlansChange: (next) => onPlansChange && onPlansChange(p.id, next), rooms: (roomsByProject || {})[p.id] || null, onRoomsChange: (next) => onRoomsChange && onRoomsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -10906,6 +11837,8 @@ function ProjectDashboardApp() {
   const [sessionGrants, setSessionGrants] = useState6([]);
   const [loggedInEmail, setLoggedInEmail] = useState6(null);
   const [editableProjectIds, setEditableProjectIds] = useState6([]);
+  // Set when a sign-in found no project list yet, cleared the moment one arrives.
+  const wantAutoProject = useRef5(false);
   const [openCardKey, setOpenCardKey] = useState6(null);
   const [pdfPage, setPdfPage] = useState6(1);
   const [functionEditOpen, setFunctionEditOpen] = useState6(false);
@@ -11076,18 +12009,20 @@ function ProjectDashboardApp() {
     const boqs = {};
     const llis = {};
     const sds = {};
+    const rms = {};
     const flagOverrides = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, sdRows, boqFlagOverrides, ...others } = entry;
+      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
       if (lliRows) llis[pid] = lliRows;
       if (sdRows) sds[pid] = sdRows;
+      if (roomsData) rms[pid] = roomsData;
       if (boqFlagOverrides) flagOverrides[pid] = boqFlagOverrides;
     });
-    return { rest, schedules, boqs, llis, sds, flagOverrides };
+    return { rest, schedules, boqs, llis, sds, rms, flagOverrides };
   };
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -11109,7 +12044,7 @@ function ProjectDashboardApp() {
         } catch (e2) {
           console.error("[awdash] load project-schedules failed", e2);
         }
-        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"], ["project-sd", "sdRows"], ["project-boq-flags", "boqFlagOverrides"]]) {
+        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"], ["project-sd", "sdRows"], ["project-rooms", "roomsData"], ["project-boq-flags", "boqFlagOverrides"]]) {
           try {
             const side = await loadAppState(key);
             rememberLoaded(key, side);
@@ -11134,7 +12069,7 @@ function ProjectDashboardApp() {
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
     (async () => {
-      const { rest, schedules, boqs, llis, sds, flagOverrides } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, sds, rms, flagOverrides } = splitExtras(projectExtras);
       let failed = null;
       for (const [key, value] of [
         ["project-extras", rest],
@@ -11142,6 +12077,7 @@ function ProjectDashboardApp() {
         ["project-boq", boqs],
         ["project-lli", llis],
         ["project-sd", sds],
+        ["project-rooms", rms],
         ["project-boq-flags", flagOverrides]
       ]) {
         try {
@@ -11168,9 +12104,16 @@ function ProjectDashboardApp() {
   const activeExtras = projectExtras[activeProject.id] || { dataSources: [], scheduleData: null };
   const setProjectContacts = (projectId, contacts) => updateProjectExtras(projectId, { contacts });
   const setContactGroupVisibility = (projectId, visibility) => updateProjectExtras(projectId, { contactGroupVisibility: visibility });
-  const setSubmittalPerms = (projectId, perms) => updateProjectExtras(projectId, { submittalPerms: perms });
-  const submittalPermsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
-    acc[pid] = projectExtras[pid] && projectExtras[pid].submittalPerms || {};
+  // The drawings and what was read out of them, one set per project. Only the
+  // record travels here; the drawing files themselves sit in Storage.
+  const setProjectPlans = (projectId, next) => updateProjectExtras(projectId, { plans: next });
+  const setProjectRooms = (projectId, next) => updateProjectExtras(projectId, { roomsData: next });
+  const plansByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    acc[pid] = projectExtras[pid] && projectExtras[pid].plans || null;
+    return acc;
+  }, {});
+  const roomsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    acc[pid] = projectExtras[pid] && projectExtras[pid].roomsData || null;
     return acc;
   }, {});
   // The bill of quantities, one per project. Only the record travels here — the
@@ -11220,6 +12163,34 @@ function ProjectDashboardApp() {
   const isSubcontractorHere = activeGrant?.role === "subcontractor";
   const visibleCardKeys = isSubcontractorHere ? activeGrant.allowedCards || [] : null;
   const canSeeCard = (key) => !visibleCardKeys || visibleCardKeys.includes(key);
+  // Named, and switched on — unless you are the system administrator, who has
+  // to be able to see a project in order to switch it back on.
+  const visibleProjects = (activeContractor.projects || []).filter(
+    (p) => p.name && p.name.trim() && (appRole === "admin" || p.published)
+  );
+  // The screen follows the data, not the other way round. Two things make this
+  // necessary: on a page refresh the session comes back before the project list
+  // does, and a project can be switched off while somebody is standing inside
+  // it. In both cases the view is corrected the moment the list is known.
+  useEffect5(() => {
+    if (!isAuthenticated || appRole === "admin") return;
+    const ids = visibleProjects.map((p) => p.id);
+    // Signing in before the project list arrived: take them in as soon as it does.
+    if (wantAutoProject.current && ids.length) {
+      wantAutoProject.current = false;
+      setSelectedProjectId(ids[0]);
+      setView("dashboard");
+      return;
+    }
+    if (ids.indexOf(selectedProjectId) >= 0) return;
+    // Standing inside a project that has just been switched off.
+    if (ids.length) {
+      setSelectedProjectId(ids[0]);
+      setView("dashboard");
+    } else {
+      setView("projectPicker");
+    }
+  }, [isAuthenticated, appRole, visibleProjects.map((p) => p.id).join(","), selectedProjectId]);
   const canEditCard = (key) => appRole === "admin" || authRole === "contractor" && editableProjectIds.includes(activeProject.id) || isSubcontractorHere && visibleCardKeys.includes(key);
   const [docViewerSourceId, setDocViewerSourceId] = useState6(null);
   const [scheduleChangeReport, setScheduleChangeReport] = useState6(null);
@@ -11289,7 +12260,10 @@ function ProjectDashboardApp() {
         }
         console.log("[awdash] detected role:", role);
         const projs = activeContractor.projects || [];
-        const configured = projs.filter((p) => p.name);
+        // The ON/OFF switch in project settings is now the real gate: a project
+        // that is off does not reach anyone except the system administrator,
+        // whatever rights they were given. Switching it back on restores it.
+        const configured = projs.filter((p) => p.name && (role === "admin" || p.published));
         setLoginError(null);
         setForm({ email: "", password: "" });
         setIsAuthenticated(true);
@@ -11318,12 +12292,14 @@ function ProjectDashboardApp() {
           if (role === "admin") {
             setView("projectPicker");
           } else {
-            const target = configured[0] || projs[0];
+            const target = configured[0] || null;
+            if (!target) wantAutoProject.current = true;
             if (target) setSelectedProjectId(target.id);
             setView(target ? "dashboard" : "projectPicker");
           }
         } else {
-          const target = configured[0] || projs[0];
+          const target = configured[0] || null;
+            if (!target) wantAutoProject.current = true;
           setSessionGrants(target ? [{ projectId: target.id, role: "client", allowedCards: [] }] : []);
           setAuthRole("client");
           setEditableProjectIds([]);
@@ -12128,7 +13104,7 @@ function ProjectDashboardApp() {
   ), view === "projectPicker" && /* @__PURE__ */ React15.createElement(
     ProjectPicker,
     {
-      projects: activeContractor.projects.filter((p) => p.name && p.name.trim()),
+      projects: visibleProjects,
       onPick: (id) => {
         setSelectedProjectId(id);
         setView("dashboard");
@@ -12142,7 +13118,7 @@ function ProjectDashboardApp() {
       onOpenCard: setOpenCardKey,
       onLockedCard: triggerAuthNotice,
       isRTL,
-      showBack: isAuthenticated && (appRole === "admin" || activeContractor.projects.filter((p) => p.name && p.name.trim()).length > 1),
+      showBack: isAuthenticated && (appRole === "admin" || visibleProjects.length > 1),
       onBack: goHome
     }
   ), view === "dashboard" && dataSourcesOpen && /* @__PURE__ */ React15.createElement("div", { className: "functionPage" }, /* @__PURE__ */ React15.createElement(
@@ -12261,6 +13237,8 @@ function ProjectDashboardApp() {
         onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
         sdRows: activeExtras.sdRows || {},
         onChangeSdRows: (next) => updateProjectExtras(activeProject.id, { sdRows: next }),
+        roomsData: activeExtras.roomsData || null,
+        onChangeRoomsData: (next) => updateProjectExtras(activeProject.id, { roomsData: next }),
         currentEmail: loggedInEmail,
         userSignatures,
         brandName: activeContractor.name || DEFAULT_BRAND_NAME,
@@ -12272,7 +13250,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL, setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, submittalPermsByProject, onSubmittalPermsChange: setSubmittalPerms, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL, setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
@@ -12459,7 +13437,7 @@ function ProjectDashboardApp() {
       value: newProjectName,
       onChange: (e) => setNewProjectName(e.target.value)
     }
-  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz"), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), scheduleChangeReport && /* @__PURE__ */ React15.createElement(
+  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz", /* @__PURE__ */ React15.createElement("span", { className: "buildStamp", dir: "ltr", title: "build" }, APP_BUILD)), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), scheduleChangeReport && /* @__PURE__ */ React15.createElement(
       "div",
       { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 640, padding: 20 }, onClick: () => setScheduleChangeReport(null) },
       /* @__PURE__ */ React15.createElement(
