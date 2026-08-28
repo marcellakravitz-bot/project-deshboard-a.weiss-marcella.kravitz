@@ -422,7 +422,16 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "28.8.2026 \u00b7 build 10";
+var APP_BUILD = "28.8.2026 \u00b7 build 12";
+// 28.8.26 — the frame does not move. Switching the language used to mirror the
+// whole site: the logo crossed to the other side, the menu button jumped, the
+// nine cards re-ordered themselves. Nothing about that is information — it is
+// the same screen, re-laid-out, and it costs the reader a second every time.
+// So the shell is pinned to the layout it has always had, and only the words
+// change. Content that genuinely has to read the other way — a table, a card's
+// body — sets its own `dir` from the language, which is why a Hebrew table
+// still reads right to left with its headings, inside a frame that stayed put.
+var APP_FRAME_DIR = "rtl";
 // Fallback used by initialsFromName() when there is no contractor name yet.
 // It was referenced but never defined, which threw a ReferenceError.
 var DEFAULT_BRAND_INITIALS = "AW";
@@ -1625,6 +1634,22 @@ var pdfViewer = `
         /* The submittal's own language switch. The layout does not resize when
            it is used — the page simply reads the other way. */
         .sbLangRow { display: flex; justify-content: center; margin-bottom: 12px; }
+        /* ---------- which language to print in ---------- */
+        .printAskScrim {
+          position: fixed; inset: 0; background: rgba(16,22,34,.55); z-index: 900;
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .printAskBox {
+          background: #fff; border-radius: 14px; padding: 22px 26px; width: 100%; max-width: 380px;
+          box-shadow: 0 20px 60px rgba(0,0,0,.3); text-align: center;
+          font-family: inherit; color: var(--ink);
+        }
+        .printAskBox h3 { margin: 0 0 6px; font-size: 17px; }
+        .printAskBox p { margin: 2px 0; font-size: 13px; color: var(--steel); }
+        .printAskEn { font-size: 12px !important; }
+        .printAskBtns { display: flex; gap: 10px; margin: 18px 0 10px; }
+        .printAskBtns button { flex: 1; }
+        .printAskCancel { font-size: 12px; }
         .sbLangToggle {
           display: inline-flex; background: #eef0f2; border-radius: 999px; padding: 3px;
         }
@@ -3860,10 +3885,17 @@ var SCHEDULE_COPY = {
   }
 };
 var SUMMARY_SHADES = ["#14265e", "#d9e7fa", "#e8f0fc", "#f2f6fd"];
-function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, projectStart, projectEnd, lastUpdated, projectName, clientNotes, onToggleClientNote, teamNotes, onToggleTeamNote, viewerRole, changeNotes, printBrand }) {
+function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, projectStart, projectEnd, lastUpdated, projectName, clientNotes, onToggleClientNote, teamNotes, onToggleTeamNote, viewerRole, changeNotes, printBrand, appIsRTL }) {
   const [justSaved, setJustSaved] = useState4(false);
   const [barTip, setBarTip] = useState4(null);
-  const [scheduleLang, setScheduleLang] = useState4("he");
+  // 28.8.26 — the schedule used to carry its own עברית/English switch. There is
+  // one language button now, in the top bar, and this follows it. Which language
+  // the printed Gantt comes out in is asked at the moment of printing.
+  const scheduleLang = appIsRTL === false ? "en" : "he";
+  // Holds the print that is waiting for a language. It is a function kept in
+  // state, so it is stored wrapped — React would otherwise call it, thinking it
+  // was an updater.
+  const [printAsk, setPrintAsk] = useState4(null);
   const [notesOpen, setNotesOpen] = useState4(false);
   const [markerPct, setMarkerPct] = useState4(null);
   const [dragging, setDragging] = useState4(false);
@@ -3955,10 +3987,13 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
   // timeline is a 5000px-wide pannable strip inside a 46vh scroll box; printing
   // that would put a keyhole on the paper. Here the whole span is laid out in
   // percentages so the entire project fits one landscape sheet.
-  const printSchedule = () => {
-    const he = isRTL;
+  // The language is the one chosen in the dialog on the way here, not the one
+  // the screen happens to be in: the sheet is for whoever receives it.
+  const printSchedule = (printLang) => {
+    const he = printLang !== "en";
     const dir = he ? "rtl" : "ltr";
     const align = he ? "right" : "left";
+    const sc = SCHEDULE_COPY[he ? "he" : "en"];
     const brand = printBrand || {};
     // The project's colour is used in EXACTLY four places in this document and
     // nowhere else: the project name, the marker date, the Gantt's header row,
@@ -4020,7 +4055,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
     // Every activity from project start to project end — collapsed phases are
     // expanded for the printout, since a printed schedule is a full record.
     const rows = mainTasks.map((t) => {
-      const label = esc(scheduleLang === "he" ? t.nameHe || t.name : t.name);
+      const label = esc(he ? t.nameHe || t.name : t.name);
       const indent = t.level != null ? (t.level - minLevel) * 10 : 0;
       if (t.isSummary) {
         // Phase rows carry the very same shading ladder as on screen.
@@ -4297,7 +4332,7 @@ tr { page-break-inside: avoid; }
       /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateLabel" }, isRTL ? "\u05EA\u05D0\u05E8\u05D9\u05DA \u05E1\u05D9\u05DE\u05D5\u05DF" : "Marker date"),
       /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateValue numerals" }, markerLabel),
       isMoved && /* @__PURE__ */ React11.createElement("span", { className: "ganttMarkerDateReset" }, isRTL ? "\u05D7\u05D6\u05E8\u05D4 \u05DC\u05D4\u05D9\u05D5\u05DD" : "back to today")
-    ), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, !readOnly && /* @__PURE__ */ React11.createElement("button", { type: "button", className: `ghostBtn small ganttSaveBtn ${justSaved ? "saved" : ""}`, onClick: () => { onSaveUpdate && onSaveUpdate(); setJustSaved(true); setTimeout(() => setJustSaved(false), 2e3); } }, /* @__PURE__ */ React11.createElement(Save, { size: 14, strokeWidth: 2.2 }), " ", justSaved ? isRTL ? "נשמר ✓" : "Saved ✓" : isRTL ? "שמור עדכון" : "Save update"), /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: printSchedule, title: isRTL ? "הדפסת הלו\"ז בלבד" : "Print the schedule only" }, /* @__PURE__ */ React11.createElement(Printer, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הדפסה" : "Print"), false &&/* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), /* @__PURE__ */ React11.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "he" ? "active" : "", onClick: () => setScheduleLang("he") }, "\u05E2\u05D1\u05E8\u05D9\u05EA"), /* @__PURE__ */ React11.createElement("button", { className: scheduleLang === "en" ? "active" : "", onClick: () => setScheduleLang("en") }, "English")))),
+    ), /* @__PURE__ */ React11.createElement("div", { style: { display: "flex", alignItems: "center", gap: 10 } }, !readOnly && /* @__PURE__ */ React11.createElement("button", { type: "button", className: `ghostBtn small ganttSaveBtn ${justSaved ? "saved" : ""}`, onClick: () => { onSaveUpdate && onSaveUpdate(); setJustSaved(true); setTimeout(() => setJustSaved(false), 2e3); } }, /* @__PURE__ */ React11.createElement(Save, { size: 14, strokeWidth: 2.2 }), " ", justSaved ? isRTL ? "נשמר ✓" : "Saved ✓" : isRTL ? "שמור עדכון" : "Save update"), /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => printSchedule), title: isRTL ? "הדפסת הלו\"ז בלבד" : "Print the schedule only" }, /* @__PURE__ */ React11.createElement(Printer, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הדפסה" : "Print"), printAsk && /* @__PURE__ */ React11.createElement(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }), false &&/* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: downloadScheduleCsv }, /* @__PURE__ */ React11.createElement(Download, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "\u05D4\u05D5\u05E8\u05D3\u05D4" : "Download"), null)),
     /* @__PURE__ */ React11.createElement("div", { className: "scheduleWrap" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttViewport" }, /* @__PURE__ */ React11.createElement("div", { className: "ganttHeaderSticky", style: { gridTemplateColumns: `${nameColWidth}px 1fr` } }, /* @__PURE__ */ React11.createElement("div", { className: "ganttLeftHeadRow", style: { flexBasis: nameColWidth } }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderCrit" }), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderTask" }, sc.taskCol), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.expectedWord)), /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPct" }, /* @__PURE__ */ React11.createElement("span", { className: "ganttHeaderPctSign" }, "%"), /* @__PURE__ */ React11.createElement("span", null, sc.actualWord))), /* @__PURE__ */ React11.createElement("div", { className: "ganttAxisWrap" }, /* @__PURE__ */ React11.createElement(
       "div",
       {
@@ -4575,7 +4610,8 @@ function ProjectScheduleCard({
   projectStart,
   projectEnd,
   projectName,
-  printBrand
+  printBrand,
+  appIsRTL
 }) {
   const note = scheduleData.parseNote;
   return /* @__PURE__ */ React12.createElement("div", { className: "functionPageBody", style: { flexDirection: "column" } }, note === "unsupported" && /* @__PURE__ */ React12.createElement("p", { className: "pdfBookStatus" }, "Unsupported file \u2014 export as CSV, Excel, MS Project XML, or a PDF task table."), note === "failed" && /* @__PURE__ */ React12.createElement("p", { className: "pdfBookStatus" }, "Couldn't find a readable task table in this file. If this PDF is a drawn Gantt chart (an image, not text), export a task-table report or CSV/Excel/XML from MS Project instead."), note === "draft" && /* @__PURE__ */ React12.createElement("p", { className: "dataSourceNote", style: { marginBottom: 12 } }, "Extracted from PDF text as a best-effort read \u2014 double check dates and the Critical column look right."), (!note || note === "draft") && /* @__PURE__ */ React12.createElement(
@@ -4595,7 +4631,8 @@ function ProjectScheduleCard({
       onToggleClientNote,
       teamNotes: scheduleData.teamNotes,
       onToggleTeamNote,
-      viewerRole
+      viewerRole,
+      appIsRTL
     }
   ));
 }
@@ -4760,6 +4797,7 @@ function CardView({
       onSaveUpdate: onSaveSchedule,
       onToggleClientNote: onToggleScheduleClientNote,
       printBrand,
+      appIsRTL: isRTL,
       onToggleTeamNote: onToggleScheduleTeamNote,
       viewerRole,
       projectStart: project.startDate,
@@ -4777,7 +4815,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("span", null, "Upload"), /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 }))), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", style: { margin: "0 0 10px", textAlign: "center" } }, "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (Save As \u2192 XML \u05DE\u05EA\u05D5\u05DA MS Project)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -5321,15 +5359,19 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
     triggerDownload(url, `${sanitizeFileNamePart(projectName || "Project")} - ${c.title}.xlsx`);
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   };
-  const exportPdf = () => {
+  const [printAsk, setPrintAsk] = useState6(null);
+  // The sheet is for whoever receives it, so the language is the one chosen on
+  // the way to the printer — not the one this screen happens to be in.
+  const exportPdf = (printLang) => {
     const brand = printBrand || {};
     // Contacts is a company document: it uses the MAIN CONTRACTOR's colour, not
     // the project colour that the schedule print uses.
     const accent = accentColour;
-    const dir = isRTL ? "rtl" : "ltr";
+    const he = printLang !== "en";
+    const dir = he ? "rtl" : "ltr";
     const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const body = groupsWithRows.map((g) => {
-      const head = `<tr class="grp"><td colspan="6">${esc(lang === "he" ? g.group.he : g.group.en)}</td></tr>` +
+      const head = `<tr class="grp"><td colspan="6">${esc(he ? g.group.he : g.group.en)}</td></tr>` +
         `<tr class="hd"><td>${esc(c.discipline)}</td><td>${esc(c.company)}</td><td>${esc(c.person)}</td><td>${esc(c.role)}</td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td></tr>`;
       const items = g.items.map((r) => {
         const v = cellOf(r);
@@ -5342,7 +5384,7 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
     }).join("");
     const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "";
     const footImg = brand.footerImg ? `<div class="footImg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
-    const html = `<!doctype html><html dir="${dir}" lang="${lang}"><head><meta charset="utf-8"><title>${esc(projectName || c.title)}</title><style>
+    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || c.title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
 @page { size: A4 portrait; margin: 0; }
 * { box-sizing: border-box; }
@@ -5394,7 +5436,7 @@ tr { page-break-inside: avoid; }
         "div",
         { className: "contactsHeadBtns" },
         /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportCsv }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.excel),
-        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportPdf }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf)
+        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => exportPdf) }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf), printAsk && /* @__PURE__ */ React15.createElement(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); exportPdf(lg); }, onClose: () => setPrintAsk(null) })
       )
     ),
     groupsWithRows.length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "pdfBookStatus" }, c.empty),
@@ -6123,7 +6165,13 @@ function boqClassifyPayload(rows) {
   return rows.map((r) => ({
     code: r.code,
     unit: r.unit || "",
-    text: (r.he || r.en || "").slice(0, 160)
+    qty: r.qty == null ? null : r.qty,
+    // The sub-chapter the line sits under. Without it the model names the same
+    // family two different ways in two batches, and then one product becomes
+    // two records. 300 characters, not 160: a finish code, a RAL number and a
+    // model number all live at the end of a long description.
+    sub: r.subName || "",
+    text: (r.he || r.en || "").slice(0, 300)
   }));
 }
 // The model answers either "SDLX" or { f: "SDLX", g: "צנרת פלדה" }. The group
@@ -6215,8 +6263,10 @@ async function boqClassify(tree, ask, onProgress) {
   return { flags: out, ruled: Object.keys(out).length - pending.length, asked, pending: pending.length };
 }
 
-// What the screens read. A hand edit always wins over the automatic pass, and it
-// is stored apart so re-uploading the workbook never overwrites a decision.
+// What the screens read. A hand edit always wins over the automatic pass. It is
+// stored in its own row, but it does NOT outlive the workbook: uploading a bill
+// of quantities again clears the hand edits, because they were answers to the
+// old classification (28.8.26).
 function boqFlagsOf(auto, overrides, code) {
   const a = (auto || {})[code];
   const o = (overrides || {})[code];
@@ -6383,6 +6433,261 @@ function boqProducts(tree, auto, overrides, flagKey, category) {
   );
 }
 
+// src/lib/board-export.js
+// -----------------------------------------------------------------------------
+// TAKING A BOARD OUT OF THE SITE.
+//
+// The LLI board and the SD board are what a procurement meeting actually runs
+// on, and a meeting does not happen in front of this screen: someone prints the
+// list, or mails a spreadsheet to a supplier. So both leave in two shapes, and
+// both look like the documents the office already sends — the same coloured
+// frame, the same logo, the same footer as the contacts sheet and the schedule.
+//
+// What goes out is WHAT IS ON THE SCREEN: the category filter, "only long lead",
+// "only what is still open" all apply. The list you are looking at is the list
+// you get, which is the only rule nobody has to be told.
+//
+// Two things are deliberately not in the export: the buttons, and the files.
+// A column of "Upload" makes no sense on paper. A file that was attached is
+// reported by its NAME, which is what lets someone find it again.
+// -----------------------------------------------------------------------------
+var BOARD_EXPORT_T = {
+  excel: { en: "Download Excel", he: "הורדה ל‑Excel" },
+  pdf: { en: "Download PDF", he: "הורדה ל‑PDF" },
+  yes: { en: "Yes", he: "כן" },
+  no: { en: "No", he: "לא" },
+  nothing: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." },
+  plainNote: {
+    en: "The spreadsheet came out without colours — the styling library did not load. The data is complete.",
+    he: "האקסל יצא בלי צבעים — ספריית העיצוב לא נטענה. הנתונים מלאים."
+  }
+};
+
+// The document's own palette, derived from the project's colour so the sheet and
+// the printed page are recognisably the same project.
+function boardExportPalette(accent) {
+  return {
+    accent: accent || "#1A559E",
+    dark: typeof shadeDarker === "function" ? shadeDarker(accent || "#1A559E") : (accent || "#1A559E"),
+    zebra: "#F5F8FC",
+    line: "#D9DEE6",
+    ink: "#17181C"
+  };
+}
+function boardHexNoHash(hex) {
+  return String(hex || "").replace("#", "").toUpperCase().slice(0, 6).padStart(6, "0");
+}
+
+// -------------------------------------------------------------------- EXCEL
+// ExcelJS is loaded only when someone actually clicks, and only then: it is a
+// large library and most visits never export anything. If it will not load, the
+// workbook is still produced with the library already in the page — same data,
+// no colours — and the screen says so rather than failing.
+// Loaded the same way PDF.js is: a plain browser build from a CDN, with
+// mirrors, and the global it defines is the proof it arrived. The harness adds a
+// local copy at the front of the list, because the test machine has no way out.
+var EXCELJS_SOURCES = [
+  "./exceljs.min.js",
+  "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",
+  "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js",
+  "https://unpkg.com/exceljs@4.4.0/dist/exceljs.min.js"
+];
+var excelJsLoading = null;
+async function loadExcelJs() {
+  if (typeof window !== "undefined" && window.ExcelJS) return window.ExcelJS;
+  if (excelJsLoading) return excelJsLoading;
+  excelJsLoading = (async () => {
+    for (const src of EXCELJS_SOURCES) {
+      try {
+        await loadScriptOnce(src);
+        if (window.ExcelJS) return window.ExcelJS;
+      } catch (e) {
+        // Try the next mirror. Only the last failure is worth reporting.
+      }
+    }
+    throw new Error("ExcelJS could not be loaded");
+  })();
+  try {
+    return await excelJsLoading;
+  } catch (e) {
+    excelJsLoading = null;
+    throw e;
+  }
+}
+
+async function boardExportXlsx(opts) {
+  const { fileName } = opts;
+  let ExcelJS = null;
+  try {
+    ExcelJS = await loadExcelJs();
+  } catch (e) {
+    console.warn("[awdash] exceljs did not load; falling back to a plain workbook", e);
+  }
+  if (ExcelJS && ExcelJS.Workbook) {
+    const buf = await boardXlsxStyled(ExcelJS, opts);
+    boardSaveBlob(buf, fileName);
+    return { styled: true };
+  }
+  boardSaveBlob(boardXlsxPlain(opts), fileName);
+  return { styled: false };
+}
+
+function boardSaveBlob(buf, fileName) {
+  const url = URL.createObjectURL(new Blob([buf], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  }));
+  triggerDownload(url, fileName);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+async function boardXlsxStyled(ExcelJS, opts) {
+  const { title, subtitle, sheetName, head, body, widths, accent, isRTL } = opts;
+  const P = boardExportPalette(accent);
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "A. Weiss";
+  wb.created = new Date();
+  const ws = wb.addWorksheet(sheetName || "Sheet1", {
+    views: [{ rightToLeft: !!isRTL, state: "frozen", ySplit: 3 }],
+    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+  });
+  const n = head.length;
+  const fill = (hex) => ({ type: "pattern", pattern: "solid", fgColor: { argb: "FF" + boardHexNoHash(hex) } });
+  const thin = { style: "thin", color: { argb: "FF" + boardHexNoHash(P.line) } };
+
+  // Row 1 — the project, in its own colour. Row 2 — what this list is and when
+  // it was taken, because a printed list with no date is a list nobody trusts.
+  ws.mergeCells(1, 1, 1, n);
+  const r1 = ws.getCell(1, 1);
+  r1.value = title;
+  r1.font = { bold: true, size: 15, color: { argb: "FFFFFFFF" }, name: "Arial" };
+  r1.fill = fill(P.dark);
+  r1.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(1).height = 26;
+
+  ws.mergeCells(2, 1, 2, n);
+  const r2 = ws.getCell(2, 1);
+  r2.value = subtitle;
+  r2.font = { bold: true, size: 10.5, color: { argb: "FF" + boardHexNoHash(P.accent) }, name: "Arial" };
+  r2.alignment = { horizontal: "center", vertical: "middle" };
+  ws.getRow(2).height = 20;
+
+  const hr = ws.getRow(3);
+  head.forEach((h, i) => {
+    const c = hr.getCell(i + 1);
+    c.value = h;
+    c.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" }, name: "Arial" };
+    c.fill = fill(P.accent);
+    c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    c.border = { top: thin, left: thin, bottom: thin, right: thin };
+  });
+  hr.height = 30;
+
+  body.forEach((row, ri) => {
+    const r = ws.getRow(4 + ri);
+    row.forEach((v, ci) => {
+      const c = r.getCell(ci + 1);
+      c.value = v === "" || v == null ? null : v;
+      c.font = { size: 10, name: "Arial", color: { argb: "FF" + boardHexNoHash(P.ink) } };
+      c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+      c.border = { top: thin, left: thin, bottom: thin, right: thin };
+      // Every other row tinted: on a wide sheet it is what stops the eye from
+      // sliding into the line above.
+      if (ri % 2 === 1) c.fill = fill(P.zebra);
+    });
+  });
+
+  ws.columns = widths.map((w) => ({ width: w }));
+  // The filter goes on the header row, so the sheet arrives ready to be sliced
+  // by supplier or by status without anybody setting it up.
+  ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3 + body.length, column: n } };
+  return await wb.xlsx.writeBuffer();
+}
+
+// The fallback. A real workbook, correct data, right column widths, and the
+// sheet opens the right way round in Hebrew — it simply has no colour.
+function boardXlsxPlain(opts) {
+  const { title, subtitle, sheetName, head, body, widths, isRTL } = opts;
+  const aoa = [[title], [subtitle], head].concat(body);
+  const ws = XLSX3.utils.aoa_to_sheet(aoa);
+  ws["!cols"] = widths.map((w) => ({ wch: w }));
+  ws["!merges"] = [
+    { s: { r: 0, c: 0 }, e: { r: 0, c: Math.max(0, head.length - 1) } },
+    { s: { r: 1, c: 0 }, e: { r: 1, c: Math.max(0, head.length - 1) } }
+  ];
+  const wb = XLSX3.utils.book_new();
+  XLSX3.utils.book_append_sheet(wb, ws, sheetName || "Sheet1");
+  wb.Workbook = { Views: [{ RTL: !!isRTL }] };
+  return XLSX3.write(wb, { bookType: "xlsx", type: "array" });
+}
+
+// ---------------------------------------------------------------------- PDF
+// Landscape, because these boards are fifteen columns wide and a portrait sheet
+// would either cut them off or shrink them past reading. Everything else is the
+// house template: the coloured frame, the logo, the centred title, the footer.
+function boardExportPdf(opts) {
+  const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs } = opts;
+  const P = boardExportPalette(accent);
+  const dir = isRTL ? "rtl" : "ltr";
+  const b = brand || {};
+  const esc = (v) => String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const total = widths.reduce((a, w) => a + w, 0) || 1;
+  const cols = widths.map((w) => `<col style="width:${((w / total) * 100).toFixed(2)}%">`).join("");
+  const th = head.map((h) => `<th>${esc(h)}</th>`).join("");
+  const tr = body.map((row, ri) => {
+    const tds = row.map((v, ci) => {
+      if (imgCol != null && ci === imgCol) {
+        const src = imgs && imgs[ri];
+        return `<td class="img">${src ? `<img src="${src}" alt="">` : ""}</td>`;
+      }
+      return `<td>${esc(v)}</td>`;
+    }).join("");
+    return `<tr>${tds}</tr>`;
+  }).join("");
+  const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "";
+  const footImg = b.footerImg ? `<div class="footImg"><img src="${b.footerImg}" alt="footer"></div>` : "";
+
+  const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
+@page { size: A4 landscape; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body { width: 297mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
+  direction: ${dir}; padding: 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.frame { border: 1.5px solid ${P.accent}; border-radius: 14px; padding: 10px 12px; }
+.hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
+  border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 10px; }
+.hdr img { max-height: 38px; max-width: 130px; object-fit: contain; justify-self: start; }
+.ttlWrap { grid-column: 2; text-align: center; }
+.ttlWrap .ttl { font-size: 17px; font-weight: 800; color: ${P.accent}; letter-spacing: .4px; }
+.ttlWrap .sub { font-size: 10px; font-weight: 600; color: ${P.accent}; margin-top: 2px; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 8px; padding: 5px 3px;
+  border: 1px solid ${P.line}; text-align: center; vertical-align: middle; word-break: break-word; }
+td { font-size: 7.5px; padding: 4px 3px; border: 1px solid ${P.line}; text-align: center;
+  vertical-align: middle; word-break: break-word; }
+tbody tr:nth-child(even) td { background: ${P.zebra}; }
+td.img { padding: 2px; }
+td.img img { max-width: 100%; max-height: 34px; object-fit: contain; display: block; margin: 0 auto; }
+tr { page-break-inside: avoid; }
+thead { display: table-header-group; }
+.footImg { margin-top: 10px; text-align: center; }
+.footImg img { max-width: 100%; max-height: 70px; object-fit: contain; }
+</style></head><body><div class="frame">
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div></div><span></span></div>
+<table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
+${footImg}</div></body></html>`;
+
+  // Opened inside the click that asked for it, like every other print here, or
+  // the browser treats it as a pop-up and swallows it.
+  const w = window.open("", "_blank");
+  if (!w) return;
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+}
+
 // src/cards/LliCard.jsx
 // -----------------------------------------------------------------------------
 // LLI — the control table for ordering equipment and materials. The rows come
@@ -6469,18 +6774,25 @@ var LLI_L = {
     he: "הסיווג של הפריט הזה לא היה ודאי — כדאי לעבור עליו בטבלת הסיווג."
   },
   lines: { en: "BOQ lines", he: "סעיפים" },
-  noCat: { en: "—", he: "—" }
+  noCat: { en: "—", he: "—" },
+  yes: { en: "Yes", he: "כן" },
+  no: { en: "No", he: "לא" },
+  excel: { en: "Download Excel", he: "הורדה ל‑Excel" },
+  pdf: { en: "Download PDF", he: "הורדה ל‑PDF" },
+  nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." }
 };
 
-function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId }) {
-  const [langOverride, setLangOverride] = useState6(null);
-  const lang = langOverride || (appIsRTL ? "he" : "en");
+function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand }) {
+  // 28.8.26 — no local override. The language button in the top bar is the only
+  // one, and every screen follows it.
+  const lang = appIsRTL ? "he" : "en";
   const isRTL = lang === "he";
   const [cat, setCat] = useState6("all");
   const [showHidden, setShowHidden] = useState6(false);
   const [onlyLong, setOnlyLong] = useState6(false);
   const [busyRow, setBusyRow] = useState6(null);
   const [poNote, setPoNote] = useState6(null);
+  const [printAsk, setPrintAsk] = useState6(null);
   const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
   const t2 = (he, en) => (lang === "he" ? he : en);
 
@@ -6617,6 +6929,76 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       setBusyRow(null);
     }
   };
+  // What leaves the board. The rows are the ones on screen — the category chips
+  // and "only long lead" have already done their work above — and the columns
+  // are the board's own, minus the ones that are buttons rather than facts.
+  const exportGrid = () => {
+    const yn = (v) => (v ? L("yes") : L("no"));
+    const head = [
+      L("section"), L("category"), L("typeMark"), L("desc"), L("supplier"),
+      L("qtyBoq"), L("unit"), L("qtySurveyor"), L("ordered"), L("poNo"),
+      L("poDate"), L("poFile"), L("eta"), L("status"), L("longLead")
+    ];
+    const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 9];
+    const cat = (k) => {
+      const c = SUBMITTAL_CATEGORIES.find((x) => x.key === k);
+      return c ? sbText(c, lang) : "";
+    };
+    const body = [];
+    const imgs = [];
+    groups.forEach((g) => {
+      g.rows.forEach((r) => {
+        const v = lliRowOf(data, r.code);
+        body.push([
+          r.source === "boq" ? r.code : L("manual"),
+          cat(r.category),
+          v.typeMark,
+          v.desc || r.title,
+          v.supplier,
+          r.qty == null ? "" : r.qty,
+          r.unit ? boqUnit(r.unit, lang) : "",
+          v.qtyActual,
+          yn(v.ordered),
+          v.ordered ? v.po : "",
+          v.ordered && v.poDate ? sbFmtDate(v.poDate) : "",
+          v.ordered && v.poFile ? v.poFile.name || "" : "",
+          v.ordered && v.eta ? sbFmtDate(v.eta) : "",
+          v.ordered ? lliStatusLabel(v.status, lang) : "",
+          r.longLead ? L("longLead") : ""
+        ]);
+        imgs.push(v.image || null);
+      });
+    });
+    return { head, body, widths, imgs };
+  };
+  const exportTitle = () => `${projectName || ""}`.trim() || L("title");
+  const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
+  const onExcel = async () => {
+    const g = exportGrid();
+    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
+    setPoNote(null);
+    const res = await boardExportXlsx({
+      title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
+      fileName: `${sanitizeFileNamePart(projectName || "Project")} - LLI.xlsx`,
+      head: g.head, body: g.body, widths: g.widths,
+      accent: (printBrand || {}).accent, isRTL
+    });
+    if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+  };
+  const onPdf = (printLang) => {
+    const g = exportGrid();
+    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
+    // The photo earns its column here and nowhere else: this is the sheet that
+    // goes to a supplier, and a picture settles an argument a description cannot.
+    const head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
+    const widths = g.widths.slice(0, 4).concat([8], g.widths.slice(4));
+    const body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
+    boardExportPdf({
+      title: exportTitle(), subtitle: exportSub(), head, body, widths,
+      accent: (printBrand || {}).accent, brand: printBrand,
+      isRTL: printLang !== "en", imgCol: 4, imgs: g.imgs
+    });
+  };
   const addManual = () => {
     const n = Object.keys(data).filter((k) => k.indexOf("m-") === 0).length + 1;
     patch(`m-${Date.now()}`, { ...lliBlankRow(), desc: "", category: cat === "all" ? null : cat, manualIndex: n });
@@ -6636,12 +7018,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       "div",
       { className: "lliHead" },
       sbH("h2", { className: "lliTitle" }, L("title")),
-      sbH(
-        "div",
-        { className: "sbLangToggle" },
-        sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
-        sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
-      )
+      null
     ),
     // The category filter is the first thing on the page, on purpose.
     sbH(
@@ -6669,7 +7046,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         " ",
         L("showHidden")
       ),
-      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
+      sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " ", L("excel")),
+      sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " ", L("pdf")),
+      printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
     ),
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
     groups.length === 0
@@ -6990,17 +7370,24 @@ var SD_L = {
     he: "הסיווג של הפריט הזה לא היה ודאי — כדאי לעבור עליו בטבלת הסיווג."
   },
   lines: { en: "BOQ lines", he: "סעיפים" },
-  noCat: { en: "—", he: "—" }
+  noCat: { en: "—", he: "—" },
+  excel: { en: "Download Excel", he: "הורדה ל‑Excel" },
+  pdf: { en: "Download PDF", he: "הורדה ל‑PDF" },
+  nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." },
+  exportNote: { en: "note", he: "הערה" }
 };
 
-function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId }) {
-  const [langOverride, setLangOverride] = useState6(null);
-  const lang = langOverride || (appIsRTL ? "he" : "en");
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand }) {
+  // 28.8.26 — no local override. The language button in the top bar is the only
+  // one, and every screen follows it.
+  const lang = appIsRTL ? "he" : "en";
   const isRTL = lang === "he";
   const [cat, setCat] = useState6("all");
   const [showHidden, setShowHidden] = useState6(false);
   const [onlyOpen, setOnlyOpen] = useState6(false);
   const [busyRow, setBusyRow] = useState6(null);
+  const [printAsk, setPrintAsk] = useState6(null);
+  const [exportNote, setExportNote] = useState6(null);
   const L = (k) => sbText(SD_L[k] || { en: k, he: k }, lang);
 
   const data = rows || {};
@@ -7081,6 +7468,65 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const url = await sbFileUrl(att);
     if (url) window.open(url, "_blank", "noopener");
   };
+  // The board as it stands on screen, in the two shapes it has to leave in.
+  const exportGrid = () => {
+    const yn = (v, at) => (v ? `${L("yes")}${at ? ` · ${sbFmtDate(String(at).slice(0, 10))}` : ""}` : L("no"));
+    const head = [
+      L("section"), L("category"), L("dwgNo"), L("desc"), L("qty"),
+      L("requested"), L("dueAt"), L("file"), L("toClient"),
+      L("owner"), L("status"), L("submittedAt"), L("approvedAt")
+    ];
+    const widths = [14, 12, 12, 32, 10, 16, 12, 20, 16, 14, 16, 12, 12];
+    const cat2 = (k) => {
+      const c = SUBMITTAL_CATEGORIES.find((x) => x.key === k);
+      return c ? sbText(c, lang) : "";
+    };
+    const body = [];
+    groups.forEach((g) => {
+      g.rows.forEach((r) => {
+        const v = sdRowOf(data, r.code);
+        const done = SD_DONE.indexOf(v.status) >= 0;
+        body.push([
+          r.source === "boq" ? r.code : L("manual"),
+          cat2(r.category),
+          v.dwgNo,
+          v.desc || r.title,
+          r.qty == null ? "" : `${r.qty}${r.unit ? ` ${boqUnit(r.unit, lang)}` : ""}`,
+          yn(v.requested, v.requestedAt),
+          v.dueAt ? sbFmtDate(v.dueAt) : "",
+          v.file ? v.file.name || "" : "",
+          yn(v.toClient, v.toClientAt),
+          v.owner,
+          sbText(sdStatus(v.status), lang),
+          v.submittedAt ? sbFmtDate(v.submittedAt) : "",
+          done && v.approvedAt ? sbFmtDate(v.approvedAt) : ""
+        ]);
+      });
+    });
+    return { head, body, widths };
+  };
+  const exportTitle = () => `${projectName || ""}`.trim() || L("title");
+  const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
+  const onExcel = async () => {
+    const g = exportGrid();
+    if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
+    setExportNote(null);
+    const res = await boardExportXlsx({
+      title: exportTitle(), subtitle: exportSub(), sheetName: "SD",
+      fileName: `${sanitizeFileNamePart(projectName || "Project")} - SD.xlsx`,
+      head: g.head, body: g.body, widths: g.widths,
+      accent: (printBrand || {}).accent, isRTL
+    });
+    if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+  };
+  const onPdf = (printLang) => {
+    const g = exportGrid();
+    if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
+    boardExportPdf({
+      title: exportTitle(), subtitle: exportSub(), head: g.head, body: g.body, widths: g.widths,
+      accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
+    });
+  };
   const addManual = () => {
     patch(`s-${Date.now()}`, { ...sdBlankRow(), category: cat === "all" ? null : cat });
   };
@@ -7099,12 +7545,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       "div",
       { className: "lliHead" },
       sbH("h2", { className: "lliTitle" }, L("title")),
-      sbH(
-        "div",
-        { className: "sbLangToggle" },
-        sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
-        sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
-      )
+      null
     ),
     sbH(
       "div",
@@ -7130,7 +7571,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         " ",
         L("showHidden")
       ),
-      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
+      sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " ", L("excel")),
+      sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " ", L("pdf")),
+      exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
+      printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
     ),
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
     groups.length === 0
@@ -7646,8 +8091,9 @@ var ROOMS_L = {
 };
 
 function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }) {
-  const [langOverride, setLangOverride] = useState6(null);
-  const lang = langOverride || (appIsRTL ? "he" : "en");
+  // 28.8.26 — no local override. The language button in the top bar is the only
+  // one, and every screen follows it.
+  const lang = appIsRTL ? "he" : "en";
   const isRTL = lang === "he";
   const L = (k) => sbText(ROOMS_L[k] || { en: k, he: k }, lang);
   const [query, setQuery] = useState6("");
@@ -7688,12 +8134,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }
     setView("search");
   };
 
-  const langSwitch = sbH(
-    "div",
-    { className: "sbLangToggle" },
-    sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
-    sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
-  );
+  const langSwitch = null;
 
   // ---- the list of specifications, one row per mark ------------------------
   if (view === "marks") {
@@ -7910,6 +8351,46 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }
 // -----------------------------------------------------------------------------
 import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw, PenLine, Stamp } from "lucide-react";
 var sbH = React15.createElement;
+
+// -----------------------------------------------------------------------------
+// WHICH LANGUAGE TO PRINT IN.
+//
+// A document that leaves the office is not always in the language the office is
+// working in: she works in Hebrew all day and still has to send an English
+// submittal to a client. That used to be a language switch sitting permanently
+// on the submittal screen — which put the setting somewhere else entirely at the
+// moment it mattered, and changed what SHE saw and not only what the client got.
+//
+// So it is asked where it belongs: on the way to the printer. Every PDF in the
+// site goes through here. The question itself is written in both languages,
+// because at that moment we do not yet know which one the reader wants.
+// -----------------------------------------------------------------------------
+function PrintLangAsk({ onPick, onClose }) {
+  return createPortal(
+    sbH(
+      "div",
+      { className: "printAskScrim", onClick: onClose },
+      sbH(
+        "div",
+        { className: "printAskBox", dir: "rtl", onClick: (e) => e.stopPropagation() },
+        sbH("h3", null, "שפת ההדפסה"),
+        sbH("p", null, "באיזו שפה להפיק את המסמך?"),
+        sbH("p", { className: "printAskEn", dir: "ltr" }, "Which language should the document be produced in?"),
+        sbH(
+          "div",
+          { className: "printAskBtns" },
+          // The window that actually prints is opened inside this click, so the
+          // browser still counts it as a gesture and does not block the popup.
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onPick("he") }, "עברית"),
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onPick("en") }, "English")
+        ),
+        sbH("button", { type: "button", className: "sbLinkBtn printAskCancel", onClick: onClose }, "ביטול · Cancel")
+      )
+    ),
+    document.body
+  );
+}
+
 var SUBMITTAL_BUCKET = "submittals";
 var SUBMITTAL_CATEGORIES = [
   { key: "architecture", en: "Architecture", he: "אדריכלות", icon: Building23 },
@@ -8820,6 +9301,7 @@ function sbPrint(rec, lang, brand, signatures) {
 
 // ------------------------------------------------------------------- the form
 function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
+  const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
   const [err, setErr] = useState6(null);
@@ -9108,13 +9590,14 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
         langSwitch || null,
         sbH(
           "button",
-          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
+          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures)) },
           sbH(Printer, { size: 14, strokeWidth: 2 }),
           " ",
           L("print")
         )
       )
     ),
+    printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
     typeof d.fromRev === "number" && !d.sent
       ? sbH("p", { className: "sbRevNote" }, `${L("newVersionNote")} Rev.${d.fromRev} → Rev.${d.rev}`)
       : null,
@@ -9853,6 +10336,7 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
 // -----------------------------------------------------------------------------
 function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, userSignatures, currentEmail, onSave, onCancel }) {
   const L = (k) => sbText(SB_L[k], lang);
+  const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [padOpen, setPadOpen] = useState6(false);
   useEffect5(() => { setD(rec); }, [rec && rec.id]);
@@ -9933,11 +10417,12 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
       langSwitch || null,
       sbH(
         "button",
-        { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => sbPrint(d, lang, printBrand, userSignatures) },
+        { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures)) },
         sbH(Printer, { size: 14, strokeWidth: 2 }),
         " ",
         L("print")
-      )
+      ),
+      printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
     )
   );
 
@@ -10553,8 +11038,9 @@ function SubmittalCard({
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
   // direction and the wording change.
-  const [langOverride, setLangOverride] = useState6(null);
-  const lang = langOverride || (appIsRTL ? "he" : "en");
+  // 28.8.26 — no local override. The language button in the top bar is the only
+  // one, and every screen follows it.
+  const lang = appIsRTL ? "he" : "en";
   const isRTL = lang === "he";
   const [selected, setSelected] = useState6(null);
   const [openId, setOpenId] = useState6(null);
@@ -10563,24 +11049,12 @@ function SubmittalCard({
   const label = (c) => sbText(c, lang);
   const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
   const L = (k) => sbText(SB_L[k], lang);
-  const langSwitch = sbH(
-    "div",
-    { className: "sbLangRow" },
-    sbH(
-      "div",
-      { className: "sbLangToggle", dir: "ltr" },
-      sbH(
-        "button",
-        { type: "button", className: lang === "en" ? "active" : "", onClick: () => setLangOverride("en") },
-        "EN"
-      ),
-      sbH(
-        "button",
-        { type: "button", className: lang === "he" ? "active" : "", onClick: () => setLangOverride("he") },
-        "HE"
-      )
-    )
-  );
+  // The submittal used to carry its own EN/HE switch, because the document that
+  // goes out to a client is not always in the language she is working in. That
+  // is still true — but it is a question about the PRINT, so it is now asked at
+  // the moment of printing instead of sitting on the screen all day.
+  const [printAsk, setPrintAsk] = useState6(null);
+  const langSwitch = null;
 
   // Editing a submittal is the system administrator's, full stop. Everyone else
   // opens it, reads it, and — if their own account allows it — signs it.
@@ -10884,10 +11358,11 @@ function SubmittalCard({
           if (made.length) commit((list || []).concat(made));
         },
         onOpen: openExisting,
-        onPrint: (s) => sbPrint(s, lang, printBrand, userSignatures),
+        onPrint: (s) => setPrintAsk(() => (lg) => sbPrint(s, lg, printBrand, userSignatures)),
         onNewRevision: startRevision,
         onDelete: deleteOne
-      })
+      }),
+    printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
   );
 }
 // src/App.jsx
@@ -11259,18 +11734,20 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
-  const exportPdf = () => {
+  const [printAsk, setPrintAsk] = useState6(null);
+  const exportPdf = (printLang) => {
+    const he = printLang !== "en";
     const rows = buildRows();
     const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const accent = pdfAccent || "#1A559E";
-    const dir = isRTL ? "rtl" : "ltr";
-    const align = isRTL ? "right" : "left";
+    const dir = he ? "rtl" : "ltr";
+    const align = he ? "right" : "left";
     const head = rows[0], body = rows.slice(1);
     const table = '<table><thead><tr>' + head.map((c) => '<th>' + esc(c) + '</th>').join("") + '</tr></thead><tbody>' + body.map((r) => '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join("") + '</tr>').join("") + '</tbody></table>';
     const logo = pdfLogo ? '<img src="' + pdfLogo + '" alt="logo">' : '';
     const footImg = pdfFooterImg ? '<div class="footImg"><img src="' + pdfFooterImg + '" alt="footer"></div>' : '';
     const footTxt = pdfFooter ? '<div class="ftr">' + esc(pdfFooter) + '</div>' : '';
-    const title = isRTL ? "רשימת משתמשים" : "User list";
+    const title = he ? "רשימת משתמשים" : "User list";
     const html = '<html dir="' + dir + '"><head><meta charset="utf-8"><title>' + title + '</title><style>' +
       '@page { size: A4 landscape; margin: 0; }' +
       '* { box-sizing: border-box; }' +
@@ -11301,7 +11778,7 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
   return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), ), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "חתימה Submittal" : "Signs Submittal"), th(isRTL ? "חתימה SD" : "Signs SD"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
     const disc = discMap[(u.email || "").toLowerCase()];
     return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSubmittal")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSd")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
-  })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen((o) => !o), style: grayPill }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 15, strokeWidth: 2 }), " ", isRTL ? "עריכת מסמך ה‑PDF" : "Edit PDF document")), pdfOpen && /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 520, marginInline: "auto", marginTop: 12, border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "#fbfcfd", textAlign: isRTL ? "right" : "left" } }, /* @__PURE__ */ React15.createElement("label", { style: { display: "block", fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה" : "Footer text"), /* @__PURE__ */ React15.createElement("textarea", { value: pdfFooter, onChange: (e) => setPdfFooter(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text shown at the bottom of the document", style: { width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" } }, pdfLogo ? /* @__PURE__ */ React15.createElement("img", { src: pdfLogo, alt: "", style: { height: 34, maxWidth: 120, objectFit: "contain" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfLogo }))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } }, pdfFooterImg ? /* @__PURE__ */ React15.createElement("img", { src: pdfFooterImg, alt: "", style: { height: 40, maxWidth: 240, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfFooterImg })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "גוון המסמך" : "Document color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setPdfAccent(pal.accent), style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: pdfAccent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })))), /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center", marginTop: 14 } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen(false), style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center", marginTop: 14, flexWrap: "wrap" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportCsv, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑Excel" : "Download Excel"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportPdf, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑PDF" : "Download PDF")))));
+  })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen((o) => !o), style: grayPill }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 15, strokeWidth: 2 }), " ", isRTL ? "עריכת מסמך ה‑PDF" : "Edit PDF document")), pdfOpen && /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 520, marginInline: "auto", marginTop: 12, border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "#fbfcfd", textAlign: isRTL ? "right" : "left" } }, /* @__PURE__ */ React15.createElement("label", { style: { display: "block", fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה" : "Footer text"), /* @__PURE__ */ React15.createElement("textarea", { value: pdfFooter, onChange: (e) => setPdfFooter(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text shown at the bottom of the document", style: { width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" } }, pdfLogo ? /* @__PURE__ */ React15.createElement("img", { src: pdfLogo, alt: "", style: { height: 34, maxWidth: 120, objectFit: "contain" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfLogo }))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } }, pdfFooterImg ? /* @__PURE__ */ React15.createElement("img", { src: pdfFooterImg, alt: "", style: { height: 40, maxWidth: 240, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfFooterImg })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "גוון המסמך" : "Document color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setPdfAccent(pal.accent), style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: pdfAccent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })))), /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center", marginTop: 14 } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen(false), style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center", marginTop: 14, flexWrap: "wrap" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportCsv, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑Excel" : "Download Excel"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPrintAsk(() => exportPdf), style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "הורדה ל‑PDF" : "Download PDF"), printAsk && /* @__PURE__ */ React15.createElement(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); exportPdf(lg); }, onClose: () => setPrintAsk(null) })))));
 }
 function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms }) {
   const [view, setView] = useState6("menu");
@@ -11442,8 +11919,9 @@ function SubmittalAdminScreen({ isRTL, signatures, onSignatureChange }) {
 // One table, opened once after the workbook is uploaded: every priced line with
 // three ticks — Submittal, SD, LLI — and a long-lead mark on the ordered ones.
 // The automatic pass fills it in generously; this screen is where that gets
-// corrected. A hand edit is stored apart from the parsed file, so re-uploading
-// the workbook never undoes a decision.
+// corrected. A hand edit lives in its own row, but a new upload of the workbook
+// clears it: the correction answered the old classification, and carrying it
+// forward would sit on top of the new one and hide it.
 // -----------------------------------------------------------------------------
 var BOQ_T = {
   title: { en: "Bill of quantities — routing", he: "סיווג כתב הכמויות" },
@@ -11481,8 +11959,9 @@ var BOQ_T = {
 
 function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose }) {
   // The window carries its own language, like the submittal and the LLI table.
-  const [langOverride, setLangOverride] = useState6(null);
-  const lang = langOverride || (appIsRTL ? "he" : "en");
+  // 28.8.26 — no local override. The language button in the top bar is the only
+  // one, and every screen follows it.
+  const lang = appIsRTL ? "he" : "en";
   const isRTL = lang === "he";
   const L = (k) => sbText(BOQ_T[k], lang);
   const auto = (tree || {}).flags || {};
@@ -11586,12 +12065,7 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
             value: q,
             onChange: (e) => setQ(e.target.value)
           }),
-          sbH(
-            "div",
-            { className: "sbLangToggle" },
-            sbH("button", { type: "button", className: lang === "en" ? "on" : "", onClick: () => setLangOverride("en") }, "EN"),
-            sbH("button", { type: "button", className: lang === "he" ? "on" : "", onClick: () => setLangOverride("he") }, "HE")
-          )
+          null
         ),
         sbH(
           "div",
@@ -11841,6 +12315,18 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
     ),
     boq && boq.chapters
       ? sbH("p", { className: "boqHint" }, `${boq.chapters} ${t("פרקים", "chapters")} · ${boq.subs} ${t("קבוצות להזמנה", "orderable groups")}`)
+      : null,
+    // Said before it happens, not discovered after. Replacing the workbook
+    // reclassifies everything and drops the hand edits with it.
+    boq
+      ? sbH(
+          "p",
+          { className: "boqWarn" },
+          t(
+            "החלפת הקבצים מסווגת את כל הסעיפים מחדש ומוחקת את הסימונים הידניים בטבלת הסיווג. מה שמולא בטבלאות ה‑LLI וה‑SD עצמן לא נמחק.",
+            "Replacing the files reclassifies every line and clears the hand edits in the routing table. What was filled in on the LLI and SD boards themselves is not touched."
+          )
+        )
       : null,
     boq
       ? sbH(
@@ -12625,9 +13111,16 @@ function ProjectDashboardApp() {
           classifiedAt: new Date().toISOString()
         }
       : null,
-    boqData: next ? { ...next.data, flags: next.flags || {} } : null
-    // boqFlagOverrides is deliberately NOT cleared here: a decision taken by
-    // hand must survive a new upload of the workbook.
+    boqData: next ? { ...next.data, flags: next.flags || {} } : null,
+    // 28.8.26 — Marcella's rule, and it reverses what was here before. The hand
+    // edits used to be kept across a new upload, on the reasoning that a
+    // decision she took should outlive the workbook. But those edits were made
+    // against a routing that was not yet doing its job: half of them exist only
+    // to undo a wrong tick. Carrying them forward would drag the old mistakes
+    // on top of the new classification and hide it. So a new workbook is a
+    // clean slate, and what the boards show is what this bill of quantities
+    // says. The screen warns before it happens.
+    boqFlagOverrides: {}
   });
   const setBoqFlagOverride = (projectId, code, flags) => {
     const cur = (projectExtras[projectId] || {}).boqFlagOverrides || {};
@@ -13556,7 +14049,7 @@ function ProjectDashboardApp() {
       root.style.removeProperty("--accent-soft");
     }
   }, [viewData.accent]);
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("header", { className: `topbar ${view === "systemAdmin" ? "adminMode" : ""}`, dir: t.dir }, /* @__PURE__ */ React15.createElement(
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("header", { className: `topbar ${view === "systemAdmin" ? "adminMode" : ""}`, dir: APP_FRAME_DIR }, /* @__PURE__ */ React15.createElement(
     "div",
     {
       className: "brand",
@@ -13569,7 +14062,7 @@ function ProjectDashboardApp() {
     },
     view !== "login" && /* @__PURE__ */ React15.createElement("div", { className: `brandMark ${brandLogoUrl ? "" : "placeholder"}` }, brandLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: brandLogoUrl, alt: "", className: "brandMarkImg" }) : displayBrandInitials),
     /* @__PURE__ */ React15.createElement("div", { className: "brandText" }, /* @__PURE__ */ React15.createElement("span", { className: "brandLabel" }, t.contractorLabel))
-  ), /* @__PURE__ */ React15.createElement("div", { className: "topbarActions" }, /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE")), /* @__PURE__ */ React15.createElement("button", { className: "iconBtn", "aria-label": t.menu, onClick: () => setMenuOpen(true) }, /* @__PURE__ */ React15.createElement(Menu, { size: 19, strokeWidth: 1.8 })))), /* @__PURE__ */ React15.createElement(ScaleToFit, null, /* @__PURE__ */ React15.createElement("div", { className: "appRoot", dir: t.dir, lang }, /* @__PURE__ */ React15.createElement("style", null, styles), view === "dashboard" && /* @__PURE__ */ React15.createElement("div", { className: "metaStrip" }, /* @__PURE__ */ React15.createElement("h1", { className: "metaTitle" }, dataSourcesOpen ? "Data Sources" : openCardKey ? t.cards.find((c) => c.key === openCardKey)?.title || "Project Dashboard" : "Project Dashboard"), /* @__PURE__ */ React15.createElement("div", { className: "metaStack" }, clientLogoUrl && /* @__PURE__ */ React15.createElement("img", { src: clientLogoUrl, alt: "", className: "clientLogoImg" }), /* @__PURE__ */ React15.createElement("span", { className: "metaProjectName" }, displayProjectName), /* @__PURE__ */ React15.createElement("span", { className: "metaFloors numerals" }, "Floors ", displayFloorsFrom, "-", displayFloorsTo), /* @__PURE__ */ React15.createElement("span", { className: "metaDates numerals", dir: "ltr" }, displayStartDate, " - ", displayEndDate))), view === "login" && /* @__PURE__ */ React15.createElement(
+  ), /* @__PURE__ */ React15.createElement("div", { className: "topbarActions" }, /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE")), /* @__PURE__ */ React15.createElement("button", { className: "iconBtn", "aria-label": t.menu, onClick: () => setMenuOpen(true) }, /* @__PURE__ */ React15.createElement(Menu, { size: 19, strokeWidth: 1.8 })))), /* @__PURE__ */ React15.createElement(ScaleToFit, null, /* @__PURE__ */ React15.createElement("div", { className: "appRoot", dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("style", null, styles), view === "dashboard" && /* @__PURE__ */ React15.createElement("div", { className: "metaStrip" }, /* @__PURE__ */ React15.createElement("h1", { className: "metaTitle" }, dataSourcesOpen ? "Data Sources" : openCardKey ? t.cards.find((c) => c.key === openCardKey)?.title || "Project Dashboard" : "Project Dashboard"), /* @__PURE__ */ React15.createElement("div", { className: "metaStack" }, clientLogoUrl && /* @__PURE__ */ React15.createElement("img", { src: clientLogoUrl, alt: "", className: "clientLogoImg" }), /* @__PURE__ */ React15.createElement("span", { className: "metaProjectName" }, displayProjectName), /* @__PURE__ */ React15.createElement("span", { className: "metaFloors numerals" }, "Floors ", displayFloorsFrom, "-", displayFloorsTo), /* @__PURE__ */ React15.createElement("span", { className: "metaDates numerals", dir: "ltr" }, displayStartDate, " - ", displayEndDate))), view === "login" && /* @__PURE__ */ React15.createElement(
     LoginScreen,
     {
       t,
@@ -13964,7 +14457,7 @@ function ProjectDashboardApp() {
           setPendingDisclaimer(false);
         }
       }
-    }), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: t.dir, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: t.dir, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: t.dir, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+    }), showDisclaimer && /* @__PURE__ */ React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: APP_FRAME_DIR, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : menuView === "login-admin" ? t.loginAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
