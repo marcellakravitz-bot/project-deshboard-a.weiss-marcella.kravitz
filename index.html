@@ -422,7 +422,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "21.8.2026 \u00b7 build 9";
+var APP_BUILD = "28.8.2026 \u00b7 build 10";
 // Fallback used by initialsFromName() when there is no contractor name yet.
 // It was referenced but never defined, which threw a ReferenceError.
 var DEFAULT_BRAND_INITIALS = "AW";
@@ -1134,16 +1134,48 @@ var pdfViewer = `
           text-align: start; padding: 7px 10px;
         }
         .lliTable tr.lliOff td { opacity: .45; }
-        .lliTable .cSec { width: 130px; text-align: start; }
-        .lliTable .cMark { width: 90px; }
-        .lliTable .cDesc { width: 26%; text-align: start; }
-        .lliTable .cImg { width: 62px; }
-        .lliTable .cQty { width: 86px; }
-        .lliTable .cOrd { width: 100px; }
-        .lliTable .cPo { width: 120px; }
-        .lliTable .cEta { width: 128px; }
-        .lliTable .cSt { width: 118px; }
-        .lliTable .cAct { width: 42px; }
+        /* Sixteen columns do not fit the design width, and squeezing them makes
+           a date field two characters wide. So the board keeps its column sizes
+           and the wrapper scrolls sideways, which is what a procurement board
+           does everywhere else. */
+        .lliTable { min-width: 1520px; }
+        .lliTable.sdTable { min-width: 1420px; }
+        /* The marks list borrows the same table skin but has seven columns and
+           must keep fitting the page. */
+        .lliTable.marksTable { min-width: 0; }
+        .lliTable .cSec { width: 120px; text-align: start; }
+        .lliTable .cCat { width: 100px; }
+        .lliTable .cMark { width: 80px; }
+        .lliTable .cDesc { width: 210px; text-align: start; }
+        .lliTable .cSup { width: 115px; }
+        .lliTable .cImg { width: 56px; }
+        .lliTable .cQty { width: 75px; }
+        .lliTable .cUnit { width: 55px; color: var(--steel); font-weight: 700; }
+        .lliTable .cOrd { width: 90px; }
+        .lliTable .cPoF { width: 92px; }
+        .lliTable .cPo { width: 100px; }
+        .lliTable .cPoD { width: 112px; }
+        .lliTable .cEta { width: 112px; }
+        .lliTable .cSt { width: 106px; }
+        .lliTable .cAct { width: 40px; }
+        .lliCatSel { font-size: 11px; font-weight: 700; }
+        .lliFileCell { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+        .lliFileCell .sbLinkBtn { font-size: 10.5px; }
+        .lliFileClear { position: static; margin-top: 1px; }
+        .lliUpload {
+          display: inline-flex; align-items: center; justify-content: center;
+          border: 1px dashed var(--line); border-radius: 7px; padding: 4px 8px;
+          font-size: 11px; font-weight: 800; color: var(--steel); cursor: pointer; background: #fff;
+        }
+        .lliUpload:hover { border-color: var(--accent); color: var(--accent-ink); }
+        /* "The classification was not certain" — her instruction document asks
+           for the item to be marked rather than guessed at. */
+        .lliReviewTag {
+          display: inline-block; margin-top: 2px; padding: 1px 6px; border-radius: 999px;
+          background: #fff4e0; color: #a4650a; font-size: 10px; font-weight: 800;
+        }
+        .lliPoNote { font-size: 11px; color: var(--steel); font-weight: 700; }
+        .lliStamp { display: block; font-size: 10px; color: var(--mist); font-weight: 700; }
         .lliCode { display: block; font-weight: 800; font-size: 11.5px; }
         .lliSubName { display: block; font-size: 11px; color: var(--mist); font-weight: 600; line-height: 1.35; }
         .lliIn {
@@ -1272,14 +1304,17 @@ var pdfViewer = `
         .marksTable .cRm { width: 160px; font-size: 11px; color: var(--mist); }
         .marksTable .cAct { width: 42px; }
         /* ---------- SD (shop drawings) ---------- */
-        .sdTable .cSec { width: 150px; text-align: start; }
-        .sdTable .cDwg { width: 105px; }
-        .sdTable .cDesc { width: 24%; text-align: start; }
-        .sdTable .cOwner { width: 120px; }
-        .sdTable .cStat { width: 150px; }
-        .sdTable .cDate { width: 128px; }
-        .sdTable .cFile { width: 92px; }
-        .sdTable .cAct { width: 42px; }
+        .sdTable .cSec { width: 130px; text-align: start; }
+        .sdTable .cCat { width: 100px; }
+        .sdTable .cDwg { width: 100px; }
+        .sdTable .cDesc { width: 200px; text-align: start; }
+        .sdTable .cQty { width: 84px; }
+        .sdTable .cReq { width: 96px; }
+        .sdTable .cOwner { width: 110px; }
+        .sdTable .cStat { width: 140px; }
+        .sdTable .cDate { width: 118px; }
+        .sdTable .cFile { width: 88px; }
+        .sdTable .cAct { width: 40px; }
         .sdSel { font-size: 11.5px; }
         .sdFileCell { display: flex; align-items: center; justify-content: center; gap: 2px; }
         .sdUpBtn {
@@ -1513,6 +1548,7 @@ var pdfViewer = `
         .boqClassTable .cCode { width: 122px; text-align: start; }
         .boqClassTable .cDesc { text-align: start; }
         .boqClassTable .cGroup { width: 170px; }
+        .boqClassTable .cCat { width: 118px; }
         .boqClassTable .cUnit { width: 58px; }
         .boqClassTable .cQ { width: 62px; }
         .boqClassTable .cFlag { width: 76px; }
@@ -6048,7 +6084,7 @@ var BOQ_RULES_WORKONLY = [
 ];
 
 function boqFlagsEmpty() {
-  return { submittal: false, sd: false, lli: false, longLead: false };
+  return { submittal: false, sd: false, lli: false, longLead: false, review: false };
 }
 function boqAnyFlag(f) {
   return !!(f && (f.submittal || f.sd || f.lli));
@@ -6095,11 +6131,30 @@ function boqClassifyPayload(rows) {
 // piping specification, not eight submittals.
 function boqParseAnswer(raw) {
   if (raw && typeof raw === "object") {
-    return { ...boqParseFlagString(raw.f), group: String(raw.g || "").trim() };
+    return {
+      ...boqParseFlagString(raw.f),
+      group: String(raw.g || "").trim(),
+      // The discipline the model read out of the line itself. The chapter
+      // number is a local convention and cannot be trusted across projects,
+      // so when the model names a discipline it wins over the chapter map.
+      category: boqCleanCategory(raw.c),
+      // Which of the lines under one parent product carries the record's
+      // identity. Empty means "the first line, in BOQ order".
+      main: String(raw.m || "").trim()
+    };
   }
-  return { ...boqParseFlagString(raw), group: "" };
+  return { ...boqParseFlagString(raw), group: "", category: null, main: "" };
 }
-// "SDLX" -> submittal + shop drawing + ordered + long lead.
+// Only a discipline that actually has a folder is accepted; an invented one is
+// dropped so the checklist never grows a table nobody can open.
+function boqCleanCategory(v) {
+  const k = String(v || "").trim().toLowerCase();
+  if (!k) return null;
+  return SUBMITTAL_CATEGORIES.some((c) => c.key === k) ? k : null;
+}
+// "SDLX" -> submittal + shop drawing + ordered + long lead. "R" is the model
+// saying it could not decide: the line is shown with a "check this" mark rather
+// than guessed at, which is what her instructions ask for.
 function boqParseFlagString(s) {
   const v = String(s || "").toUpperCase();
   const longLead = v.indexOf("X") >= 0;
@@ -6108,7 +6163,8 @@ function boqParseFlagString(s) {
     sd: v.indexOf("D") >= 0,
     // A long lead item is ordered by definition, whatever the model wrote.
     lli: v.indexOf("L") >= 0 || longLead,
-    longLead
+    longLead,
+    review: v.indexOf("R") >= 0
   };
 }
 
@@ -6165,9 +6221,24 @@ function boqFlagsOf(auto, overrides, code) {
   const a = (auto || {})[code];
   const o = (overrides || {})[code];
   const group = (o && o.group) || (a && a.group) || "";
-  if (o) return { submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli, longLead: !!o.longLead, group, source: "user" };
-  if (a) return { submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli, longLead: !!a.longLead, group, source: a.source || "auto" };
-  return { ...boqFlagsEmpty(), group, source: "none" };
+  // The discipline and the parent-product identity follow the same rule as the
+  // ticks: a hand edit wins, the automatic pass is the fallback.
+  const category = boqCleanCategory((o && o.category) || (a && a.category)) || null;
+  const main = (o && o.main) || (a && a.main) || "";
+  if (o) {
+    return {
+      submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli, longLead: !!o.longLead,
+      // A line she has been through herself is not "still to be checked".
+      review: false, group, category, main, source: "user"
+    };
+  }
+  if (a) {
+    return {
+      submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli, longLead: !!a.longLead,
+      review: !!a.review, group, category, main, source: a.source || "auto"
+    };
+  }
+  return { ...boqFlagsEmpty(), group, category, main, source: "none" };
 }
 // The families inside one sub-chapter: one entry per thing that gets approved
 // once. Without a group name from the model a line stands on its own.
@@ -6200,16 +6271,116 @@ function boqSubFlags(sub, auto, overrides) {
   return acc;
 }
 function boqCountFlags(tree, auto, overrides) {
-  const c = { submittal: 0, sd: 0, lli: 0, none: 0, notes: 0, total: 0 };
+  const c = { submittal: 0, sd: 0, lli: 0, none: 0, notes: 0, review: 0, total: 0 };
   (tree && tree.chapters || []).forEach((ch) => ch.subs.forEach((sub) => sub.items.forEach((item) => {
     c.total++;
     if (boqIsNote(item.unit)) { c.notes++; return; }
     const f = boqFlagsOf(auto, overrides, item.code);
     let any = false;
     BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) { c[k]++; any = true; } });
+    if (f.review) c.review++;
     if (!any) c.none++;
   })));
   return c;
+}
+
+// -----------------------------------------------------------------------------
+// PARENT PRODUCTS — the row of the three boards.
+//
+// Her instruction document (28.8.26) is explicit about this: the bill of
+// quantities is the source, not the shape. A door is one product even though the
+// BOQ prices the leaf, the frame, the hinges and the hardware on four lines. An
+// electrical panel is one product whatever its internals cost. So the row of the
+// LLI board, of the SD board and of the submittal checklist is a PRODUCT, and
+// its identity is the item number of the representative BOQ line — never a new
+// number, never a renumbering.
+//
+// What binds several lines into one product is the family name the model writes
+// on them. Without a family name we do not know what the parent is, and guessing
+// would be worse than not grouping: a line with no family falls back to its
+// sub-chapter, which is exactly how the boards behaved before. So when the AI
+// service is not deployed nothing gets worse, and when it is, the boards
+// collapse into real products.
+// -----------------------------------------------------------------------------
+function boqProductKey(chapterNo, subCode, family) {
+  const f = String(family || "").trim().toLowerCase().replace(/\s+/g, " ");
+  // A family is a product across the whole chapter — "steel pipe" priced in two
+  // sub-chapters is still one thing to order. No family: the sub-chapter, as
+  // before.
+  return f ? `c${chapterNo}|${f}` : `s|${subCode}`;
+}
+// The quantity of a product is the sum of its lines that share the commonest
+// unit. Squares metres and units may not be added into one number, and a square
+// metre is never a number of panels — mixed groups carry the "*" mark instead.
+function boqProductQty(items) {
+  const counts = {};
+  (items || []).forEach((it) => {
+    if (boqIsNote(it.unit)) return;
+    counts[it.unit] = (counts[it.unit] || 0) + 1;
+  });
+  const units = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+  const unit = units[0] || "";
+  const qty = (items || []).filter((it) => it.unit === unit).reduce((sum, it) => sum + (it.qty || 0), 0);
+  return { unit, qty, mixedUnits: units.length > 1 };
+}
+// Every product in the bill of quantities, in BOQ order. `flagKey` narrows it to
+// one board; `category` narrows it to one discipline.
+function boqProducts(tree, auto, overrides, flagKey, category) {
+  const byKey = {};
+  const out = [];
+  ((tree && tree.chapters) || []).forEach((ch) => {
+    (ch.subs || []).forEach((sub) => {
+      (sub.items || []).forEach((item) => {
+        if (boqIsNote(item.unit)) return;
+        const f = boqFlagsOf(auto, overrides, item.code);
+        if (!boqAnyFlag(f)) return;
+        const key = boqProductKey(ch.c, sub.code, f.group);
+        let p = byKey[key];
+        if (!p) {
+          p = {
+            key, chapter: ch, sub, subs: [sub], family: f.group || "",
+            items: [], flags: boqFlagsEmpty(), category: null, main: "",
+            code: item.code, unit: "", qty: 0, mixedUnits: false
+          };
+          byKey[key] = p;
+          out.push(p);
+        }
+        p.items.push(item);
+        if (p.subs.indexOf(sub) < 0) p.subs.push(sub);
+        BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) p.flags[k] = true; });
+        if (f.longLead) p.flags.longLead = true;
+        if (f.review) p.flags.review = true;
+        // The first discipline anyone named for this product wins; a later line
+        // that says nothing does not erase it.
+        if (!p.category && f.category) p.category = f.category;
+        if (!p.main && f.main) p.main = f.main;
+      });
+    });
+  });
+  out.forEach((p) => {
+    // Item codes are fixed width (CC.SS.IIII), so plain string order is BOQ
+    // order.
+    p.items.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+    const named = p.main && p.items.find((it) => it.code === p.main);
+    p.code = (named || p.items[0]).code;
+    p.lead = named || p.items[0];
+    const q = boqProductQty(p.items);
+    p.unit = q.unit;
+    p.qty = q.qty;
+    p.mixedUnits = q.mixedUnits;
+    // The description: the family name when there is one, because that is the
+    // name of the thing being managed; otherwise the wording of the lead line.
+    p.he = p.family || p.lead.he || p.lead.en || "";
+    p.en = p.family || p.lead.en || p.lead.he || "";
+    // No discipline from the model: fall back to the chapter map, which is a
+    // starting point and not a law.
+    if (!p.category) p.category = boqCategoryOf(p.sub) || null;
+  });
+  out.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
+  return out.filter((p) =>
+    (!flagKey || p.flags[flagKey]) &&
+    (!category || category === "all" || p.category === category)
+  );
 }
 
 // src/cards/LliCard.jsx
@@ -6221,7 +6392,19 @@ function boqCountFlags(tree, auto, overrides) {
 // A project with no BOQ (a lump-sum contract) builds its rows by hand.
 // -----------------------------------------------------------------------------
 function lliBlankRow() {
-  return { typeMark: "", desc: "", image: null, qtyActual: "", ordered: false, po: "", eta: "", status: "pending", hidden: false };
+  return {
+    typeMark: "", desc: "", image: null, qtyActual: "", ordered: false,
+    po: "", eta: "", status: "pending", hidden: false,
+    // 28.8.26 — her instruction document. The supplier is the company that will
+    // actually deliver, and it is never the manufacturer read out of the BOQ:
+    // that one belongs in the description. So this field starts empty and stays
+    // empty until someone types in it.
+    supplier: "",
+    // The purchase order as a document, beside the number and the date it
+    // carries. The two text fields can be filled from the file, but only with
+    // what is plainly written in it.
+    poFile: null, poDate: "", poText: "", category: null
+  };
 }
 function lliRowOf(rows, code) {
   return { ...lliBlankRow(), ...(rows || {})[code] || {} };
@@ -6266,7 +6449,27 @@ var LLI_L = {
   empty: { en: "Nothing to order in this category.", he: "אין פריטים להזמנה בקטגוריה הזו." },
   ordersOf: { en: "ordered", he: "הוזמנו" },
   rowsOf: { en: "rows", he: "שורות" },
-  restore: { en: "Restore", he: "החזרה" }
+  restore: { en: "Restore", he: "החזרה" },
+  category: { en: "Category", he: "קטגוריה" },
+  supplier: { en: "Supplier", he: "ספק" },
+  unit: { en: "Unit", he: "יחידה" },
+  qtyBoq: { en: "BOQ qty", he: "כמות כתב כמויות" },
+  qtySurveyor: { en: "QS qty", he: "כמות שמאי" },
+  poFile: { en: "PO file", he: "קובץ הזמנה" },
+  poNo: { en: "PO number", he: "מספר הזמנה" },
+  poDate: { en: "PO date", he: "תאריך הזמנה" },
+  upload: { en: "Upload", he: "העלאה" },
+  open: { en: "Open", he: "פתיחה" },
+  remove: { en: "Remove the file", he: "הסרת הקובץ" },
+  readPo: { en: "Read the order", he: "קריאת ההזמנה" },
+  reading: { en: "Reading…", he: "קורא…" },
+  review: { en: "Check", he: "לבדיקה" },
+  reviewTitle: {
+    en: "The classification of this item was not certain — worth a look in the routing table.",
+    he: "הסיווג של הפריט הזה לא היה ודאי — כדאי לעבור עליו בטבלת הסיווג."
+  },
+  lines: { en: "BOQ lines", he: "סעיפים" },
+  noCat: { en: "—", he: "—" }
 };
 
 function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId }) {
@@ -6277,7 +6480,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [showHidden, setShowHidden] = useState6(false);
   const [onlyLong, setOnlyLong] = useState6(false);
   const [busyRow, setBusyRow] = useState6(null);
+  const [poNote, setPoNote] = useState6(null);
   const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
+  const t2 = (he, en) => (lang === "he" ? he : en);
 
   const data = rows || {};
   const patch = (code, next) => {
@@ -6285,28 +6490,27 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     onChangeRows({ ...data, [code]: { ...lliRowOf(data, code), ...next } });
   };
 
-  // The rows the BOQ gives us, plus whatever was added by hand.
+  // The rows the BOQ gives us, plus whatever was added by hand. One row is one
+  // parent product — a door, a panel, a lighting type — and its number is the
+  // number of its representative BOQ line.
   const auto = (boqData || {}).flags || {};
-  const boqRows = (((boqData || {}).chapters) || []).flatMap((ch) =>
-    ch.subs.map((sub) => {
-      // The routing table decides who belongs here: a group is on the ordering
-      // board when any of its lines is ticked LLI.
-      const f = boqSubFlags(sub, auto, boqFlags);
-      return {
-        code: sub.code,
-        chapter: ch,
-        sub,
-        source: "boq",
-        category: boqCategoryOf(sub),
-        title: boqText(sub, lang),
-        unit: sub.unit,
-        qty: sub.qty,
-        longLead: f.longLead,
-        routed: f.lli,
-        defaultHidden: !f.lli
-      };
-    })
-  );
+  const boqRows = boqProducts(boqData, auto, boqFlags, "lli").map((p) => ({
+    code: p.code,
+    chapter: p.chapter,
+    sub: p.sub,
+    product: p,
+    source: "boq",
+    // A discipline she set by hand on the row wins over the one the BOQ pass
+    // worked out, so a wrong guess is a one-click fix and not a re-upload.
+    category: ((data[p.code] || {}).category) || p.category,
+    title: boqText(p, lang),
+    unit: p.unit,
+    qty: p.qty,
+    longLead: p.flags.longLead,
+    review: p.flags.review,
+    routed: true,
+    defaultHidden: false
+  }));
   const manualRows = Object.keys(data)
     .filter((k) => k.indexOf("m-") === 0)
     .map((k) => ({
@@ -6358,6 +6562,61 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       setBusyRow(null);
     }
   };
+  // The purchase order. Uploaded like every other attachment — the storage
+  // bucket first, an inline copy only when the bucket is out — and its text is
+  // pulled out here in the browser at the same moment, exactly as the submittal
+  // specs are, so the file itself never has to leave the system later.
+  const onPoFile = async (code, e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setBusyRow(`po-${code}`);
+    setPoNote(null);
+    try {
+      const stored = await sbUploadFile(projectId, `po-${code}`, f);
+      const text = /\.pdf$/i.test(f.name) ? await sbExtractPdfText(f) : "";
+      patch(code, { poFile: { ...stored, name: f.name, size: f.size }, poText: text, ordered: true });
+    } catch (ex) {
+      console.warn("[awdash] po upload failed", ex);
+      setPoNote(String((ex && ex.message) || ex));
+    } finally {
+      setBusyRow(null);
+    }
+  };
+  const openFile = async (att) => {
+    const url = await sbFileUrl(att);
+    if (url) window.open(url, "_blank", "noopener");
+  };
+  // Read the order. Only what is plainly in the document is written into the
+  // row — a field the model did not find stays exactly as it was, because an
+  // invented order number is worse than an empty one.
+  const readPo = async (code, v) => {
+    setBusyRow(`po-${code}`);
+    setPoNote(null);
+    try {
+      if (!v.poText) throw new Error(t2("לא נשלף טקסט מקובץ ההזמנה", "No text could be read out of the order file"));
+      const { data: res, error } = await supabase.functions.invoke("submittal-ai", {
+        body: { mode: "po", text: v.poText.slice(0, 2e4) }
+      });
+      if (error) throw error;
+      const got = (res && res.po) || null;
+      if (!got) throw new Error((res && res.error) || "no_po");
+      const next = {};
+      if (got.number && !v.po) next.po = String(got.number).trim();
+      if (got.date && !v.poDate) next.poDate = String(got.date).slice(0, 10);
+      if (got.supplier && !v.supplier) next.supplier = String(got.supplier).trim();
+      if (got.delivery && !v.eta) next.eta = String(got.delivery).slice(0, 10);
+      if (!Object.keys(next).length) {
+        setPoNote(t2("לא נמצא בהזמנה מידע חדש למלא.", "Nothing new to fill in was found in the order."));
+      } else {
+        patch(code, next);
+      }
+    } catch (ex) {
+      setPoNote(String((ex && ex.message) || ex));
+    } finally {
+      setBusyRow(null);
+    }
+  };
   const addManual = () => {
     const n = Object.keys(data).filter((k) => k.indexOf("m-") === 0).length + 1;
     patch(`m-${Date.now()}`, { ...lliBlankRow(), desc: "", category: cat === "all" ? null : cat, manualIndex: n });
@@ -6402,6 +6661,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         " ",
         L("onlyLong")
       ),
+      poNote ? sbH("span", { className: "lliPoNote" }, poNote) : null,
       sbH(
         "label",
         { className: "lliShowHidden" },
@@ -6427,13 +6687,18 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                 "tr",
                 null,
                 sbH("th", { className: "cSec" }, L("section")),
+                sbH("th", { className: "cCat" }, L("category")),
                 sbH("th", { className: "cMark" }, L("typeMark")),
                 sbH("th", { className: "cDesc" }, L("desc")),
+                sbH("th", { className: "cSup" }, L("supplier")),
+                sbH("th", { className: "cQty" }, L("qtyBoq")),
+                sbH("th", { className: "cUnit" }, L("unit")),
+                sbH("th", { className: "cQty" }, L("qtySurveyor")),
                 sbH("th", { className: "cImg" }, L("image")),
-                sbH("th", { className: "cQty" }, L("qtyContract")),
-                sbH("th", { className: "cQty" }, L("qtyActual")),
                 sbH("th", { className: "cOrd" }, L("ordered")),
-                sbH("th", { className: "cPo" }, L("po")),
+                sbH("th", { className: "cPoF" }, L("poFile")),
+                sbH("th", { className: "cPo" }, L("poNo")),
+                sbH("th", { className: "cPoD" }, L("poDate")),
                 sbH("th", { className: "cEta" }, L("eta")),
                 sbH("th", { className: "cSt" }, L("status")),
                 canEdit ? sbH("th", { className: "cAct" }, "") : null
@@ -6443,7 +6708,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 11 : 10 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 16 : 15 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -6454,8 +6719,28 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                       "td",
                       { className: "cSec" },
                       sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
-                      r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null,
-                      r.longLead ? sbH("span", { className: "lliLongTag" }, L("longLead")) : null
+                      // How many BOQ lines this one product covers. A door
+                      // priced on four lines is one record, and this says so.
+                      r.product && r.product.items.length > 1
+                        ? sbH("span", { className: "lliSubName" }, `${r.product.items.length} ${L("lines")}`)
+                        : r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null,
+                      r.longLead ? sbH("span", { className: "lliLongTag" }, L("longLead")) : null,
+                      r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cCat" },
+                      sbH(
+                        "select",
+                        {
+                          className: "lliIn lliSel lliCatSel",
+                          value: r.category || "",
+                          disabled: !canEdit,
+                          onChange: (e) => patch(r.code, { category: e.target.value || null })
+                        },
+                        sbH("option", { value: "" }, L("noCat")),
+                        SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))
+                      )
                     ),
                     sbH(
                       "td",
@@ -6477,6 +6762,32 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     ),
                     sbH(
                       "td",
+                      { className: "cSup" },
+                      sbH("input", {
+                        type: "text",
+                        className: "lliIn",
+                        // Never filled from the BOQ. The manufacturer named
+                        // there is a specification, not the company that will
+                        // deliver — that one is typed here.
+                        value: v.supplier,
+                        readOnly: !canEdit,
+                        onChange: (e) => patch(r.code, { supplier: e.target.value })
+                      })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cQty", dir: "ltr" },
+                      r.qty ? String(r.qty) : "—",
+                      r.product && r.product.mixedUnits ? sbH("span", { className: "lliMixed", title: "mixed units" }, "*") : null
+                    ),
+                    sbH("td", { className: "cUnit", dir: "ltr" }, r.unit ? boqUnit(r.unit, lang) : "—"),
+                    sbH(
+                      "td",
+                      { className: "cQty" },
+                      sbH("input", { type: "text", className: "lliIn lliNum", dir: "ltr", value: v.qtyActual, readOnly: !canEdit, onChange: (e) => patch(r.code, { qtyActual: e.target.value }) })
+                    ),
+                    sbH(
+                      "td",
                       { className: "cImg" },
                       sbH(
                         "label",
@@ -6488,17 +6799,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                       v.image && canEdit
                         ? sbH("button", { type: "button", className: "lliImgClear", onClick: () => patch(r.code, { image: null }) }, "×")
                         : null
-                    ),
-                    sbH(
-                      "td",
-                      { className: "cQty", dir: "ltr" },
-                      r.qty ? `${r.qty}${r.unit ? ` ${boqUnit(r.unit, lang)}` : ""}` : "—",
-                      r.sub && r.sub.mixedUnits ? sbH("span", { className: "lliMixed", title: "mixed units" }, "*") : null
-                    ),
-                    sbH(
-                      "td",
-                      { className: "cQty" },
-                      sbH("input", { type: "text", className: "lliIn lliNum", dir: "ltr", value: v.qtyActual, readOnly: !canEdit, onChange: (e) => patch(r.code, { qtyActual: e.target.value }) })
                     ),
                     sbH(
                       "td",
@@ -6516,10 +6816,50 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     ),
                     sbH(
                       "td",
+                      { className: "cPoF" },
+                      // The purchase order itself. Uploading it is what lets the
+                      // number, the date and the supplier be read out of it — and
+                      // only what is plainly written there is ever filled in.
+                      !v.ordered
+                        ? sbH("span", { className: "lliDash" }, "—")
+                        : v.poFile
+                          ? sbH(
+                              "div",
+                              { className: "lliFileCell" },
+                              sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => openFile(v.poFile) }, L("open")),
+                              canEdit
+                                ? sbH(
+                                    "button",
+                                    { type: "button", className: "sbLinkBtn", disabled: busyRow === `po-${r.code}`, onClick: () => readPo(r.code, v) },
+                                    busyRow === `po-${r.code}` ? L("reading") : L("readPo")
+                                  )
+                                : null,
+                              canEdit
+                                ? sbH("button", { type: "button", className: "lliImgClear lliFileClear", title: L("remove"), onClick: () => patch(r.code, { poFile: null, poText: "" }) }, "×")
+                                : null
+                            )
+                          : canEdit
+                            ? sbH(
+                                "label",
+                                { className: "lliUpload" },
+                                busyRow === `po-${r.code}` ? "…" : L("upload"),
+                                sbH("input", { type: "file", accept: ".pdf,application/pdf,image/*", style: { display: "none" }, onChange: (e) => onPoFile(r.code, e) })
+                              )
+                            : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    sbH(
+                      "td",
                       { className: "cPo" },
                       // The order number only makes sense once it was ordered.
                       v.ordered
                         ? sbH("input", { type: "text", className: "lliIn", dir: "ltr", value: v.po, readOnly: !canEdit, onChange: (e) => patch(r.code, { po: e.target.value }) })
+                        : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cPoD" },
+                      v.ordered
+                        ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.poDate, readOnly: !canEdit, onChange: (e) => patch(r.code, { poDate: e.target.value }) })
                         : sbH("span", { className: "lliDash" }, "—")
                     ),
                     sbH(
@@ -6595,7 +6935,17 @@ function sdStatus(key) {
   return SD_STATUSES.find((s) => s.key === key) || SD_STATUSES[0];
 }
 function sdBlankRow() {
-  return { dwgNo: "", desc: "", owner: "", status: "required", submittedAt: "", approvedAt: "", file: null, hidden: false };
+  return {
+    dwgNo: "", desc: "", owner: "", status: "required", submittedAt: "", approvedAt: "", file: null, hidden: false,
+    // 28.8.26 — her instruction document tracks the drawing from the moment it
+    // is asked for. Both switches stamp themselves when they are turned on, and
+    // the stamp is what the small grey line under them shows; a status can be
+    // set back, but the date something actually happened is not rewritten.
+    requested: false, requestedAt: "",
+    dueAt: "",
+    toClient: false, toClientAt: "",
+    category: null
+  };
 }
 function sdRowOf(rows, code) {
   return { ...sdBlankRow(), ...(rows || {})[code] || {} };
@@ -6626,7 +6976,21 @@ var SD_L = {
   noBoq: {
     en: "No bill of quantities uploaded for this project yet. Upload one in project settings, or build the list by hand below.",
     he: "עדיין לא הועלה כתב כמויות לפרויקט הזה. אפשר להעלות אותו בהגדרות הפרויקט, או לבנות את הרשימה ידנית כאן."
-  }
+  },
+  category: { en: "Category", he: "קטגוריה" },
+  qty: { en: "Quantity", he: "כמות" },
+  requested: { en: "SD requested", he: "SD נדרש" },
+  yes: { en: "Yes", he: "כן" },
+  no: { en: "No", he: "לא" },
+  dueAt: { en: "Due date", he: "תאריך יעד" },
+  toClient: { en: "Submitted to client", he: "הוגש ללקוח" },
+  review: { en: "Check", he: "לבדיקה" },
+  reviewTitle: {
+    en: "The classification of this item was not certain — worth a look in the routing table.",
+    he: "הסיווג של הפריט הזה לא היה ודאי — כדאי לעבור עליו בטבלת הסיווג."
+  },
+  lines: { en: "BOQ lines", he: "סעיפים" },
+  noCat: { en: "—", he: "—" }
 };
 
 function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId }) {
@@ -6645,22 +7009,23 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     onChangeRows({ ...data, [code]: { ...sdRowOf(data, code), ...next } });
   };
 
+  // One row per parent product that needs a drawing — a staircase priced on six
+  // lines is one drawing, not six — numbered by its representative BOQ line.
   const auto = (boqData || {}).flags || {};
-  const boqRows = (((boqData || {}).chapters) || []).flatMap((ch) =>
-    ch.subs.map((sub) => {
-      const f = boqSubFlags(sub, auto, boqFlags);
-      return {
-        code: sub.code,
-        chapter: ch,
-        sub,
-        source: "boq",
-        category: boqCategoryOf(sub),
-        title: boqText(sub, lang),
-        routed: f.sd,
-        defaultHidden: !f.sd
-      };
-    })
-  );
+  const boqRows = boqProducts(boqData, auto, boqFlags, "sd").map((p) => ({
+    code: p.code,
+    chapter: p.chapter,
+    sub: p.sub,
+    product: p,
+    source: "boq",
+    category: ((data[p.code] || {}).category) || p.category,
+    title: boqText(p, lang),
+    unit: p.unit,
+    qty: p.qty,
+    review: p.flags.review,
+    routed: true,
+    defaultHidden: false
+  }));
   const manualRows = Object.keys(data)
     .filter((k) => k.indexOf("s-") === 0)
     .map((k) => ({
@@ -6783,13 +7148,18 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 "tr",
                 null,
                 sbH("th", { className: "cSec" }, L("section")),
+                sbH("th", { className: "cCat" }, L("category")),
                 sbH("th", { className: "cDwg" }, L("dwgNo")),
                 sbH("th", { className: "cDesc" }, L("desc")),
+                sbH("th", { className: "cQty" }, L("qty")),
+                sbH("th", { className: "cReq" }, L("requested")),
+                sbH("th", { className: "cDate" }, L("dueAt")),
+                sbH("th", { className: "cFile" }, L("file")),
+                sbH("th", { className: "cReq" }, L("toClient")),
                 sbH("th", { className: "cOwner" }, L("owner")),
                 sbH("th", { className: "cStat" }, L("status")),
                 sbH("th", { className: "cDate" }, L("submittedAt")),
                 sbH("th", { className: "cDate" }, L("approvedAt")),
-                sbH("th", { className: "cFile" }, L("file")),
                 canEdit ? sbH("th", { className: "cAct" }, "") : null
               )
             ),
@@ -6797,7 +7167,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 9 : 8 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 14 : 13 }, g.title)),
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -6810,7 +7180,25 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                       "td",
                       { className: "cSec" },
                       sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
-                      r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null
+                      r.product && r.product.items.length > 1
+                        ? sbH("span", { className: "lliSubName" }, `${r.product.items.length} ${L("lines")}`)
+                        : r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null,
+                      r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cCat" },
+                      sbH(
+                        "select",
+                        {
+                          className: "lliIn lliSel lliCatSel",
+                          value: r.category || "",
+                          disabled: !canEdit,
+                          onChange: (e) => patch(r.code, { category: e.target.value || null })
+                        },
+                        sbH("option", { value: "" }, L("noCat")),
+                        SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))
+                      )
                     ),
                     sbH(
                       "td",
@@ -6827,6 +7215,96 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         readOnly: !canEdit,
                         onChange: (e) => patch(r.code, { desc: e.target.value })
                       })
+                    ),
+                    // Straight from the bill of quantities, and never converted:
+                    // square metres of panel are not a number of panels.
+                    sbH(
+                      "td",
+                      { className: "cQty", dir: "ltr" },
+                      r.qty ? `${r.qty}${r.unit ? ` ${boqUnit(r.unit, lang)}` : ""}` : "—",
+                      r.product && r.product.mixedUnits ? sbH("span", { className: "lliMixed", title: "mixed units" }, "*") : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cReq" },
+                      sbH(
+                        "button",
+                        {
+                          type: "button",
+                          className: `lliOrd ${v.requested ? "on" : ""}`,
+                          disabled: !canEdit,
+                          onClick: () => patch(r.code, {
+                            requested: !v.requested,
+                            // Turning it on stamps the moment. Turning it off
+                            // does not erase the stamp — it happened.
+                            requestedAt: !v.requested && !v.requestedAt ? new Date().toISOString() : v.requestedAt
+                          })
+                        },
+                        v.requested ? L("yes") : L("no")
+                      ),
+                      v.requested && v.requestedAt
+                        ? sbH("span", { className: "lliStamp", dir: "ltr" }, sbFmtDate(v.requestedAt.slice(0, 10)))
+                        : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cDate" },
+                      sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.dueAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { dueAt: e.target.value }) })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cFile" },
+                      v.file
+                        ? sbH(
+                            "div",
+                            { className: "sdFileCell" },
+                            sbH(
+                              "button",
+                              { type: "button", className: "sbLinkBtn", title: v.file.name || "", onClick: () => openFile(v.file) },
+                              sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
+                              " ",
+                              L("open")
+                            ),
+                            canEdit
+                              ? sbH("button", { type: "button", className: "lliImgClear", title: L("remove"), onClick: () => patch(r.code, { file: null }) }, "×")
+                              : null
+                          )
+                        : canEdit
+                          ? sbH(
+                              "label",
+                              { className: "sdUpBtn" },
+                              busyRow === r.code ? "…" : L("upload"),
+                              sbH("input", { type: "file", accept: "application/pdf,image/*", style: { display: "none" }, onChange: (e) => onFile(r.code, e) })
+                            )
+                          : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cReq" },
+                      sbH(
+                        "button",
+                        {
+                          type: "button",
+                          className: `lliOrd ${v.toClient ? "on" : ""}`,
+                          disabled: !canEdit,
+                          onClick: () => {
+                            const on = !v.toClient;
+                            const p = {
+                              toClient: on,
+                              toClientAt: on && !v.toClientAt ? new Date().toISOString() : v.toClientAt
+                            };
+                            // Sending it to the client IS the submission, so the
+                            // board says so without being told twice.
+                            if (on && v.status === "required") p.status = "submitted";
+                            if (on && !v.submittedAt) p.submittedAt = new Date().toISOString().slice(0, 10);
+                            patch(r.code, p);
+                          }
+                        },
+                        v.toClient ? L("yes") : L("no")
+                      ),
+                      v.toClient && v.toClientAt
+                        ? sbH("span", { className: "lliStamp", dir: "ltr" }, sbFmtDate(v.toClientAt.slice(0, 10)))
+                        : null
                     ),
                     sbH(
                       "td",
@@ -6870,33 +7348,6 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                       done
                         ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.approvedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { approvedAt: e.target.value }) })
                         : sbH("span", { className: "lliDash" }, "—")
-                    ),
-                    sbH(
-                      "td",
-                      { className: "cFile" },
-                      v.file
-                        ? sbH(
-                            "div",
-                            { className: "sdFileCell" },
-                            sbH(
-                              "button",
-                              { type: "button", className: "sbLinkBtn", title: v.file.name || "", onClick: () => openFile(v.file) },
-                              sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
-                              " ",
-                              L("open")
-                            ),
-                            canEdit
-                              ? sbH("button", { type: "button", className: "lliImgClear", title: L("remove"), onClick: () => patch(r.code, { file: null }) }, "×")
-                              : null
-                          )
-                        : canEdit
-                          ? sbH(
-                              "label",
-                              { className: "sdUpBtn" },
-                              busyRow === r.code ? "…" : L("upload"),
-                              sbH("input", { type: "file", accept: "application/pdf,image/*", style: { display: "none" }, onChange: (e) => onFile(r.code, e) })
-                            )
-                          : sbH("span", { className: "lliDash" }, "—")
                     ),
                     canEdit
                       ? sbH(
@@ -7662,8 +8113,13 @@ var SB_L = {
   chkMissing: { en: "Not submitted", he: "טרם הוגש" },
   chkAdd: { en: "Submittal", he: "סבמיטל" },
   chkNewRev: { en: "A new version of", he: "גירסה חדשה של" },
-  chkLines: { en: "What needs approving under this group", he: "מה דורש אישור תחת הקבוצה" },
+  chkLines: { en: "The BOQ lines this product covers", he: "הסעיפים שהמוצר הזה מכסה" },
   chkLinesShort: { en: "lines", he: "שורות" },
+  chkReview: { en: "Check", he: "לבדיקה" },
+  chkReviewTitle: {
+    en: "The classification of this item was not certain — worth a look in the routing table.",
+    he: "הסיווג של הפריט הזה לא היה ודאי — כדאי לעבור עליו בטבלת הסיווג."
+  },
   chkEquiv: { en: "or equivalent", he: "שו״ע" },
   chkSpecific: { en: "specific product", he: "ציוד ספציפי" },
   chkDone: { en: "submitted", he: "הוגשו" },
@@ -9758,9 +10214,10 @@ function SubmittalFolder({
     // carry several submittals, because a group is several products.
     (() => {
       const auto = (boqData || {}).flags || {};
-      const groups = (((boqData || {}).chapters) || [])
-        .flatMap((ch) => ch.subs)
-        .filter((sub) => boqCategoryOf(sub) === category.key && boqSubFlags(sub, auto, boqFlags).submittal);
+      // The discipline of a product is read out of what it is, not out of its
+      // chapter number — a project numbered differently used to land its lines
+      // in the wrong folder.
+      const groups = boqProducts(boqData, auto, boqFlags, "submittal", category.key);
       const mine = (list || []).filter((s) => s.category === category.key);
       const norm = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
       // Attached by the item number the submittal was started from. Records made
@@ -9778,26 +10235,21 @@ function SubmittalFolder({
           return picked.some((c) => names.indexOf(c) >= 0);
         });
       };
-      const rowsChk = groups.map((sub) => {
-        // One line per thing that gets approved once — steel pipe in eight
-        // diameters is one specification, not eight submittals. The families
-        // come from the routing table; a line with no family stands alone.
-        const fams = boqGroupsOf(sub, auto, boqFlags, "submittal");
-        const own = attached(sub.code, sub);
-        const perLine = fams.map((fam) => {
-          const code = `${sub.code}#${fam.key}`;
-          const node = { he: fam.name || fam.items[0].he, en: fam.name || fam.items[0].en };
-          return {
-            item: { ...fam.items[0], code, groupName: fam.name, count: fam.items.length },
-            // A family of several lines is shown by its group code; a line that
-            // stands alone keeps its own item number.
-            label: fam.name ? sub.code : fam.items[0].code,
-            node,
-            hits: attached(code, node)
-          };
+      const rowsChk = groups.map((p) => {
+        // One row per thing that gets approved once — steel pipe in eight
+        // diameters is one specification, not eight submittals — carrying the
+        // item number of its representative BOQ line. The chevron opens the
+        // actual lines it covers, and a submittal can be started from any of
+        // them.
+        const node = { he: p.he, en: p.en };
+        const own = attached(p.code, node);
+        const perLine = p.items.map((it) => {
+          const n = { he: it.he, en: it.en };
+          return { item: it, label: it.code, node: n, hits: attached(it.code, n) };
         });
         const all = own.concat(perLine.flatMap((l) => l.hits));
-        return { sub, lines: perLine, own, count: all.length };
+        // A product that is one line has nothing to open into.
+        return { product: p, code: p.code, node, lines: perLine.length > 1 ? perLine : [], own, count: all.length };
       });
       const hits = rowsChk.filter((r) => r.count > 0).length;
       const pill = (s) =>
@@ -9864,14 +10316,17 @@ function SubmittalFolder({
                       sbH("th", { className: "cAct" }, "")
                     )),
                     sbH("tbody", null, rowsChk.flatMap((r) => {
-                      const open = openChk === r.sub.code;
+                      const open = openChk === r.code;
                       const head = sbH(
                         "tr",
-                        { key: r.sub.code, className: r.count ? "sbChkOn" : "" },
+                        { key: r.code, className: r.count ? "sbChkOn" : "" },
                         sbH(
                           "td",
                           { dir: "ltr", className: "sbChkCode" },
-                          r.sub.code,
+                          r.code,
+                          r.product.flags.review
+                            ? sbH("span", { className: "lliReviewTag", title: L("chkReviewTitle") }, L("chkReview"))
+                            : null,
                           r.lines.length
                             ? sbH(
                                 "button",
@@ -9879,14 +10334,14 @@ function SubmittalFolder({
                                   type: "button",
                                   className: `sbRevToggle ${open ? "open" : ""}`,
                                   title: L("chkLines"),
-                                  onClick: () => setOpenChk(open ? null : r.sub.code)
+                                  onClick: () => setOpenChk(open ? null : r.code)
                                 },
                                 sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }),
                                 r.lines.length
                               )
                             : null
                         ),
-                        sbH("td", { className: "sbChkDesc" }, boqText(r.sub, lang)),
+                        sbH("td", { className: "sbChkDesc" }, boqText(r.node, lang)),
                         sbH(
                           "td",
                           { className: "sbChkPills" },
@@ -9898,7 +10353,7 @@ function SubmittalFolder({
                               : sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
                           )
                         ),
-                        sbH("td", { className: "sbChkAct" }, addBtn(r.sub.code, r.sub, "", r.own))
+                        sbH("td", { className: "sbChkAct" }, addBtn(r.code, r.node, "", r.own))
                       );
                       if (!open) return [head];
                       const kids = r.lines.map((l) => {
@@ -9909,10 +10364,7 @@ function SubmittalFolder({
                           sbH(
                             "td",
                             { dir: "ltr", className: "sbChkCode" },
-                            l.label,
-                            l.item.count > 1
-                              ? sbH("span", { className: "sbChkCount" }, `${l.item.count} ${L("chkLinesShort")}`)
-                              : null
+                            l.label
                           ),
                           sbH(
                             "td",
@@ -11021,7 +11473,10 @@ var BOQ_T = {
   reset: { en: "Undo my edits on this line", he: "ביטול העריכה בשורה" },
   empty: { en: "No line matches this filter.", he: "אין שורה שמתאימה לסינון." },
   close: { en: "Close", he: "סגירה" },
-  open: { en: "Open the routing table", he: "פתיחת טבלת הסיווג" }
+  open: { en: "Open the routing table", he: "פתיחת טבלת הסיווג" },
+  category: { en: "Discipline", he: "תחום" },
+  review: { en: "Check", he: "לבדיקה" },
+  reviewCount: { en: "to check", he: "לבדיקה" }
 };
 
 function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose }) {
@@ -11064,7 +11519,13 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
   const counts = boqCountFlags(tree, auto, draft);
   const toggle = (code, key) => {
     const cur = boqFlagsOf(auto, draft, code);
-    const next = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead, group: cur.group };
+    // The discipline and the parent-product identity ride along with the ticks.
+    // Without this, ticking a box would quietly throw away a discipline she had
+    // corrected by hand, because the override row would stop carrying it.
+    const next = {
+      submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+      group: cur.group, category: cur.category, main: cur.main
+    };
     next[key] = !next[key];
     if (key === "longLead" && next.longLead) next.lli = true;
     if (key === "lli" && !next.lli) next.longLead = false;
@@ -11074,7 +11535,10 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
     const next = { ...draft };
     rows.forEach((r) => {
       const cur = boqFlagsOf(auto, draft, r.item.code);
-      const f = { submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead, group: cur.group };
+      const f = {
+        submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+        group: cur.group, category: cur.category, main: cur.main
+      };
       f[key] = value;
       if (key === "longLead" && value) f.lli = true;
       if (key === "lli" && !value) f.longLead = false;
@@ -11148,7 +11612,8 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
               [counts.sd, L("sd")],
               [counts.lli, L("lli")],
               [counts.none, L("none")],
-              [counts.notes, L("notes")]
+              [counts.notes, L("notes")],
+              [counts.review, L("reviewCount")]
             ].map(([n, label]) => sbH("span", { key: label, className: "boqCountPart" }, `${n} ${label}`))
           )
         ),
@@ -11186,6 +11651,7 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
                             sbH("th", { className: "cCode" }, L("code")),
                             sbH("th", { className: "cDesc" }, L("desc")),
                             sbH("th", { className: "cGroup" }, L("group")),
+                            sbH("th", { className: "cCat" }, L("category")),
                             sbH("th", { className: "cUnit" }, L("unit")),
                             sbH("th", { className: "cQ" }, L("qty")),
                             ["submittal", "sd", "lli", "longLead"].map((k) =>
@@ -11205,7 +11671,10 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
                                 "td",
                                 { className: "cCode", dir: "ltr" },
                                 sbH("span", { className: "boqRowCode" }, r.item.code),
-                                sbH("span", { className: "boqRowSub" }, boqText(r.sub, lang))
+                                sbH("span", { className: "boqRowSub" }, boqText(r.sub, lang)),
+                                // The model said it could not decide. Better a
+                                // line she looks at than a tick that was a guess.
+                                f.review ? sbH("span", { className: "lliReviewTag" }, L("review")) : null
                               ),
                               sbH("td", { className: "cDesc" }, boqText(r.item, lang)),
                               // The family this line belongs to. Steel pipe in eight
@@ -11224,10 +11693,36 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
                                       ...draft,
                                       [r.item.code]: {
                                         submittal: f.submittal, sd: f.sd, lli: f.lli, longLead: f.longLead,
-                                        group: e.target.value
+                                        group: e.target.value, category: f.category, main: f.main
                                       }
                                     })
                                 })
+                              ),
+                              // The discipline. It used to be worked out from the
+                              // chapter number alone, which is only a local
+                              // convention — in a project numbered differently the
+                              // line landed in the wrong folder and there was no
+                              // screen to say otherwise. Now there is.
+                              sbH(
+                                "td",
+                                { className: "cCat" },
+                                sbH(
+                                  "select",
+                                  {
+                                    className: "lliIn boqGroupIn",
+                                    value: f.category || "",
+                                    onChange: (e) =>
+                                      setDraft({
+                                        ...draft,
+                                        [r.item.code]: {
+                                          submittal: f.submittal, sd: f.sd, lli: f.lli, longLead: f.longLead,
+                                          group: f.group, category: e.target.value || null, main: f.main
+                                        }
+                                      })
+                                  },
+                                  sbH("option", { value: "" }, "—"),
+                                  SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))
+                                )
                               ),
                               sbH("td", { className: "cUnit" }, boqUnit(r.item.unit, lang)),
                               sbH("td", { className: "cQ", dir: "ltr" }, r.item.qty == null ? "—" : r.item.qty),
