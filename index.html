@@ -439,7 +439,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "28.8.2026 \u00b7 build 22";
+var APP_BUILD = "28.8.2026 \u00b7 build 23";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6320,9 +6320,16 @@ function boqRuleFlags(chapterNo, item, subName) {
   const sd = BOQ_RULES_SD.some((re) => re.test(text));
   const longLead = BOQ_RULES_LONGLEAD.some((re) => re.test(text));
   if (sd || longLead) {
+    // A word like "מעלית" or "לוח חשמל" is enough to know the line belongs on a
+    // board. It is NOT enough to know which product it is: settling it here
+    // used to keep it away from the model, and a line with no family name has
+    // no parent product — so two fire door types, or a main panel and six
+    // floor panels, ended up as one record with the wrong quantity. The rule is
+    // kept as the answer to fall back on, and the line is still asked about
+    // (28.8.26).
     // Anything worth drawing or worth chasing is also worth approving, and a
     // long lead item is by definition something that gets ordered.
-    return { submittal: true, sd, lli: longLead, longLead, settled: true, source: "rule" };
+    return { submittal: true, sd, lli: longLead, longLead, settled: false, source: "rule" };
   }
   return null;
 }
@@ -6399,10 +6406,18 @@ async function boqClassify(tree, ask, onProgress) {
     ch.subs.forEach((sub) => {
       sub.items.forEach((item) => {
         const ruled = boqRuleFlags(ch.c, item, `${sub.he || ""} ${sub.en || ""}`);
-        if (ruled) {
+        // Only a line that belongs on no board at all is settled here — a note,
+        // a demolition line, an admin sub-chapter. Everything the rules would
+        // put ON a board still goes to the model, because a board record needs
+        // a product name and a discipline, and only the model gives those. The
+        // rule travels with the line as the answer to use if the model has none.
+        if (ruled && ruled.settled) {
           out[item.code] = { submittal: ruled.submittal, sd: ruled.sd, lli: ruled.lli, longLead: !!ruled.longLead, source: "rule" };
         } else {
-          pending.push({ ...item, chapter: ch.c, chapterName: boqText(ch, "he"), subName: boqText(sub, "he") });
+          pending.push({
+            ...item, chapter: ch.c, chapterName: boqText(ch, "he"), subName: boqText(sub, "he"),
+            hint: ruled ? { submittal: ruled.submittal, sd: ruled.sd, lli: ruled.lli, longLead: !!ruled.longLead } : null
+          });
         }
       });
     });
@@ -6427,7 +6442,9 @@ async function boqClassify(tree, ask, onProgress) {
       batch.forEach((item) => {
         const raw = answer && answer[item.code];
         if (raw == null) {
-          out[item.code] = boqFallbackFlags("fallback");
+          // No answer for this line: the rule's own verdict if it had one,
+          // otherwise the generous fallback.
+          out[item.code] = item.hint ? { ...item.hint, source: "rule" } : boqFallbackFlags("fallback");
           return;
         }
         out[item.code] = { ...boqParseAnswer(raw), source: "ai" };
@@ -6436,7 +6453,7 @@ async function boqClassify(tree, ask, onProgress) {
     }
   } else {
     pending.forEach((item) => {
-      out[item.code] = boqFallbackFlags("rules-only");
+      out[item.code] = item.hint ? { ...item.hint, source: "rule" } : boqFallbackFlags("rules-only");
     });
   }
   return { flags: out, ruled: Object.keys(out).length - pending.length, asked, pending: pending.length };
@@ -6525,18 +6542,19 @@ function boqCountFlags(tree, auto, overrides) {
 // number, never a renumbering.
 //
 // What binds several lines into one product is the family name the model writes
-// on them. Without a family name we do not know what the parent is, and guessing
-// would be worse than not grouping: a line with no family falls back to its
-// sub-chapter, which is exactly how the boards behaved before. So when the AI
-// service is not deployed nothing gets worse, and when it is, the boards
-// collapse into real products.
+// on them. Without a family name we do not know what the parent is, and
+// guessing is worse than not grouping at all: fire door FD1 and fire door FD2
+// sit in the same sub-chapter and are two different products, so falling back
+// to the sub-chapter merged them into a single record carrying the wrong
+// quantity and only one of the two names. A line nobody named now stands on its
+// own (28.8.26).
 // -----------------------------------------------------------------------------
-function boqProductKey(chapterNo, subCode, family) {
+function boqProductKey(chapterNo, subCode, family, code) {
   const f = String(family || "").trim().toLowerCase().replace(/\s+/g, " ");
   // A family is a product across the whole chapter — "steel pipe" priced in two
-  // sub-chapters is still one thing to order. No family: the sub-chapter, as
-  // before.
-  return f ? `c${chapterNo}|${f}` : `s|${subCode}`;
+  // sub-chapters is still one thing to order. No family: the line itself, which
+  // is the only grouping that can be made without inventing one.
+  return f ? `c${chapterNo}|${f}` : `i|${code}`;
 }
 // The quantity of a product is the sum of its lines that share the commonest
 // unit. Squares metres and units may not be added into one number, and a square
@@ -6563,7 +6581,7 @@ function boqProducts(tree, auto, overrides, flagKey, category) {
         if (boqIsNote(item.unit)) return;
         const f = boqFlagsOf(auto, overrides, item.code);
         if (!boqAnyFlag(f)) return;
-        const key = boqProductKey(ch.c, sub.code, f.group);
+        const key = boqProductKey(ch.c, sub.code, f.group, item.code);
         let p = byKey[key];
         if (!p) {
           p = {
