@@ -439,7 +439,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "28.8.2026 \u00b7 build 20";
+var APP_BUILD = "28.8.2026 \u00b7 build 22";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -562,7 +562,9 @@ var header = `
         .brand { min-height: 56px; }
         .brandLabel { font-size: 13px; color: var(--mist); font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
 
-        .topbarActions { display: flex; align-items: center; gap: 10px; }
+        /* The menu button on the outside, the languages beside it — and pinned
+           that way, like everything else in this bar. */
+        .topbarActions { display: flex; flex-direction: row-reverse; align-items: center; gap: 10px; }
         .langToggle {
           display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden;
         }
@@ -1649,7 +1651,11 @@ var pdfViewer = `
         .boqClassTable .cDesc { text-align: start; }
         .boqClassTable .cGroup { width: 170px; }
         .boqClassTable .cCat { width: 118px; }
+        .boqWarnAdvice { display: block; margin-top: 4px; font-size: 12px; font-weight: 800; color: #8a3f07; }
+        .boqWarnAdvice { display: block; margin-top: 4px; font-size: 12px; font-weight: 800; color: #8a3f07; }
         .boqWarnDetail { display: block; margin-top: 3px; font-size: 11px; font-weight: 600; color: #a4650a; word-break: break-word; }
+        .boqProbe { white-space: pre-line; }
+        .boqProbe { white-space: pre-line; }
         .boqProbe { font-size: 12px; font-weight: 700; color: var(--steel); margin: 4px 0 0; }
         .boqClassTable .cUnit { width: 58px; }
         .boqClassTable .cQ { width: 62px; }
@@ -7064,7 +7070,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       patch(code, { poFile: { ...stored, name: f.name, size: f.size }, poText: text, ordered: true });
     } catch (ex) {
       console.warn("[awdash] po upload failed", ex);
-      setPoNote(String((ex && ex.message) || ex));
+      const raw = String((ex && ex.message) || ex);
+      setPoNote(fnErrorAdvice(raw, isRTL) || raw);
     } finally {
       setBusyRow(null);
     }
@@ -7098,7 +7105,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         patch(code, next);
       }
     } catch (ex) {
-      setPoNote(String((ex && ex.message) || ex));
+      const raw = String((ex && ex.message) || ex);
+      setPoNote(fnErrorAdvice(raw, isRTL) || raw);
     } finally {
       setBusyRow(null);
     }
@@ -9049,6 +9057,53 @@ async function fnErrorText(error, data) {
   } catch (e) {
   }
   return msg;
+}
+
+// What to DO about it.
+//
+// The sentences the server sends back are written for whoever wrote the server:
+// "Edge Function returned a non-2xx status code", "credit balance too low",
+// "stop_reason: max_tokens". Each one has exactly one thing the person in front
+// of the screen should do about it, and none of them say what that is. This
+// turns the sentence into the instruction; the original is still shown
+// underneath, because the day one of these is something new, the raw words are
+// the only thing that will help.
+function fnErrorAdvice(raw, isRTL) {
+  const m = String(raw || "").toLowerCase();
+  const t = (he, en) => (isRTL ? he : en);
+  if (/credit balance|insufficient (credit|funds)|billing/.test(m)) {
+    return t("נגמר הקרדיט בחשבון ה‑AI. יש להטעין ב‑platform.claude.com → Settings → Billing → Buy credits.",
+             "The AI account is out of credit. Top it up at platform.claude.com → Settings → Billing → Buy credits.");
+  }
+  if (/anthropic_api_key|api key|authentication_error|invalid x-api-key/.test(m)) {
+    return t("מפתח ה‑AI לא מוגדר או שאינו תקין. Supabase → Edge Functions → Secrets → ANTHROPIC_API_KEY.",
+             "The AI key is missing or invalid. Supabase → Edge Functions → Secrets → ANTHROPIC_API_KEY.");
+  }
+  if (/rate.?limit|429|too many requests/.test(m)) {
+    return t("יותר מדי בקשות בבת אחת. להמתין דקה ולנסות שוב.",
+             "Too many requests at once. Wait a minute and try again.");
+  }
+  if (/overloaded|529|503/.test(m)) {
+    return t("שירות ה‑AI עמוס כרגע. לנסות שוב בעוד כמה דקות.",
+             "The AI service is busy right now. Try again in a few minutes.");
+  }
+  if (/max_tokens|cut off/.test(m)) {
+    return t("התשובה של המודל נקטעה. זו אינה בעיה של קרדיט — הפונקציה המעודכנת מחלקת את המנה לבד; אם זה חוזר, יש לפרוס את submittal-ai המעודכן.",
+             "The model's answer was cut off. This is not a credit problem — the updated function splits the batch itself; if it keeps happening, deploy the updated submittal-ai.");
+  }
+  if (/failed to send|404|not found|failed to fetch|networkerror/.test(m)) {
+    return t("הפונקציה submittal-ai לא נפרסה, או שהשם שלה לא מדויק. Supabase → Edge Functions.",
+             "The submittal-ai function is not deployed, or its name is not exact. Supabase → Edge Functions.");
+  }
+  if (/unauthorized|401|jwt|not authenticated/.test(m)) {
+    return t("הבקשה יצאה בלי משתמש מחובר. להתנתק ולהתחבר מחדש.",
+             "The request went out with no signed-in user. Sign out and sign in again.");
+  }
+  if (/did not answer in json|bad_answer/.test(m)) {
+    return t("המודל לא החזיר JSON תקין. בדרך כלל חולף בניסיון שני.",
+             "The model did not return valid JSON. This usually clears on a second try.");
+  }
+  return null;
 }
 
 async function sbUploadFile(projectId, submittalId, file) {
@@ -12444,7 +12499,9 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
         : t("השירות עונה, אבל זו הגרסה הישנה של הפונקציה — היא לא מחזירה שם משפחה ותחום. צריך לפרוס את submittal-ai המעודכן.",
              "The service answers, but this is the old version of the function — it returns no family name or discipline. Deploy the updated submittal-ai."));
     } catch (e) {
-      setProbe(t(`השירות לא נענה: ${String((e && e.message) || e)}`, `The service did not answer: ${String((e && e.message) || e)}`));
+      const raw = String((e && e.message) || e);
+      const advice = fnErrorAdvice(raw, isRTL);
+      setProbe([t("השירות לא נענה.", "The service did not answer."), advice || "", raw].filter(Boolean).join("\n"));
     }
   };
   const onFile = async (e) => {
@@ -12599,6 +12656,9 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
             "הסיווג נעשה בחוקים מקומיים בלבד — שירות ה‑AI לא נענה. כדאי לעבור על טבלת הסיווג.",
             "Classified by local rules only — the AI service did not answer. Worth going through the classification table."
           ),
+          boq.aiError && fnErrorAdvice(boq.aiError, isRTL)
+            ? sbH("span", { className: "boqWarnAdvice" }, fnErrorAdvice(boq.aiError, isRTL))
+            : null,
           boq.aiError ? sbH("span", { className: "boqWarnDetail", dir: "ltr" }, boq.aiError) : null
         )
       : null,
