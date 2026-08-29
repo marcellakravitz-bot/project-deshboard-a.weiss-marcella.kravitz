@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 31";
+var APP_BUILD = "29.8.2026 \u00b7 build 33";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1223,6 +1223,18 @@ var pdfViewer = `
            exported, and seen by the client. */
         .lliShowTick { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent, #0F3460); }
         .sbShowCol { width: 62px; text-align: center; }
+        .sbItemCell { max-width: 260px; }
+        .sbCellIn {
+          width: 100%; min-width: 90px; padding: 4px 6px; border: 1px solid var(--line);
+          border-radius: 6px; font-family: inherit; font-size: 12px; text-align: center;
+          background: #fff; color: var(--ink);
+        }
+        /* Her own notes, on a card that opens where she is standing. */
+        .sbNotesBtn.has { color: var(--accent-ink); border-color: var(--accent); }
+        .sbOffListTitle { margin: 12px 0 0; font-size: 13px; font-weight: 800; color: var(--steel); text-align: center; }
+        .sbNotesBox { width: 100%; min-height: 160px; padding: 10px 12px; border: 1px solid var(--line);
+          border-radius: 10px; font-family: inherit; font-size: 13px; line-height: 1.6;
+          background: #fff; color: var(--ink); resize: vertical; }
         /* One fan across the three boards (29.8.26). */
         .sbTable tr.sbLate td { background: #fbe3e3; }
         .sbTable tr.sbWait td { background: #fdeed8; }
@@ -9593,7 +9605,12 @@ var SB_SUBCATS = {
     ["Counters & Desks", "דלפקים ועמדות"],
     ["Worktops", "משטחי עבודה"],
     ["Shelving", "מדפים"],
+    ["Doors", "דלתות"],
     ["Wooden Doors", "דלתות עץ"],
+    ["Fire Doors", "דלתות אש"],
+    ["Glazed Fire Doors", "דלתות אש מזוגגות"],
+    ["Glazed Doors", "דלתות מזוגגות"],
+    ["Door Frames", "משקופים"],
     ["Wood Cladding", "חיפויי עץ"],
     ["Ironmongery", "פרזול"]
   ]
@@ -9677,6 +9694,16 @@ var SB_L = {
   date: { en: "Date", he: "תאריך" },
   contractor: { en: "Contractor", he: "קבלן" },
   requiredApprovalDate: { en: "Required Approval Date", he: "תאריך נדרש לאישור" },
+  // The submittal list's own column headings (29.8.26).
+  catCol: { en: "Category", he: "קטגוריה" },
+  itemCol: { en: "Item", he: "תיאור פריט" },
+  supplierCol: { en: "Supplier", he: "ספק" },
+  dueCol: { en: "Approval due", he: "תאריך נדרש לאישור" },
+  notesCol: { en: "My notes", he: "הערות שלי" },
+  notesHint: {
+    en: "Private notes on this submittal. They are not printed and nobody else sees them.",
+    he: "הערות פרטיות על הסבמיטל הזה. הן לא מודפסות ואף אחד אחר לא רואה אותן."
+  },
   discipline: { en: "Discipline", he: "תחום" },
   submittedBy: { en: "Submitted By", he: "הוגש על ידי" },
   scope: { en: "Scope", he: "תכולה" },
@@ -9713,6 +9740,11 @@ var SB_L = {
   },
   bulkWorking: { en: "Reading", he: "קורא" },
   bulkNoHome: { en: "No place was found for these files", he: "לא נמצא יעד לקבצים הבאים" },
+  bulkOffList: { en: "Filed, but on no checklist line", he: "נפתחו, אך לא שויכו לשורה בצ׳ק‑ליסט" },
+  bulkOffListHint: {
+    en: "They are in the folder's own list above. Nothing on the bill-of-quantities checklist matched them.",
+    he: "הם נמצאים ברשימת הסבמיטלים למעלה. לא נמצאה להם שורה מתאימה בצ׳ק‑ליסט מכתב הכמויות."
+  },
   bulkNoHomeHint: {
     en: "They were not filed. Nothing else was affected — the rest went into their submittals.",
     he: "הם לא שויכו לאף סבמיטל. שאר הקבצים נכנסו לסבמיטלים שלהם כרגיל."
@@ -9993,6 +10025,12 @@ function sbNewSubmittal(opts) {
     submittedBy: opts.submittedBy || "",
     email: opts.email || "",
     scope: "",
+    // The company that will actually deliver — never the manufacturer, and
+    // never printed on the client's copy (29.8.26).
+    supplier: "",
+    // Her own notes. Private: they are on this screen and nowhere else — not on
+    // the form, not in a print, not in an export.
+    notes: "",
     subCategory: "",
     typeId: "",
     itemDescription: "",
@@ -10177,12 +10215,27 @@ async function sbFileUrl(att) {
   if (att.inline && att.dataUrl) return dataUrlToBlobUrl(att.dataUrl, att.name) || att.dataUrl;
   if (!att.path) return null;
   try {
-    const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(att.path, 3600);
+    // Downloaded and handed over as a blob with the right content type, rather
+    // than as a signed link. A file stored before the content type was being
+    // set — and every file she uploaded until yesterday is one — is served as
+    // "application/octet-stream", and a browser downloads that instead of
+    // showing it, whatever the link says. Reading the bytes ourselves settles
+    // it for old files and new ones alike (29.8.26).
+    const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).download(att.path);
     if (error) throw error;
-    return data && data.signedUrl || null;
+    const type = (data && data.type && data.type !== "application/octet-stream")
+      ? data.type
+      : guessContentType(att.name || att.path);
+    return URL.createObjectURL(new Blob([await data.arrayBuffer()], { type }));
   } catch (e) {
-    console.warn("[awdash] could not sign submittal file url", e);
-    return null;
+    console.warn("[awdash] could not read the file for viewing; falling back to a link", e);
+    try {
+      const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(att.path, 3600);
+      if (error) throw error;
+      return data && data.signedUrl || null;
+    } catch (e2) {
+      return null;
+    }
   }
 }
 async function sbRemoveFile(att) {
@@ -10509,78 +10562,6 @@ async function sbRenderSpecPages(rec, onProgress) {
 // extract, so the pages themselves are sent and the model reads them by eye.
 // Deliberately smaller and fewer than the print render: legible is enough.
 var SB_AI_IMAGE_PAGES = 5;
-// -----------------------------------------------------------------------------
-// Read one specification and turn it into a filled submittal.
-//
-// The same call the "fill with AI" button inside a submittal makes — the model
-// is given the document, the discipline and the sub-category catalogue, and it
-// answers with the product the document describes. Three answers are possible
-// and all three matter:
-//   the model named a product      → the submittal is filled in
-//   the model placed nothing here  → the file is left out and reported by name,
-//                                    never filed into a discipline it does not
-//                                    belong to
-//   the service did not answer     → said plainly, and the file is filed as an
-//                                    empty submittal rather than lost
-// -----------------------------------------------------------------------------
-async function sbFillFromSpec(rec, file, category, lang) {
-  const val = (v) => (v && String(v).trim() ? String(v).trim() : "");
-  let images = [];
-  try {
-    if (String(rec.specText || "").length < 200) {
-      images = (await sbRenderSpecImages(rec, SB_AI_IMAGE_PAGES)).map((sh) => sh.data);
-    }
-  } catch (e) {
-    images = [];
-  }
-  if (!images.length && String(rec.specText || "").length < 60) {
-    // Nothing readable in the file at all.
-    return { placed: false, aiDown: false, patch: null };
-  }
-  let data = null;
-  try {
-    const res = await supabase.functions.invoke("submittal-ai", {
-      body: {
-        specText: images.length ? "" : rec.specText,
-        images,
-        files: [{ name: file.name }],
-        category,
-        lang,
-        subCategories: sbSubcats(category).map((r) => r[0]),
-        fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
-      }
-    });
-    if (res.error) throw new Error(await fnFail(res.error, res.data, lang === "he"));
-    data = res.data || null;
-  } catch (e) {
-    console.warn("[awdash] load specifications: the AI service did not answer", e);
-    return { placed: false, aiDown: true, patch: null };
-  }
-  const out = data || {};
-  // The model was asked which files it could not use. A file it named is not
-  // filed here, whatever else came back.
-  const unused = (Array.isArray(out.unusedFiles) ? out.unusedFiles : []).map(String);
-  if (unused.some((n) => n && file.name && (n === file.name || String(file.name).indexOf(n) >= 0))) {
-    return { placed: false, aiDown: false, patch: null };
-  }
-  const pr = (Array.isArray(out.products) && out.products.length ? out.products[0] : out) || {};
-  const patch = {
-    subCategory: sbSubcatCanon(val(pr.subCategory), category),
-    typeId: val(pr.typeId),
-    itemDescription: val(pr.itemDescription),
-    modelCode: val(pr.modelCode),
-    manufacturer: val(pr.manufacturer),
-    infoEn: val(pr.infoEn),
-    infoHe: val(pr.infoHe)
-  };
-  if (pr.docs && typeof pr.docs === "object") patch.docs = { ...(rec.docs || {}), ...pr.docs };
-  // A submittal with no product name and no description was not filled in — the
-  // document said nothing this discipline can use.
-  const said = patch.itemDescription || patch.typeId || patch.modelCode || patch.manufacturer;
-  if (!said) return { placed: false, aiDown: false, patch: null };
-  Object.keys(patch).forEach((k) => { if (patch[k] === "") delete patch[k]; });
-  return { placed: true, aiDown: false, patch };
-}
 async function sbRenderSpecImages(rec, maxPages) {
   const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
   if (!atts.length) return [];
@@ -11937,11 +11918,15 @@ function SubmittalFolder({
   onNewRevision,
   onDelete,
   onBulkCreate,
+  onToggleShow,
+  onPatch,
   boqData,
   boqFlags
 }) {
   const L = (k) => sbText(SB_L[k], lang);
   const [bulkBusy, setBulkBusy] = useState6(null);
+  // The submittal whose private notes are open.
+  const [notesFor, setNotesFor] = useState6(null);
   // One file, one submittal. The serial runs on as they are made, so the
   // numbers come out in the order the files were picked.
   const onBulk = async (e) => {
@@ -12270,10 +12255,13 @@ function SubmittalFolder({
                 "tr",
                 null,
                 sbH("th", null, L("submittalNo")),
-                sbH("th", null, L("typeId")),
+                sbH("th", null, L("catCol")),
+                sbH("th", null, L("itemCol")),
+                sbH("th", null, L("supplierCol")),
                 sbH("th", null, L("date")),
-                sbH("th", null, L("signDate")),
+                sbH("th", null, L("dueCol")),
                 sbH("th", null, L("status")),
+                sbH("th", null, L("signDate")),
                 canEdit ? sbH("th", { className: "sbShowCol" }, L("showCol")) : null,
                 sbH("th", null, "")
               )
@@ -12289,9 +12277,13 @@ function SubmittalFolder({
                 const older = olderCountOf(s);
                 // The same fan as the other two boards: orange while it is
                 // with the supervision, green once it is signed (29.8.26).
-                const tone = st === "approved" || st === "approvedNoted" ? "sbOk"
-                  : s.sent && st === "open" ? "sbWait"
-                  : st === "rejected" ? "sbLate"
+                const due = String(s.requiredApprovalDate || "").slice(0, 10);
+                const settled = st === "approved" || st === "approvedNoted";
+                const tone = settled ? "sbOk"
+                  // Past the date it had to be approved by, and still not
+                  // approved: red, whatever else is true of it (29.8.26).
+                  : (st === "rejected" || (due && due < sbToday())) ? "sbLate"
+                  : s.sent ? "sbWait"
                   : "";
                 return sbH(
                   "tr",
@@ -12319,8 +12311,34 @@ function SubmittalFolder({
                         : null
                     )
                   ),
-                  sbH("td", null, s.typeId || "—"),
+                  sbH("td", null, sbText(boardCategoryOf(s.category) || { en: "", he: "" }, lang) || "—"),
+                  sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || s.typeId || "—"),
+                  sbH(
+                    "td",
+                    null,
+                    canEdit
+                      ? sbH("input", {
+                          type: "text",
+                          className: "sbCellIn",
+                          value: s.supplier || "",
+                          placeholder: "—",
+                          onChange: (e) => onPatch && onPatch(s, { supplier: e.target.value })
+                        })
+                      : (s.supplier || "—")
+                  ),
                   sbH("td", { dir: "ltr" }, s.sent ? sbFmtDate((s.sentAt || "").slice(0, 10) || s.date) : sbFmtDate(s.date)),
+                  sbH("td", { dir: "ltr" }, due ? sbFmtDate(due) : "—"),
+                  sbH(
+                    "td",
+                    { className: "sbStatusCell" },
+                    sbH(
+                      "div",
+                      { className: "sbStatusWrap" },
+                      sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang)),
+                      s.sent ? null : sbH("span", { className: "sbDraftTag" }, L("draft")),
+                      isNew ? sbH("span", { className: "sbNewTag" }, L("newlyApproved")) : null
+                    )
+                  ),
                   // Signed: the date. Not signed, and this person may sign:
                   // the way in sits exactly where the date will end up.
                   sbH(
@@ -12337,17 +12355,6 @@ function SubmittalFolder({
                             L("signColumn")
                           )
                         : "—"
-                  ),
-                  sbH(
-                    "td",
-                    { className: "sbStatusCell" },
-                    sbH(
-                      "div",
-                      { className: "sbStatusWrap" },
-                      sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang)),
-                      s.sent ? null : sbH("span", { className: "sbDraftTag" }, L("draft")),
-                      isNew ? sbH("span", { className: "sbNewTag" }, L("newlyApproved")) : null
-                    )
                   ),
                   canEdit
                     ? sbH(
@@ -12760,57 +12767,179 @@ function SubmittalCard({
         // in — so pressing "+ סבמיטל" afterwards opens a finished form rather
         // than an empty one. A file the model cannot place is never guessed at:
         // it is left out and named on screen (29.8.26).
+        // "Load specifications": every file she picked is read TOGETHER, in one
+        // pass, and the model says which of them describe the same product. One
+        // product becomes one submittal carrying all its papers — the
+        // datasheet, the standard certificate and the test report are three
+        // documents about one thing, not three things (29.8.26).
         onBulkCreate: async (files, onProgress) => {
-          const made = [];
-          const homeless = [];
-          let aiDown = false;
-          for (let i = 0; i < files.length; i++) {
-            const f = files[i];
-            const rec = sbNewSubmittal({
-              category: chosen.key,
-              seq: sbNextSeq(list.concat(made), chosen.key),
-              projectName: pName,
-              contractor: contractorName,
-              disciplineEn: chosen.en,
-              disciplineHe: chosen.he,
-              email: currentEmail || "",
-              submittedBy: (currentEmail || "").split("@")[0] || ""
-            });
-            const isImage = /^image\//.test(f.type || "");
-            try {
-              const stored = await sbUploadFile(projectId, rec.id, f);
-              if (isImage) {
-                rec.image = { ...stored, name: f.name, thumb: await sbMakeThumb(f) };
-              } else {
-                const text = await sbExtractPdfText(f).catch(() => "");
-                rec.attachments = [{ ...stored, name: f.name, size: f.size }];
-                rec.specText = text || "";
-              }
-            } catch (ex) {
-              console.warn("[awdash] load specifications: could not store", f.name, ex);
-            }
-            // A picture is filed as it is; only a document is read.
-            if (!isImage && !aiDown) {
-              const filled = await sbFillFromSpec(rec, f, chosen.key, lang);
-              if (filled.aiDown) {
-                aiDown = true;
-              } else if (filled.placed) {
-                Object.assign(rec, filled.patch, { aiFilledAt: new Date().toISOString() });
-              } else {
-                // Nothing in this document belongs in this discipline.
-                homeless.push(f.name);
-                if (onProgress) onProgress(i + 1);
-                continue;
-              }
-            }
-            made.push(rec);
+          const picked = Array.from(files || []);
+          if (!picked.length) return;
+          const docs = [];
+          const pics = [];
+          for (let i = 0; i < picked.length; i++) {
+            const f = picked[i];
+            if (/^image\//.test(f.type || "")) pics.push(f);
+            else docs.push({ file: f, text: await sbExtractPdfText(f).catch(() => "") });
             if (onProgress) onProgress(i + 1);
           }
+
+          // What the model is given: the text of every document, each under its
+          // own file name; pages as pictures for the ones with no text layer.
+          const withText = docs.filter((d) => String(d.text || "").trim().length >= 60);
+          const scans = docs.filter((d) => String(d.text || "").trim().length < 60);
+          const specText = withText
+            .map((d) => `=== ${d.file.name} ===\n${String(d.text).slice(0, 30000)}`)
+            .join("\n\n");
+          let images = [];
+          const manifest = docs.map((d) => ({ name: d.file.name }));
+          for (const d of scans) {
+            if (images.length >= SB_AI_IMAGE_PAGES * 2) break;
+            const stored = await sbUploadFile(projectId, `scan-${Date.now()}`, d.file).catch(() => null);
+            if (!stored) continue;
+            const shots = await sbRenderSpecImages(
+              { attachments: [{ ...stored, name: d.file.name }] },
+              Math.max(2, Math.round(SB_AI_IMAGE_PAGES * 2 / Math.max(1, scans.length)))
+            ).catch(() => []);
+            images = images.concat(shots.map((sh) => sh.data));
+          }
+
+          // The checklist this folder already shows, in the model's terms.
+          const checklist = boqProducts(
+            boqData, (boqData || {}).flags || {}, boqFlags, "submittal", chosen.key
+          ).map((pr) => ({ code: pr.code, name: boqText(pr, lang) }));
+          const checklistCodes = new Set(checklist.map((c) => c.code));
+
+          let out = null;
+          let aiDown = false;
+          if (specText.trim() || images.length) {
+            try {
+              const res = await supabase.functions.invoke("submittal-ai", {
+                body: {
+                  specText,
+                  images,
+                  files: manifest,
+                  category: chosen.key,
+                  lang,
+                  // The approvals this discipline is already waiting for. A
+                  // loaded specification belongs on one of THESE lines — a new
+                  // list beside the one she already has helps nobody (29.8.26).
+                  checklist,
+                  subCategories: sbSubcats(chosen.key).map((r) => r[0]),
+                  fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
+                }
+              });
+              if (res.error) throw res.error;
+              out = res.data || null;
+            } catch (e) {
+              console.warn("[awdash] load specifications: the AI service did not answer", e);
+              aiDown = true;
+            }
+          }
+
+          const val = (v) => (v && String(v).trim() ? String(v).trim() : "");
+          const products = out && Array.isArray(out.products) && out.products.length
+            ? out.products
+            : out && (out.typeId || out.itemDescription) ? [out] : [];
+          const unused = new Set((out && Array.isArray(out.unusedFiles) ? out.unusedFiles : []).map(String));
+
+          // Which file belongs to which product. The model names them; a file
+          // it did not place is reported, never filed on a guess.
+          const byName = {};
+          docs.forEach((d) => { byName[d.file.name] = d; });
+          const taken = new Set();
+          const made = [];
+          const offList = [];
+          const newRec = () => sbNewSubmittal({
+            category: chosen.key,
+            seq: sbNextSeq(list.concat(made), chosen.key),
+            projectName: pName,
+            contractor: contractorName,
+            disciplineEn: chosen.en,
+            disciplineHe: chosen.he,
+            email: currentEmail || "",
+            submittedBy: (currentEmail || "").split("@")[0] || ""
+          });
+
+          for (const pr of products) {
+            const names = (Array.isArray(pr.files) ? pr.files : [])
+              .map(String)
+              .filter((n) => byName[n] && !taken.has(n));
+            if (!names.length) continue;
+            const rec = newRec();
+            const atts = [];
+            let text = "";
+            for (const n of names) {
+              taken.add(n);
+              const d = byName[n];
+              const stored = await sbUploadFile(projectId, rec.id, d.file).catch(() => null);
+              if (stored) atts.push({ ...stored, name: d.file.name, size: d.file.size });
+              if (d.text) text += `${text ? "\n\n" : ""}${d.text}`;
+            }
+            rec.attachments = atts;
+            rec.specText = text.slice(0, 60000);
+            // The checklist line this answers. With it, the submittal shows up
+            // on that line instead of only in the list at the top.
+            const onLine = String(pr.boq || "").trim();
+            if (onLine && checklistCodes.has(onLine)) rec.boqCode = onLine;
+            rec.subCategory = sbSubcatCanon(val(pr.subCategory), chosen.key);
+            rec.typeId = val(pr.typeId) || rec.typeId;
+            rec.itemDescription = val(pr.itemDescription) || rec.itemDescription;
+            rec.modelCode = val(pr.modelCode) || rec.modelCode;
+            rec.manufacturer = val(pr.manufacturer) || rec.manufacturer;
+            rec.infoEn = val(pr.infoEn) || rec.infoEn;
+            rec.infoHe = val(pr.infoHe) || rec.infoHe;
+            if (pr.docs && typeof pr.docs === "object") rec.docs = { ...(rec.docs || {}), ...pr.docs };
+            rec.aiFilledAt = new Date().toISOString();
+            made.push(rec);
+          }
+
+          // A picture stands on its own; there is nothing to read in it.
+          for (const f of pics) {
+            const rec = newRec();
+            const stored = await sbUploadFile(projectId, rec.id, f).catch(() => null);
+            if (stored) rec.image = { ...stored, name: f.name, thumb: await sbMakeThumb(f) };
+            made.push(rec);
+          }
+
+          // Whatever nobody claimed: named on screen, and — when the service
+          // simply did not answer — filed as it used to be, one per document,
+          // so nothing she uploaded is lost.
+          // A product the checklist has no line for is not a mistake — it is a
+          // submittal she will see at the top of the folder, and it is worth
+          // saying which ones those were.
+          made.forEach((rec) => {
+            if (!rec.boqCode && (rec.attachments || []).length) {
+              offList.push(rec.itemDescription || rec.typeId || (rec.attachments[0] || {}).name || "");
+            }
+          });
+          const homeless = [];
+          for (const d of docs) {
+            if (taken.has(d.file.name)) continue;
+            if (aiDown) {
+              const rec = newRec();
+              const stored = await sbUploadFile(projectId, rec.id, d.file).catch(() => null);
+              if (stored) rec.attachments = [{ ...stored, name: d.file.name, size: d.file.size }];
+              rec.specText = d.text || "";
+              made.push(rec);
+            } else {
+              homeless.push(d.file.name);
+            }
+          }
+
           if (made.length) commit((list || []).concat(made));
-          if (homeless.length || aiDown) setBulkReport({ homeless, aiDown });
+          if (homeless.length || offList.length || aiDown) {
+            setBulkReport({ homeless, offList: offList.filter(Boolean), aiDown });
+          }
         },
         onOpen: openExisting,
         onPrint: (s) => setPrintAsk(() => (lg) => sbPrint(s, lg, printBrand, userSignatures)),
+        // The tick that decides whether this submittal is on the client's
+        // screen and on the paper.
+        onToggleShow: (s) => commit((list || []).map((x) => (x.id === s.id ? { ...x, hidden: !x.hidden } : x))),
+        // One field on one submittal, saved where it stands: the supplier
+        // typed into the list, her private notes (29.8.26).
+        onPatch: (s, next) => commit((list || []).map((x) => (x.id === s.id ? { ...x, ...next } : x))),
         onNewRevision: startRevision,
         onDelete: deleteOne
       }),
@@ -12824,6 +12953,7 @@ function SubmittalCard({
 function SbBulkReport({ report, lang, isRTL, onClose }) {
   const L = (k) => sbText(SB_L[k], lang);
   const names = (report && report.homeless) || [];
+  const offList = (report && report.offList) || [];
   return createPortal(
     sbH(
       "div",
@@ -12835,7 +12965,7 @@ function SbBulkReport({ report, lang, isRTL, onClose }) {
           "div",
           { className: "functionEditModalHead" },
           sbH("span", { className: "functionEditModalSpacer" }),
-          sbH("span", { className: "functionEditModalTitle" }, names.length ? L("bulkNoHome") : L("bulkPlain")),
+          sbH("span", { className: "functionEditModalTitle" }, names.length ? L("bulkNoHome") : L("bulkOffList")),
           sbH("button", { className: "drawerClose", onClick: onClose, "aria-label": L("close") }, sbH(X3, { size: 16, strokeWidth: 2 }))
         ),
         sbH(
@@ -12844,7 +12974,20 @@ function SbBulkReport({ report, lang, isRTL, onClose }) {
           names.length
             ? sbH("ul", { className: "sbHomelessList" }, names.map((n, i) => sbH("li", { key: `${n}-${i}`, dir: "auto" }, n)))
             : null,
-          sbH("p", { className: "sbHomelessHint" }, report && report.aiDown ? L("bulkPlain") : L("bulkNoHomeHint"))
+          names.length
+            ? sbH("p", { className: "sbHomelessHint" }, report && report.aiDown ? L("bulkPlain") : L("bulkNoHomeHint"))
+            : null,
+          // Filed, but on no line of the checklist: they are in the folder's
+          // own list at the top and nowhere else (29.8.26).
+          offList.length
+            ? sbH(
+                React15.Fragment,
+                null,
+                sbH("h4", { className: "sbOffListTitle" }, L("bulkOffList")),
+                sbH("ul", { className: "sbHomelessList" }, offList.map((n, i) => sbH("li", { key: `off-${i}`, dir: "auto" }, n))),
+                sbH("p", { className: "sbHomelessHint" }, L("bulkOffListHint"))
+              )
+            : null
         ),
         sbH(
           "div",
