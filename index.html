@@ -92,7 +92,8 @@ import {
 import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon } from "lucide-react";
 import {
   PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
-  Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2
+  Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2,
+  Hammer as Hammer2
 } from "lucide-react";
 
 // src/config/supabase.js
@@ -439,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 24";
+var APP_BUILD = "29.8.2026 \u00b7 build 25";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1212,13 +1213,17 @@ var pdfViewer = `
         .lliShowTick { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent, #0F3460); }
         .sbShowCol { width: 62px; text-align: center; }
         .lliTable .cRoom { width: 74px; text-align: center; }
-        .lliMoveBox { display: inline-flex; flex-direction: column; gap: 1px; margin-inline-start: 6px; vertical-align: middle; }
-        .lliMoveBtn {
-          border: 1px solid var(--line); background: #fff; color: var(--mist);
-          border-radius: 4px; width: 16px; height: 12px; line-height: 1;
-          font-size: 7px; padding: 0; cursor: pointer;
+        /* Dragging a row into place. The handle says the row can be moved; the
+           line says where it will land if it is dropped now (29.8.26). */
+        .lliImgBox:focus-visible { outline: 2px solid var(--accent, #0F3460); outline-offset: 1px; }
+        .lliDragHandle {
+          display: inline-block; margin-inline-start: 6px; color: var(--mist);
+          font-size: 13px; line-height: 1; cursor: grab; user-select: none;
         }
-        .lliMoveBtn:hover { color: var(--ink); border-color: var(--mist); }
+        .lliTable tr[draggable="true"]:active .lliDragHandle { cursor: grabbing; }
+        .lliTable tr.lliDragging td { opacity: .4; }
+        .lliTable tr.lliDropHere td { box-shadow: inset 0 2px 0 0 var(--accent, #0F3460); }
+        .lliTable tr.lliDropTail td { height: 8px; padding: 0; border: 0; }
         /* What she types into a cell sits where the cell sits. An input is
            left-aligned by default and inherits nothing, so it has to be told
            (29.8.26). */
@@ -2938,6 +2943,19 @@ function sanitizeFileNamePart(s) {
 // inside the record. The key is internal and nobody ever reads it, so it is
 // made of plain ASCII; the file keeps its real name in the record beside it
 // (29.8.26).
+var CONTENT_TYPES = {
+  pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+  gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", txt: "text/plain",
+  csv: "text/csv", xml: "application/xml", html: "text/html",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+};
+function guessContentType(name) {
+  const ext = String(name || "").split(".").pop().toLowerCase();
+  return CONTENT_TYPES[ext] || "application/octet-stream";
+}
 function storageKeyPart(name) {
   const s = String(name || "file").trim();
   const dot = s.lastIndexOf(".");
@@ -6447,7 +6465,9 @@ function boqParseAnswer(raw) {
 function boqCleanCategory(v) {
   const k = String(v || "").trim().toLowerCase();
   if (!k) return null;
-  return SUBMITTAL_CATEGORIES.some((c) => c.key === k) ? k : null;
+  // A board category counts too: joinery is a real discipline on LLI and SD
+  // even though it has no submittal folder.
+  return BOARD_CATEGORIES.some((c) => c.key === k) ? k : null;
 }
 // "SDLX" -> submittal + shop drawing + ordered + long lead. "R" is the model
 // saying it could not decide: the line is shown with a "check this" mark rather
@@ -7135,8 +7155,11 @@ var LLI_L = {
   longLead: { en: "Long lead", he: "אספקה ארוכה" },
   onlyLong: { en: "Only long lead", he: "רק אספקה ארוכה" },
   byRoomCol: { en: "BY ROOM", he: "BY ROOM" },
-  moveUp: { en: "Move up", he: "העלאת השורה" },
-  moveDown: { en: "Move down", he: "הורדת השורה" },
+  dragHint: { en: "Drag the row to where it belongs", he: "גוררים את השורה למקום שלה" },
+  pasteHint: {
+    en: "Click the box and paste a picture (Ctrl+V), or click again to pick a file",
+    he: "לוחצים על התיבה ומדביקים תמונה (Ctrl+V), או לוחצים שוב לבחירת קובץ"
+  },
   byRoomHint: {
     en: "Ticked rows build the room search: this row's category, mark, description and photo appear under every room the drawings give that mark to.",
     he: "שורה מסומנת נבנית לתוך החיפוש לפי חדר: הקטגוריה, האיפיון, התיאור והתמונה שלה יופיעו בכל חדר שהתוכניות נותנות לו את האיפיון הזה."
@@ -7206,6 +7229,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [busyRow, setBusyRow] = useState6(null);
   const [poNote, setPoNote] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
+  // Which row is being dragged, and the row the line is currently drawn above.
+  const [drag, setDrag] = useState6(null);
   const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
   const t2 = (he, en) => (lang === "he" ? he : en);
 
@@ -7294,19 +7319,45 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       return va === vb ? a.pos - b.pos : va - vb;
     });
   });
-  // Moving a row means writing down the order of the whole group it sits in —
-  // anything less and the next render puts it back.
-  const moveRow = (g, code, dir) => {
-    const list = g.rows.slice();
-    const i = list.findIndex((x) => x.code === code);
-    const j = i + dir;
-    if (i < 0 || j < 0 || j >= list.length) return;
-    const tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+  // She drags a row and drops it where the line shows. Moving one row means
+  // writing down the order of the whole group it sits in — anything less and
+  // the next render puts it back where the BOQ had it (29.8.26).
+  const dropRow = (g, code, beforeCode) => {
+    if (!onChangeRows || code === beforeCode) return;
+    const list = g.rows.filter((x) => x.code !== code);
+    const moved = g.rows.find((x) => x.code === code);
+    if (!moved) return;
+    const at = beforeCode == null ? list.length : list.findIndex((x) => x.code === beforeCode);
+    list.splice(at < 0 ? list.length : at, 0, moved);
     const next = { ...data };
     list.forEach((x, k) => { next[x.code] = { ...lliRowOf(data, x.code), order: k }; });
-    if (onChangeRows) onChangeRows(next);
+    onChangeRows(next);
   };
 
+  // A picture from the clipboard. Chrome, Edge and Safari all put a screenshot
+  // or a copied image on the clipboard as a file, so the same path that handles
+  // an uploaded file handles this one — it is only the way in that differs.
+  const onImagePaste = async (code, e) => {
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    let file = null;
+    for (let i = 0; i < items.length && !file; i++) {
+      if (items[i].kind === "file" && /^image\//.test(items[i].type || "")) file = items[i].getAsFile();
+    }
+    if (!file) {
+      const fs2 = (e.clipboardData && e.clipboardData.files) || [];
+      if (fs2.length && /^image\//.test(fs2[0].type || "")) file = fs2[0];
+    }
+    if (!file) return;
+    e.preventDefault();
+    setBusyRow(code);
+    try {
+      patch(code, { image: await sbMakeThumb(file, 640) });
+    } catch (ex) {
+      console.warn("[awdash] could not read the pasted picture", ex);
+    } finally {
+      setBusyRow(null);
+    }
+  };
   const onImage = async (code, e) => {
     const f = e.target.files && e.target.files[0];
     e.target.value = "";
@@ -7354,9 +7405,21 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     setBusyRow(`po-${code}`);
     setPoNote(null);
     try {
-      if (!v.poText) throw new Error(t2("לא נשלף טקסט מקובץ ההזמנה", "No text could be read out of the order file"));
+      // An order that is a scan has no text layer. Rather than stop there, its
+      // pages go to the model as pictures — that file is the commonest kind of
+      // purchase order there is (29.8.26).
+      const poText = String(v.poText || "").trim();
+      let shots = [];
+      if (poText.length < 40) {
+        shots = await sbRenderSpecImages({ attachments: [v.poFile].filter(Boolean) }, 4)
+          .then((list) => list.map((sh) => sh.data))
+          .catch(() => []);
+      }
+      if (poText.length < 40 && !shots.length) {
+        throw new Error(t2("לא נשלף טקסט מקובץ ההזמנה", "No text could be read out of the order file"));
+      }
       const { data: res, error } = await supabase.functions.invoke("submittal-ai", {
-        body: { mode: "po", text: v.poText.slice(0, 2e4) }
+        body: { mode: "po", text: poText.slice(0, 2e4), images: shots }
       });
       if (error) throw error;
       const got = (res && res.po) || null;
@@ -7390,7 +7453,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     ];
     const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 9];
     const cat = (k) => {
-      const c = SUBMITTAL_CATEGORIES.find((x) => x.key === k);
+      const c = boardCategoryOf(k);
       return c ? sbText(c, lang) : "";
     };
     const body = [];
@@ -7477,7 +7540,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       "div",
       { className: "lliFilter" },
       catChip("all", L("allCats")),
-      SUBMITTAL_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
+      BOARD_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
     ),
     sbH(
       "div",
@@ -7534,9 +7597,47 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
+                  const dragging = drag && drag.code === r.code;
+                  const lineAbove = drag && drag.over === r.code && drag.code !== r.code;
                   return sbH(
                     "tr",
-                    { key: r.code, className: hidden ? "lliOff" : "" },
+                    {
+                      key: r.code,
+                      className: `${hidden ? "lliOff" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""}`.trim(),
+                      draggable: canEdit,
+                      onDragStart: canEdit
+                        ? (e) => {
+                            e.dataTransfer.effectAllowed = "move";
+                            // Firefox will not start a drag without payload.
+                            try { e.dataTransfer.setData("text/plain", r.code); } catch (_) {}
+                            setDrag({ code: r.code, group: g.key, over: r.code });
+                          }
+                        : void 0,
+                      onDragOver: canEdit
+                        ? (e) => {
+                            if (!drag || drag.group !== g.key) return;
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                            // The line is drawn above the row the cursor is on,
+                            // or below it once the cursor passes the halfway
+                            // mark — so what she sees is where it will land.
+                            const box = e.currentTarget.getBoundingClientRect();
+                            const past = e.clientY - box.top > box.height / 2;
+                            const list = g.rows;
+                            const i = list.findIndex((x) => x.code === r.code);
+                            const target = past ? (list[i + 1] ? list[i + 1].code : null) : r.code;
+                            if (drag.over !== target) setDrag({ ...drag, over: target });
+                          }
+                        : void 0,
+                      onDrop: canEdit
+                        ? (e) => {
+                            e.preventDefault();
+                            if (drag && drag.group === g.key) dropRow(g, drag.code, drag.over);
+                            setDrag(null);
+                          }
+                        : void 0,
+                      onDragEnd: canEdit ? () => setDrag(null) : void 0
+                    },
                     sbH(
                       "td",
                       { className: "cSec" },
@@ -7548,29 +7649,19 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                         : r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null,
                       r.longLead ? sbH("span", { className: "lliLongTag" }, L("longLead")) : null,
                       r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
-                      canEdit
-                        ? sbH(
-                            "span",
-                            { className: "lliMoveBox" },
-                            sbH("button", { type: "button", className: "lliMoveBtn", title: L("moveUp"), onClick: () => moveRow(g, r.code, -1) }, "\u25B2"),
-                            sbH("button", { type: "button", className: "lliMoveBtn", title: L("moveDown"), onClick: () => moveRow(g, r.code, 1) }, "\u25BC")
-                          )
-                        : null
+                      canEdit ? sbH("span", { className: "lliDragHandle", title: L("dragHint") }, "\u2261") : null
                     ),
                     sbH(
                       "td",
                       { className: "cCat" },
-                      sbH(
-                        "select",
-                        {
-                          className: "lliIn lliSel lliCatSel",
-                          value: r.category || "",
-                          disabled: !canEdit,
-                          onChange: (e) => patch(r.code, { category: e.target.value || null })
-                        },
-                        sbH("option", { value: "" }, L("noCat")),
-                        SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))
-                      )
+                      sbH(BoardCatSelect, {
+                        value: r.category || "",
+                        subValue: v.subCategory || "",
+                        lang,
+                        disabled: !canEdit,
+                        noneLabel: L("noCat"),
+                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory })
+                      })
                     ),
                     sbH(
                       "td",
@@ -7621,7 +7712,16 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                       { className: "cImg" },
                       sbH(
                         "label",
-                        { className: `lliImgBox ${canEdit ? "" : "ro"}` },
+                        {
+                          className: `lliImgBox ${canEdit ? "" : "ro"}`,
+                          // Click the box and paste, the way a picture goes into
+                          // a spreadsheet cell. The file picker still works; this
+                          // just saves the trip through the desktop for a picture
+                          // that is already on the clipboard (29.8.26).
+                          tabIndex: canEdit ? 0 : void 0,
+                          title: canEdit ? L("pasteHint") : void 0,
+                          onPaste: canEdit ? (e) => onImagePaste(r.code, e) : void 0
+                        },
                         v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
                         busyRow === r.code ? sbH("span", { className: "lliImgBusy" }, "…") : null,
                         canEdit ? sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onImage(r.code, e) }) : null
@@ -7753,7 +7853,16 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                         )
                       : null
                   );
-                })
+                }),
+                // Dropping below the last row of a group.
+                canEdit && drag && drag.group === g.key
+                  ? sbH("tr", {
+                      key: `${g.key}-end`,
+                      className: `lliDropTail ${drag.over === null ? "lliDropHere" : ""}`.trim(),
+                      onDragOver: (e) => { e.preventDefault(); if (drag.over !== null) setDrag({ ...drag, over: null }); },
+                      onDrop: (e) => { e.preventDefault(); dropRow(g, drag.code, null); setDrag(null); }
+                    }, sbH("td", { colSpan: canEdit ? 17 : 15 }))
+                  : null
               )
             )
           )
@@ -7960,7 +8069,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     ];
     const widths = [15, 13, 38, 12, 13, 20, 17, 17, 13, 13];
     const cat2 = (k) => {
-      const c = SUBMITTAL_CATEGORIES.find((x) => x.key === k);
+      const c = boardCategoryOf(k);
       return c ? sbText(c, lang) : "";
     };
     const body = [];
@@ -8033,7 +8142,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       "div",
       { className: "lliFilter" },
       catChip("all", L("allCats")),
-      SUBMITTAL_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
+      BOARD_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
     ),
     sbH(
       "div",
@@ -8105,17 +8214,14 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     sbH(
                       "td",
                       { className: "cCat" },
-                      sbH(
-                        "select",
-                        {
-                          className: "lliIn lliSel lliCatSel",
-                          value: r.category || "",
-                          disabled: !canEdit,
-                          onChange: (e) => patch(r.code, { category: e.target.value || null })
-                        },
-                        sbH("option", { value: "" }, L("noCat")),
-                        SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))
-                      )
+                      sbH(BoardCatSelect, {
+                        value: r.category || "",
+                        subValue: v.subCategory || "",
+                        lang,
+                        disabled: !canEdit,
+                        noneLabel: L("noCat"),
+                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory })
+                      })
                     ),
                     sbH(
                       "td",
@@ -8924,6 +9030,18 @@ var SUBMITTAL_CATEGORIES = [
   { key: "hvac", en: "HVAC", he: "מיזוג אוויר", icon: AirVent2 },
   { key: "plumbing", en: "Plumbing", he: "אינסטלציה", icon: Droplets2 }
 ];
+// Joinery is a trade on the boards but not a submittal folder: carpentry is
+// approved by a shop drawing and chased as a delivery, and nobody submits a
+// material sheet for it. So it lives on LLI and SD and stays off the submittal
+// screen — her own instruction, 29.8.26.
+var BOARD_ONLY_CATEGORIES = [
+  { key: "joinery", en: "Joinery", he: "נגרות", icon: Hammer2, boardOnly: true }
+];
+// What the two boards offer. The submittal screen keeps SUBMITTAL_CATEGORIES.
+var BOARD_CATEGORIES = SUBMITTAL_CATEGORIES.concat(BOARD_ONLY_CATEGORIES);
+function boardCategoryOf(key) {
+  return BOARD_CATEGORIES.find((c) => c.key === key) || null;
+}
 
 // The sub-category catalogue, exactly as Marcella supplied it (18.8.26,
 // "תת קטגוריה לסבמיטלים.xlsx"). English first, Hebrew second — the English term
@@ -9029,8 +9147,70 @@ var SB_SUBCATS = {
     ["Water Softeners", "מרככי מים"],
     ["Pipes & Fittings", "צנרת ואביזרים"],
     ["Valves", "מגופים"]
+  ],
+  // Joinery — a starting list, not from her sheet (29.8.26). It is here so the
+  // LLI and SD boards have something concrete to pick from; say the word and
+  // the entries change.
+  joinery: [
+    ["Joinery", "נגרות אומן"],
+    ["Built-in Furniture", "ריהוט מובנה"],
+    ["Cupboards", "ארונות"],
+    ["Counters & Desks", "דלפקים ועמדות"],
+    ["Worktops", "משטחי עבודה"],
+    ["Shelving", "מדפים"],
+    ["Wooden Doors", "דלתות עץ"],
+    ["Wood Cladding", "חיפויי עץ"],
+    ["Ironmongery", "פרזול"]
   ]
 };
+// -----------------------------------------------------------------------------
+// The category cell on the boards.
+//
+// "Architecture" is true of a curtain, a mirror and a built-in cupboard alike,
+// and saying it tells nobody what the row is. So the picker offers her own
+// sub-category catalogue, grouped under the discipline each one belongs to:
+// she picks "וילונות והצללה" and the row is a curtain, filed under
+// architecture, and it lands in the chapter where architecture lives (29.8.26).
+//
+// The value carries both halves — "architecture|Curtains & Blinds" — so one
+// choice settles the discipline and the detail together.
+// -----------------------------------------------------------------------------
+function boardCatValue(category, subCategory) {
+  if (!category) return "";
+  return subCategory ? `${category}|${subCategory}` : category;
+}
+function boardCatPick(value) {
+  const [category, subCategory] = String(value || "").split("|");
+  return { category: category || null, subCategory: subCategory || "" };
+}
+function BoardCatSelect({ value, subValue, lang, disabled, noneLabel, onPick }) {
+  return sbH(
+    "select",
+    {
+      className: "lliIn lliSel lliCatSel",
+      value: boardCatValue(value, subValue),
+      disabled,
+      onChange: (e) => onPick(boardCatPick(e.target.value))
+    },
+    sbH("option", { value: "" }, noneLabel),
+    BOARD_CATEGORIES.map((c) => {
+      const subs = sbSubcats(c.key);
+      const name = sbText(c, lang);
+      return sbH(
+        "optgroup",
+        { key: c.key, label: name },
+        // The discipline on its own stays available, for a row that is one of
+        // these and nothing more specific.
+        sbH("option", { value: c.key }, name),
+        subs.map((row) => sbH(
+          "option",
+          { key: `${c.key}|${row[0]}`, value: `${c.key}|${row[0]}` },
+          lang === "he" ? row[1] : row[0]
+        ))
+      );
+    })
+  );
+}
 function sbSubcats(catKey) {
   return SB_SUBCATS[catKey] || [];
 }
@@ -9483,7 +9663,11 @@ async function sbUploadFile(projectId, submittalId, file) {
   try {
     const { error } = await supabase.storage.from(SUBMITTAL_BUCKET).upload(path, file, {
       upsert: true,
-      contentType: file.type || "application/octet-stream"
+      // A file stored as "application/octet-stream" is downloaded by every
+      // browser instead of being shown. Most files arrive with a type; the ones
+      // that do not get theirs from the extension, so a PDF opens as a PDF
+      // (29.8.26).
+      contentType: file.type || guessContentType(file.name)
     });
     if (error) throw error;
     return { path, inline: false, dataUrl: null };
@@ -9494,9 +9678,26 @@ async function sbUploadFile(projectId, submittalId, file) {
     return { path: null, inline: true, dataUrl };
   }
 }
+// A URL that can be OPENED, not only downloaded. A data: URL is refused by
+// every browser as a top-level document, so a file kept inline is turned back
+// into bytes and handed over as a blob: URL, which opens in a tab and closes
+// with it (29.8.26).
+function dataUrlToBlobUrl(dataUrl, name) {
+  const m = String(dataUrl || "").match(/^data:([^;,]*)(;base64)?,(.*)$/);
+  if (!m) return null;
+  const type = m[1] || guessContentType(name);
+  try {
+    const raw = m[2] ? atob(m[3]) : decodeURIComponent(m[3]);
+    const buf = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+    return URL.createObjectURL(new Blob([buf], { type: type || "application/octet-stream" }));
+  } catch (e) {
+    return null;
+  }
+}
 async function sbFileUrl(att) {
   if (!att) return null;
-  if (att.inline && att.dataUrl) return att.dataUrl;
+  if (att.inline && att.dataUrl) return dataUrlToBlobUrl(att.dataUrl, att.name) || att.dataUrl;
   if (!att.path) return null;
   try {
     const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(att.path, 3600);
