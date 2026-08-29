@@ -439,7 +439,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "28.8.2026 \u00b7 build 23";
+var APP_BUILD = "29.8.2026 \u00b7 build 24";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1202,7 +1202,43 @@ var pdfViewer = `
            would simply scroll away and take the headings with it. --appvh is
            the visible height measured in design pixels; plain vh is measured on
            the real window and then shrinks again with the app's own scaling. */
-        .lliTableWrap { overflow: auto; max-height: calc(var(--appvh, 760px) - 250px); }
+        /* The same box the project schedule uses: a thin frame, a soft corner
+           and a slim scrollbar. One design line for every table on the site,
+           so a board never looks like it came from somewhere else (29.8.26). */
+        /* Icon and word, the same way every other button on the site is built. */
+        .sbActBtn { display: inline-flex; align-items: center; gap: 6px; }
+        /* The tick that decides whether a row is on the board at all: printed,
+           exported, and seen by the client. */
+        .lliShowTick { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent, #0F3460); }
+        .sbShowCol { width: 62px; text-align: center; }
+        .lliTable .cRoom { width: 74px; text-align: center; }
+        .lliMoveBox { display: inline-flex; flex-direction: column; gap: 1px; margin-inline-start: 6px; vertical-align: middle; }
+        .lliMoveBtn {
+          border: 1px solid var(--line); background: #fff; color: var(--mist);
+          border-radius: 4px; width: 16px; height: 12px; line-height: 1;
+          font-size: 7px; padding: 0; cursor: pointer;
+        }
+        .lliMoveBtn:hover { color: var(--ink); border-color: var(--mist); }
+        /* What she types into a cell sits where the cell sits. An input is
+           left-aligned by default and inherits nothing, so it has to be told
+           (29.8.26). */
+        .lliTable td input[type="text"], .lliTable td input:not([type]), .lliTable td textarea { text-align: center; }
+        .lliTable td.cDesc input, .lliTable td.cDesc textarea { text-align: start; }
+        .sbHomelessList { margin: 4px 0 10px; padding-inline-start: 20px; font-size: 13px; line-height: 1.9; }
+        .sbHomelessList li { word-break: break-word; }
+        .sbHomelessHint { margin: 0; font-size: 12px; color: var(--mist); line-height: 1.7; text-align: center; }
+        .sbActBtn svg { flex: none; }
+        .lliTableWrap {
+          overflow: auto; max-height: calc(var(--appvh, 760px) - 250px);
+          border: 1px solid var(--line); border-radius: 10px;
+          scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+        }
+        .lliTableWrap::-webkit-scrollbar { width: 8px; height: 8px; }
+        .lliTableWrap::-webkit-scrollbar-track { background: transparent; }
+        .lliTableWrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+        .lliTableWrap::-webkit-scrollbar-thumb:hover { background: var(--mist); }
+        /* The frame draws the outer edge, so the last row must not draw one too. */
+        .lliTableWrap > .lliTable > tbody:last-child > tr:last-child > td { border-bottom: 0; }
         .lliTable { width: 100%; border-collapse: collapse; font-size: 12px; table-layout: fixed; }
         .lliTable thead th {
           background: #f3f6fa; color: var(--steel); font-weight: 800; font-size: 11px;
@@ -1227,9 +1263,12 @@ var pdfViewer = `
           text-align: center; vertical-align: middle;
         }
         .lliTable tr.lliChapter td {
-          /* Darker, so the chapter reads as a band and not as another row. */
+          /* Darker, so the chapter reads as a band and not as another row. The
+             padding is the cells' own, so the chapter name begins on the same
+             line as the BOQ numbers underneath it rather than a few pixels in
+             from them (29.8.26). */
           background: #cddcf0; font-weight: 800; font-size: 12px; color: #0F3460;
-          text-align: start; padding: 7px 10px; border-bottom: 1px solid #b6c8e2;
+          text-align: start; padding: 7px 6px; border-bottom: 1px solid #b6c8e2;
         }
         .lliTable tr.lliOff td { opacity: .45; }
         /* Sixteen columns do not fit the design width, and squeezing them makes
@@ -1237,7 +1276,10 @@ var pdfViewer = `
            and the wrapper scrolls sideways, which is what a procurement board
            does everywhere else. */
         .lliTable { min-width: 1520px; }
-        .lliTable.sdTable { min-width: 1180px; }
+        /* The SD board has ten columns, not sixteen, and they fit the design
+           width. So it does not scroll sideways: the columns share the width
+           they have, and the description takes whatever is left over. */
+        .lliTable.sdTable { min-width: 0; width: 100%; }
         /* The marks list borrows the same table skin but has seven columns and
            must keep fitting the page. */
         .lliTable.marksTable { min-width: 0; }
@@ -1402,15 +1444,15 @@ var pdfViewer = `
         .marksTable .cRm { width: 160px; font-size: 11px; color: var(--mist); }
         .marksTable .cAct { width: 42px; }
         /* ---------- SD (shop drawings) ---------- */
-        .sdTable .cSec { width: 118px; text-align: start; }
-        .sdTable .cCat { width: 104px; }
-        .sdTable .cDesc { width: 260px; text-align: start; }
-        .sdTable .cQty { width: 96px; }
-        .sdTable .cReq { width: 104px; }
-        .sdTable .cStat { width: 150px; }
-        .sdTable .cDate { width: 122px; }
-        .sdTable .cFile { width: 92px; }
-        .sdTable .cAct { width: 40px; }
+        .sdTable .cSec { width: 96px; text-align: center; }
+        .sdTable .cCat { width: 92px; }
+        .sdTable .cDesc { width: auto; text-align: start; }
+        .sdTable .cQty { width: 84px; }
+        .sdTable .cReq { width: 88px; }
+        .sdTable .cStat { width: 132px; }
+        .sdTable .cDate { width: 104px; }
+        .sdTable .cFile { width: 78px; }
+        .sdTable .cAct { width: 36px; }
         .sdDesc { min-height: 58px; }
         /* The quantity, read the way it is spoken: the number, then its unit. */
         .qtyPair { display: inline-flex; align-items: baseline; gap: 4px; }
@@ -2889,6 +2931,23 @@ function printedStampHtml(lang) {
 
 function sanitizeFileNamePart(s) {
   return String(s || "").trim().replace(/[\\/:*?"<>|]/g, "-");
+}
+// The key a file is stored under. Supabase Storage refuses a key with Hebrew
+// letters or spaces in it — "Invalid key" — and every Hebrew file name she
+// uploaded was failing that way and quietly falling back to an inline copy
+// inside the record. The key is internal and nobody ever reads it, so it is
+// made of plain ASCII; the file keeps its real name in the record beside it
+// (29.8.26).
+function storageKeyPart(name) {
+  const s = String(name || "file").trim();
+  const dot = s.lastIndexOf(".");
+  const ext = dot > 0 ? s.slice(dot + 1).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 8) : "";
+  const base = (dot > 0 ? s.slice(0, dot) : s)
+    .replace(/[^A-Za-z0-9._-]+/g, "-")
+    .replace(/-{2,}/g, "-")
+    .replace(/^[-._]+|[-._]+$/g, "")
+    .slice(0, 40);
+  return `${base || "file"}${ext ? "." + ext : ""}`;
 }
 function triggerDownload(href, filename) {
   const a = document.createElement("a");
@@ -4959,7 +5018,11 @@ function CardView({
       onChange: onChangeRoomsData,
       canEdit,
       projectId: project.id,
-      projectName: project.name
+      projectName: project.name,
+      // The room search draws its marks from the LLI board's ticked rows.
+      boqData,
+      boqFlags,
+      lliRows
     }
   ), showSchedule && /* @__PURE__ */ React14.createElement(
     ProjectScheduleCard,
@@ -6369,10 +6432,15 @@ function boqParseAnswer(raw) {
       category: boqCleanCategory(raw.c),
       // Which of the lines under one parent product carries the record's
       // identity. Empty means "the first line, in BOQ order".
-      main: String(raw.m || "").trim()
+      main: String(raw.m || "").trim(),
+      // A component of the parent — a breaker in the panel, a handle on the
+      // door, a fitting on the pipe. It belongs to the record, but its
+      // quantity is not a quantity of the product: 84 breakers must never make
+      // a main electrical panel read "84" (29.8.26).
+      accessory: !!raw.a
     };
   }
-  return { ...boqParseFlagString(raw), group: "", category: null, main: "" };
+  return { ...boqParseFlagString(raw), group: "", category: null, main: "", accessory: false };
 }
 // Only a discipline that actually has a folder is accepted; an invented one is
 // dropped so the checklist never grows a table nobody can open.
@@ -6430,15 +6498,23 @@ async function boqClassify(tree, ask, onProgress) {
     // half, and every batch failed identically. Half the batch is twice the
     // calls and costs the same, because the price is per token either way.
     const BATCH = 40;
+    // The names already used, carried from one batch to the next. Without this
+    // the model calls the same cable "כבלי N2XY" in one batch and "כבל N2XY" in
+    // the next, and one product turns into two records (29.8.26).
+    const known = [];
     for (let i = 0; i < pending.length; i += BATCH) {
       const batch = pending.slice(i, i + BATCH);
       if (onProgress) onProgress(Math.min(i + batch.length, pending.length), pending.length);
       let answer = null;
       try {
-        answer = await ask(boqClassifyPayload(batch));
+        answer = await ask(boqClassifyPayload(batch), known.slice());
       } catch (e) {
         console.warn("[awdash] boq classify batch failed", e);
       }
+      Object.values(answer || {}).forEach((v) => {
+        const g = v && typeof v === "object" ? String(v.g || "").trim() : "";
+        if (g && known.indexOf(g) < 0) known.push(g);
+      });
       batch.forEach((item) => {
         const raw = answer && answer[item.code];
         if (raw == null) {
@@ -6471,20 +6547,21 @@ function boqFlagsOf(auto, overrides, code) {
   // ticks: a hand edit wins, the automatic pass is the fallback.
   const category = boqCleanCategory((o && o.category) || (a && a.category)) || null;
   const main = (o && o.main) || (a && a.main) || "";
+  const accessory = !!((o && o.accessory) || (a && a.accessory));
   if (o) {
     return {
       submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli, longLead: !!o.longLead,
       // A line she has been through herself is not "still to be checked".
-      review: false, group, category, main, source: "user"
+      review: false, group, category, main, accessory, source: "user"
     };
   }
   if (a) {
     return {
       submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli, longLead: !!a.longLead,
-      review: !!a.review, group, category, main, source: a.source || "auto"
+      review: !!a.review, group, category, main, accessory, source: a.source || "auto"
     };
   }
-  return { ...boqFlagsEmpty(), group, category, main, source: "none" };
+  return { ...boqFlagsEmpty(), group, category, main, accessory, source: "none" };
 }
 // The families inside one sub-chapter: one entry per thing that gets approved
 // once. Without a group name from the model a line stands on its own.
@@ -6550,24 +6627,109 @@ function boqCountFlags(tree, auto, overrides) {
 // own (28.8.26).
 // -----------------------------------------------------------------------------
 function boqProductKey(chapterNo, subCode, family, code) {
-  const f = String(family || "").trim().toLowerCase().replace(/\s+/g, " ");
+  const f = boqFamilySig(family);
   // A family is a product across the whole chapter — "steel pipe" priced in two
   // sub-chapters is still one thing to order. No family: the line itself, which
   // is the only grouping that can be made without inventing one.
   return f ? `c${chapterNo}|${f}` : `i|${code}`;
 }
+// -----------------------------------------------------------------------------
+// The signature of a family name.
+//
+// The model is told to write the same wording on every line of one product, and
+// mostly it does — but a bill of quantities is answered in batches, and across
+// two batches "כבל N2XY 5x2.5", "כבלים N2XY" and "כבל N2XY 5x6" are the same
+// cable written three ways. Compared letter for letter they are three products,
+// and Marcella gets three records where she asked for one (29.8.26).
+//
+// So the comparison is made on what the words mean, not on the words:
+//   - a size is never part of a product's identity: 5x2.5, 600/600, 3/4, ø110,
+//     "בקוטר", "במידות" are dropped. A type code (FL-01, D4, OD1, N2XY) is kept,
+//     because that IS the identity.
+//   - Hebrew singular and plural of one noun are one word: כבל / כבלים,
+//     דלת / דלתות. Only prefix letters and plural endings go, so two different
+//     nouns never collapse into one.
+//   - word order is not identity: "כבלי N2XY" and "N2XY כבל" are one family.
+// -----------------------------------------------------------------------------
+// A word that announces a measurement. It goes — and so does the number that
+// follows it, because "בקוטר 2" is a diameter, not a type.
+var BOQ_SIZE_WORDS = /^(בקוטר|קוטר|במידות|מידות|בחתך|חתך|בעובי|עובי|בגובה|גובה|ברוחב|רוחב|באורך|אורך|מ"מ|ממ|ס"מ|סמ|מטר|מ"ר|אינץ'?|צול|מידה|בגוון|גוון)$/;
+function boqFamilySig(family) {
+  const raw = String(family || "")
+    .toLowerCase()
+    .replace(/[(),;:\[\]{}]/g, " ")
+    .split(/\s+/)
+    .map((w) => w.trim())
+    .filter(Boolean);
+  const kept = [];
+  let dropNumberNext = false;
+  raw.forEach((w) => {
+    if (BOQ_SIZE_WORDS.test(w)) { dropNumberNext = true; return; }
+    // 5x2.5 · 600/600 · 3/4 · 90-210 — a measurement in any of its shapes.
+    if (/^[ø⌀]?\d+(\.\d+)?([x×\/\-]\d+(\.\d+)?)+["'׳״]?$/.test(w)) { dropNumberNext = false; return; }
+    // 110ממ · 25a · 30w · 2" — a number wearing its unit.
+    if (/^[ø⌀]?\d+(\.\d+)?(מ"מ|ממ|ס"מ|סמ|מ"ר|kg|mm|cm|w|a|v|["'׳״])$/.test(w)) { dropNumberNext = false; return; }
+    // A bare number is dropped ONLY when a size word has just announced it. On
+    // its own a number is a type: "דלת 1" and "דלת 2" are two different doors,
+    // and merging those would be a worse mistake than any size ever splitting
+    // a family.
+    if (dropNumberNext && /^\d+(\.\d+)?$/.test(w)) { dropNumberNext = false; return; }
+    dropNumberNext = false;
+    kept.push(w.replace(/["'׳״“”‘’.]/g, ""));
+  });
+  return kept
+    .filter(Boolean)
+    .map(boqHebStem)
+    .sort()
+    .join(" ");
+}
+// One Hebrew noun, however the line happens to phrase it: כבל / כבלי / כבלים,
+// מגוף / מגופים, דלת / דלתות, כדורי / כדוריים. Only plural and construct
+// endings come off — never a leading letter, because מ and כ are the first
+// letter of מגוף and כבל as often as they are a preposition. A stem is never
+// cut below three letters, so דלי does not become דל and meet דלת halfway.
+var BOQ_HEB_FINALS = { "מ": "ם", "נ": "ן", "צ": "ץ", "פ": "ף", "כ": "ך" };
+function boqHebStem(w) {
+  if (!/[֐-׿]/.test(w)) return w;
+  let s = w;
+  for (let i = 0; i < 3; i++) {
+    const cut = s.replace(/(יות|יים|ים|ות|י|ה)$/, "");
+    if (cut === s || cut.length < 3) break;
+    s = cut;
+  }
+  const last = s.slice(-1);
+  return BOQ_HEB_FINALS[last] ? s.slice(0, -1) + BOQ_HEB_FINALS[last] : s;
+}
 // The quantity of a product is the sum of its lines that share the commonest
 // unit. Squares metres and units may not be added into one number, and a square
 // metre is never a number of panels — mixed groups carry the "*" mark instead.
-function boqProductQty(items) {
+// A line that is plainly a part of something else, not a thing to order on its
+// own. The model is asked to mark these ("a":1) and usually does — but it is a
+// judgement call, and it missed the door handles, which share their unit with
+// the doors and so quietly made a record of 38 doors read 104. This list is the
+// backstop: it only ever applies to a line that carries no ticks of its own and
+// already sits inside somebody else's family, so a genuinely separate
+// ironmongery package is untouched (29.8.26).
+var BOQ_COMPONENT_WORDS = /(^|\s)(ידית|ידיות|מנעול|מנעולים|צילינדר|ציר|צירים|אביזר|אביזרי|אביזרים|תמיכה|תמיכות|מתלה|מתלים|נעלי|מחבר|מחברים|מדף|מדפים|בורג|ברגים|אטם|אטמים|רוזטה|רוזטות|עיגון|חיזוק|חיזוקים|שרוול|שרוולים|handle|handles|lock|hinge|hinges|accessor|support|supports|bracket|brackets|hanger|hangers|connector|connectors|shelf|shelves|screw|screws|gasket|gaskets|fitting|fittings)(\s|,|$)/;
+function boqLooksLikeComponent(item) {
+  return BOQ_COMPONENT_WORDS.test(`${(item && item.he) || ""} ${(item && item.en) || ""}`);
+}
+function boqProductQty(items, lead, isAccessory) {
+  // The lines that ARE the product: the same thing in another size counts, a
+  // component of it does not. Without this a door with its handles reads 104
+  // and a main panel with its breakers reads 124 (29.8.26).
+  const acc = typeof isAccessory === "function" ? isAccessory : () => false;
+  const real = (items || []).filter((it) => !boqIsNote(it.unit) && !acc(it));
+  const pool = real.length ? real : (items || []).filter((it) => !boqIsNote(it.unit));
   const counts = {};
-  (items || []).forEach((it) => {
-    if (boqIsNote(it.unit)) return;
-    counts[it.unit] = (counts[it.unit] || 0) + 1;
-  });
+  pool.forEach((it) => { counts[it.unit] = (counts[it.unit] || 0) + 1; });
   const units = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-  const unit = units[0] || "";
-  const qty = (items || []).filter((it) => it.unit === unit).reduce((sum, it) => sum + (it.qty || 0), 0);
+  // The representative line names the unit — it is the line the record is
+  // keyed by, so its unit is the record's unit. Only if it somehow has none
+  // does the commonest unit stand in.
+  const leadUnit = lead && !boqIsNote(lead.unit) && !acc(lead) ? lead.unit : "";
+  const unit = (leadUnit && counts[leadUnit] ? leadUnit : units[0]) || leadUnit || "";
+  const qty = pool.filter((it) => it.unit === unit).reduce((sum, it) => sum + (it.qty || 0), 0);
   return { unit, qty, mixedUnits: units.length > 1 };
 }
 // Every product in the bill of quantities, in BOQ order. `flagKey` narrows it to
@@ -6575,43 +6737,90 @@ function boqProductQty(items) {
 function boqProducts(tree, auto, overrides, flagKey, category) {
   const byKey = {};
   const out = [];
+  // ---------------------------------------------------------------------------
+  // Which lines are one product. Two things can join lines, and either is
+  // enough:
+  //   the family name  — the same product named the same way; and
+  //   "m", the representative item number the model puts on every line of one
+  //   parent. A staircase is priced in the concrete chapter and again in the
+  //   metalwork chapter; the family name alone cannot join those, because a
+  //   family is scoped to its chapter so that "צנרת פלדה" in sprinklers is not
+  //   confused with "צנרת פלדה" in HVAC. "m" joins them, and it also rescues a
+  //   family whose wording drifted between two batches (29.8.26).
+  // ---------------------------------------------------------------------------
+  const rows = [];
   ((tree && tree.chapters) || []).forEach((ch) => {
     (ch.subs || []).forEach((sub) => {
       (sub.items || []).forEach((item) => {
         if (boqIsNote(item.unit)) return;
         const f = boqFlagsOf(auto, overrides, item.code);
-        if (!boqAnyFlag(f)) return;
-        const key = boqProductKey(ch.c, sub.code, f.group, item.code);
-        let p = byKey[key];
-        if (!p) {
-          p = {
-            key, chapter: ch, sub, subs: [sub], family: f.group || "",
-            items: [], flags: boqFlagsEmpty(), category: null, main: "",
-            code: item.code, unit: "", qty: 0, mixedUnits: false
-          };
-          byKey[key] = p;
-          out.push(p);
-        }
-        p.items.push(item);
-        if (p.subs.indexOf(sub) < 0) p.subs.push(sub);
-        BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) p.flags[k] = true; });
-        if (f.longLead) p.flags.longLead = true;
-        if (f.review) p.flags.review = true;
-        // The first discipline anyone named for this product wins; a later line
-        // that says nothing does not erase it.
-        if (!p.category && f.category) p.category = f.category;
-        if (!p.main && f.main) p.main = f.main;
+        // Every line is grouped, including the ones carrying no ticks of their
+        // own. A valve priced in six diameters is one product: the model puts
+        // the letters on one of the six and names all six the same, and the
+        // record has to hold all six or its quantity is the quantity of one
+        // diameter. Groups that end up with no tick anywhere are dropped below
+        // — but a line is never dropped before it has been grouped (29.8.26).
+        const tags = [`i|${item.code}`, `m|${item.code}`];
+        if (f.main && f.main !== item.code) tags.push(`m|${f.main}`);
+        const fam = boqProductKey(ch.c, sub.code, f.group, item.code);
+        if (fam.charAt(0) === "c") tags.push(fam);
+        rows.push({ ch, sub, item, f, tags });
       });
     });
   });
+  // Union-find over those tags: any two lines sharing a tag are one product.
+  const parent = {};
+  const find = (k) => { while (parent[k] !== k) { parent[k] = parent[parent[k]]; k = parent[k]; } return k; };
+  const add = (k) => { if (parent[k] === undefined) parent[k] = k; return find(k); };
+  const join = (a, b) => { const ra = add(a), rb = add(b); if (ra !== rb) parent[ra] = rb; };
+  rows.forEach((r) => { r.tags.forEach((t) => add(t)); r.tags.forEach((t) => join(r.tags[0], t)); });
+
+  rows.forEach((r) => {
+    const { ch, sub, item, f } = r;
+    const key = find(r.tags[0]);
+    let p = byKey[key];
+    if (!p) {
+      p = {
+        key, chapter: ch, sub, subs: [sub], family: f.group || "",
+        items: [], acc: {}, flags: boqFlagsEmpty(), category: null, main: "",
+        code: item.code, unit: "", qty: 0, mixedUnits: false
+      };
+      byKey[key] = p;
+      out.push(p);
+    }
+    // The name of the record is the first family name anyone gave it; a line
+    // that came back unnamed does not blank a product that already has a name.
+    if (!p.family && f.group) p.family = f.group;
+    p.items.push(item);
+    // A component: either the model said so, or the line carries no ticks of
+    // its own and reads like a part rather than a product.
+    if (f.accessory || (!boqAnyFlag(f) && boqLooksLikeComponent(item))) p.acc[item.code] = true;
+    if (p.subs.indexOf(sub) < 0) p.subs.push(sub);
+    BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) p.flags[k] = true; });
+    if (f.longLead) p.flags.longLead = true;
+    if (f.review) p.flags.review = true;
+    // The first discipline anyone named for this product wins; a later line
+    // that says nothing does not erase it.
+    if (!p.category && f.category) p.category = f.category;
+    if (!p.main && f.main) p.main = f.main;
+  });
+  // A group where not one line was ticked is not a product anybody manages.
+  for (let i = out.length - 1; i >= 0; i--) {
+    if (!boqAnyFlag(out[i].flags)) { delete byKey[out[i].key]; out.splice(i, 1); }
+  }
   out.forEach((p) => {
     // Item codes are fixed width (CC.SS.IIII), so plain string order is BOQ
     // order.
     p.items.sort((a, b) => (a.code < b.code ? -1 : a.code > b.code ? 1 : 0));
     const named = p.main && p.items.find((it) => it.code === p.main);
-    p.code = (named || p.items[0]).code;
-    p.lead = named || p.items[0];
-    const q = boqProductQty(p.items);
+    // The record is led by the representative line, and a component is never
+    // that: if "m" points at a breaker, the first line that is not a component
+    // leads instead.
+    const firstReal = p.items.find((it) => !p.acc[it.code]) || p.items[0];
+    const lead = named && !p.acc[named.code] ? named : firstReal;
+    p.code = lead.code;
+    p.lead = lead;
+    const q = boqProductQty(p.items, p.lead, (it) => !!p.acc[it.code]);
     p.unit = q.unit;
     p.qty = q.qty;
     p.mixedUnits = q.mixedUnits;
@@ -6897,7 +7106,7 @@ ${footImg}</div>${printedStampHtml(isRTL ? "he" : "en")}</body></html>`;
 function lliBlankRow() {
   return {
     typeMark: "", desc: "", image: null, qtyActual: "", ordered: false,
-    po: "", eta: "", status: "pending", hidden: false,
+    po: "", eta: "", status: "pending", hidden: false, byRoom: false,
     // 28.8.26 — her instruction document. The supplier is the company that will
     // actually deliver, and it is never the manufacturer read out of the BOQ:
     // that one belongs in the description. So this field starts empty and stays
@@ -6925,6 +7134,13 @@ var LLI_L = {
   title: { en: "LLI — order control", he: "LLI — מעקב הזמנות" },
   longLead: { en: "Long lead", he: "אספקה ארוכה" },
   onlyLong: { en: "Only long lead", he: "רק אספקה ארוכה" },
+  byRoomCol: { en: "BY ROOM", he: "BY ROOM" },
+  moveUp: { en: "Move up", he: "העלאת השורה" },
+  moveDown: { en: "Move down", he: "הורדת השורה" },
+  byRoomHint: {
+    en: "Ticked rows build the room search: this row's category, mark, description and photo appear under every room the drawings give that mark to.",
+    he: "שורה מסומנת נבנית לתוך החיפוש לפי חדר: הקטגוריה, האיפיון, התיאור והתמונה שלה יופיעו בכל חדר שהתוכניות נותנות לו את האיפיון הזה."
+  },
   noBoq: {
     en: "No bill of quantities uploaded for this project yet. Upload one in project settings, or build the list by hand below.",
     he: "עדיין לא הועלה כתב כמויות לפרויקט הזה. אפשר להעלות אותו בהגדרות הפרויקט, או לבנות את הרשימה ידנית כאן."
@@ -6934,7 +7150,7 @@ var LLI_L = {
     he: "אין בקטגוריה הזו פריט שמשויך למעקב ההזמנות. טבלת הסיווג בהגדרות הפרויקט קובעת את זה."
   },
   allCats: { en: "All categories", he: "כל הקטגוריות" },
-  section: { en: "BOQ item", he: "סעיף בכתב הכמויות" },
+  section: { en: "BOQ", he: "BOQ" },
   typeMark: { en: "Type mark", he: "איפיון" },
   desc: { en: "Description", he: "תיאור הסעיף" },
   image: { en: "Photo", he: "תמונה" },
@@ -6947,6 +7163,7 @@ var LLI_L = {
   status: { en: "Supply status", he: "סטטוס סופק" },
   hide: { en: "Not for ordering", he: "לא להזמנה" },
   showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
+  showCol: { en: "Show", he: "הצגה" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
   manual: { en: "Manual", he: "ידני" },
   empty: { en: "Nothing to order in this category.", he: "אין פריטים להזמנה בקטגוריה הזו." },
@@ -6986,8 +7203,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const lang = appIsRTL ? "he" : "en";
   const isRTL = lang === "he";
   const [cat, setCat] = useState6("all");
-  const [showHidden, setShowHidden] = useState6(false);
-  const [onlyLong, setOnlyLong] = useState6(false);
   const [busyRow, setBusyRow] = useState6(null);
   const [poNote, setPoNote] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
@@ -7041,22 +7256,56 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   };
   const visible = all.filter((r) =>
     (cat === "all" || r.category === cat) &&
-    (showHidden || !isHidden(r)) &&
-    (!onlyLong || r.longLead)
+    // The administrator sees the whole board — the "הצגה" tick tells her which
+    // rows are on it. A client sees only the rows that are on (29.8.26).
+    (canEdit || !isHidden(r))
   );
   const orderedCount = visible.filter((r) => lliRowOf(data, r.code).ordered).length;
 
-  // Grouped under their chapter, in BOQ order; manual rows come last.
+  // A row added by hand belongs with its own trade, not in a bin at the bottom
+  // of the board. Once she picks its category it joins the chapter where the
+  // rest of that category already sits, and keeps the "ידני" mark beside its
+  // number so it is always clear where the line came from. A row with no
+  // category yet has nowhere to go, and stays in the manual group (29.8.26).
+  const chapterOfCategory = {};
+  boqRows.forEach((r) => {
+    if (r.category && r.chapter && !chapterOfCategory[r.category]) chapterOfCategory[r.category] = r.chapter;
+  });
+  const homeOf = (r) => (r.chapter ? r.chapter : (r.category && chapterOfCategory[r.category]) || null);
+  // Grouped under their chapter, in BOQ order; anything with no home comes last.
   const groups = [];
   visible.forEach((r) => {
-    const key = r.chapter ? r.chapter.code : "manual";
+    const ch = homeOf(r);
+    const key = ch ? ch.code : "manual";
     let g = groups.find((x) => x.key === key);
     if (!g) {
-      g = { key, title: r.chapter ? `${r.chapter.code} · ${boqText(r.chapter, lang)}` : L("manual"), rows: [] };
+      g = { key, title: ch ? `${ch.code} · ${boqText(ch, lang)}` : L("manual"), rows: [] };
       groups.push(g);
     }
     g.rows.push(r);
   });
+  // The order she put them in. A row she has not moved keeps its BOQ position;
+  // moving one gives it a number of its own, and the arrows shuffle those.
+  groups.forEach((g) => {
+    g.rows.forEach((r, i) => { r.pos = i; });
+    g.rows.sort((a, b) => {
+      const oa = lliRowOf(data, a.code).order, ob = lliRowOf(data, b.code).order;
+      const va = oa == null ? a.pos : oa, vb = ob == null ? b.pos : ob;
+      return va === vb ? a.pos - b.pos : va - vb;
+    });
+  });
+  // Moving a row means writing down the order of the whole group it sits in —
+  // anything less and the next render puts it back.
+  const moveRow = (g, code, dir) => {
+    const list = g.rows.slice();
+    const i = list.findIndex((x) => x.code === code);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    const tmp = list[i]; list[i] = list[j]; list[j] = tmp;
+    const next = { ...data };
+    list.forEach((x, k) => { next[x.code] = { ...lliRowOf(data, x.code), order: k }; });
+    if (onChangeRows) onChangeRows(next);
+  };
 
   const onImage = async (code, e) => {
     const f = e.target.files && e.target.files[0];
@@ -7148,6 +7397,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const imgs = [];
     groups.forEach((g) => {
       g.rows.forEach((r) => {
+        // Only what is ticked for showing is printed. An unticked row is off
+        // the board as far as the client and the paper are concerned (29.8.26).
+        if (isHidden(r)) return;
         const v = lliRowOf(data, r.code);
         body.push([
           r.source === "boq" ? r.code : L("manual"),
@@ -7231,24 +7483,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       "div",
       { className: "lliBar" },
       sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${orderedCount} ${L("ordersOf")}`),
-      sbH(
-        "label",
-        { className: "lliShowHidden" },
-        sbH("input", { type: "checkbox", checked: onlyLong, onChange: (e) => setOnlyLong(e.target.checked) }),
-        " ",
-        L("onlyLong")
-      ),
       poNote ? sbH("span", { className: "lliPoNote" }, poNote) : null,
-      sbH(
-        "label",
-        { className: "lliShowHidden" },
-        sbH("input", { type: "checkbox", checked: showHidden, onChange: (e) => setShowHidden(e.target.checked) }),
-        " ",
-        L("showHidden")
-      ),
+      // A client and the main contractor look at the board; they do not take it
+      // away with them. Export, and the way behind the ticks, belong to the
+      // system administrator (29.8.26).
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
-      sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"),
-      sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"),
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
       printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
     ),
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
@@ -7281,14 +7522,15 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                 sbH("th", { className: "cPoD" }, L("poDate")),
                 sbH("th", { className: "cEta" }, L("eta")),
                 sbH("th", { className: "cSt" }, L("status")),
-                canEdit ? sbH("th", { className: "cAct" }, "") : null
+                canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
+                canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null
               )
             ),
             groups.map((g) =>
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 16 : 15 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 17 : 15 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -7305,7 +7547,15 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                         ? sbH("span", { className: "lliSubName" }, `${r.product.items.length} ${L("lines")}`)
                         : r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null,
                       r.longLead ? sbH("span", { className: "lliLongTag" }, L("longLead")) : null,
-                      r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null
+                      r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
+                      canEdit
+                        ? sbH(
+                            "span",
+                            { className: "lliMoveBox" },
+                            sbH("button", { type: "button", className: "lliMoveBtn", title: L("moveUp"), onClick: () => moveRow(g, r.code, -1) }, "\u25B2"),
+                            sbH("button", { type: "button", className: "lliMoveBtn", title: L("moveDown"), onClick: () => moveRow(g, r.code, 1) }, "\u25BC")
+                          )
+                        : null
                     ),
                     sbH(
                       "td",
@@ -7466,20 +7716,40 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                           )
                         : sbH("span", { className: "lliDash" }, "—")
                     ),
+                    // Ticked means the row is on the board: it is printed, it
+                    // is exported, and it is what a client sees. Unticking is
+                    // how a row is taken off all three at once (29.8.26).
                     canEdit
                       ? sbH(
                           "td",
                           { className: "cAct" },
-                          sbH(
-                            "button",
-                            {
-                              type: "button",
-                              className: "sbIconBtn",
-                              title: hidden ? L("restore") : L("hide"),
-                              onClick: () => patch(r.code, { hidden: !hidden })
-                            },
-                            sbH(hidden ? RotateCcw : Trash2, { size: 14, strokeWidth: 2 })
-                          )
+                          sbH("input", {
+                            type: "checkbox",
+                            className: "lliShowTick",
+                            checked: !hidden,
+                            title: hidden ? L("restore") : L("hide"),
+                            "aria-label": L("showCol"),
+                            onChange: () => patch(r.code, { hidden: !hidden })
+                          })
+                        )
+                      : null,
+                    // BY ROOM: this row is also part of the room search. What
+                    // travels there is the four things a room screen needs —
+                    // the category, the mark, the description and the photo —
+                    // and it travels live, so editing the row here changes what
+                    // the room screen shows (29.8.26).
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cRoom" },
+                          sbH("input", {
+                            type: "checkbox",
+                            className: "lliShowTick",
+                            checked: !!v.byRoom,
+                            title: L("byRoomHint"),
+                            "aria-label": L("byRoomCol"),
+                            onChange: () => patch(r.code, { byRoom: !v.byRoom })
+                          })
                         )
                       : null
                   );
@@ -7533,7 +7803,7 @@ function sdRowOf(rows, code) {
 var SD_L = {
   title: { en: "SD — shop drawings", he: "SD — תוכניות ייצור" },
   allCats: { en: "All categories", he: "כל הקטגוריות" },
-  section: { en: "BOQ item", he: "סעיף בכתב הכמויות" },
+  section: { en: "BOQ", he: "BOQ" },
   dwgNo: { en: "Drawing no.", he: "מספר תוכנית" },
   desc: { en: "Description", he: "תיאור" },
   owner: { en: "In the hands of", he: "מי מטפל" },
@@ -7547,6 +7817,7 @@ var SD_L = {
   hide: { en: "Not a shop drawing", he: "לא נדרשת תוכנית" },
   restore: { en: "Restore", he: "החזרה" },
   showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
+  showCol: { en: "Show", he: "הצגה" },
   onlyOpen: { en: "Only what is still open", he: "רק מה שעדיין פתוח" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
   manual: { en: "Manual", he: "ידני" },
@@ -7589,7 +7860,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // list says all of it, and says it by name: any status, one named status, or
   // the rows that were put aside.
   const [statusFilter, setStatusFilter] = useState6("all");
-  const showHidden = statusFilter === "hidden";
+
   const [busyRow, setBusyRow] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
   const [exportNote, setExportNote] = useState6(null);
@@ -7643,7 +7914,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   };
   const visible = all.filter((r) =>
     (cat === "all" || r.category === cat) &&
-    (showHidden ? isHidden(r) : !isHidden(r)) &&
+    (canEdit || !isHidden(r)) &&
     matchesStatus(r)
   );
   const doneCount = all.filter((r) => !isHidden(r) && (cat === "all" || r.category === cat) && isDone(r)).length;
@@ -7695,6 +7966,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const body = [];
     groups.forEach((g) => {
       g.rows.forEach((r) => {
+        if (isHidden(r)) return;
         const v = sdRowOf(data, r.code);
         const done = SD_DONE.indexOf(v.status) >= 0;
         body.push([
@@ -7773,11 +8045,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         sbH("option", { value: "all" }, L("allStatuses")),
         sbH("option", { value: "open" }, L("onlyOpen")),
         SD_STATUSES.map((st) => sbH("option", { key: st.key, value: st.key }, sbText(st, lang))),
-        sbH("option", { value: "hidden" }, L("showHidden"))
       ),
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
-      sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"),
-      sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"),
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
       exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
       printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
     ),
@@ -7806,7 +8077,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 sbH("th", { className: "cStat" }, L("status")),
                 sbH("th", { className: "cDate" }, L("submittedAt")),
                 sbH("th", { className: "cDate" }, L("approvedAt")),
-                canEdit ? sbH("th", { className: "cAct" }, "") : null
+                canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null
               )
             ),
             groups.map((g) =>
@@ -7976,20 +8247,21 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.approvedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { approvedAt: e.target.value }) })
                         : sbH("span", { className: "lliDash" }, "—")
                     ),
+                    // Ticked means the row is on the board: it is printed, it
+                    // is exported, and it is what a client sees. Unticking is
+                    // how a row is taken off all three at once (29.8.26).
                     canEdit
                       ? sbH(
                           "td",
                           { className: "cAct" },
-                          sbH(
-                            "button",
-                            {
-                              type: "button",
-                              className: "sbIconBtn",
-                              title: hidden ? L("restore") : L("hide"),
-                              onClick: () => patch(r.code, { hidden: !hidden })
-                            },
-                            sbH(hidden ? RotateCcw : Trash2, { size: 14, strokeWidth: 2 })
-                          )
+                          sbH("input", {
+                            type: "checkbox",
+                            className: "lliShowTick",
+                            checked: !hidden,
+                            title: hidden ? L("restore") : L("hide"),
+                            "aria-label": L("showCol"),
+                            onChange: () => patch(r.code, { hidden: !hidden })
+                          })
                         )
                       : null
                   );
@@ -8063,6 +8335,47 @@ function roomsBlank() {
 function roomsMarkOf(data, key) {
   const [cat, mark] = String(key).split("|");
   return { cat, mark, name: "", desc: "", image: null, hidden: false, ...((data || {}).marks || {})[key] || {} };
+}
+// -----------------------------------------------------------------------------
+// What the LLI board contributes to the room search.
+//
+// She fills the mark (איפיון) on an LLI row and ticks BY ROOM. The drawings
+// already say which rooms carry that mark; the LLI row says what the mark IS —
+// its category, its description and its photo. Joining the two on the mark is
+// the whole feature: one place to maintain, and the room screen stays current
+// because nothing is copied (29.8.26).
+// -----------------------------------------------------------------------------
+function lliRoomMarks(boqData, boqFlags, lliRows, lang) {
+  const out = {};
+  const data = lliRows || {};
+  const auto = (boqData || {}).flags || {};
+  const add = (cat, v, fallbackDesc) => {
+    const mark = String((v && v.typeMark) || "").trim();
+    if (!mark) return;
+    const key = roomMarkKey(cat || roomCatOfMark(mark), mark);
+    const prev = out[key] || {};
+    out[key] = {
+      cat: cat || roomCatOfMark(mark),
+      mark,
+      name: prev.name || mark,
+      desc: prev.desc || String((v && v.desc) || fallbackDesc || "").trim(),
+      image: prev.image || (v && v.image) || null,
+      fromLli: true
+    };
+  };
+  boqProducts(boqData, auto, boqFlags, "lli").forEach((p) => {
+    const v = lliRowOf(data, p.code);
+    if (!v.byRoom) return;
+    const f = boqFlagsOf(auto, boqFlags, p.code);
+    add(v.category || f.category || p.category, v, boqText(p, lang));
+  });
+  // Rows added by hand on the board carry an "m-" key.
+  Object.keys(data).forEach((code) => {
+    const v = data[code];
+    if (!v || !v.byRoom || code.indexOf("m-") !== 0) return;
+    add(v.category, v, v.desc);
+  });
+  return out;
 }
 // Room -> category -> marks, built once per render of the card.
 function roomsIndex(data) {
@@ -8272,7 +8585,7 @@ var ROOMS_L = {
   noPhoto: { en: "—", he: "—" }
 };
 
-function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }) {
+function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, boqData, boqFlags, lliRows }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -8285,7 +8598,30 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }
   const [showHidden, setShowHidden] = useState6(false);
   const [busy, setBusy] = useState6(null);
 
-  const d = data || roomsBlank();
+  const base = data || roomsBlank();
+  // The LLI board's contribution, merged in at read time. It is never written
+  // into the rooms record: LLI stays the one place the mark is maintained.
+  const fromLli = lliRoomMarks(boqData, boqFlags, lliRows, lang);
+  const d = Object.keys(fromLli).length
+    ? { ...base, marks: (() => {
+        const m = { ...(base.marks || {}) };
+        Object.keys(fromLli).forEach((k) => {
+          const own = m[k] || {};
+          const lli = fromLli[k];
+          m[k] = {
+            ...own,
+            cat: own.cat || lli.cat,
+            mark: own.mark || lli.mark,
+            // What she typed on the room list wins; the LLI row fills the rest.
+            name: own.name || lli.name,
+            desc: own.desc || lli.desc,
+            image: own.image || lli.image,
+            fromLli: true
+          };
+        });
+        return m;
+      })() }
+    : base;
   const idx = roomsIndex(d);
   const cols = { mark: true, ...(d.columns || {}) };
   const patchMark = (key, next) => {
@@ -8497,7 +8833,9 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }
             sbH("span", { className: "roomsDot" }, "\u00b7"),
             sbH("span", { className: "boqCountPart" }, `${roomsAllMarks(d).length} ${L("marksCount")}`))
         : sbH("p", { className: "roomsMiss" }, L("noData")),
-      !room && idx.rooms.length
+      // A client types a room number and gets that room. The list of every room
+      // in the project, and the list behind it, are hers (29.8.26).
+      !room && canEdit && idx.rooms.length
         ? sbH("div", { className: "roomsChips" },
             idx.rooms.slice(0, 24).map((r) => sbH("button", { key: r, type: "button", className: "lliChip", onClick: () => go(r) }, r)),
             idx.rooms.length > 24 ? sbH("span", { className: "roomsMore" }, `+${idx.rooms.length - 24}`) : null)
@@ -8531,7 +8869,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName }
 // every label carries both languages so the site-wide EN/HE switch flips the
 // whole document, no runtime translation.
 // -----------------------------------------------------------------------------
-import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw, PenLine, Stamp } from "lucide-react";
+import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw, PenLine, Stamp, Save as SaveIcon2, SendHorizonal as SendIcon2 } from "lucide-react";
 var sbH = React15.createElement;
 
 // -----------------------------------------------------------------------------
@@ -8753,12 +9091,23 @@ var SB_L = {
   create: { en: "Create submittal", he: "צור סבמיטל" },
   noSubmittals: { en: "No submittals in this folder yet.", he: "עדיין אין סבמיטלים בתיקייה הזו." },
   trackingList: { en: "Tracking list", he: "רשימת מעקב" },
-  bulkCreate: { en: "Several at once", he: "כמה טפסים יחד" },
+  bulkCreate: { en: "Load specifications", he: "טעינת מפרטים" },
   bulkHint: {
-    en: "Pick several files — each one becomes its own submittal, with that file already attached.",
-    he: "בוחרים כמה קבצים — כל אחד הופך לסבמיטל משלו, עם הקובץ שלו כבר מצורף."
+    en: "Pick the specifications for this discipline. Each one is read and filed into its own submittal, already filled in.",
+    he: "בוחרים את המפרטים של הדיסציפלינה. כל מפרט נקרא ונכנס לסבמיטל שלו, כבר מלא."
   },
-  bulkWorking: { en: "Creating", he: "יוצר" },
+  bulkWorking: { en: "Reading", he: "קורא" },
+  bulkNoHome: { en: "No place was found for these files", he: "לא נמצא יעד לקבצים הבאים" },
+  bulkNoHomeHint: {
+    en: "They were not filed. Nothing else was affected — the rest went into their submittals.",
+    he: "הם לא שויכו לאף סבמיטל. שאר הקבצים נכנסו לסבמיטלים שלהם כרגיל."
+  },
+  bulkPlain: {
+    en: "The AI service did not answer, so the files were filed as empty submittals with the file attached.",
+    he: "שירות ה‑AI לא נענה, ולכן הקבצים נפתחו כסבמיטלים ריקים עם הקובץ מצורף."
+  },
+  close: { en: "Close", he: "סגירה" },
+  showCol: { en: "Show", he: "הצגה" },
   submittalList: { en: "Submittal list", he: "רשימת סבמיטלים" },
   checklist: { en: "Checklist from the bill of quantities", he: "צ׳ק‑ליסט מכתב הכמויות" },
   checklistHint: {
@@ -9011,6 +9360,9 @@ function sbNewSubmittal(opts) {
     category: opts.category,
     seq: opts.seq,
     rev: 0,
+    // Ticked by default: a new submittal is on the board until somebody takes
+    // it off.
+    hidden: false,
     createdAt: new Date().toISOString(),
     createdBy: opts.email || "",
     projectName: opts.projectName || "",
@@ -9125,8 +9477,9 @@ function fnErrorAdvice(raw, isRTL) {
 }
 
 async function sbUploadFile(projectId, submittalId, file) {
-  const safe = sanitizeFileNamePart(file.name || "file");
-  const path = `${projectId}/${submittalId}/${Date.now()}-${safe}`;
+  const safe = storageKeyPart(file.name || "file");
+  const rnd = Math.random().toString(36).slice(2, 7);
+  const path = `${projectId}/${submittalId}/${Date.now()}-${rnd}-${safe}`;
   try {
     const { error } = await supabase.storage.from(SUBMITTAL_BUCKET).upload(path, file, {
       upsert: true,
@@ -9478,6 +9831,78 @@ async function sbRenderSpecPages(rec, onProgress) {
 // extract, so the pages themselves are sent and the model reads them by eye.
 // Deliberately smaller and fewer than the print render: legible is enough.
 var SB_AI_IMAGE_PAGES = 5;
+// -----------------------------------------------------------------------------
+// Read one specification and turn it into a filled submittal.
+//
+// The same call the "fill with AI" button inside a submittal makes — the model
+// is given the document, the discipline and the sub-category catalogue, and it
+// answers with the product the document describes. Three answers are possible
+// and all three matter:
+//   the model named a product      → the submittal is filled in
+//   the model placed nothing here  → the file is left out and reported by name,
+//                                    never filed into a discipline it does not
+//                                    belong to
+//   the service did not answer     → said plainly, and the file is filed as an
+//                                    empty submittal rather than lost
+// -----------------------------------------------------------------------------
+async function sbFillFromSpec(rec, file, category, lang) {
+  const val = (v) => (v && String(v).trim() ? String(v).trim() : "");
+  let images = [];
+  try {
+    if (String(rec.specText || "").length < 200) {
+      images = (await sbRenderSpecImages(rec, SB_AI_IMAGE_PAGES)).map((sh) => sh.data);
+    }
+  } catch (e) {
+    images = [];
+  }
+  if (!images.length && String(rec.specText || "").length < 60) {
+    // Nothing readable in the file at all.
+    return { placed: false, aiDown: false, patch: null };
+  }
+  let data = null;
+  try {
+    const res = await supabase.functions.invoke("submittal-ai", {
+      body: {
+        specText: images.length ? "" : rec.specText,
+        images,
+        files: [{ name: file.name }],
+        category,
+        lang,
+        subCategories: sbSubcats(category).map((r) => r[0]),
+        fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
+      }
+    });
+    if (res.error) throw res.error;
+    data = res.data || null;
+  } catch (e) {
+    console.warn("[awdash] load specifications: the AI service did not answer", e);
+    return { placed: false, aiDown: true, patch: null };
+  }
+  const out = data || {};
+  // The model was asked which files it could not use. A file it named is not
+  // filed here, whatever else came back.
+  const unused = (Array.isArray(out.unusedFiles) ? out.unusedFiles : []).map(String);
+  if (unused.some((n) => n && file.name && (n === file.name || String(file.name).indexOf(n) >= 0))) {
+    return { placed: false, aiDown: false, patch: null };
+  }
+  const pr = (Array.isArray(out.products) && out.products.length ? out.products[0] : out) || {};
+  const patch = {
+    subCategory: sbSubcatCanon(val(pr.subCategory), category),
+    typeId: val(pr.typeId),
+    itemDescription: val(pr.itemDescription),
+    modelCode: val(pr.modelCode),
+    manufacturer: val(pr.manufacturer),
+    infoEn: val(pr.infoEn),
+    infoHe: val(pr.infoHe)
+  };
+  if (pr.docs && typeof pr.docs === "object") patch.docs = { ...(rec.docs || {}), ...pr.docs };
+  // A submittal with no product name and no description was not filled in — the
+  // document said nothing this discipline can use.
+  const said = patch.itemDescription || patch.typeId || patch.modelCode || patch.manufacturer;
+  if (!said) return { placed: false, aiDown: false, patch: null };
+  Object.keys(patch).forEach((k) => { if (patch[k] === "") delete patch[k]; });
+  return { placed: true, aiDown: false, patch };
+}
 async function sbRenderSpecImages(rec, maxPages) {
   const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
   if (!atts.length) return [];
@@ -10316,15 +10741,19 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
       : sbH(
           "div",
           { className: "sbSaveRow" },
+          // Two buttons that do different things should not look the same. A
+          // diskette for saving, a paper plane for sending (29.8.26).
           sbH(
             "button",
-            { type: "button", className: "ghostBtn small", onClick: () => onSave({ ...d, sent: false }) },
-            L("save")
+            { type: "button", className: "ghostBtn small sbActBtn", onClick: () => onSave({ ...d, sent: false }) },
+            sbH(SaveIcon2, { size: 14, strokeWidth: 2.2 }),
+            sbH("span", null, L("save"))
           ),
           sbH(
             "button",
-            { type: "button", className: "functionEditBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
-            L("send")
+            { type: "button", className: "functionEditBtn sbActBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
+            sbH(SendIcon2, { size: 14, strokeWidth: 2.2 }),
+            sbH("span", null, L("send"))
           )
         )
   );
@@ -11162,6 +11591,7 @@ function SubmittalFolder({
                 sbH("th", null, L("date")),
                 sbH("th", null, L("signDate")),
                 sbH("th", null, L("status")),
+                canEdit ? sbH("th", { className: "sbShowCol" }, L("showCol")) : null,
                 sbH("th", null, "")
               )
             ),
@@ -11230,18 +11660,35 @@ function SubmittalFolder({
                       isNew ? sbH("span", { className: "sbNewTag" }, L("newlyApproved")) : null
                     )
                   ),
+                  canEdit
+                    ? sbH(
+                        "td",
+                        { className: "sbShowCol" },
+                        sbH("input", {
+                          type: "checkbox",
+                          className: "lliShowTick",
+                          checked: !s.hidden,
+                          "aria-label": L("showCol"),
+                          onChange: () => onToggleShow(s)
+                        })
+                      )
+                    : null,
                   sbH(
                     "td",
                     { className: "sbActions" },
                     // The one icon that matters: opens the whole document —
-                    // the form we built plus the specifications uploaded for it.
-                    sbH(
-                      "button",
-                      { type: "button", className: "sbActBtn", title: L("pdfHint"), onClick: () => onPrint(s) },
-                      sbH(canEdit ? FileTextIcon : Printer, { size: 13, strokeWidth: 2 }),
-                      " ",
-                      canEdit ? L("openDoc") : L("printPdf")
-                    ),
+                    // the form we built plus the specifications uploaded for
+                    // it. A client reads it on the screen; taking it away as a
+                    // PDF is the administrator's to do.
+                    canEdit
+                      ? sbH(
+                          "button",
+                          { type: "button", className: "sbActBtn", title: L("pdfHint"), onClick: () => onPrint(s) },
+                          sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
+                          " ",
+                          L("openDoc")
+                        )
+                      : null,
 
                     canEdit
                       ? sbH(
@@ -11316,6 +11763,8 @@ function SubmittalCard({
   // is still true — but it is a question about the PRINT, so it is now asked at
   // the moment of printing instead of sitting on the screen all day.
   const [printAsk, setPrintAsk] = useState6(null);
+  // What "load specifications" could not place, reported once at the end.
+  const [bulkReport, setBulkReport] = useState6(null);
   const langSwitch = null;
 
   // Editing a submittal is the system administrator's, full stop. Everyone else
@@ -11375,7 +11824,10 @@ function SubmittalCard({
   // A draft has not been submitted to anyone. Only the administrator, who is the
   // one writing it, sees it at all — not in the list, not in the count on the
   // tile, not in the checklist.
-  const visibleList = canEdit ? list : (list || []).filter((s) => s.sent);
+  // What a client sees: a submittal that has actually gone out, and that was
+  // left ticked for showing. Unticking one takes it off their screen and off
+  // the paper without deleting anything (29.8.26).
+  const visibleList = canEdit ? list : (list || []).filter((s) => s.sent && !s.hidden);
 
   const commit = (next) => {
     if (onChangeSubmittals) onChangeSubmittals(next);
@@ -11584,11 +12036,16 @@ function SubmittalCard({
           setOpenId(rec.id);
         },
         onCreate: startCreate,
-        // One submittal per file, each with its own serial and its own file
-        // already attached. They land as drafts: the numbers exist, the papers
-        // are in place, and the filling in happens afterwards.
+        // "Load specifications": she picks the specs for this discipline and
+        // each one is READ, not merely attached. The model says what product
+        // the document describes, and that becomes a submittal already filled
+        // in — so pressing "+ סבמיטל" afterwards opens a finished form rather
+        // than an empty one. A file the model cannot place is never guessed at:
+        // it is left out and named on screen (29.8.26).
         onBulkCreate: async (files, onProgress) => {
           const made = [];
+          const homeless = [];
+          let aiDown = false;
           for (let i = 0; i < files.length; i++) {
             const f = files[i];
             const rec = sbNewSubmittal({
@@ -11601,9 +12058,9 @@ function SubmittalCard({
               email: currentEmail || "",
               submittedBy: (currentEmail || "").split("@")[0] || ""
             });
+            const isImage = /^image\//.test(f.type || "");
             try {
               const stored = await sbUploadFile(projectId, rec.id, f);
-              const isImage = /^image\//.test(f.type || "");
               if (isImage) {
                 rec.image = { ...stored, name: f.name, thumb: await sbMakeThumb(f) };
               } else {
@@ -11612,19 +12069,73 @@ function SubmittalCard({
                 rec.specText = text || "";
               }
             } catch (ex) {
-              console.warn("[awdash] bulk create: could not store", f.name, ex);
+              console.warn("[awdash] load specifications: could not store", f.name, ex);
+            }
+            // A picture is filed as it is; only a document is read.
+            if (!isImage && !aiDown) {
+              const filled = await sbFillFromSpec(rec, f, chosen.key, lang);
+              if (filled.aiDown) {
+                aiDown = true;
+              } else if (filled.placed) {
+                Object.assign(rec, filled.patch, { aiFilledAt: new Date().toISOString() });
+              } else {
+                // Nothing in this document belongs in this discipline.
+                homeless.push(f.name);
+                if (onProgress) onProgress(i + 1);
+                continue;
+              }
             }
             made.push(rec);
             if (onProgress) onProgress(i + 1);
           }
           if (made.length) commit((list || []).concat(made));
+          if (homeless.length || aiDown) setBulkReport({ homeless, aiDown });
         },
         onOpen: openExisting,
         onPrint: (s) => setPrintAsk(() => (lg) => sbPrint(s, lg, printBrand, userSignatures)),
         onNewRevision: startRevision,
         onDelete: deleteOne
       }),
-    printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
+    printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
+    bulkReport ? sbH(SbBulkReport, { report: bulkReport, lang, isRTL, onClose: () => setBulkReport(null) }) : null
+  );
+}
+// The files "load specifications" could not place, named. A file is never
+// filed into a discipline it does not belong to just to avoid an empty hand:
+// it is left where it was, and she is told which ones (29.8.26).
+function SbBulkReport({ report, lang, isRTL, onClose }) {
+  const L = (k) => sbText(SB_L[k], lang);
+  const names = (report && report.homeless) || [];
+  return createPortal(
+    sbH(
+      "div",
+      { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: onClose },
+      sbH(
+        "div",
+        { className: "functionEditModal", onClick: (e) => e.stopPropagation() },
+        sbH(
+          "div",
+          { className: "functionEditModalHead" },
+          sbH("span", { className: "functionEditModalSpacer" }),
+          sbH("span", { className: "functionEditModalTitle" }, names.length ? L("bulkNoHome") : L("bulkPlain")),
+          sbH("button", { className: "drawerClose", onClick: onClose, "aria-label": L("close") }, sbH(X3, { size: 16, strokeWidth: 2 }))
+        ),
+        sbH(
+          "div",
+          { className: "functionEditModalBody" },
+          names.length
+            ? sbH("ul", { className: "sbHomelessList" }, names.map((n, i) => sbH("li", { key: `${n}-${i}`, dir: "auto" }, n)))
+            : null,
+          sbH("p", { className: "sbHomelessHint" }, report && report.aiDown ? L("bulkPlain") : L("bulkNoHomeHint"))
+        ),
+        sbH(
+          "div",
+          { className: "functionEditModalSaveRow" },
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: onClose }, L("close"))
+        )
+      )
+    ),
+    document.body
   );
 }
 // src/App.jsx
@@ -12552,9 +13063,9 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
       // The classification runs here, once. Local rules settle the obvious
       // lines for nothing; the rest go to the model in batches of eighty.
       setStage(t("מסווג את הסעיפים…", "Classifying the items…"));
-      const ask = async (rows) => {
+      const ask = async (rows, known) => {
         const { data, error } = await supabase.functions.invoke("submittal-ai", {
-          body: { mode: "classify", lines: rows }
+          body: { mode: "classify", lines: rows, known: known || [] }
         });
         if (error) throw new Error(await fnErrorText(error, data));
         if (!data || !data.flags) throw new Error(await fnErrorText(null, data) || "no_flags");
@@ -12562,9 +13073,9 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
       };
       let aiReached = true;
       let aiError = null;
-      const probe = async (rows) => {
+      const probe = async (rows, known) => {
         try {
-          return await ask(rows);
+          return await ask(rows, known);
         } catch (e) {
           aiReached = false;
           if (!aiError) aiError = String((e && e.message) || e);
