@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 27";
+var APP_BUILD = "29.8.2026 \u00b7 build 28";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1228,7 +1228,6 @@ var pdfViewer = `
            left-aligned by default and inherits nothing, so it has to be told
            (29.8.26). */
         .lliTable td input[type="text"], .lliTable td input:not([type]), .lliTable td textarea { text-align: center; }
-        .lliTable td.cDesc input, .lliTable td.cDesc textarea { text-align: start; }
         .sbHomelessList { margin: 4px 0 10px; padding-inline-start: 20px; font-size: 13px; line-height: 1.9; }
         .sbHomelessList li { word-break: break-word; }
         .sbHomelessHint { margin: 0; font-size: 12px; color: var(--mist); line-height: 1.7; text-align: center; }
@@ -1293,7 +1292,7 @@ var pdfViewer = `
         .lliTable .cMark { width: 80px; }
         .lliTable .cDesc { width: 210px; text-align: start; }
         .lliTable .cSup { width: 115px; }
-        .lliTable .cImg { width: 56px; }
+        .lliTable .cImg { width: 104px; }
         .lliTable .cQty { width: 75px; }
         .lliTable .cUnit { width: 55px; color: var(--steel); font-weight: 700; }
         .lliTable .cOrd { width: 90px; }
@@ -1330,25 +1329,36 @@ var pdfViewer = `
         }
         .lliIn:focus { outline: none; border-color: var(--accent); }
         .lliIn[readonly], .lliIn:disabled { background: #f7f8fa; color: var(--steel); }
-        .lliDesc { resize: vertical; line-height: 1.4; min-height: 40px; }
+        /* The description box is as tall as what is written in it. A field that
+           scrolls hides the second half of a sentence, and a description she
+           cannot read is a description she has to click into (29.8.26). */
+        .lliDesc { resize: vertical; line-height: 1.4; min-height: 40px; overflow: hidden; text-align: center; }
         .lliNum { text-align: center; }
         .lliSel { font-weight: 800; cursor: pointer; }
         .lliDash { color: var(--mist); }
         .lliImgBox {
           position: relative; display: flex; align-items: center; justify-content: center;
-          width: 46px; height: 40px; margin: 0 auto; border: 1px dashed var(--line);
-          border-radius: 7px; cursor: pointer; color: var(--mist); overflow: hidden; background: #fff;
+          /* Twice the size it was: a thumbnail of a floor tile at 46px told her
+             nothing about the tile (29.8.26). */
+          width: 92px; height: 80px; margin: 0 auto; border: 1px dashed var(--line);
+          border-radius: 8px; cursor: pointer; color: var(--mist); overflow: hidden; background: #fff;
         }
         .lliImgBox.ro { cursor: default; }
         /* The selected cell, so it is never a guess where a paste will land. */
         .lliImgBox.sel { border-style: solid; border-color: var(--accent, #0F3460); box-shadow: 0 0 0 2px var(--accent-soft, #e6ecf5); }
         .lliImgPick {
-          position: absolute; inset-inline-end: 1px; bottom: 1px;
-          width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+          position: absolute; inset-inline-end: 2px; bottom: 2px;
+          width: 18px; height: 18px; display: flex; align-items: center; justify-content: center;
           border: 1px solid var(--line); border-radius: 4px; background: #fff;
           color: var(--mist); padding: 0; cursor: pointer;
         }
         .lliImgPick:hover { color: var(--accent-ink); border-color: var(--accent); }
+        .printAskChoice {
+          border: 1px solid var(--line); background: #fff; color: var(--steel);
+          border-radius: 10px; padding: 9px 12px; font-family: inherit;
+          font-size: 12.5px; font-weight: 700; cursor: pointer;
+        }
+        .printAskChoice.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
         .lliImgBox:hover { border-color: var(--accent); color: var(--accent-ink); }
         .lliImgBox img { width: 100%; height: 100%; object-fit: cover; }
         .lliImgBusy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff9; }
@@ -1394,7 +1404,9 @@ var pdfViewer = `
         }
         .roomsHero.compact { padding: 14px 16px 12px; gap: 9px; }
         .roomsLead { margin: 0; font-size: 14px; color: var(--steel); line-height: 1.6; }
-        .roomsSearch { display: flex; gap: 8px; align-items: center; }
+        /* The button sits under the box, centred on it — the room number is what
+           the screen is about, and the button is what you press next (29.8.26). */
+        .roomsSearch { display: flex; flex-direction: column; gap: 10px; align-items: center; }
         .roomsInput {
           width: 260px; padding: 13px 16px; border: 1px solid var(--line); border-radius: 12px;
           font-family: inherit; font-size: 20px; font-weight: 800; text-align: center;
@@ -1438,7 +1450,8 @@ var pdfViewer = `
         .roomsTable .cMk { width: 120px; font-weight: 800; }
         .roomsTable .cNm { width: 24%; }
         .roomsTable .cIm { width: 92px; text-align: center; }
-        .roomsImg { width: 68px; height: 50px; object-fit: cover; border-radius: 7px; border: 1px solid var(--line); display: block; }
+        /* Twice the size, the same as on the LLI board (29.8.26). */
+        .roomsImg { width: 136px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
         .roomsColBar {
           display: flex; align-items: center; justify-content: center; gap: 14px;
           flex-wrap: wrap; margin: 6px 0 10px; font-size: 12px; color: var(--steel);
@@ -1454,7 +1467,7 @@ var pdfViewer = `
         .marksTable .cMk { width: 110px; }
         .marksTable .cNm { width: 20%; }
         .marksTable .cDs { width: 28%; text-align: start; }
-        .marksTable .cIm { width: 70px; }
+        .marksTable .cIm { width: 104px; }
         .marksTable .cRm { width: 160px; font-size: 11px; color: var(--mist); }
         .marksTable .cAct { width: 42px; }
         /* ---------- SD (shop drawings) ---------- */
@@ -7099,11 +7112,13 @@ body { width: 297mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 8px; padding: 5px 3px;
   border: 1px solid ${P.line}; text-align: center; vertical-align: middle; word-break: break-word; }
+/* A line break she typed into a cell is part of what the cell says, so the
+   printed page keeps it (29.8.26). */
 td { font-size: 7.5px; padding: 4px 3px; border: 1px solid ${P.line}; text-align: center;
-  vertical-align: middle; word-break: break-word; }
+  vertical-align: middle; word-break: break-word; white-space: pre-wrap; }
 tbody tr:nth-child(even) td { background: ${P.zebra}; }
 td.img { padding: 2px; }
-td.img img { max-width: 100%; max-height: 34px; object-fit: contain; display: block; margin: 0 auto; }
+td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: block; margin: 0 auto; }
 tr { page-break-inside: avoid; }
 thead { display: table-header-group; }
 .footImg { margin-top: 10px; text-align: center; }
@@ -7122,6 +7137,16 @@ ${footImg}</div>${printedStampHtml(isRTL ? "he" : "en")}</body></html>`;
   w.document.write(html);
   w.document.close();
   w.focus();
+  // Straight into the print dialog, the same as the project schedule does —
+  // from there "Save as PDF" is one click, and nothing is downloaded that she
+  // did not ask for (29.8.26). The delay lets the fonts and the pictures land
+  // first; a print fired before them prints an empty frame.
+  setTimeout(() => {
+    try {
+      w.print();
+    } catch (e) {
+    }
+  }, 700);
 }
 
 // src/cards/LliCard.jsx
@@ -7132,6 +7157,14 @@ ${footImg}</div>${printedStampHtml(isRTL ? "he" : "en")}</body></html>`;
 // them, keyed by the same code, so re-uploading a BOQ never wipes it.
 // A project with no BOQ (a lump-sum contract) builds its rows by hand.
 // -----------------------------------------------------------------------------
+// A text box that is the size of its own contents. React does not re-measure a
+// textarea for us, so the height is set from what the browser says the text
+// needs — on mount, and again on every change (29.8.26).
+function autoGrow(el) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${Math.max(el.scrollHeight, 40)}px`;
+}
 function lliBlankRow() {
   return {
     typeMark: "", desc: "", image: null, qtyActual: "", ordered: false,
@@ -7170,6 +7203,7 @@ var LLI_L = {
     he: "לוחצים על התא ואז Ctrl+V להדבקת תמונה. לחיצה כפולה לבחירת קובץ."
   },
   pickFile: { en: "Choose a file", he: "בחירת קובץ" },
+  forClient: { en: "client copy", he: "עותק ללקוח" },
   byRoomHint: {
     en: "Ticked rows build the room search: this row's category, mark, description and photo appear under every room the drawings give that mark to.",
     he: "שורה מסומנת נבנית לתוך החיפוש לפי חדר: הקטגוריה, האיפיון, התיאור והתמונה שלה יופיעו בכל חדר שהתוכניות נותנות לו את האיפיון הזה."
@@ -7207,7 +7241,9 @@ var LLI_L = {
   supplier: { en: "Supplier", he: "ספק" },
   unit: { en: "Unit", he: "יחידה" },
   qtyBoq: { en: "BOQ qty", he: "כמות כתב כמויות" },
-  qtySurveyor: { en: "QS qty", he: "כמות שמאי" },
+  // Was "כמות שמאי". It is the number of units the order actually places, and
+  // it is read off the purchase order along with its number and dates (29.8.26).
+  qtySurveyor: { en: "Order qty", he: "כמות הזמנה" },
   poFile: { en: "PO file", he: "קובץ הזמנה" },
   poNo: { en: "PO number", he: "מספר הזמנה" },
   poDate: { en: "PO date", he: "תאריך הזמנה" },
@@ -7453,6 +7489,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       if (got.date && !v.poDate) next.poDate = String(got.date).slice(0, 10);
       if (got.supplier && !v.supplier) next.supplier = String(got.supplier).trim();
       if (got.delivery && !v.eta) next.eta = String(got.delivery).slice(0, 10);
+      // The number of units the order actually places — not a price, and not
+      // the BOQ quantity: what was ordered against this mark (29.8.26).
+      if (got.qty && !v.qtyActual) next.qtyActual = String(got.qty).trim();
       if (!Object.keys(next).length) {
         setPoNote(t2("לא נמצא בהזמנה מידע חדש למלא.", "Nothing new to fill in was found in the order."));
       } else {
@@ -7468,7 +7507,11 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // What leaves the board. The rows are the ones on screen — the category chips
   // and "only long lead" have already done their work above — and the columns
   // are the board's own, minus the ones that are buttons rather than facts.
-  const exportGrid = () => {
+  // Which columns a client's copy carries. Everything that says WHAT the item is
+  // and WHEN it lands; nothing about who it was bought from or on what order —
+  // that half of the board is hers (29.8.26).
+  const LLI_CLIENT_COLS = [0, 1, 2, 3, 6, 12, 13, 14];
+  const exportGrid = (audience) => {
     const yn = (v) => (v ? L("yes") : L("no"));
     const head = [
       L("section"), L("category"), L("typeMark"), L("desc"), L("supplier"),
@@ -7508,7 +7551,17 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         imgs.push(v.image || null);
       });
     });
-    return { head, body, widths, imgs };
+    if (audience === "client") {
+      const keep = LLI_CLIENT_COLS;
+      return {
+        head: keep.map((i) => head[i]),
+        widths: keep.map((i) => widths[i]),
+        body: body.map((row) => keep.map((i) => row[i])),
+        imgs,
+        clientCols: keep
+      };
+    }
+    return { head, body, widths, imgs, clientCols: null };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -7524,16 +7577,18 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     });
     if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
-  const onPdf = (printLang) => {
-    const g = exportGrid();
+  const onPdf = (printLang, audience) => {
+    const g = exportGrid(audience);
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
     // The photo earns its column here and nowhere else: this is the sheet that
     // goes to a supplier, and a picture settles an argument a description cannot.
     const head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
-    const widths = g.widths.slice(0, 4).concat([8], g.widths.slice(4));
+    const widths = g.widths.slice(0, 4).concat([14], g.widths.slice(4));
     const body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
     boardExportPdf({
-      title: exportTitle(), subtitle: exportSub(), head, body, widths,
+      title: exportTitle(),
+      subtitle: `${exportSub()}${audience === "client" ? ` · ${L("forClient")}` : ""}`,
+      head, body, widths,
       accent: (printBrand || {}).accent, brand: printBrand,
       isRTL: printLang !== "en", imgCol: 4, imgs: g.imgs
     });
@@ -7577,7 +7632,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
-      printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
+      printAsk
+        ? sbH(PrintLangAsk, {
+            withAudience: true,
+            onPick: (lg, who) => { setPrintAsk(null); printAsk(lg, who); },
+            onClose: () => setPrintAsk(null)
+          })
+        : null
     ),
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
     groups.length === 0
@@ -7702,6 +7763,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                         // whatever was actually chosen.
                         value: v.desc || r.title,
                         readOnly: !canEdit,
+                        ref: autoGrow,
+                        onInput: (e) => autoGrow(e.target),
                         onChange: (e) => patch(r.code, { desc: e.target.value })
                       })
                     ),
@@ -7964,6 +8027,7 @@ var SD_L = {
   title: { en: "SD — shop drawings", he: "SD — תוכניות ייצור" },
   allCats: { en: "All categories", he: "כל הקטגוריות" },
   section: { en: "BOQ", he: "BOQ" },
+  forClient: { en: "client copy", he: "עותק ללקוח" },
   dwgNo: { en: "Drawing no.", he: "מספר תוכנית" },
   desc: { en: "Description", he: "תיאור" },
   owner: { en: "In the hands of", he: "מי מטפל" },
@@ -8161,11 +8225,19 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     });
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
-  const onPdf = (printLang) => {
+  // The SD board's client copy: what the drawing is and where it stands, not
+  // the paperwork around it (29.8.26).
+  const SD_CLIENT_COLS = [0, 1, 2, 3, 4, 7];
+  const onPdf = (printLang, audience) => {
     const g = exportGrid();
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
+    const keep = audience === "client" ? SD_CLIENT_COLS : g.head.map((_, i) => i);
     boardExportPdf({
-      title: exportTitle(), subtitle: exportSub(), head: g.head, body: g.body, widths: g.widths,
+      title: exportTitle(),
+      subtitle: `${exportSub()}${audience === "client" ? ` · ${L("forClient")}` : ""}`,
+      head: keep.map((i) => g.head[i]),
+      body: g.body.map((row) => keep.map((i) => row[i])),
+      widths: keep.map((i) => g.widths[i]),
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
     });
   };
@@ -8210,7 +8282,13 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
       exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
-      printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
+      printAsk
+        ? sbH(PrintLangAsk, {
+            withAudience: true,
+            onPick: (lg, who) => { setPrintAsk(null); printAsk(lg, who); },
+            onClose: () => setPrintAsk(null)
+          })
+        : null
     ),
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
     groups.length === 0
@@ -8280,6 +8358,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                       sbH("textarea", {
                         className: "lliIn lliDesc sdDesc",
                         rows: 3,
+                        ref: autoGrow,
+                        onInput: (e) => autoGrow(e.target),
                         value: v.desc || r.title,
                         readOnly: !canEdit,
                         onChange: (e) => patch(r.code, { desc: e.target.value })
@@ -9042,7 +9122,13 @@ var sbH = React15.createElement;
 // site goes through here. The question itself is written in both languages,
 // because at that moment we do not yet know which one the reader wants.
 // -----------------------------------------------------------------------------
-function PrintLangAsk({ onPick, onClose }) {
+function PrintLangAsk({ onPick, onClose, withAudience }) {
+  // Two questions on the boards, one everywhere else. The audience decides
+  // which columns are printed: a client's copy carries what a client sees on
+  // the screen, and hers carries everything (29.8.26).
+  const [lang, setLang] = useState6("he");
+  const [who, setWho] = useState6("admin");
+  const pick = (v) => (withAudience ? onPick(v, who) : onPick(v));
   return createPortal(
     sbH(
       "div",
@@ -9050,7 +9136,28 @@ function PrintLangAsk({ onPick, onClose }) {
       sbH(
         "div",
         { className: "printAskBox", dir: "rtl", onClick: (e) => e.stopPropagation() },
-        sbH("h3", null, "שפת ההדפסה"),
+        sbH("h3", null, "הדפסה"),
+        withAudience
+          ? sbH(
+              React15.Fragment,
+              null,
+              sbH("p", null, "עבור מי המסמך?"),
+              sbH(
+                "div",
+                { className: "printAskBtns" },
+                sbH("button", {
+                  type: "button",
+                  className: `printAskChoice ${who === "admin" ? "on" : ""}`,
+                  onClick: () => setWho("admin")
+                }, "הדפסת מנהל · כל העמודות"),
+                sbH("button", {
+                  type: "button",
+                  className: `printAskChoice ${who === "client" ? "on" : ""}`,
+                  onClick: () => setWho("client")
+                }, "הדפסת לקוח · העמודות שהלקוח רואה")
+              )
+            )
+          : null,
         sbH("p", null, "באיזו שפה להפיק את המסמך?"),
         sbH("p", { className: "printAskEn", dir: "ltr" }, "Which language should the document be produced in?"),
         sbH(
@@ -9058,8 +9165,8 @@ function PrintLangAsk({ onPick, onClose }) {
           { className: "printAskBtns" },
           // The window that actually prints is opened inside this click, so the
           // browser still counts it as a gesture and does not block the popup.
-          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onPick("he") }, "עברית"),
-          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onPick("en") }, "English")
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => pick("he") }, "עברית"),
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => pick("en") }, "English")
         ),
         sbH("button", { type: "button", className: "sbLinkBtn printAskCancel", onClick: onClose }, "ביטול · Cancel")
       )
