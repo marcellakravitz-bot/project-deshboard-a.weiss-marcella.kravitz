@@ -93,7 +93,7 @@ import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3,
 import {
   PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
   Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2,
-  Hammer as Hammer2
+  Hammer as Hammer2, FileUp as FileUp2
 } from "lucide-react";
 
 // src/config/supabase.js
@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 29";
+var APP_BUILD = "29.8.2026 \u00b7 build 30";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1195,6 +1195,17 @@ var pdfViewer = `
           flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; color: var(--steel);
         }
         .lliCount { font-weight: 800; }
+        /* The tally and the search each get their own line, centred (29.8.26). */
+        .lliTally { text-align: center; font-size: 12px; color: var(--steel); margin-bottom: 6px; }
+        .lliMarkFind { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; }
+        .lliAlsoOn { display: flex; justify-content: center; gap: 8px; margin-top: 4px; font-size: 10.5px; font-weight: 700; color: var(--steel); }
+        .lliAlsoOn label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
+        .lliAlsoOn input { width: 12px; height: 12px; accent-color: var(--accent, #0F3460); }
+        .lliMarkInput {
+          width: 240px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 9px;
+          font-family: inherit; font-size: 12.5px; font-weight: 700; text-align: center;
+          background: #fff; color: var(--ink);
+        }
         .lliShowHidden { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; cursor: pointer; }
         .lliNote { text-align: center; color: var(--mist); font-size: 13px; line-height: 1.6; margin: 14px 0; }
         /* The board scrolls inside its own box rather than with the page, which
@@ -1235,7 +1246,9 @@ var pdfViewer = `
         .sbHomelessHint { margin: 0; font-size: 12px; color: var(--mist); line-height: 1.7; text-align: center; }
         .sbActBtn svg { flex: none; }
         .lliTableWrap {
-          overflow: auto; max-height: calc(var(--appvh, 760px) - 250px);
+          /* Half again as tall: the board is the screen, and everything above it
+             is a heading (29.8.26). */
+          overflow: auto; max-height: calc(var(--appvh, 760px) - 150px);
           border: 1px solid var(--line); border-radius: 10px;
           scrollbar-width: thin; scrollbar-color: var(--line) transparent;
         }
@@ -1268,19 +1281,27 @@ var pdfViewer = `
           padding: 5px 6px; border-bottom: 1px solid var(--line-soft);
           text-align: center; vertical-align: middle;
         }
+        /* The number, the tags and the grip on one middle line — the number used
+           to ride a little high in a tall row (29.8.26). */
+        .lliTable td.cSec {
+          display: table-cell; vertical-align: middle; line-height: 1.5;
+        }
+        .lliTable td.cSec .lliCode { display: inline-block; vertical-align: middle; }
         .lliTable tr.lliChapter td {
           /* Darker, so the chapter reads as a band and not as another row. The
              padding is the cells' own, so the chapter name begins on the same
              line as the BOQ numbers underneath it rather than a few pixels in
              from them (29.8.26). */
           background: #cddcf0; font-weight: 800; font-size: 12px; color: #0F3460;
-          text-align: start; padding: 7px 6px; border-bottom: 1px solid #b6c8e2;
+          text-align: center; padding: 7px 6px; border-bottom: 1px solid #b6c8e2;
         }
         .lliTable tr.lliOff td { opacity: .45; }
         /* Long lead, and nobody has ordered it yet. A wash of red, not a
            warning sign: it has to be readable for as long as the list is
            (29.8.26). */
         .lliTable tr.lliLate td, .lliTable tr.lliLate:nth-child(even) td { background: #fbe3e3; }
+        /* Ordered: the same wash, the other end of the fan (29.8.26). */
+        .lliTable tr.lliDone td, .lliTable tr.lliDone:nth-child(even) td { background: #e3f3e6; }
         /* Sixteen columns do not fit the design width, and squeezing them makes
            a date field two characters wide. So the board keeps its column sizes
            and the wrapper scrolls sideways, which is what a procurement board
@@ -5098,7 +5119,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -7083,7 +7104,7 @@ function boardXlsxPlain(opts) {
 // house template: the coloured frame, the logo, the centred title, the footer.
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, noStamp, issuedLabel } = opts;
+          alertRows, toneRows, noStamp, issuedLabel } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -7102,7 +7123,8 @@ function boardExportPdf(opts) {
     }).join("");
     // A row that needs the eye — a long lead item nobody has ordered yet —
     // carries its colour onto the paper too (29.8.26).
-    return `<tr${alertRows && alertRows[ri] ? ' class="alert"' : ""}>${tds}</tr>`;
+    const cls = (alertRows && alertRows[ri] && "alert") || (toneRows && toneRows[ri]) || "";
+    return `<tr${cls ? ` class="${cls}"` : ""}>${tds}</tr>`;
   }).join("");
   const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "";
   // The client's own mark, on the far side of the header and the same height as
@@ -7117,7 +7139,7 @@ function boardExportPdf(opts) {
 html, body { margin: 0; padding: 0; }
 /* Room for the frame on every side, on every page. */
 body { width: 297mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
-  direction: ${dir}; padding: 9mm 9mm 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  direction: ${dir}; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 @page { margin: 0; }
 
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
@@ -7139,6 +7161,11 @@ tbody tr:nth-child(even) td { background: ${P.zebra}; }
 /* Long lead, not yet ordered. A wash rather than a shout — it has to survive
    being read for ten minutes (29.8.26). */
 tbody tr.alert td, tbody tr.alert:nth-child(even) td { background: #fbe3e3; }
+/* The same fan on the drawings report: past its date and still not in, in
+   somebody's hands, or signed off (29.8.26). */
+tbody tr.late td, tbody tr.late:nth-child(even) td { background: #fbe3e3; }
+tbody tr.wait td, tbody tr.wait:nth-child(even) td { background: #fdeed8; }
+tbody tr.ok td, tbody tr.ok:nth-child(even) td { background: #e3f3e6; }
 td.img { padding: 2px; }
 td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: block; margin: 0 auto; }
 tr { page-break-inside: avoid; }
@@ -7151,6 +7178,17 @@ ${printedStampCss(4)}
    used to have three pages with no border at all (29.8.26). */
 .pageFrame { position: fixed; inset: 6mm; border: 1.5px solid ${P.accent}; border-radius: 12px; pointer-events: none; }
 .sheet { padding: 4mm 5mm 6mm; }
+/* The frame is drawn on top of the page, so the table has to stay inside it:
+   without this the last column and the last row of every page ran under the
+   border and were cut (29.8.26). */
+@media print {
+  .sheet { padding: 6mm 8mm 10mm; }
+  table { page-break-inside: auto; }
+  tbody tr { page-break-inside: avoid; page-break-after: auto; }
+  /* The closing image belongs at the foot of the LAST page, not squeezed
+     under the last row of the table. */
+  .footImg { page-break-before: auto; margin-top: 6mm; }
+}
 </style></head><body><div class="pageFrame"></div><div class="sheet">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
@@ -7274,6 +7312,10 @@ var LLI_L = {
   empty: { en: "Nothing to order in this category.", he: "אין פריטים להזמנה בקטגוריה הזו." },
   ordersOf: { en: "ordered", he: "הוזמנו" },
   rowsOf: { en: "rows", he: "שורות" },
+  findMark: { en: "Find a mark", he: "חיפוש לפי איפיון" },
+  alsoSd: { en: "Also on the shop-drawing board", he: "מופיע גם בטבלת SD" },
+  alsoSubmittal: { en: "Also on the submittal checklist", he: "מופיע גם בסבמיטלים" },
+  clearFind: { en: "Clear", he: "ניקוי" },
   restore: { en: "Restore", he: "החזרה" },
   category: { en: "Category", he: "קטגוריה" },
   supplier: { en: "Supplier", he: "ספק" },
@@ -7317,6 +7359,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [drag, setDrag] = useState6(null);
   // The picture cell she last clicked. Ctrl+V lands there.
   const [pasteAt, setPasteAt] = useState6(null);
+  // Searching the board by the mark she gave a row.
+  const [markQuery, setMarkQuery] = useState6("");
   // The scrolling box the rows live in, and the timer that scrolls it while a
   // row is being carried to a place that is not on screen yet.
   const wrapRef = useRef5(null);
@@ -7390,11 +7434,17 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const saved = (data[r.code] || {}).hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
+  // Every mark anybody has written on this board, for the list she picks from.
+  const markList = Array.from(new Set(
+    all.map((r) => String(lliRowOf(data, r.code).typeMark || "").trim()).filter(Boolean)
+  )).sort();
+  const markNeedle = markQuery.trim().toLowerCase();
   const visible = all.filter((r) =>
     (cat === "all" || r.category === cat) &&
     // The administrator sees the whole board — the "הצגה" tick tells her which
     // rows are on it. A client sees only the rows that are on (29.8.26).
-    (canEdit || !isHidden(r))
+    (canEdit || !isHidden(r)) &&
+    (!markNeedle || String(lliRowOf(data, r.code).typeMark || "").toLowerCase().indexOf(markNeedle) >= 0)
   );
   const orderedCount = visible.filter((r) => lliRowOf(data, r.code).ordered).length;
 
@@ -7697,10 +7747,37 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       catChip("all", L("allCats")),
       BOARD_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
     ),
+    // The tally stands on its own line, centred, with the search for a mark
+    // beside it: the marks already on the board are offered as a list, so she
+    // does not have to remember how one was spelled (29.8.26).
+    sbH(
+      "div",
+      { className: "lliTally" },
+      sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${orderedCount} ${L("ordersOf")}`)
+    ),
+    sbH(
+      "div",
+      { className: "lliMarkFind" },
+      sbH("input", {
+        type: "search",
+        className: "lliMarkInput",
+        list: "lliMarkList",
+        placeholder: L("findMark"),
+        value: markQuery,
+        onChange: (e) => setMarkQuery(e.target.value)
+      }),
+      sbH(
+        "datalist",
+        { id: "lliMarkList" },
+        markList.map((m) => sbH("option", { key: m, value: m }))
+      ),
+      markQuery
+        ? sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => setMarkQuery("") }, L("clearFind"))
+        : null
+    ),
     sbH(
       "div",
       { className: "lliBar" },
-      sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${orderedCount} ${L("ordersOf")}`),
       poNote ? sbH("span", { className: "lliPoNote" }, poNote) : null,
       // A client and the main contractor look at the board; they do not take it
       // away with them. Export, and the way behind the ticks, belong to the
@@ -7764,7 +7841,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     "tr",
                     {
                       key: r.code,
-                      className: `${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""}`.trim(),
+                      className: `${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""}`.trim(),
                       onDragOver: canEdit
                         ? (e) => {
                             if (!drag || drag.group !== g.key) return;
@@ -7799,7 +7876,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                       "td",
                       { className: "cSec" },
                       sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
-                      r.longLead ? sbH("span", { className: "lliLongTag" }, L("longLead")) : null,
                       r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
                       canEdit
                         ? sbH(
@@ -7838,7 +7914,36 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     sbH(
                       "td",
                       { className: "cMark" },
-                      sbH("input", { type: "text", className: "lliIn", value: v.typeMark, readOnly: !canEdit, onChange: (e) => patch(r.code, { typeMark: e.target.value }) })
+                      sbH("input", { type: "text", className: "lliIn", value: v.typeMark, readOnly: !canEdit, onChange: (e) => patch(r.code, { typeMark: e.target.value }) }),
+                      // A row she added by hand came from nowhere, so nothing
+                      // says which other boards it belongs on. These two ticks
+                      // do — and they put it there (29.8.26).
+                      r.source === "manual" && canEdit
+                        ? sbH(
+                            "span",
+                            { className: "lliAlsoOn" },
+                            sbH(
+                              "label",
+                              { title: L("alsoSd") },
+                              sbH("input", {
+                                type: "checkbox",
+                                checked: !!v.alsoSd,
+                                onChange: () => patch(r.code, { alsoSd: !v.alsoSd })
+                              }),
+                              "SD"
+                            ),
+                            sbH(
+                              "label",
+                              { title: L("alsoSubmittal") },
+                              sbH("input", {
+                                type: "checkbox",
+                                checked: !!v.alsoSubmittal,
+                                onChange: () => patch(r.code, { alsoSubmittal: !v.alsoSubmittal })
+                              }),
+                              "SUB"
+                            )
+                          )
+                        : null
                     ),
                     sbH(
                       "td",
@@ -8114,7 +8219,7 @@ var SD_L = {
   title: { en: "SD — shop drawings", he: "SD — תוכניות ייצור" },
   allCats: { en: "All categories", he: "כל הקטגוריות" },
   section: { en: "BOQ", he: "BOQ" },
-  forClient: { en: "client copy", he: "עותק ללקוח" },
+  issuedOn: { en: "Report issued on", he: "תאריך הנפקת דוח" },
   dwgNo: { en: "Drawing no.", he: "מספר תוכנית" },
   desc: { en: "Description", he: "תיאור" },
   owner: { en: "In the hands of", he: "מי מטפל" },
@@ -8160,7 +8265,7 @@ var SD_L = {
   allStatuses: { en: "All statuses", he: "כל הסטטוסים" }
 };
 
-function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand }) {
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -8211,7 +8316,22 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       title: (data[k] || {}).desc || "",
       defaultHidden: false
     }));
-  const all = boqRows.concat(manualRows);
+  // Rows she added by hand on the LLI board and ticked "also SD". They belong
+  // here as much as any BOQ line does; the LLI row stays the one place they are
+  // maintained (29.8.26).
+  const fromLli = Object.keys(lliRows || {})
+    .filter((k) => k.indexOf("m-") === 0 && (lliRows[k] || {}).alsoSd)
+    .map((k) => ({
+      code: k,
+      chapter: null,
+      sub: null,
+      source: "manual",
+      category: (lliRows[k] || {}).category || null,
+      title: (lliRows[k] || {}).desc || "",
+      fromLli: true,
+      defaultHidden: false
+    }));
+  const all = boqRows.concat(manualRows, fromLli);
   const isHidden = (r) => {
     const saved = (data[r.code] || {}).hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
@@ -8275,11 +8395,22 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       return c ? sbText(c, lang) : "";
     };
     const body = [];
+    // The colour of a row, in the fan we already use: green for approved and
+    // approved-as-noted, orange for submitted, red for a drawing whose due date
+    // has passed and is still not in. Nothing else is coloured (29.8.26).
+    const tone = [];
+    const today = new Date().toISOString().slice(0, 10);
     groups.forEach((g) => {
       g.rows.forEach((r) => {
         if (isHidden(r)) return;
         const v = sdRowOf(data, r.code);
         const done = SD_DONE.indexOf(v.status) >= 0;
+        tone.push(
+          done ? "ok"
+            : v.status === "submitted" ? "wait"
+            : v.dueAt && v.dueAt < today ? "late"
+            : ""
+        );
         body.push([
           r.source === "boq" ? r.code : L("manual"),
           cat2(r.category),
@@ -8296,7 +8427,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         ]);
       });
     });
-    return { head, body, widths };
+    return { head, body, widths, tone };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -8312,19 +8443,26 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     });
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
-  // The SD board's client copy: what the drawing is and where it stands, not
-  // the paperwork around it (29.8.26).
-  const SD_CLIENT_COLS = [0, 1, 2, 3, 4, 7];
+  // The SD board's client copy, by name: what the drawing is, when it was due,
+  // where it stands and when it was signed. Nothing about the file itself
+  // (29.8.26).
+  const sdClientKeys = ["section", "category", "desc", "dueAt", "status", "submittedAt", "approvedAt"];
   const onPdf = (printLang, audience) => {
     const g = exportGrid();
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
-    const keep = audience === "client" ? SD_CLIENT_COLS : g.head.map((_, i) => i);
+    const keep = audience === "client"
+      ? sdClientKeys.map((k) => g.head.indexOf(L(k))).filter((i) => i >= 0)
+      : g.head.map((_, i) => i);
     boardExportPdf({
       title: exportTitle(),
-      subtitle: `${exportSub()}${audience === "client" ? ` · ${L("forClient")}` : ""}`,
+      subtitle: L("title"),
+      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
       head: keep.map((i) => g.head[i]),
       body: g.body.map((row) => keep.map((i) => row[i])),
       widths: keep.map((i) => g.widths[i]),
+      toneRows: g.tone,
+      // The drawings report keeps its printed-on stamp; only the ordering
+      // report drops it, because she asked for that one by name (29.8.26).
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
     });
   };
@@ -8354,10 +8492,15 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       catChip("all", L("allCats")),
       BOARD_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
     ),
+    // The tally on its own line, centred (29.8.26).
+    sbH(
+      "div",
+      { className: "lliTally" },
+      sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${doneCount} ${L("approvedOf")}`)
+    ),
     sbH(
       "div",
       { className: "lliBar" },
-      sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${doneCount} ${L("approvedOf")}`),
       sbH(
         "select",
         { className: "lliIn lliSel lliStatusFilter", value: statusFilter, onChange: (e) => setStatusFilter(e.target.value) },
@@ -8499,8 +8642,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         : canEdit
                           ? sbH(
                               "label",
-                              { className: "sdUpBtn" },
-                              busyRow === r.code ? "…" : L("upload"),
+                              { className: "sdUpBtn", title: L("upload") },
+                              // A file going up: the icon says it in less room
+                              // than the word did (29.8.26).
+                              busyRow === r.code ? "…" : sbH(FileUp2, { size: 15, strokeWidth: 2 }),
                               sbH("input", { type: "file", accept: "application/pdf,image/*", style: { display: "none" }, onChange: (e) => onFile(r.code, e) })
                             )
                           : sbH("span", { className: "lliDash" }, "—")
@@ -9544,7 +9689,7 @@ var SB_L = {
     he: "עדיין לא הועלה כתב כמויות לפרויקט, ולכן אין מול מה לבדוק."
   },
   checklistEmpty: { en: "The bill of quantities has nothing in this discipline.", he: "אין בכתב הכמויות פריטים בתחום הזה." },
-  chkItem: { en: "BOQ item", he: "סעיף בכתב הכמויות" },
+  chkItem: { en: "BOQ", he: "BOQ" },
   chkDesc: { en: "Description", he: "תיאור" },
   chkSubmittal: { en: "Submittal", he: "סבמיטל" },
   chkMissing: { en: "Not submitted", he: "טרם הוגש" },
@@ -9695,11 +9840,14 @@ function sbAddDays(iso, days) {
   const p = (x) => String(x).padStart(2, "0");
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 }
+// Every date on the site, in the one shape she reads: dd/mm/yy. The century is
+// never in question on a construction project, and the two extra digits cost a
+// column its width (29.8.26).
 function sbFmtDate(iso) {
   if (!iso) return "";
   const parts = String(iso).split("-");
   if (parts.length !== 3) return String(iso);
-  return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  return `${parts[2]}/${parts[1]}/${String(parts[0]).slice(-2)}`;
 }
 // The serial is per category per project, exactly like the workbook:
 // Plumbing-001, Plumbing-002 ... and the revision sits underneath it.
@@ -12250,6 +12398,35 @@ function SubmittalCard({
   const [printAsk, setPrintAsk] = useState6(null);
   // What "load specifications" could not place, reported once at the end.
   const [bulkReport, setBulkReport] = useState6(null);
+  // Opening a submittal for editing is a screen of its own as far as the person
+  // is concerned, but it was not a screen as far as the browser was concerned —
+  // so Back skipped it and landed two screens out. It gets its own history
+  // entry now, and Back closes the editor and nothing more (29.8.26).
+  const sbEditOpen = !!draft || !!openId;
+  const sbPushedRef = useRef5(false);
+  const sbClosingRef = useRef5(false);
+  useEffect5(() => {
+    if (!sbEditOpen) return;
+    try { window.history.pushState({ awsb: Date.now() }, ""); } catch (e) {}
+    sbPushedRef.current = true;
+    const onPop = () => {
+      sbPushedRef.current = false;
+      if (sbClosingRef.current) { sbClosingRef.current = false; return; }
+      setDraft(null);
+      setOpenId(null);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      // Closed from inside the app: take the entry back off the stack, or the
+      // next Back press would do nothing at all.
+      if (sbPushedRef.current) {
+        sbPushedRef.current = false;
+        sbClosingRef.current = true;
+        try { window.history.back(); } catch (e) {}
+      }
+    };
+  }, [sbEditOpen]);
   const langSwitch = null;
 
   // Editing a submittal is the system administrator's, full stop. Everyone else
