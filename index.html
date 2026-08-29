@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 30";
+var APP_BUILD = "29.8.2026 \u00b7 build 31";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1223,7 +1223,13 @@ var pdfViewer = `
            exported, and seen by the client. */
         .lliShowTick { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent, #0F3460); }
         .sbShowCol { width: 62px; text-align: center; }
+        /* One fan across the three boards (29.8.26). */
+        .sbTable tr.sbLate td { background: #fbe3e3; }
+        .sbTable tr.sbWait td { background: #fdeed8; }
+        .sbTable tr.sbOk td { background: #e3f3e6; }
         .lliTable .cRoom { width: 74px; text-align: center; }
+        /* The grip's own column, at the outer edge of the table. */
+        .lliTable .cGrip { width: 26px; padding: 0; text-align: center; }
         /* Dragging a row into place. The handle says the row can be moved; the
            line says where it will land if it is dropped now (29.8.26). */
         .lliImgBox:focus-visible { outline: 2px solid var(--accent, #0F3460); outline-offset: 1px; }
@@ -1299,8 +1305,14 @@ var pdfViewer = `
         /* Long lead, and nobody has ordered it yet. A wash of red, not a
            warning sign: it has to be readable for as long as the list is
            (29.8.26). */
+        /* ONE fan of three colours, and the same rule on all three boards
+           (29.8.26):
+             red    something is late, or long lead and not moving yet
+             orange it is with somebody, waiting for an answer
+             green  it is done
+           LLI has no orange: an order is either placed or it is not. */
         .lliTable tr.lliLate td, .lliTable tr.lliLate:nth-child(even) td { background: #fbe3e3; }
-        /* Ordered: the same wash, the other end of the fan (29.8.26). */
+        .lliTable tr.lliWait td, .lliTable tr.lliWait:nth-child(even) td { background: #fdeed8; }
         .lliTable tr.lliDone td, .lliTable tr.lliDone:nth-child(even) td { background: #e3f3e6; }
         /* Sixteen columns do not fit the design width, and squeezing them makes
            a date field two characters wide. So the board keeps its column sizes
@@ -7134,13 +7146,16 @@ function boardExportPdf(opts) {
 
   const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
-@page { size: A4 landscape; margin: 0; }
+/* Real page margins. Every page — not only the first — keeps its content
+   inside them, which is what stops the table running under the frame on page
+   two and page three (29.8.26). */
+@page { size: A4 landscape; margin: 12mm; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-/* Room for the frame on every side, on every page. */
-body { width: 297mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
+body { width: auto; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
   direction: ${dir}; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-@page { margin: 0; }
+/* On screen the document still needs a page to sit on. */
+@media screen { body { width: 297mm; padding: 12mm; } }
 
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 10px; }
@@ -7176,18 +7191,23 @@ ${printedStampCss(4)}
 /* The frame is drawn by a fixed element, so it is redrawn on EVERY printed
    page instead of only around the first one — a table that runs to four pages
    used to have three pages with no border at all (29.8.26). */
-.pageFrame { position: fixed; inset: 6mm; border: 1.5px solid ${P.accent}; border-radius: 12px; pointer-events: none; }
-.sheet { padding: 4mm 5mm 6mm; }
-/* The frame is drawn on top of the page, so the table has to stay inside it:
-   without this the last column and the last row of every page ran under the
-   border and were cut (29.8.26). */
+/* The frame is inset INTO the page margin, so it surrounds the content on
+   every page and the content never reaches it. */
+.pageFrame { position: fixed; inset: -6mm; border: 1.5px solid ${P.accent}; border-radius: 12px; pointer-events: none; }
+.sheet { padding: 0; }
+@media screen { .pageFrame { inset: 6mm; } }
 @media print {
-  .sheet { padding: 6mm 8mm 10mm; }
   table { page-break-inside: auto; }
   tbody tr { page-break-inside: avoid; page-break-after: auto; }
-  /* The closing image belongs at the foot of the LAST page, not squeezed
-     under the last row of the table. */
-  .footImg { page-break-before: auto; margin-top: 6mm; }
+  /* The closing image sits at the foot of the page, not glued under the last
+     row of the table (29.8.26). */
+  .footImg {
+    position: fixed; left: 0; right: 0; bottom: -2mm;
+    margin: 0; text-align: center;
+  }
+  .footImg img { max-height: 14mm; }
+  /* Room at the end of the table so the last rows never run into it. */
+  tbody:after { content: ""; display: block; height: 16mm; }
 }
 </style></head><body><div class="pageFrame"></div><div class="sheet">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
@@ -7434,6 +7454,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const saved = (data[r.code] || {}).hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
+  // The disciplines this board is actually using, in the catalogue's order.
+  const inUseCats = BOARD_CATEGORIES.filter((c) => all.some((r) => r.category === c.key));
   // Every mark anybody has written on this board, for the list she picks from.
   const markList = Array.from(new Set(
     all.map((r) => String(lliRowOf(data, r.code).typeMark || "").trim()).filter(Boolean)
@@ -7745,7 +7767,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       "div",
       { className: "lliFilter" },
       catChip("all", L("allCats")),
-      BOARD_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
+      // Only the disciplines that are actually on this board, so the row of
+      // chips is a summary and not a wall of buttons. It follows the rows as
+      // they are edited — nothing waits for a refresh (29.8.26).
+      inUseCats.map((c) => catChip(c.key, sbText(c, lang)))
     ),
     // The tally stands on its own line, centred, with the search for a mark
     // beside it: the marks already on the board are offered as a list, so she
@@ -7808,6 +7833,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
               sbH(
                 "tr",
                 null,
+                canEdit ? sbH("th", { className: "cGrip" }, "") : null,
                 sbH("th", { className: "cSec" }, L("section")),
                 sbH("th", { className: "cCat" }, L("category")),
                 sbH("th", { className: "cMark" }, L("typeMark")),
@@ -7831,7 +7857,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 17 : 15 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 18 : 15 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -7872,13 +7898,14 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                         : void 0,
                       onDragEnd: canEdit ? () => { setDrag(null); autoScrollStop(); } : void 0
                     },
-                    sbH(
-                      "td",
-                      { className: "cSec" },
-                      sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
-                      r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
-                      canEdit
-                        ? sbH(
+                    // The grip is a column of its own at the very edge of the
+                    // table, so it is a straight line down the side instead of
+                    // drifting with the width of the number beside it (29.8.26).
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cGrip" },
+                          sbH(
                             "span",
                             {
                               className: "lliDragHandle",
@@ -7897,27 +7924,16 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                             },
                             sbH(GripIcon, { size: 13 })
                           )
-                        : null
-                    ),
+                        )
+                      : null,
                     sbH(
                       "td",
-                      { className: "cCat" },
-                      sbH(BoardCatSelect, {
-                        value: r.category || "",
-                        subValue: v.subCategory || "",
-                        lang,
-                        disabled: !canEdit,
-                        noneLabel: L("noCat"),
-                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory })
-                      })
-                    ),
-                    sbH(
-                      "td",
-                      { className: "cMark" },
-                      sbH("input", { type: "text", className: "lliIn", value: v.typeMark, readOnly: !canEdit, onChange: (e) => patch(r.code, { typeMark: e.target.value }) }),
-                      // A row she added by hand came from nowhere, so nothing
-                      // says which other boards it belongs on. These two ticks
-                      // do — and they put it there (29.8.26).
+                      { className: "cSec" },
+                      sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
+                      r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
+                      // Under "ידני": the two boards this hand-made row also
+                      // belongs on. A BOQ line does not need them — the bill of
+                      // quantities already said (29.8.26).
                       r.source === "manual" && canEdit
                         ? sbH(
                             "span",
@@ -7944,6 +7960,23 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                             )
                           )
                         : null
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cCat" },
+                      sbH(BoardCatSelect, {
+                        value: r.category || "",
+                        subValue: v.subCategory || "",
+                        lang,
+                        disabled: !canEdit,
+                        noneLabel: L("noCat"),
+                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory })
+                      })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cMark" },
+                      sbH("input", { type: "text", className: "lliIn", value: v.typeMark, readOnly: !canEdit, onChange: (e) => patch(r.code, { typeMark: e.target.value }) })
                     ),
                     sbH(
                       "td",
@@ -8167,7 +8200,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                       className: `lliDropTail ${drag.over === null ? "lliDropHere" : ""}`.trim(),
                       onDragOver: (e) => { e.preventDefault(); if (drag.over !== null) setDrag({ ...drag, over: null }); },
                       onDrop: (e) => { e.preventDefault(); dropRow(g, drag.code, null); setDrag(null); }
-                    }, sbH("td", { colSpan: canEdit ? 17 : 15 }))
+                    }, sbH("td", { colSpan: canEdit ? 18 : 15 }))
                   : null
               )
             )
@@ -8336,6 +8369,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const saved = (data[r.code] || {}).hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
+  const inUseCats = BOARD_CATEGORIES.filter((c) => all.some((r) => r.category === c.key));
   const isDone = (r) => SD_DONE.indexOf(sdRowOf(data, r.code).status) >= 0;
   const matchesStatus = (r) => {
     if (statusFilter === "all") return true;
@@ -8408,7 +8442,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         tone.push(
           done ? "ok"
             : v.status === "submitted" ? "wait"
-            : v.dueAt && v.dueAt < today ? "late"
+            : (r.longLead || (v.dueAt && v.dueAt < today)) ? "late"
             : ""
         );
         body.push([
@@ -8490,7 +8524,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       "div",
       { className: "lliFilter" },
       catChip("all", L("allCats")),
-      BOARD_CATEGORIES.map((c) => catChip(c.key, sbText(c, lang)))
+      // Only the disciplines that are actually on this board, so the row of
+      // chips is a summary and not a wall of buttons. It follows the rows as
+      // they are edited — nothing waits for a refresh (29.8.26).
+      inUseCats.map((c) => catChip(c.key, sbText(c, lang)))
     ),
     // The tally on its own line, centred (29.8.26).
     sbH(
@@ -8558,9 +8595,17 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                   const hidden = isHidden(r);
                   const st = sdStatus(v.status);
                   const done = SD_DONE.indexOf(v.status) >= 0;
+                  // The same fan as the ordering board: red for a drawing that
+                  // is long lead or past its date and still not in, orange
+                  // while it is with somebody, green once it is signed
+                  // (29.8.26).
+                  const tone = done ? "lliDone"
+                    : v.status === "submitted" ? "lliWait"
+                    : (r.longLead || (v.dueAt && v.dueAt < sbToday())) ? "lliLate"
+                    : "";
                   return sbH(
                     "tr",
-                    { key: r.code, className: hidden ? "lliOff" : "" },
+                    { key: r.code, className: `${hidden ? "lliOff" : ""} ${tone}`.trim() },
                     sbH(
                       "td",
                       { className: "cSec" },
@@ -10573,7 +10618,12 @@ async function sbRenderSpecImages(rec, maxPages) {
         canvas.width = Math.round(viewport.width);
         canvas.height = Math.round(viewport.height);
         await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-        out.push({ data: canvas.toDataURL("image/jpeg", 0.72).split(",")[1], file: att.name, page: i });
+        // The WHOLE data URL, not just the base64 after the comma. The function
+        // matches images against /^data:(image\/…);base64,(.*)$/ and silently
+        // drops anything else — so every scanned page we sent was thrown away
+        // before it reached the model, and a scanned order or spec could never
+        // be read. That is the bug behind "it cannot read my order" (29.8.26).
+        out.push({ data: canvas.toDataURL("image/jpeg", 0.72), file: att.name, page: i });
       }
     } catch (e) {
       console.warn("[awdash] could not rasterise a spec for the AI", att.name, e);
@@ -12237,9 +12287,15 @@ function SubmittalFolder({
                 // Yellow = approved since this browser last opened the folder.
                 const isNew = !!signedAt && (!seenAt || signedAt > seenAt);
                 const older = olderCountOf(s);
+                // The same fan as the other two boards: orange while it is
+                // with the supervision, green once it is signed (29.8.26).
+                const tone = st === "approved" || st === "approvedNoted" ? "sbOk"
+                  : s.sent && st === "open" ? "sbWait"
+                  : st === "rejected" ? "sbLate"
+                  : "";
                 return sbH(
                   "tr",
-                  { key: s.id, className: `${isNew ? "sbRowNew" : ""} ${isOlder(s) ? "sbRowOlder" : ""}`.trim() },
+                  { key: s.id, className: `${isNew ? "sbRowNew" : ""} ${isOlder(s) ? "sbRowOlder" : ""} ${tone}`.trim() },
                   sbH(
                     "td",
                     { className: "sbNoCell" },
