@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 28";
+var APP_BUILD = "29.8.2026 \u00b7 build 29";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1217,10 +1217,12 @@ var pdfViewer = `
            line says where it will land if it is dropped now (29.8.26). */
         .lliImgBox:focus-visible { outline: 2px solid var(--accent, #0F3460); outline-offset: 1px; }
         .lliDragHandle {
-          display: inline-block; margin-inline-start: 6px; color: var(--mist);
-          font-size: 13px; line-height: 1; cursor: grab; user-select: none;
+          display: inline-flex; align-items: center; margin-inline-start: 6px;
+          color: var(--mist); line-height: 1; cursor: grab; user-select: none;
+          vertical-align: middle;
         }
-        .lliTable tr[draggable="true"]:active .lliDragHandle { cursor: grabbing; }
+        .lliDragHandle:hover { color: var(--accent); }
+        .lliDragHandle:active { cursor: grabbing; }
         .lliTable tr.lliDragging td { opacity: .4; }
         .lliTable tr.lliDropHere td { box-shadow: inset 0 2px 0 0 var(--accent, #0F3460); }
         .lliTable tr.lliDropTail td { height: 8px; padding: 0; border: 0; }
@@ -1275,6 +1277,10 @@ var pdfViewer = `
           text-align: start; padding: 7px 6px; border-bottom: 1px solid #b6c8e2;
         }
         .lliTable tr.lliOff td { opacity: .45; }
+        /* Long lead, and nobody has ordered it yet. A wash of red, not a
+           warning sign: it has to be readable for as long as the list is
+           (29.8.26). */
+        .lliTable tr.lliLate td, .lliTable tr.lliLate:nth-child(even) td { background: #fbe3e3; }
         /* Sixteen columns do not fit the design width, and squeezing them makes
            a date field two characters wide. So the board keeps its column sizes
            and the wrapper scrolls sideways, which is what a procurement board
@@ -1292,7 +1298,7 @@ var pdfViewer = `
         .lliTable .cMark { width: 80px; }
         .lliTable .cDesc { width: 210px; text-align: start; }
         .lliTable .cSup { width: 115px; }
-        .lliTable .cImg { width: 104px; }
+        .lliTable .cImg { width: 196px; }
         .lliTable .cQty { width: 75px; }
         .lliTable .cUnit { width: 55px; color: var(--steel); font-weight: 700; }
         .lliTable .cOrd { width: 90px; }
@@ -1338,9 +1344,9 @@ var pdfViewer = `
         .lliDash { color: var(--mist); }
         .lliImgBox {
           position: relative; display: flex; align-items: center; justify-content: center;
-          /* Twice the size it was: a thumbnail of a floor tile at 46px told her
-             nothing about the tile (29.8.26). */
-          width: 92px; height: 80px; margin: 0 auto; border: 1px dashed var(--line);
+          /* Four times the size it started at: a thumbnail of a floor tile told
+             her nothing about the tile (29.8.26). */
+          width: 184px; height: 160px; margin: 0 auto; border: 1px dashed var(--line);
           border-radius: 8px; cursor: pointer; color: var(--mist); overflow: hidden; background: #fff;
         }
         .lliImgBox.ro { cursor: default; }
@@ -1360,7 +1366,8 @@ var pdfViewer = `
         }
         .printAskChoice.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
         .lliImgBox:hover { border-color: var(--accent); color: var(--accent-ink); }
-        .lliImgBox img { width: 100%; height: 100%; object-fit: cover; }
+        /* The whole picture, shrunk to fit — not the middle of it, cropped. */
+        .lliImgBox img { width: 100%; height: 100%; object-fit: contain; }
         .lliImgBusy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff9; }
         .lliImgClear {
           display: block; margin: 3px auto 0; border: none; background: none; cursor: pointer;
@@ -1451,7 +1458,7 @@ var pdfViewer = `
         .roomsTable .cNm { width: 24%; }
         .roomsTable .cIm { width: 92px; text-align: center; }
         /* Twice the size, the same as on the LLI board (29.8.26). */
-        .roomsImg { width: 136px; height: 100px; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); display: block; }
+        .roomsImg { width: 136px; height: 100px; object-fit: contain; background: #fff; border-radius: 8px; border: 1px solid var(--line); display: block; }
         .roomsColBar {
           display: flex; align-items: center; justify-content: center; gap: 14px;
           flex-wrap: wrap; margin: 6px 0 10px; font-size: 12px; color: var(--steel);
@@ -6989,7 +6996,7 @@ function boardSaveBlob(buf, fileName) {
 }
 
 async function boardXlsxStyled(ExcelJS, opts) {
-  const { title, subtitle, sheetName, head, body, widths, accent, isRTL } = opts;
+  const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows } = opts;
   const P = boardExportPalette(accent);
   const wb = new ExcelJS.Workbook();
   wb.creator = "A. Weiss";
@@ -7039,8 +7046,10 @@ async function boardXlsxStyled(ExcelJS, opts) {
       c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
       c.border = { top: thin, left: thin, bottom: thin, right: thin };
       // Every other row tinted: on a wide sheet it is what stops the eye from
-      // sliding into the line above.
-      if (ri % 2 === 1) c.fill = fill(P.zebra);
+      // sliding into the line above. A row that needs attention — a long lead
+      // item nobody has ordered — takes a soft red instead (29.8.26).
+      if (alertRows && alertRows[ri]) c.fill = fill("#fbe3e3");
+      else if (ri % 2 === 1) c.fill = fill(P.zebra);
     });
   });
 
@@ -7073,7 +7082,8 @@ function boardXlsxPlain(opts) {
 // would either cut them off or shrink them past reading. Everything else is the
 // house template: the coloured frame, the logo, the centred title, the footer.
 function boardExportPdf(opts) {
-  const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs } = opts;
+  const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
+          alertRows, noStamp, issuedLabel } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -7090,9 +7100,14 @@ function boardExportPdf(opts) {
       }
       return `<td>${esc(v)}</td>`;
     }).join("");
-    return `<tr>${tds}</tr>`;
+    // A row that needs the eye — a long lead item nobody has ordered yet —
+    // carries its colour onto the paper too (29.8.26).
+    return `<tr${alertRows && alertRows[ri] ? ' class="alert"' : ""}>${tds}</tr>`;
   }).join("");
   const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "";
+  // The client's own mark, on the far side of the header and the same height as
+  // the contractor's.
+  const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
   const footImg = b.footerImg ? `<div class="footImg"><img src="${b.footerImg}" alt="footer"></div>` : "";
 
   const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
@@ -7100,15 +7115,19 @@ function boardExportPdf(opts) {
 @page { size: A4 landscape; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+/* Room for the frame on every side, on every page. */
 body { width: 297mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
-  direction: ${dir}; padding: 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.frame { border: 1.5px solid ${P.accent}; border-radius: 14px; padding: 10px 12px; }
+  direction: ${dir}; padding: 9mm 9mm 10mm; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+@page { margin: 0; }
+
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 10px; }
 .hdr img { max-height: 38px; max-width: 130px; object-fit: contain; justify-self: start; }
 .ttlWrap { grid-column: 2; text-align: center; }
 .ttlWrap .ttl { font-size: 17px; font-weight: 800; color: ${P.accent}; letter-spacing: .4px; }
 .ttlWrap .sub { font-size: 10px; font-weight: 600; color: ${P.accent}; margin-top: 2px; }
+.ttlWrap .issued { font-size: 9.5px; font-weight: 700; color: ${P.ink}; margin-top: 3px; }
+.hdr img.clientLogo { justify-self: end; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 8px; padding: 5px 3px;
   border: 1px solid ${P.line}; text-align: center; vertical-align: middle; word-break: break-word; }
@@ -7117,6 +7136,9 @@ th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 8px; pad
 td { font-size: 7.5px; padding: 4px 3px; border: 1px solid ${P.line}; text-align: center;
   vertical-align: middle; word-break: break-word; white-space: pre-wrap; }
 tbody tr:nth-child(even) td { background: ${P.zebra}; }
+/* Long lead, not yet ordered. A wash rather than a shout — it has to survive
+   being read for ten minutes (29.8.26). */
+tbody tr.alert td, tbody tr.alert:nth-child(even) td { background: #fbe3e3; }
 td.img { padding: 2px; }
 td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: block; margin: 0 auto; }
 tr { page-break-inside: avoid; }
@@ -7124,10 +7146,15 @@ thead { display: table-header-group; }
 .footImg { margin-top: 10px; text-align: center; }
 .footImg img { max-width: 100%; max-height: 70px; object-fit: contain; }
 ${printedStampCss(4)}
-</style></head><body><div class="frame">
-<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div></div><span></span></div>
+/* The frame is drawn by a fixed element, so it is redrawn on EVERY printed
+   page instead of only around the first one — a table that runs to four pages
+   used to have three pages with no border at all (29.8.26). */
+.pageFrame { position: fixed; inset: 6mm; border: 1.5px solid ${P.accent}; border-radius: 12px; pointer-events: none; }
+.sheet { padding: 4mm 5mm 6mm; }
+</style></head><body><div class="pageFrame"></div><div class="sheet">
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
-${footImg}</div>${printedStampHtml(isRTL ? "he" : "en")}</body></html>`;
+${footImg}</div>${noStamp ? "" : printedStampHtml(isRTL ? "he" : "en")}</body></html>`;
 
   // Opened inside the click that asked for it, like every other print here, or
   // the browser treats it as a pop-up and swallows it.
@@ -7164,6 +7191,17 @@ function autoGrow(el) {
   if (!el) return;
   el.style.height = "auto";
   el.style.height = `${Math.max(el.scrollHeight, 40)}px`;
+}
+// Nine dots: the mark every list uses for "take hold of this one".
+function GripIcon({ size }) {
+  const s = size || 13;
+  const dots = [];
+  [0, 1, 2].forEach((row) => {
+    [0, 1, 2].forEach((col) => {
+      dots.push(sbH("circle", { key: `${row}-${col}`, cx: 2 + col * 4, cy: 2 + row * 4, r: 1.15 }));
+    });
+  });
+  return sbH("svg", { width: s, height: s, viewBox: "0 0 12 12", fill: "currentColor", "aria-hidden": "true" }, dots);
 }
 function lliBlankRow() {
   return {
@@ -7203,7 +7241,7 @@ var LLI_L = {
     he: "לוחצים על התא ואז Ctrl+V להדבקת תמונה. לחיצה כפולה לבחירת קובץ."
   },
   pickFile: { en: "Choose a file", he: "בחירת קובץ" },
-  forClient: { en: "client copy", he: "עותק ללקוח" },
+  issuedOn: { en: "Report issued on", he: "תאריך הנפקת דוח" },
   byRoomHint: {
     en: "Ticked rows build the room search: this row's category, mark, description and photo appear under every room the drawings give that mark to.",
     he: "שורה מסומנת נבנית לתוך החיפוש לפי חדר: הקטגוריה, האיפיון, התיאור והתמונה שלה יופיעו בכל חדר שהתוכניות נותנות לו את האיפיון הזה."
@@ -7279,6 +7317,31 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [drag, setDrag] = useState6(null);
   // The picture cell she last clicked. Ctrl+V lands there.
   const [pasteAt, setPasteAt] = useState6(null);
+  // The scrolling box the rows live in, and the timer that scrolls it while a
+  // row is being carried to a place that is not on screen yet.
+  const wrapRef = useRef5(null);
+  const autoScrollRef = useRef5(null);
+  const autoScrollStop = () => {
+    if (autoScrollRef.current) {
+      clearInterval(autoScrollRef.current);
+      autoScrollRef.current = null;
+    }
+  };
+  // Within 60px of an edge, the list creeps that way — faster the closer the
+  // cursor gets, the way every list that can be reordered behaves.
+  const autoScrollTick = (clientY) => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const box = el.getBoundingClientRect();
+    const zone = 60;
+    let step = 0;
+    if (clientY - box.top < zone) step = -Math.max(6, (zone - (clientY - box.top)) / 3);
+    else if (box.bottom - clientY < zone) step = Math.max(6, (zone - (box.bottom - clientY)) / 3);
+    autoScrollStop();
+    if (!step) return;
+    autoScrollRef.current = setInterval(() => { el.scrollTop += step; }, 30);
+  };
+  useEffect5(() => autoScrollStop, []);
   const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
   const t2 = (he, en) => (lang === "he" ? he : en);
 
@@ -7507,10 +7570,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // What leaves the board. The rows are the ones on screen — the category chips
   // and "only long lead" have already done their work above — and the columns
   // are the board's own, minus the ones that are buttons rather than facts.
-  // Which columns a client's copy carries. Everything that says WHAT the item is
-  // and WHEN it lands; nothing about who it was bought from or on what order —
-  // that half of the board is hers (29.8.26).
-  const LLI_CLIENT_COLS = [0, 1, 2, 3, 6, 12, 13, 14];
+  // A long lead item that has not been ordered yet is the one thing on this
+  // board that costs money to miss, so it is coloured — on screen, on paper and
+  // in the workbook. No note beside it: the colour is the note (29.8.26).
+  const needsOrder = (r) => !!r.longLead && !lliRowOf(data, r.code).ordered;
   const exportGrid = (audience) => {
     const yn = (v) => (v ? L("yes") : L("no"));
     const head = [
@@ -7525,6 +7588,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     };
     const body = [];
     const imgs = [];
+    const alerts = [];
     groups.forEach((g) => {
       g.rows.forEach((r) => {
         // Only what is ticked for showing is printed. An unticked row is off
@@ -7549,19 +7613,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
           r.longLead ? L("longLead") : ""
         ]);
         imgs.push(v.image || null);
+        alerts.push(needsOrder(r));
       });
     });
-    if (audience === "client") {
-      const keep = LLI_CLIENT_COLS;
-      return {
-        head: keep.map((i) => head[i]),
-        widths: keep.map((i) => widths[i]),
-        body: body.map((row) => keep.map((i) => row[i])),
-        imgs,
-        clientCols: keep
-      };
-    }
-    return { head, body, widths, imgs, clientCols: null };
+    return { head, body, widths, imgs, alerts };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -7572,25 +7627,46 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const res = await boardExportXlsx({
       title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
       fileName: `${sanitizeFileNamePart(projectName || "Project")} - LLI.xlsx`,
-      head: g.head, body: g.body, widths: g.widths,
+      head: g.head, body: g.body, widths: g.widths, alertRows: g.alerts,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
+  // The columns a client's copy carries, by name. Everything that says WHAT the
+  // item is and WHEN it lands; nothing about who it was bought from or on what
+  // order — that half of the board is hers (29.8.26).
+  const clientKeys = ["section", "category", "typeMark", "desc", "image", "eta", "status", "longLead"];
   const onPdf = (printLang, audience) => {
     const g = exportGrid(audience);
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
     // The photo earns its column here and nowhere else: this is the sheet that
     // goes to a supplier, and a picture settles an argument a description cannot.
-    const head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
-    const widths = g.widths.slice(0, 4).concat([14], g.widths.slice(4));
-    const body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
+    let head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
+    let widths = g.widths.slice(0, 4).concat([14], g.widths.slice(4));
+    let body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
+    let imgCol = 4;
+    let imgs = g.imgs;
+    if (audience === "client") {
+      const want = clientKeys.map((k) => L(k));
+      const keep = want.map((name) => head.indexOf(name)).filter((i) => i >= 0);
+      imgCol = keep.indexOf(head.indexOf(L("image")));
+      head = keep.map((i) => head[i]);
+      widths = keep.map((i) => widths[i]);
+      body = body.map((row) => keep.map((i) => row[i]));
+    }
     boardExportPdf({
       title: exportTitle(),
-      subtitle: `${exportSub()}${audience === "client" ? ` · ${L("forClient")}` : ""}`,
+      // The date is a line of its own, and it says what it is: the day the
+      // report was issued.
+      subtitle: L("title"),
+      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
       head, body, widths,
       accent: (printBrand || {}).accent, brand: printBrand,
-      isRTL: printLang !== "en", imgCol: 4, imgs: g.imgs
+      isRTL: printLang !== "en", imgCol, imgs,
+      alertRows: g.alerts,
+      // The date is in the heading of this report, so it is not repeated at the
+      // foot of every page.
+      noStamp: true
     });
   };
   const addManual = () => {
@@ -7645,7 +7721,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       ? sbH("p", { className: "lliNote" }, L("empty"))
       : sbH(
           "div",
-          { className: "lliTableWrap" },
+          { className: "lliTableWrap", ref: wrapRef },
           sbH(
             "table",
             { className: "lliTable" },
@@ -7688,16 +7764,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     "tr",
                     {
                       key: r.code,
-                      className: `${hidden ? "lliOff" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""}`.trim(),
-                      draggable: canEdit,
-                      onDragStart: canEdit
-                        ? (e) => {
-                            e.dataTransfer.effectAllowed = "move";
-                            // Firefox will not start a drag without payload.
-                            try { e.dataTransfer.setData("text/plain", r.code); } catch (_) {}
-                            setDrag({ code: r.code, group: g.key, over: r.code });
-                          }
-                        : void 0,
+                      className: `${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""}`.trim(),
                       onDragOver: canEdit
                         ? (e) => {
                             if (!drag || drag.group !== g.key) return;
@@ -7712,6 +7779,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                             const i = list.findIndex((x) => x.code === r.code);
                             const target = past ? (list[i + 1] ? list[i + 1].code : null) : r.code;
                             if (drag.over !== target) setDrag({ ...drag, over: target });
+                            // Near the top or the bottom edge of the box, the
+                            // list scrolls itself, so a row can be carried past
+                            // what happens to be on screen (29.8.26).
+                            autoScrollTick(e.clientY);
                           }
                         : void 0,
                       onDrop: canEdit
@@ -7719,22 +7790,38 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                             e.preventDefault();
                             if (drag && drag.group === g.key) dropRow(g, drag.code, drag.over);
                             setDrag(null);
+                            autoScrollStop();
                           }
                         : void 0,
-                      onDragEnd: canEdit ? () => setDrag(null) : void 0
+                      onDragEnd: canEdit ? () => { setDrag(null); autoScrollStop(); } : void 0
                     },
                     sbH(
                       "td",
                       { className: "cSec" },
                       sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
-                      // How many BOQ lines this one product covers. A door
-                      // priced on four lines is one record, and this says so.
-                      r.product && r.product.items.length > 1
-                        ? sbH("span", { className: "lliSubName" }, `${r.product.items.length} ${L("lines")}`)
-                        : r.sub ? sbH("span", { className: "lliSubName" }, boqText(r.sub, lang)) : null,
                       r.longLead ? sbH("span", { className: "lliLongTag" }, L("longLead")) : null,
                       r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
-                      canEdit ? sbH("span", { className: "lliDragHandle", title: L("dragHint") }, "\u2261") : null
+                      canEdit
+                        ? sbH(
+                            "span",
+                            {
+                              className: "lliDragHandle",
+                              title: L("dragHint"),
+                              // ONLY the grip drags. When the whole row was
+                              // draggable, selecting a few words inside a cell
+                              // picked the row up instead (29.8.26).
+                              draggable: true,
+                              onDragStart: (e) => {
+                                e.stopPropagation();
+                                e.dataTransfer.effectAllowed = "move";
+                                try { e.dataTransfer.setData("text/plain", r.code); } catch (_) {}
+                                setDrag({ code: r.code, group: g.key, over: r.code });
+                              },
+                              onDragEnd: () => { setDrag(null); autoScrollStop(); }
+                            },
+                            sbH(GripIcon, { size: 13 })
+                          )
+                        : null
                     ),
                     sbH(
                       "td",
@@ -15459,6 +15546,9 @@ function ProjectDashboardApp() {
         brandName: activeContractor.name || DEFAULT_BRAND_NAME,
         printBrand: {
           logoUrl: DEFAULT_BRAND_LOGO_URL || activeContractor.logoUrl,
+          // The client's own logo, as it was uploaded in the project settings.
+          // A printed sheet that goes to the client carries both marks (29.8.26).
+          clientLogoUrl: (activeProject && activeProject.clientLogoUrl) || null,
           accent: viewData.accent && viewData.accent.accent || "#1A559E",
           footerImg: typeof DEFAULT_PDF_FOOTER !== "undefined" ? DEFAULT_PDF_FOOTER : "",
           footerText: ""
