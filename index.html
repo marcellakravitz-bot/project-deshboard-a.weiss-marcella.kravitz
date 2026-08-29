@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 25";
+var APP_BUILD = "29.8.2026 \u00b7 build 27";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1340,6 +1340,15 @@ var pdfViewer = `
           border-radius: 7px; cursor: pointer; color: var(--mist); overflow: hidden; background: #fff;
         }
         .lliImgBox.ro { cursor: default; }
+        /* The selected cell, so it is never a guess where a paste will land. */
+        .lliImgBox.sel { border-style: solid; border-color: var(--accent, #0F3460); box-shadow: 0 0 0 2px var(--accent-soft, #e6ecf5); }
+        .lliImgPick {
+          position: absolute; inset-inline-end: 1px; bottom: 1px;
+          width: 14px; height: 14px; display: flex; align-items: center; justify-content: center;
+          border: 1px solid var(--line); border-radius: 4px; background: #fff;
+          color: var(--mist); padding: 0; cursor: pointer;
+        }
+        .lliImgPick:hover { color: var(--accent-ink); border-color: var(--accent); }
         .lliImgBox:hover { border-color: var(--accent); color: var(--accent-ink); }
         .lliImgBox img { width: 100%; height: 100%; object-fit: cover; }
         .lliImgBusy { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #fff9; }
@@ -7157,9 +7166,10 @@ var LLI_L = {
   byRoomCol: { en: "BY ROOM", he: "BY ROOM" },
   dragHint: { en: "Drag the row to where it belongs", he: "גוררים את השורה למקום שלה" },
   pasteHint: {
-    en: "Click the box and paste a picture (Ctrl+V), or click again to pick a file",
-    he: "לוחצים על התיבה ומדביקים תמונה (Ctrl+V), או לוחצים שוב לבחירת קובץ"
+    en: "Click the cell, then Ctrl+V to paste a picture. Double-click to choose a file.",
+    he: "לוחצים על התא ואז Ctrl+V להדבקת תמונה. לחיצה כפולה לבחירת קובץ."
   },
+  pickFile: { en: "Choose a file", he: "בחירת קובץ" },
   byRoomHint: {
     en: "Ticked rows build the room search: this row's category, mark, description and photo appear under every room the drawings give that mark to.",
     he: "שורה מסומנת נבנית לתוך החיפוש לפי חדר: הקטגוריה, האיפיון, התיאור והתמונה שלה יופיעו בכל חדר שהתוכניות נותנות לו את האיפיון הזה."
@@ -7231,6 +7241,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [printAsk, setPrintAsk] = useState6(null);
   // Which row is being dragged, and the row the line is currently drawn above.
   const [drag, setDrag] = useState6(null);
+  // The picture cell she last clicked. Ctrl+V lands there.
+  const [pasteAt, setPasteAt] = useState6(null);
   const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
   const t2 = (he, en) => (lang === "he" ? he : en);
 
@@ -7334,6 +7346,18 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     onChangeRows(next);
   };
 
+  // Ctrl+V anywhere on the page goes to the picture cell she selected. Without
+  // this, the paste only worked while the cell itself held the keyboard focus,
+  // and one stray click was enough to lose it (29.8.26).
+  useEffect5(() => {
+    if (!canEdit || !pasteAt) return;
+    // No check on where the focus is: a picture on the clipboard is of no use
+    // to a text field, and onImagePaste ignores a clipboard that carries no
+    // picture — so text pasted into a field is never touched.
+    const onWindowPaste = (e) => onImagePaste(pasteAt, e);
+    window.addEventListener("paste", onWindowPaste);
+    return () => window.removeEventListener("paste", onWindowPaste);
+  }, [canEdit, pasteAt, data]);
   // A picture from the clipboard. Chrome, Edge and Safari all put a screenshot
   // or a copied image on the clipboard as a file, so the same path that handles
   // an uploaded file handles this one — it is only the way in that differs.
@@ -7421,7 +7445,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       const { data: res, error } = await supabase.functions.invoke("submittal-ai", {
         body: { mode: "po", text: poText.slice(0, 2e4), images: shots }
       });
-      if (error) throw error;
+      if (error) throw new Error(await fnFail(error, res, isRTL));
       const got = (res && res.po) || null;
       if (!got) throw new Error((res && res.error) || "no_po");
       const next = {};
@@ -7710,20 +7734,47 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     sbH(
                       "td",
                       { className: "cImg" },
+                      // A cell, the way a spreadsheet has cells: one click
+                      // selects it and Ctrl+V drops the picture in. It used to
+                      // be a <label> around a hidden file input, so a click
+                      // opened the operating system's file dialog — and a paste
+                      // into that dialog does nothing at all, which is exactly
+                      // what she ran into. Choosing a file now has its own
+                      // corner button, and a double-click does it too (29.8.26).
                       sbH(
-                        "label",
+                        "div",
                         {
-                          className: `lliImgBox ${canEdit ? "" : "ro"}`,
-                          // Click the box and paste, the way a picture goes into
-                          // a spreadsheet cell. The file picker still works; this
-                          // just saves the trip through the desktop for a picture
-                          // that is already on the clipboard (29.8.26).
+                          className: `lliImgBox ${canEdit ? "" : "ro"} ${pasteAt === r.code ? "sel" : ""}`.trim(),
                           tabIndex: canEdit ? 0 : void 0,
                           title: canEdit ? L("pasteHint") : void 0,
+                          onClick: canEdit ? () => setPasteAt(r.code) : void 0,
+                          onFocus: canEdit ? () => setPasteAt(r.code) : void 0,
+                          onDoubleClick: canEdit
+                            ? (e) => {
+                                const inp = e.currentTarget.querySelector("input[type=file]");
+                                if (inp) inp.click();
+                              }
+                            : void 0,
                           onPaste: canEdit ? (e) => onImagePaste(r.code, e) : void 0
                         },
                         v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
                         busyRow === r.code ? sbH("span", { className: "lliImgBusy" }, "…") : null,
+                        canEdit
+                          ? sbH(
+                              "button",
+                              {
+                                type: "button",
+                                className: "lliImgPick",
+                                title: L("pickFile"),
+                                onClick: (e) => {
+                                  e.stopPropagation();
+                                  const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
+                                  if (inp) inp.click();
+                                }
+                              },
+                              sbH(Upload4, { size: 10, strokeWidth: 2.4 })
+                            )
+                          : null,
                         canEdit ? sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onImage(r.code, e) }) : null
                       ),
                       v.image && canEdit
@@ -9618,9 +9669,48 @@ async function fnErrorText(error, data) {
 // turns the sentence into the instruction; the original is still shown
 // underneath, because the day one of these is something new, the raw words are
 // the only thing that will help.
+// One line for the screen: what went wrong, and what to do about it. Every
+// call to the function goes through this — "Edge Function returned a non-2xx
+// status code" is what supabase-js says on its own, and it tells her nothing
+// (29.8.26).
+async function fnFail(error, data, isRTL) {
+  const raw = await fnErrorText(error, data);
+  const advice = fnErrorAdvice(raw, isRTL);
+  const generic = /non-2xx status code/i.test(raw) && !advice;
+  if (advice) return `${advice}\n${raw}`;
+  if (generic) {
+    return `${raw} — ${isRTL
+      ? "הפונקציה submittal-ai החזירה שגיאה בלי הסבר. כדאי לבדוק ב‑Supabase → Edge Functions → submittal-ai → Logs, ולוודא שהגרסה האחרונה עלתה ב‑Deploy."
+      : "submittal-ai answered with an error and no reason. Check Supabase → Edge Functions → submittal-ai → Logs, and that the latest version was deployed."}`;
+  }
+  return raw || String((error && error.message) || error || "");
+}
 function fnErrorAdvice(raw, isRTL) {
   const m = String(raw || "").toLowerCase();
   const t = (he, en) => (isRTL ? he : en);
+  // The function's own short codes. They come back as a 400 and, left alone,
+  // reach the screen as "Edge Function returned a non-2xx status code", which
+  // says nothing at all (29.8.26).
+  if (/\bno_text\b/.test(m)) {
+    return t("לא נמצא טקסט בקובץ, וגם לא ניתן היה להפוך את העמודים לתמונות. אם זו סריקה — כדאי לוודא שזה PDF ולא קובץ נעול, ולנסות להעלות שוב.",
+             "The file had no text, and its pages could not be turned into pictures either. If it is a scan, check it is a PDF and not a locked file, and upload it again.");
+  }
+  if (/\bno_spec_text\b/.test(m)) {
+    return t("לא נשלח שום מפרט לקריאה — צריך לצרף קובץ לסבמיטל לפני המילוי האוטומטי.",
+             "No specification was sent to read — attach a file to the submittal before filling it automatically.");
+  }
+  if (/\bno_lines\b/.test(m)) {
+    return t("לא נשלחו סעיפים לסיווג. כנראה לא נקראו שורות מחוירות מכתב הכמויות.",
+             "No priced lines were sent for classification — the workbook may not have parsed.");
+  }
+  if (/\bunauthorized\b/.test(m)) {
+    return t("הבקשה נדחתה — צריך להתחבר מחדש לאתר ולנסות שוב.",
+             "The request was refused — sign in again and retry.");
+  }
+  if (/\bbad_task\b|\bbad_answer\b/.test(m)) {
+    return t("הפונקציה קיבלה בקשה שהיא לא מכירה. סימן שהגרסה שבסופרבייס ישנה מהאתר — צריך להעלות את submittal-ai מחדש ולעשות Deploy.",
+             "The function did not recognise the request. The deployed version is older than the site — paste submittal-ai again and Deploy.");
+  }
   if (/credit balance|insufficient (credit|funds)|billing/.test(m)) {
     return t("נגמר הקרדיט בחשבון ה‑AI. יש להטעין ב‑platform.claude.com → Settings → Billing → Buy credits.",
              "The AI account is out of credit. Top it up at platform.claude.com → Settings → Billing → Buy credits.");
@@ -10073,7 +10163,7 @@ async function sbFillFromSpec(rec, file, category, lang) {
         fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
       }
     });
-    if (res.error) throw res.error;
+    if (res.error) throw new Error(await fnFail(res.error, res.data, lang === "he"));
     data = res.data || null;
   } catch (e) {
     console.warn("[awdash] load specifications: the AI service did not answer", e);
@@ -10400,7 +10490,7 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
           fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
         }
       });
-      if (error) throw error;
+      if (error) throw new Error(await fnFail(error, data, isRTL));
       const out = data || {};
       // One submittal covers one product. If the material describes several,
       // the list comes back and nothing is filled until it is confirmed.
@@ -13487,7 +13577,7 @@ function PlansUploadBlock({ isRTL, projectId, plans, onPlansChange, rooms, onRoo
   // reading that never happened.
   const askAi = async (payload, expect) => {
     const { data, error } = await supabase.functions.invoke("submittal-ai", { body: { mode: "rooms", ...payload } });
-    if (error) throw error;
+    if (error) throw new Error(await fnFail(error, data, isRTL));
     if (!data || data.error) throw new Error(data && data.error || "no_answer");
     if (expect && !data[expect]) throw new Error("no_" + expect);
     return data;
