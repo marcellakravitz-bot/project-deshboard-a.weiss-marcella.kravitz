@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 33";
+var APP_BUILD = "29.8.2026 \u00b7 build 36";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1119,6 +1119,13 @@ var pdfViewer = `
            it was asked to be, and the bulk option sits quietly under it. */
         .sbCreateWrap { display: flex; flex-direction: column; align-items: center; gap: 9px; }
         .sbBulkBtn { cursor: pointer; font-family: inherit; }
+        .sbBulkBtn.busy, .sbAiBtn.busy { cursor: progress; opacity: .85; }
+        .sbSpin {
+          width: 13px; height: 13px; border-radius: 999px; display: inline-block;
+          border: 2px solid var(--line); border-top-color: var(--accent, #0F3460);
+          animation: sbSpin .7s linear infinite; flex: none;
+        }
+        @keyframes sbSpin { to { transform: rotate(360deg); } }
         .sbTableWrap { overflow-x: auto; margin-top: 8px; }
         .sbTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
         .sbTable th {
@@ -1554,7 +1561,24 @@ var pdfViewer = `
            a group made every row jump sideways. */
         .sbChkTable { table-layout: fixed; }
         .sbChkTable td { text-align: center; }
-        .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 150px; }
+        .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 130px; }
+        .sbChkTable th.cChkNo { width: 110px; }
+        .sbChkTable th.cChkSup { width: 120px; }
+        .sbChkTable th.cChkDate { width: 88px; }
+        .sbChkTable td.sbChkNo { font-weight: 800; dir: ltr; }
+        /* The description gets the room that is left, and reads whole. */
+        .sbChkTable td.sbChkDesc { white-space: normal; overflow: visible; text-overflow: clip; }
+        .sbChkWarn {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 16px; height: 16px; margin-inline-start: 5px; border-radius: 999px;
+          background: #fbe3e3; color: #b3261e; font-size: 11px; font-weight: 900;
+          vertical-align: middle; cursor: help;
+        }
+        .sbChkDocs {
+          display: inline-flex; align-items: center; gap: 3px; margin-inline-start: 6px;
+          padding: 1px 6px; border-radius: 999px; background: var(--accent-soft, #e6ecf5);
+          color: var(--accent-ink, #0F3460); font-size: 10.5px; font-weight: 800; vertical-align: middle;
+        }
         .sbChkTable th.cPills, .sbChkTable td.sbChkPills { width: 210px; }
         .sbChkTable th.cAct, .sbChkTable td.sbChkAct { width: 118px; }
         .sbChkTable .sbChkCode { font-weight: 800; }
@@ -1759,7 +1783,10 @@ var pdfViewer = `
         .boqCountPart { unicode-bidi: isolate; }
         .boqCountPart + .boqCountPart::before { content: " · "; color: var(--mist); unicode-bidi: isolate; }
         .boqEdited { color: var(--accent-ink); }
-        .boqStage { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--steel); }
+        .boqStage {
+          margin: 6px 0 0; font-size: 12px; font-weight: 700; color: var(--steel);
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
         .boqWarn { margin: 6px 0 0; font-size: 12px; font-weight: 700; color: #8a6a12; line-height: 1.5; }
         .boqClassTable { width: 100%; border-collapse: collapse; font-size: 12px; }
         .boqClassTable th {
@@ -1800,6 +1827,11 @@ var pdfViewer = `
         /* One colour for all three routes: a tick is a tick. */
         .boqTick.on { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
         .boqTick.on.longLead { background: #e08a12; border-color: #e08a12; }
+        /* Routed here, then taken off that board from the list itself: the tick
+           stays, in grey, so an empty box still means "never routed" (29.8.26). */
+        .boqTick.on.off, .boqTick.on.off.longLead {
+          background: #c7ccd4; border-color: #c7ccd4; color: #fff;
+        }
         .boqActions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
         .boqBlock {
           margin-top: 16px; padding: 12px 14px; border: 1px solid var(--line-soft);
@@ -7393,6 +7425,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [pasteAt, setPasteAt] = useState6(null);
   // Searching the board by the mark she gave a row.
   const [markQuery, setMarkQuery] = useState6("");
+  // The row whose cell last held the cursor. A new row is added under it.
+  const focusRowRef = useRef5(null);
   // The scrolling box the rows live in, and the timer that scrolls it while a
   // row is being carried to a place that is not on screen yet.
   const wrapRef = useRef5(null);
@@ -7602,8 +7636,15 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     }
   };
   const openFile = async (att) => {
+    // The tab is opened INSIDE the click, before anything is awaited. Reading
+    // the file's bytes takes a moment, and a window opened after that moment is
+    // no longer part of a user gesture — the browser blocks it, nothing opens,
+    // and the page just jumps. Open first, point it at the file after (29.8.26).
+    const w = window.open("", "_blank", "noopener");
     const url = await sbFileUrl(att);
-    if (url) window.open(url, "_blank", "noopener");
+    if (!url) { if (w) w.close(); return; }
+    if (w) w.location.href = url;
+    else window.open(url, "_blank", "noopener");
   };
   // Read the order. Only what is plainly in the document is written into the
   // row — a field the model did not find stays exactly as it was, because an
@@ -7753,9 +7794,32 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       noStamp: true
     });
   };
+  // A new row lands directly under the row she was standing in — the one whose
+  // cell last had the cursor. Adding at the bottom meant dragging the row up
+  // through the whole report every single time (29.8.26).
   const addManual = () => {
     const n = Object.keys(data).filter((k) => k.indexOf("m-") === 0).length + 1;
-    patch(`m-${Date.now()}`, { ...lliBlankRow(), desc: "", category: cat === "all" ? null : cat, manualIndex: n });
+    const code = `m-${Date.now()}`;
+    const here = focusRowRef.current;
+    const g = here ? groups.find((x) => x.rows.some((r) => r.code === here)) : null;
+    const blank = {
+      ...lliBlankRow(),
+      desc: "",
+      // It joins the chapter she is standing in, so it does not jump away the
+      // moment it is created.
+      category: (g && (data[here] || {}).category) || (here && (data[here] || {}).category)
+        || (g && (g.rows.find((r) => r.code === here) || {}).category)
+        || (cat === "all" ? null : cat),
+      manualIndex: n
+    };
+    if (!g || !onChangeRows) { patch(code, blank); return; }
+    // Renumber the group with the new row sitting just after the current one.
+    const order = g.rows.map((r) => r.code);
+    const at = order.indexOf(here);
+    order.splice(at + 1, 0, code);
+    const next = { ...data, [code]: blank };
+    order.forEach((c, k) => { next[c] = { ...lliRowOf(next, c), order: k }; });
+    onChangeRows(next);
   };
 
   const catChip = (key, label) =>
@@ -7880,6 +7944,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     {
                       key: r.code,
                       className: `${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""}`.trim(),
+                      // Wherever she puts the cursor in this row, this is now
+                      // the row a new one is added under.
+                      onFocusCapture: () => { focusRowRef.current = r.code; },
+                      onMouseDown: () => { focusRowRef.current = r.code; },
                       onDragOver: canEdit
                         ? (e) => {
                             if (!drag || drag.group !== g.key) return;
@@ -8058,7 +8126,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                           onPaste: canEdit ? (e) => onImagePaste(r.code, e) : void 0
                         },
                         v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
-                        busyRow === r.code ? sbH("span", { className: "lliImgBusy" }, "…") : null,
+                        busyRow === r.code ? sbH("span", { className: "lliImgBusy" }, sbH("span", { className: "sbSpin" })) : null,
                         canEdit
                           ? sbH(
                               "button",
@@ -8123,7 +8191,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                             ? sbH(
                                 "label",
                                 { className: "lliUpload" },
-                                busyRow === `po-${r.code}` ? "…" : L("upload"),
+                                busyRow === `po-${r.code}`
+                                  ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
+                                  : L("upload"),
                                 sbH("input", { type: "file", accept: ".pdf,application/pdf,image/*", style: { display: "none" }, onChange: (e) => onPoFile(r.code, e) })
                               )
                             : sbH("span", { className: "lliDash" }, "—")
@@ -8424,8 +8494,15 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     }
   };
   const openFile = async (att) => {
+    // The tab is opened INSIDE the click, before anything is awaited. Reading
+    // the file's bytes takes a moment, and a window opened after that moment is
+    // no longer part of a user gesture — the browser blocks it, nothing opens,
+    // and the page just jumps. Open first, point it at the file after (29.8.26).
+    const w = window.open("", "_blank", "noopener");
     const url = await sbFileUrl(att);
-    if (url) window.open(url, "_blank", "noopener");
+    if (!url) { if (w) w.close(); return; }
+    if (w) w.location.href = url;
+    else window.open(url, "_blank", "noopener");
   };
   // The board as it stands on screen, in the two shapes it has to leave in.
   const exportGrid = () => {
@@ -8702,7 +8779,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                               { className: "sdUpBtn", title: L("upload") },
                               // A file going up: the icon says it in less room
                               // than the word did (29.8.26).
-                              busyRow === r.code ? "…" : sbH(FileUp2, { size: 15, strokeWidth: 2 }),
+                              busyRow === r.code
+                                ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
+                                : sbH(FileUp2, { size: 15, strokeWidth: 2 }),
                               sbH("input", { type: "file", accept: "application/pdf,image/*", style: { display: "none" }, onChange: (e) => onFile(r.code, e) })
                             )
                           : sbH("span", { className: "lliDash" }, "—")
@@ -9700,6 +9779,7 @@ var SB_L = {
   supplierCol: { en: "Supplier", he: "ספק" },
   dueCol: { en: "Approval due", he: "תאריך נדרש לאישור" },
   notesCol: { en: "My notes", he: "הערות שלי" },
+  closedNoApproval: { en: "Closed — not approved", he: "סגור ללא אישור" },
   notesHint: {
     en: "Private notes on this submittal. They are not printed and nobody else sees them.",
     he: "הערות פרטיות על הסבמיטל הזה. הן לא מודפסות ואף אחד אחר לא רואה אותן."
@@ -9739,6 +9819,7 @@ var SB_L = {
     he: "בוחרים את המפרטים של הדיסציפלינה. כל מפרט נקרא ונכנס לסבמיטל שלו, כבר מלא."
   },
   bulkWorking: { en: "Reading", he: "קורא" },
+  bulkMatching: { en: "Matching to the checklist…", he: "משייך לצ׳ק‑ליסט…" },
   bulkNoHome: { en: "No place was found for these files", he: "לא נמצא יעד לקבצים הבאים" },
   bulkOffList: { en: "Filed, but on no checklist line", he: "נפתחו, אך לא שויכו לשורה בצ׳ק‑ליסט" },
   bulkOffListHint: {
@@ -9768,6 +9849,9 @@ var SB_L = {
   checklistEmpty: { en: "The bill of quantities has nothing in this discipline.", he: "אין בכתב הכמויות פריטים בתחום הזה." },
   chkItem: { en: "BOQ", he: "BOQ" },
   chkDesc: { en: "Description", he: "תיאור" },
+  chkDocs: { en: "documents attached", he: "מסמכים מצורפים" },
+  chkExpired: { en: "The certificate expired on", he: "תוקף המסמך פג בתאריך" },
+  chkMissingDocs: { en: "Missing", he: "חסר" },
   chkSubmittal: { en: "Submittal", he: "סבמיטל" },
   chkMissing: { en: "Not submitted", he: "טרם הוגש" },
   chkAdd: { en: "Submittal", he: "סבמיטל" },
@@ -11266,8 +11350,12 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
           ? null
           : sbH(
               "button",
-              { type: "button", className: "sbAiBtn", onClick: runAi, disabled: busy === "ai" },
-              sbH(Sparkles, { size: 14, strokeWidth: 2 }),
+              { type: "button", className: `sbAiBtn ${busy === "ai" ? "busy" : ""}`.trim(), onClick: runAi, disabled: busy === "ai" },
+              // A turning ring while it thinks. Without it the screen sits
+              // still and looks like nothing happened (29.8.26).
+              busy === "ai"
+                ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
+                : sbH(Sparkles, { size: 14, strokeWidth: 2 }),
               " ",
               busy === "ai" ? (lang === "he" ? "קורא את המפרטים…" : "Reading the specs…") : L("fillWithAi")
             )
@@ -11935,7 +12023,12 @@ function SubmittalFolder({
     if (!files.length || !onBulkCreate) return;
     setBulkBusy(`${L("bulkWorking")} 0/${files.length}`);
     try {
-      await onBulkCreate(files, (done) => setBulkBusy(`${L("bulkWorking")} ${done}/${files.length}`));
+      await onBulkCreate(
+        files,
+        (done) => setBulkBusy(`${L("bulkWorking")} ${done}/${files.length}`),
+        // The long half of the job: the model reading what was just gathered.
+        () => setBulkBusy(L("bulkMatching"))
+      );
     } finally {
       setBulkBusy(null);
     }
@@ -11999,14 +12092,22 @@ function SubmittalFolder({
           // specifications and nothing else.
           sbH(
             "label",
-            { className: "ghostBtn small sbBulkBtn", title: sbText(SB_L.bulkHint, lang) },
-            sbH(Upload4, { size: 14, strokeWidth: 2 }),
+            {
+              className: `ghostBtn small sbBulkBtn ${bulkBusy ? "busy" : ""}`.trim(),
+              title: sbText(SB_L.bulkHint, lang)
+            },
+            // While it is reading, the button says so and turns. Without it the
+            // screen sat still for half a minute and looked broken (29.8.26).
+            bulkBusy
+              ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
+              : sbH(Upload4, { size: 14, strokeWidth: 2 }),
             " ",
             bulkBusy || L("bulkCreate"),
             sbH("input", {
               type: "file",
               accept: "application/pdf,image/*",
               multiple: true,
+              disabled: !!bulkBusy,
               style: { display: "none" },
               onChange: onBulk
             })
@@ -12156,11 +12257,36 @@ function SubmittalFolder({
                     sbH("thead", null, sbH("tr", null,
                       sbH("th", { className: "cCode" }, L("chkItem")),
                       sbH("th", { className: "cDesc" }, L("chkDesc")),
-                      sbH("th", { className: "cPills" }, L("chkSubmittal")),
+                      // The submittal's own facts, in the table that already
+                      // lists what needs approving. One table, not two
+                      // (29.8.26).
+                      sbH("th", { className: "cChkNo" }, L("submittalNo")),
+                      sbH("th", { className: "cChkSup" }, L("supplierCol")),
+                      sbH("th", { className: "cChkDate" }, L("date")),
+                      sbH("th", { className: "cChkDate" }, L("dueCol")),
+                      sbH("th", { className: "cPills" }, L("status")),
+                      sbH("th", { className: "cChkDate" }, L("signDate")),
                       sbH("th", { className: "cAct" }, "")
                     )),
                     sbH("tbody", null, rowsChk.flatMap((r) => {
                       const open = openChk === r.code;
+                      // The submittal that answers this line — the newest one,
+                      // when there are revisions — and what it says.
+                      const onLine = [...r.own, ...r.lines.flatMap((l) => l.hits)];
+                      const lead = onLine.length
+                        ? onLine.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0]
+                        : null;
+                      const leadDue = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
+                      const leadSigned = lead ? sbSignedAt(lead) : null;
+                      const docCount = onLine.reduce((n2, x) => n2 + ((x.attachments || []).length), 0);
+                      const chk = (lead && lead.checks) || null;
+                      const warn = chk
+                        ? [
+                            chk.expired && chk.expires ? `${L("chkExpired")} ${sbFmtDate(chk.expires)}` : "",
+                            (chk.missing || []).length ? `${L("chkMissingDocs")}: ${chk.missing.join(", ")}` : "",
+                            chk.note || ""
+                          ].filter(Boolean).join(" · ")
+                        : "";
                       const head = sbH(
                         "tr",
                         { key: r.code, className: r.count ? "sbChkOn" : "" },
@@ -12185,7 +12311,42 @@ function SubmittalFolder({
                               )
                             : null
                         ),
-                        sbH("td", { className: "sbChkDesc" }, boqText(r.node, lang)),
+                        sbH(
+                          "td",
+                          { className: "sbChkDesc", dir: "auto" },
+                          // What the model read off the specification when there
+                          // is one; the bill of quantities' own wording when
+                          // there is not.
+                          (lead && (lead.itemDescription || lead.typeId)) || boqText(r.node, lang),
+                          docCount
+                            ? sbH(
+                                "span",
+                                { className: "sbChkDocs", title: `${docCount} ${L("chkDocs")}` },
+                                sbH(FileTextIcon, { size: 12, strokeWidth: 2 }),
+                                docCount
+                              )
+                            : null,
+                          // Something is wrong with the papers themselves.
+                          warn
+                            ? sbH("span", { className: "sbChkWarn", title: warn }, "!")
+                            : null
+                        ),
+                        sbH("td", { className: "sbChkNo" }, lead ? sbNumber(lead.category, lead.seq) : "—"),
+                        sbH(
+                          "td",
+                          null,
+                          lead && canEdit
+                            ? sbH("input", {
+                                type: "text",
+                                className: "sbCellIn",
+                                value: lead.supplier || "",
+                                placeholder: "—",
+                                onChange: (e) => onPatch && onPatch(lead, { supplier: e.target.value })
+                              })
+                            : (lead && lead.supplier) || "—"
+                        ),
+                        sbH("td", { dir: "ltr" }, lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "—"),
+                        sbH("td", { dir: "ltr" }, leadDue ? sbFmtDate(leadDue) : "—"),
                         sbH(
                           "td",
                           { className: "sbChkPills" },
@@ -12197,6 +12358,7 @@ function SubmittalFolder({
                               : sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
                           )
                         ),
+                        sbH("td", { dir: "ltr" }, leadSigned ? sbFmtDate(leadSigned.slice(0, 10)) : "—"),
                         sbH("td", { className: "sbChkAct" }, addBtn(r.code, r.node, "", r.own))
                       );
                       if (!open) return [head];
@@ -12220,6 +12382,10 @@ function SubmittalFolder({
                               eq ? L("chkEquiv") : L("chkSpecific")
                             )
                           ),
+                          // The child row carries the same columns so the table
+                          // stays one grid, and leaves them empty: a line under
+                          // a product has no submittal of its own.
+                          sbH("td", { colSpan: 4 }),
                           sbH(
                             "td",
                             { className: "sbChkPills" },
@@ -12229,6 +12395,7 @@ function SubmittalFolder({
                               l.hits.length ? l.hits.map(pill) : sbH("span", { className: "sbChkDash" }, "—")
                             )
                           ),
+                          sbH("td"),
                           sbH("td", { className: "sbChkAct" }, addBtn(l.item.code, l.node, "", l.hits))
                         );
                       });
@@ -12279,6 +12446,9 @@ function SubmittalFolder({
                 // with the supervision, green once it is signed (29.8.26).
                 const due = String(s.requiredApprovalDate || "").slice(0, 10);
                 const settled = st === "approved" || st === "approvedNoted";
+                // A version that a newer one replaced. It is closed: a revision
+                // was raised because this one was not approved (29.8.26).
+                const superseded = isOlder(s) && !settled;
                 const tone = settled ? "sbOk"
                   // Past the date it had to be approved by, and still not
                   // approved: red, whatever else is true of it (29.8.26).
@@ -12334,8 +12504,10 @@ function SubmittalFolder({
                     sbH(
                       "div",
                       { className: "sbStatusWrap" },
-                      sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang)),
-                      s.sent ? null : sbH("span", { className: "sbDraftTag" }, L("draft")),
+                      superseded
+                        ? sbH("span", { className: "sbStatus", style: { background: "#9aa3af" } }, L("closedNoApproval"))
+                        : sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang)),
+                      s.sent || superseded ? null : sbH("span", { className: "sbDraftTag" }, L("draft")),
                       isNew ? sbH("span", { className: "sbNewTag" }, L("newlyApproved")) : null
                     )
                   ),
@@ -12360,7 +12532,9 @@ function SubmittalFolder({
                     ? sbH(
                         "td",
                         { className: "sbShowCol" },
-                        sbH("input", {
+                        superseded
+                          ? sbH("span", { className: "lliDash" }, "—")
+                          : sbH("input", {
                           type: "checkbox",
                           className: "lliShowTick",
                           checked: !s.hidden,
@@ -12386,7 +12560,9 @@ function SubmittalFolder({
                         )
                       : null,
 
-                    canEdit
+                    // Editing belongs to a draft. Once it has gone out, the
+                    // way to change anything is a new revision.
+                    canEdit && !s.sent && !superseded
                       ? sbH(
                           "button",
                           { type: "button", className: "sbActBtn", onClick: () => onOpen(s) },
@@ -12395,7 +12571,11 @@ function SubmittalFolder({
                           L("open")
                         )
                       : null,
-                    canEdit
+                    // A superseded version is history: it can be printed and
+                    // nothing else. Raising a revision of a revision, or
+                    // editing one that has already gone out, is how a document
+                    // that was sent quietly turns back into a draft (29.8.26).
+                    canEdit && !superseded
                       ? sbH(
                           "button",
                           { type: "button", className: "sbActBtn", title: L("newRevision"), onClick: () => onNewRevision(s) },
@@ -12404,7 +12584,7 @@ function SubmittalFolder({
                           `Rev.${sbNextRev(list, s)}`
                         )
                       : null,
-                    canEdit
+                    canEdit && !superseded
                       ? sbH(
                           "button",
                           { type: "button", className: "sbActBtn danger", title: L("remove"), onClick: () => onDelete(s) },
@@ -12772,7 +12952,7 @@ function SubmittalCard({
         // product becomes one submittal carrying all its papers — the
         // datasheet, the standard certificate and the test report are three
         // documents about one thing, not three things (29.8.26).
-        onBulkCreate: async (files, onProgress) => {
+        onBulkCreate: async (files, onProgress, onStage) => {
           const picked = Array.from(files || []);
           if (!picked.length) return;
           const docs = [];
@@ -12812,6 +12992,7 @@ function SubmittalCard({
 
           let out = null;
           let aiDown = false;
+          if (onStage) onStage();
           if (specText.trim() || images.length) {
             try {
               const res = await supabase.functions.invoke("submittal-ai", {
@@ -12890,6 +13071,17 @@ function SubmittalCard({
             rec.infoEn = val(pr.infoEn) || rec.infoEn;
             rec.infoHe = val(pr.infoHe) || rec.infoHe;
             if (pr.docs && typeof pr.docs === "object") rec.docs = { ...(rec.docs || {}), ...pr.docs };
+            // What the model found wrong with the papers themselves: an expiry
+            // that has passed, a certificate that never arrived. Kept on the
+            // record so the row can say so without asking again (29.8.26).
+            if (pr.checks && typeof pr.checks === "object") {
+              rec.checks = {
+                expires: String(pr.checks.expires || "").slice(0, 10),
+                expired: !!pr.checks.expired,
+                missing: Array.isArray(pr.checks.missing) ? pr.checks.missing.map(String) : [],
+                note: String(pr.checks.note || "").trim()
+              };
+            }
             rec.aiFilledAt = new Date().toISOString();
             made.push(rec);
           }
@@ -13558,6 +13750,10 @@ function SubmittalAdminScreen({ isRTL, signatures, onSignatureChange }) {
 // forward would sit on top of the new one and hide it.
 // -----------------------------------------------------------------------------
 var BOQ_T = {
+  cancelledOnBoard: {
+    en: "Routed here, then taken off that board from the board itself",
+    he: "סווג לכאן, ואז הוסר מהלוח מתוך הרשימה עצמה"
+  },
   title: { en: "Bill of quantities — routing", he: "סיווג כתב הכמויות" },
   hint: {
     en: "Each line can go to more than one tab. The automatic pass ticks generously; remove what does not belong.",
@@ -13591,7 +13787,7 @@ var BOQ_T = {
   reviewCount: { en: "to check", he: "לבדיקה" }
 };
 
-function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose }) {
+function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose, offBoards }) {
   // The window carries its own language, like the submittal and the LLI table.
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
@@ -13660,12 +13856,24 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
     setDraft(next);
   };
 
-  const tick = (code, key, on) =>
-    sbH(
+  // A line she routed here but then took off the board itself keeps its tick —
+  // in grey. An empty box means it was never routed; a grey tick means it was,
+  // and she cancelled it from the list. Those are different things and the
+  // table has to say which (29.8.26).
+  const cancelled = (code, key) => !!((offBoards || {})[key] || {})[code];
+  const tick = (code, key, on) => {
+    const off = on && cancelled(code, key);
+    return sbH(
       "button",
-      { type: "button", className: `boqTick ${on ? "on" : ""} ${key}`, title: L(key), onClick: () => toggle(code, key) },
+      {
+        type: "button",
+        className: `boqTick ${on ? "on" : ""} ${off ? "off" : ""} ${key}`,
+        title: off ? L("cancelledOnBoard") : L(key),
+        onClick: () => toggle(code, key)
+      },
       on ? "✓" : ""
     );
+  };
   const bulkBtns = (rows, key) =>
     sbH(
       "span",
@@ -13862,7 +14070,7 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose 
   );
 }
 
-function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, onOverridesChange }) {
+function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, onOverridesChange, offBoards }) {
   const [busy, setBusy] = useState6(false);
   const [tableOpen, setTableOpen] = useState6(false);
   const [stage, setStage] = useState6(null);
@@ -14020,6 +14228,8 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
           tree: boqData,
           overrides,
           onChange: onOverridesChange,
+          // Which lines were taken off each board from the board itself.
+          offBoards,
           onClose: () => setTableOpen(false)
         })
       : null,
@@ -14037,7 +14247,9 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
         onChange: onFile
       })
     ),
-    busy && stage ? sbH("p", { className: "boqStage" }, stage) : null,
+    busy && stage
+      ? sbH("p", { className: "boqStage" }, sbH("span", { className: "sbSpin" }), " ", stage)
+      : null,
     boq && boq.aiReached === false
       ? sbH(
           "p",
@@ -14361,13 +14573,15 @@ function PlansUploadBlock({ isRTL, projectId, plans, onPlansChange, rooms, onRoo
           `${roomCount} ${t("חדרים", "rooms")} · ${markCount} ${t("איפיונים", "specifications")}` +
           ((rooms.source && rooms.source.mode) ? ` · ${rooms.source.mode}` : ""))
       : null,
-    busy && stage ? sbH("p", { className: "boqStage" }, stage) : null,
+    busy && stage
+      ? sbH("p", { className: "boqStage" }, sbH("span", { className: "sbSpin" }), " ", stage)
+      : null,
     note ? sbH("p", { className: "boqHint plansNote" }, note) : null,
     err ? sbH("p", { className: "sbErr" }, err) : null
   );
 }
 
-function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange, plansByProject, onPlansChange, roomsByProject, onRoomsChange }) {
+function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange, plansByProject, onPlansChange, roomsByProject, onRoomsChange, offBoardsByProject }) {
   const inS = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff", width: "100%" };
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6({ name: "", floorsFrom: "", floorsTo: "", startDate: "", endDate: "", clientLogoUrl: null, accent: null });
@@ -14392,7 +14606,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { className: "blockRule" }), /* @__PURE__ */ React15.createElement(PlansUploadBlock, { isRTL, projectId: p.id, plans: (plansByProject || {})[p.id] || null, onPlansChange: (next) => onPlansChange && onPlansChange(p.id, next), rooms: (roomsByProject || {})[p.id] || null, onRoomsChange: (next) => onRoomsChange && onRoomsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null }), /* @__PURE__ */ React15.createElement("div", { className: "blockRule" }), /* @__PURE__ */ React15.createElement(PlansUploadBlock, { isRTL, projectId: p.id, plans: (plansByProject || {})[p.id] || null, onPlansChange: (next) => onPlansChange && onPlansChange(p.id, next), rooms: (roomsByProject || {})[p.id] || null, onRoomsChange: (next) => onRoomsChange && onRoomsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -14806,6 +15020,25 @@ function ProjectDashboardApp() {
   }, {});
   const boqByProject = Object.keys(projectExtras).reduce((acc, pid) => {
     acc[pid] = projectExtras[pid] && projectExtras[pid].boq || null;
+    return acc;
+  }, {});
+  // Which lines were taken off each board FROM the board itself. The routing
+  // table shows those as a grey tick, so "never routed" and "routed and then
+  // cancelled" no longer look the same (29.8.26).
+  const offBoardsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
+    const ex = projectExtras[pid] || {};
+    const off = (rows) => Object.keys(rows || {}).reduce((o, code) => {
+      if ((rows[code] || {}).hidden) o[code] = true;
+      return o;
+    }, {});
+    acc[pid] = {
+      lli: off(ex.lliRows),
+      sd: off(ex.sdRows),
+      submittal: (ex.submittals || []).reduce((o, rec) => {
+        if (rec && rec.hidden && rec.boqCode) o[rec.boqCode] = true;
+        return o;
+      }, {})
+    };
     return acc;
   }, {});
   const boqDataByProject = Object.keys(projectExtras).reduce((acc, pid) => {
@@ -15931,7 +16164,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL, setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL, setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
