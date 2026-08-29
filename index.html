@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "29.8.2026 \u00b7 build 36";
+var APP_BUILD = "30.8.2026 \u00b7 build 37";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1229,6 +1229,29 @@ var pdfViewer = `
         /* The tick that decides whether a row is on the board at all: printed,
            exported, and seen by the client. */
         .lliShowTick { width: 15px; height: 15px; cursor: pointer; accent-color: var(--accent, #0F3460); }
+        /* Taking a row off the list. Quiet until it is wanted — this is not a
+           button anybody should hit by accident (30.8.26). */
+        .lliRowDel, .sbRowDel {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 22px; height: 22px; margin-inline-start: 6px; padding: 0;
+          border: 1px solid transparent; border-radius: 6px; background: transparent;
+          color: #b3bac4; cursor: pointer; vertical-align: middle;
+        }
+        .lliRowDel:hover, .sbRowDel:hover { color: #c0392b; border-color: #f0c6c0; background: #fdf1ef; }
+        /* What was removed, and the way back. */
+        .lliOffBar, .sbOffBar {
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          margin: 0 0 8px; font-size: 12px; font-weight: 600; color: var(--mist, #8a929e);
+        }
+        .lliOffRestore, .sbOffRestore {
+          display: inline-flex; align-items: center; gap: 5px;
+          border: 1px solid var(--line, #e3e6ea); border-radius: 999px;
+          background: #fff; padding: 3px 11px; font-size: 11.5px; font-weight: 700;
+          color: var(--accent, #0F3460); cursor: pointer; font-family: inherit;
+        }
+        .lliOffRestore:hover, .sbOffRestore:hover { background: var(--accent-soft, #eef2f8); }
+        /* The opened list under a submittal: which BOQ lines it covers. */
+        .sbChkLineTag { font-size: 10.5px; font-weight: 700; color: var(--mist, #8a929e); white-space: nowrap; }
         .sbShowCol { width: 62px; text-align: center; }
         .sbItemCell { max-width: 260px; }
         .sbCellIn {
@@ -3072,6 +3095,15 @@ function storageKeyPart(name) {
     .replace(/^[-._]+|[-._]+$/g, "")
     .slice(0, 40);
   return `${base || "file"}${ext ? "." + ext : ""}`;
+}
+// The name a saved report carries: the project, what the document is, and the
+// day it was taken out. She asked for exactly those three, in that order, so a
+// folder of downloads sorts and reads by itself (30.8.26).
+function boardFileName(projectName, docName, ext) {
+  const day = new Date();
+  const stamp = `${String(day.getDate()).padStart(2, "0")}.${String(day.getMonth() + 1).padStart(2, "0")}.${String(day.getFullYear()).slice(2)}`;
+  const parts = [sanitizeFileNamePart(projectName || "Project"), docName, stamp].filter(Boolean);
+  return `${parts.join(" - ")}${ext ? `.${ext}` : ""}`;
 }
 function triggerDownload(href, filename) {
   const a = document.createElement("a");
@@ -5109,7 +5141,9 @@ function CardView({
   onChangeSdRows,
   roomsData,
   onChangeRoomsData,
-  userPerms
+  userPerms,
+  submittalChkOff,
+  onChangeChkOff
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -5175,7 +5209,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -7047,6 +7081,11 @@ async function loadExcelJs() {
   }
 }
 
+// A picture in a cell: big enough to see what the thing is, small enough that a
+// sheet of eighty rows is still a sheet (30.8.26).
+var BOARD_XLSX_IMG_W = 88;
+var BOARD_XLSX_IMG_H = 66;
+var BOARD_XLSX_IMG_ROW = 54;
 async function boardExportXlsx(opts) {
   const { fileName } = opts;
   let ExcelJS = null;
@@ -7072,8 +7111,21 @@ function boardSaveBlob(buf, fileName) {
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+// What kind of picture it is, read off the data URL itself — ExcelJS has to be
+// told, and a JPEG filed as a PNG opens as a broken box (30.8.26).
+function boardImageKind(dataUrl) {
+  const m = /^data:image\/([a-z0-9.+-]+);base64,/i.exec(String(dataUrl || ""));
+  if (!m) return null;
+  const k = m[1].toLowerCase();
+  if (k === "jpg" || k === "jpeg") return "jpeg";
+  if (k === "png") return "png";
+  if (k === "gif") return "gif";
+  return null;
+}
+
 async function boardXlsxStyled(ExcelJS, opts) {
-  const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows } = opts;
+  const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows,
+          imgCol, imgs } = opts;
   const P = boardExportPalette(accent);
   const wb = new ExcelJS.Workbook();
   wb.creator = "A. Weiss";
@@ -7092,7 +7144,9 @@ async function boardXlsxStyled(ExcelJS, opts) {
   const r1 = ws.getCell(1, 1);
   r1.value = title;
   r1.font = { bold: true, size: 15, color: { argb: "FFFFFFFF" }, name: "Arial" };
-  r1.fill = fill(P.dark);
+  // The heading of the sheet is the project's colour, exactly like the column
+  // titles under it — one accent on the page, not two (30.8.26).
+  r1.fill = fill(P.accent);
   r1.alignment = { horizontal: "center", vertical: "middle" };
   ws.getRow(1).height = 26;
 
@@ -7128,6 +7182,22 @@ async function boardXlsxStyled(ExcelJS, opts) {
       if (alertRows && alertRows[ri]) c.fill = fill("#fbe3e3");
       else if (ri % 2 === 1) c.fill = fill(P.zebra);
     });
+    // A photo on the board is a photo in the workbook — in the cell, not in a
+    // separate list. Wherever a board exports pictures, this is what puts them
+    // there (30.8.26).
+    const pic = imgCol != null && imgs ? imgs[ri] : null;
+    const kind = pic ? boardImageKind(pic) : null;
+    if (kind) {
+      const id = wb.addImage({ base64: pic, extension: kind });
+      // Anchored inside the cell with a hair of margin, and sized to the row so
+      // it never sits on top of the one below.
+      ws.addImage(id, {
+        tl: { col: imgCol + 0.06, row: 3 + ri + 0.06 },
+        ext: { width: BOARD_XLSX_IMG_W, height: BOARD_XLSX_IMG_H },
+        editAs: "oneCell"
+      });
+      r.height = BOARD_XLSX_IMG_ROW;
+    }
   });
 
   ws.columns = widths.map((w) => ({ width: w }));
@@ -7158,9 +7228,13 @@ function boardXlsxPlain(opts) {
 // Landscape, because these boards are fifteen columns wide and a portrait sheet
 // would either cut them off or shrink them past reading. Everything else is the
 // house template: the coloured frame, the logo, the centred title, the footer.
+// A4 landscape is 210mm tall; the page margin is what keeps the frame off the
+// edge of the paper.
+var PRINT_PAGE_MM = 210;
+var PRINT_MARGIN_MM = 8;
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, toneRows, noStamp, issuedLabel } = opts;
+          alertRows, toneRows, noStamp, issuedLabel, fileName } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -7186,20 +7260,42 @@ function boardExportPdf(opts) {
   // The client's own mark, on the far side of the header and the same height as
   // the contractor's.
   const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
-  const footImg = b.footerImg ? `<div class="footImg"><img src="${b.footerImg}" alt="footer"></div>` : "";
+  const footImg = b.footerImg ? `<div class="footImg" id="footimg"><img src="${b.footerImg}" alt="footer"></div>` : "";
 
-  const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(title)}</title><style>
+  // ---------------------------------------------------------------------------
+  // The pages are cut here, not left to the browser.
+  //
+  // A repeating frame drawn with position:fixed only ever framed the first page
+  // properly: the rows kept flowing under it, and anything painted outside the
+  // page's own content box was clipped away. So the document is built as ONE
+  // table, and a short script inside the printed window measures the paper and
+  // deals the rows into real pages — each a self-contained box with its own
+  // frame, its own heading row, and nothing crossing the border. The closing
+  // image is appended to the LAST page only (30.8.26).
+  // ---------------------------------------------------------------------------
+  const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(fileName || title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
-/* Real page margins. Every page — not only the first — keeps its content
-   inside them, which is what stops the table running under the frame on page
-   two and page three (29.8.26). */
-@page { size: A4 landscape; margin: 12mm; }
+/* The margin is the white edge of the paper; the frame is drawn just inside it,
+   by each page for itself (30.8.26). */
+@page { size: A4 landscape; margin: ${PRINT_MARGIN_MM}mm; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
 body { width: auto; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
   direction: ${dir}; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 /* On screen the document still needs a page to sit on. */
-@media screen { body { width: 297mm; padding: 12mm; } }
+@media screen { body { width: 297mm; padding: ${PRINT_MARGIN_MM}mm; background: #eef1f5; } }
+/* One printed page: its own frame, its own heading, its own rows. Nothing
+   flows across the border because nothing flows at all — the script below
+   deals the rows into pages before printing. */
+.page {
+  border: 1.5px solid ${P.accent}; border-radius: 12px;
+  padding: 5mm 6mm; background: #fff;
+  page-break-after: always; break-after: page;
+  overflow: hidden;
+}
+.page:last-child { page-break-after: auto; break-after: auto; }
+@media screen { .page { margin-bottom: 8mm; box-shadow: 0 2px 14px -6px rgba(0,0,0,.35); } }
+#src { position: absolute; left: -9999px; top: 0; width: 273mm; }
 
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 10px; }
@@ -7227,36 +7323,72 @@ tbody tr.wait td, tbody tr.wait:nth-child(even) td { background: #fdeed8; }
 tbody tr.ok td, tbody tr.ok:nth-child(even) td { background: #e3f3e6; }
 td.img { padding: 2px; }
 td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: block; margin: 0 auto; }
-tr { page-break-inside: avoid; }
-thead { display: table-header-group; }
-.footImg { margin-top: 10px; text-align: center; }
-.footImg img { max-width: 100%; max-height: 70px; object-fit: contain; }
 ${printedStampCss(4)}
-/* The frame is drawn by a fixed element, so it is redrawn on EVERY printed
-   page instead of only around the first one — a table that runs to four pages
-   used to have three pages with no border at all (29.8.26). */
-/* The frame is inset INTO the page margin, so it surrounds the content on
-   every page and the content never reaches it. */
-.pageFrame { position: fixed; inset: -6mm; border: 1.5px solid ${P.accent}; border-radius: 12px; pointer-events: none; }
-.sheet { padding: 0; }
-@media screen { .pageFrame { inset: 6mm; } }
-@media print {
-  table { page-break-inside: auto; }
-  tbody tr { page-break-inside: avoid; page-break-after: auto; }
-  /* The closing image sits at the foot of the page, not glued under the last
-     row of the table (29.8.26). */
-  .footImg {
-    position: fixed; left: 0; right: 0; bottom: -2mm;
-    margin: 0; text-align: center;
-  }
-  .footImg img { max-height: 14mm; }
-  /* Room at the end of the table so the last rows never run into it. */
-  tbody:after { content: ""; display: block; height: 16mm; }
-}
-</style></head><body><div class="pageFrame"></div><div class="sheet">
+/* The closing image belongs to the last page, under the last rows on it. */
+.footImg { margin-top: 6mm; text-align: center; }
+.footImg img { max-height: 16mm; }
+</style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
-${footImg}</div>${noStamp ? "" : printedStampHtml(isRTL ? "he" : "en")}</body></html>`;
+${footImg}</div><div id="pages"></div><div id="mm" style="position:absolute;left:-9999px;top:0;height:100mm"></div>${noStamp ? "" : printedStampHtml(isRTL ? "he" : "en")}
+<script>
+(function () {
+  var probe = document.getElementById("mm");
+  var px = probe.getBoundingClientRect().height / 100;   // pixels per millimetre
+  probe.remove();
+  var src = document.getElementById("src");
+  var out = document.getElementById("pages");
+  var hdr = src.querySelector(".hdr");
+  var table = src.querySelector("table");
+  var colg = table.querySelector("colgroup");
+  var thead = table.querySelector("thead");
+  var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
+  var foot = document.getElementById("footimg");
+  if (foot) foot.remove();
+  // A4 landscape, less the page margin the stylesheet sets, less the frame's
+  // own padding: what is actually left for rows.
+  var room = (${PRINT_PAGE_MM} - 2 * ${PRINT_MARGIN_MM} - 3) * px;
+  function newPage() {
+    var pg = document.createElement("div");
+    pg.className = "page";
+    pg.appendChild(hdr.cloneNode(true));
+    var t = document.createElement("table");
+    if (colg) t.appendChild(colg.cloneNode(true));
+    t.appendChild(thead.cloneNode(true));
+    var tb = document.createElement("tbody");
+    t.appendChild(tb);
+    pg.appendChild(t);
+    out.appendChild(pg);
+    return { pg: pg, tb: tb };
+  }
+  var cur = newPage();
+  for (var i = 0; i < rows.length; i++) {
+    cur.tb.appendChild(rows[i]);
+    // One row too many: it starts the next page instead of hanging over the
+    // edge of this one.
+    if (cur.pg.scrollHeight > room && cur.tb.children.length > 1) {
+      var next = newPage();
+      next.tb.appendChild(rows[i]);
+      cur = next;
+    }
+  }
+  // The closing image goes under the last rows. If it no longer fits there it
+  // gets a page of its own rather than being pushed over the frame.
+  if (foot) {
+    cur.pg.appendChild(foot);
+    if (cur.pg.scrollHeight > room) {
+      foot.remove();
+      var last = document.createElement("div");
+      last.className = "page";
+      last.appendChild(hdr.cloneNode(true));
+      last.appendChild(foot);
+      out.appendChild(last);
+    }
+  }
+  src.remove();
+})();
+<\/script>
+</body></html>`;
 
   // Opened inside the click that asked for it, like every other print here, or
   // the browser treats it as a pop-up and swallows it.
@@ -7371,6 +7503,11 @@ var LLI_L = {
   hide: { en: "Not for ordering", he: "לא להזמנה" },
   showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
   showCol: { en: "Show", he: "הצגה" },
+  // Taking the line off this board altogether. Nothing is deleted from the
+  // bill of quantities — the routing table keeps its tick, in grey (30.8.26).
+  removeRow: { en: "Remove from this list", he: "הסרה מהרשימה" },
+  removedSome: { en: "Removed from this list", he: "הוסרו מהרשימה" },
+  restoreAll: { en: "Restore all", he: "החזרת הכל" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
   manual: { en: "Manual", he: "ידני" },
   empty: { en: "Nothing to order in this category.", he: "אין פריטים להזמנה בקטגוריה הזו." },
@@ -7507,7 +7644,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     all.map((r) => String(lliRowOf(data, r.code).typeMark || "").trim()).filter(Boolean)
   )).sort();
   const markNeedle = markQuery.trim().toLowerCase();
+  // A row she removed from this list is off it until she puts it back. It is
+  // not deleted from the bill of quantities: the routing table still shows it,
+  // with a grey tick (30.8.26).
+  const isRemoved = (r) => !!(data[r.code] || {}).removed;
+  const removedCount = all.filter(isRemoved).length;
   const visible = all.filter((r) =>
+    !isRemoved(r) &&
     (cat === "all" || r.category === cat) &&
     // The administrator sees the whole board — the "הצגה" tick tells her which
     // rows are on it. A client sees only the rows that are on (29.8.26).
@@ -7749,10 +7892,17 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const g = exportGrid();
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
     setPoNote(null);
+    // The photo travels into the workbook the same way it travels onto the
+    // paper — its own column, in the same place, with the picture in the cell
+    // (30.8.26).
+    const head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
+    const widths = g.widths.slice(0, 4).concat([15], g.widths.slice(4));
+    const body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
     const res = await boardExportXlsx({
       title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
-      fileName: `${sanitizeFileNamePart(projectName || "Project")} - LLI.xlsx`,
-      head: g.head, body: g.body, widths: g.widths, alertRows: g.alerts,
+      fileName: boardFileName(projectName, "LLI", "xlsx"),
+      head, body, widths, alertRows: g.alerts,
+      imgCol: 4, imgs: g.imgs,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -7781,6 +7931,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     }
     boardExportPdf({
       title: exportTitle(),
+      // The name the browser offers when she saves it.
+      fileName: boardFileName(projectName, "LLI", ""),
       // The date is a line of its own, and it says what it is: the day the
       // report was issued.
       subtitle: L("title"),
@@ -7856,6 +8008,32 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       { className: "lliTally" },
       sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${orderedCount} ${L("ordersOf")}`)
     ),
+    // Nothing is thrown away: what she removed is counted here and comes back
+    // with one press (30.8.26).
+    canEdit && removedCount
+      ? sbH(
+          "div",
+          { className: "lliOffBar" },
+          sbH("span", null, `${removedCount} ${L("removedSome")}`),
+          sbH(
+            "button",
+            {
+              type: "button",
+              className: "lliOffRestore",
+              onClick: () => {
+                const next = { ...data };
+                all.forEach((r) => {
+                  if ((next[r.code] || {}).removed) next[r.code] = { ...next[r.code], removed: false };
+                });
+                onChangeRows && onChangeRows(next);
+              }
+            },
+            sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
+            " ",
+            L("restoreAll")
+          )
+        )
+      : null,
     sbH(
       "div",
       { className: "lliMarkFind" },
@@ -8251,7 +8429,21 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                             title: hidden ? L("restore") : L("hide"),
                             "aria-label": L("showCol"),
                             onChange: () => patch(r.code, { hidden: !hidden })
-                          })
+                          }),
+                          // Off the list altogether — a grey tick in the
+                          // routing table, and it comes back from the bar at
+                          // the top of the board (30.8.26).
+                          sbH(
+                            "button",
+                            {
+                              type: "button",
+                              className: "lliRowDel",
+                              title: L("removeRow"),
+                              "aria-label": L("removeRow"),
+                              onClick: () => patch(r.code, { removed: true })
+                            },
+                            sbH(Trash2, { size: 13, strokeWidth: 2 })
+                          )
                         )
                       : null,
                     // BY ROOM: this row is also part of the room search. What
@@ -8349,6 +8541,9 @@ var SD_L = {
   restore: { en: "Restore", he: "החזרה" },
   showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
   showCol: { en: "Show", he: "הצגה" },
+  removeRow: { en: "Remove from this list", he: "הסרה מהרשימה" },
+  removedSome: { en: "Removed from this list", he: "הוסרו מהרשימה" },
+  restoreAll: { en: "Restore all", he: "החזרת הכל" },
   onlyOpen: { en: "Only what is still open", he: "רק מה שעדיין פתוח" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
   manual: { en: "Manual", he: "ידני" },
@@ -8459,7 +8654,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     if (statusFilter === "open") return !isDone(r);
     return sdRowOf(data, r.code).status === statusFilter;
   };
+  const isRemoved = (r) => !!(data[r.code] || {}).removed;
+  const removedCount = all.filter(isRemoved).length;
   const visible = all.filter((r) =>
+    !isRemoved(r) &&
     (cat === "all" || r.category === cat) &&
     (canEdit || !isHidden(r)) &&
     matchesStatus(r)
@@ -8560,7 +8758,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     setExportNote(null);
     const res = await boardExportXlsx({
       title: exportTitle(), subtitle: exportSub(), sheetName: "SD",
-      fileName: `${sanitizeFileNamePart(projectName || "Project")} - SD.xlsx`,
+      fileName: boardFileName(projectName, "SD", "xlsx"),
       head: g.head, body: g.body, widths: g.widths,
       accent: (printBrand || {}).accent, isRTL
     });
@@ -8578,6 +8776,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       : g.head.map((_, i) => i);
     boardExportPdf({
       title: exportTitle(),
+      fileName: boardFileName(projectName, "SD", ""),
       subtitle: L("title"),
       issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
       head: keep.map((i) => g.head[i]),
@@ -8624,6 +8823,32 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       { className: "lliTally" },
       sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${doneCount} ${L("approvedOf")}`)
     ),
+    // Nothing is thrown away: what she removed is counted here and comes back
+    // with one press (30.8.26).
+    canEdit && removedCount
+      ? sbH(
+          "div",
+          { className: "lliOffBar" },
+          sbH("span", null, `${removedCount} ${L("removedSome")}`),
+          sbH(
+            "button",
+            {
+              type: "button",
+              className: "lliOffRestore",
+              onClick: () => {
+                const next = { ...data };
+                all.forEach((r) => {
+                  if ((next[r.code] || {}).removed) next[r.code] = { ...next[r.code], removed: false };
+                });
+                onChangeRows && onChangeRows(next);
+              }
+            },
+            sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
+            " ",
+            L("restoreAll")
+          )
+        )
+      : null,
     sbH(
       "div",
       { className: "lliBar" },
@@ -8866,7 +9091,21 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                             title: hidden ? L("restore") : L("hide"),
                             "aria-label": L("showCol"),
                             onChange: () => patch(r.code, { hidden: !hidden })
-                          })
+                          }),
+                          // Off the list altogether — a grey tick in the
+                          // routing table, and it comes back from the bar at
+                          // the top of the board (30.8.26).
+                          sbH(
+                            "button",
+                            {
+                              type: "button",
+                              className: "lliRowDel",
+                              title: L("removeRow"),
+                              "aria-label": L("removeRow"),
+                              onClick: () => patch(r.code, { removed: true })
+                            },
+                            sbH(Trash2, { size: 13, strokeWidth: 2 })
+                          )
                         )
                       : null
                   );
@@ -9776,9 +10015,20 @@ var SB_L = {
   // The submittal list's own column headings (29.8.26).
   catCol: { en: "Category", he: "קטגוריה" },
   itemCol: { en: "Item", he: "תיאור פריט" },
-  supplierCol: { en: "Supplier", he: "ספק" },
+  supplierCol: { en: "Supplier / Contractor", he: "ספק / קבלן" },
   dueCol: { en: "Approval due", he: "תאריך נדרש לאישור" },
   notesCol: { en: "My notes", he: "הערות שלי" },
+  // The three dates on the tracking table say which date they are. "Date" on
+  // its own was read as any of them (30.8.26).
+  sentCol: { en: "Submission date", he: "תאריך הגשה" },
+  targetCol: { en: "Approval target date", he: "תאריך יעד לאישור" },
+  clientOkCol: { en: "Client approval date", he: "תאריך אישור לקוח" },
+  // Taking a line off this board. It is not deleted from the bill of
+  // quantities — the routing table keeps its tick, in grey (30.8.26).
+  removeRow: { en: "Remove from this list", he: "הסרה מהרשימה" },
+  removedSome: { en: "Removed from this list", he: "הוסרו מהרשימה" },
+  restoreAll: { en: "Restore all", he: "החזרת הכל" },
+  belongTo: { en: "Items covered by this submittal", he: "סעיפים שנכללים בסבמיטל הזה" },
   closedNoApproval: { en: "Closed — not approved", he: "סגור ללא אישור" },
   notesHint: {
     en: "Private notes on this submittal. They are not printed and nobody else sees them.",
@@ -10427,11 +10677,17 @@ async function sbExtractPdfText(file) {
 // ------------------------------------------------------------------- printing
 // The browser offers the document title as the file name when the person
 // chooses "Save as PDF", so the title is the file name we want.
-function sbPrintName(rec) {
+// What the saved file is called. The browser takes the document's title as the
+// name it offers in "Save as PDF", so this is the name on her disk: the
+// project, the discipline, the serial with its revision, and the day it was
+// produced — enough to tell two saves of the same submittal apart (30.8.26).
+function sbPrintName(rec, lang) {
+  const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === rec.category) || null;
   const parts = [
     sanitizeFileNamePart(rec.projectName || ""),
+    cat ? sanitizeFileNamePart(sbText(cat, lang === "en" ? "en" : "he")) : "",
     `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0}`,
-    sbFmtDate(rec.date).replace(/\//g, ".")
+    sbFmtDate(new Date().toISOString().slice(0, 10)).replace(/\//g, ".")
   ].filter(Boolean);
   return parts.join(" - ");
 }
@@ -10478,7 +10734,7 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
   const img = rec.image && rec.image.thumb
     ? `<img src="${rec.image.thumb}" alt="">`
     : `<span class="noImg">${L("picture")}</span>`;
-  const html = `<html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbPrintName(rec))}</title><style>
+  const html = `<html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbPrintName(rec, lang))}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
 @page { size: A4 portrait; margin: 0; }
 * { box-sizing: border-box; }
@@ -12009,7 +12265,10 @@ function SubmittalFolder({
   onToggleShow,
   onPatch,
   boqData,
-  boqFlags
+  boqFlags,
+  chkOff,
+  onRemoveChk,
+  onRestoreChk
 }) {
   const L = (k) => sbText(SB_L[k], lang);
   const [bulkBusy, setBulkBusy] = useState6(null);
@@ -12180,7 +12439,10 @@ function SubmittalFolder({
           return picked.some((c) => names.indexOf(c) >= 0);
         });
       };
-      const rowsChk = groups.map((p) => {
+      // Lines she took off this board by hand stay out of it until she puts
+      // them back; the routing table shows them as a grey tick (30.8.26).
+      const off = chkOff || {};
+      const rowsChk = groups.filter((p) => !off[p.code]).map((p) => {
         // One row per thing that gets approved once — steel pipe in eight
         // diameters is one specification, not eight submittals — carrying the
         // item number of its representative BOQ line. The chevron opens the
@@ -12236,6 +12498,24 @@ function SubmittalFolder({
         "div",
         { className: "sbChk" },
         sbH("div", { className: "sbListTitle" }, L("checklist")),
+        // Nothing is thrown away: what she removed is counted here and comes
+        // back with one press (30.8.26).
+        (() => {
+          const n = groups.filter((p) => off[p.code]).length;
+          if (!n) return null;
+          return sbH(
+            "p",
+            { className: "sbOffBar" },
+            `${n} ${L("removedSome")}`,
+            sbH(
+              "button",
+              { type: "button", className: "sbOffRestore", onClick: () => onRestoreChk && onRestoreChk(category.key) },
+              sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
+              " ",
+              L("restoreAll")
+            )
+          );
+        })(),
         !boqData
           ? sbH("p", { className: "submittalPanelNote" }, L("checklistNone"))
           : rowsChk.length === 0
@@ -12254,18 +12534,19 @@ function SubmittalFolder({
                     // laid out fixed: opening a group must not be allowed to
                     // re-measure every column and shift the rows under the
                     // cursor.
+                    // The submittal's own facts, in the table that already
+                    // lists what needs approving. One table, not two (29.8.26).
+                    // The serial leads — it is what the submittal is called —
+                    // and the BOQ number follows it (30.8.26).
                     sbH("thead", null, sbH("tr", null,
+                      sbH("th", { className: "cChkNo" }, L("submittalNo")),
                       sbH("th", { className: "cCode" }, L("chkItem")),
                       sbH("th", { className: "cDesc" }, L("chkDesc")),
-                      // The submittal's own facts, in the table that already
-                      // lists what needs approving. One table, not two
-                      // (29.8.26).
-                      sbH("th", { className: "cChkNo" }, L("submittalNo")),
                       sbH("th", { className: "cChkSup" }, L("supplierCol")),
-                      sbH("th", { className: "cChkDate" }, L("date")),
-                      sbH("th", { className: "cChkDate" }, L("dueCol")),
+                      sbH("th", { className: "cChkDate" }, L("sentCol")),
+                      sbH("th", { className: "cChkDate" }, L("targetCol")),
                       sbH("th", { className: "cPills" }, L("status")),
-                      sbH("th", { className: "cChkDate" }, L("signDate")),
+                      sbH("th", { className: "cChkDate" }, L("clientOkCol")),
                       sbH("th", { className: "cAct" }, "")
                     )),
                     sbH("tbody", null, rowsChk.flatMap((r) => {
@@ -12290,6 +12571,7 @@ function SubmittalFolder({
                       const head = sbH(
                         "tr",
                         { key: r.code, className: r.count ? "sbChkOn" : "" },
+                        sbH("td", { className: "sbChkNo" }, lead ? sbNumber(lead.category, lead.seq) : "—"),
                         sbH(
                           "td",
                           { dir: "ltr", className: "sbChkCode" },
@@ -12331,7 +12613,6 @@ function SubmittalFolder({
                             ? sbH("span", { className: "sbChkWarn", title: warn }, "!")
                             : null
                         ),
-                        sbH("td", { className: "sbChkNo" }, lead ? sbNumber(lead.category, lead.seq) : "—"),
                         sbH(
                           "td",
                           null,
@@ -12359,14 +12640,36 @@ function SubmittalFolder({
                           )
                         ),
                         sbH("td", { dir: "ltr" }, leadSigned ? sbFmtDate(leadSigned.slice(0, 10)) : "—"),
-                        sbH("td", { className: "sbChkAct" }, addBtn(r.code, r.node, "", r.own))
+                        sbH(
+                          "td",
+                          { className: "sbChkAct" },
+                          addBtn(r.code, r.node, "", r.own),
+                          // Taking the line off this board. The routing table
+                          // keeps its tick, in grey (30.8.26).
+                          sbH(
+                            "button",
+                            {
+                              type: "button",
+                              className: "sbRowDel",
+                              title: L("removeRow"),
+                              "aria-label": L("removeRow"),
+                              onClick: () => onRemoveChk && onRemoveChk(r.code)
+                            },
+                            sbH(Trash2, { size: 13, strokeWidth: 2 })
+                          )
+                        )
                       );
                       if (!open) return [head];
-                      const kids = r.lines.map((l) => {
+                      const kids = r.lines.map((l, li) => {
                         const eq = boqIsEquivalent(l.item);
                         return sbH(
                           "tr",
                           { key: l.item.code, className: "sbChkLine" },
+                          // The opened list is there to say WHICH bill-of-
+                          // quantities lines this one submittal covers — nothing
+                          // is started from it, so it carries no buttons and no
+                          // columns of its own (30.8.26).
+                          sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
                           sbH(
                             "td",
                             { dir: "ltr", className: "sbChkCode" },
@@ -12382,21 +12685,7 @@ function SubmittalFolder({
                               eq ? L("chkEquiv") : L("chkSpecific")
                             )
                           ),
-                          // The child row carries the same columns so the table
-                          // stays one grid, and leaves them empty: a line under
-                          // a product has no submittal of its own.
-                          sbH("td", { colSpan: 4 }),
-                          sbH(
-                            "td",
-                            { className: "sbChkPills" },
-                            sbH(
-                              "div",
-                              { className: "sbChkPillWrap" },
-                              l.hits.length ? l.hits.map(pill) : sbH("span", { className: "sbChkDash" }, "—")
-                            )
-                          ),
-                          sbH("td"),
-                          sbH("td", { className: "sbChkAct" }, addBtn(l.item.code, l.node, "", l.hits))
+                          sbH("td", { colSpan: 6 })
                         );
                       });
                       return [head, ...kids];
@@ -12618,7 +12907,9 @@ function SubmittalCard({
   printBrand,
   boqData,
   boqFlags,
-  userPerms
+  userPerms,
+  submittalChkOff,
+  onChangeChkOff
 }) {
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
@@ -13133,7 +13424,18 @@ function SubmittalCard({
         // typed into the list, her private notes (29.8.26).
         onPatch: (s, next) => commit((list || []).map((x) => (x.id === s.id ? { ...x, ...next } : x))),
         onNewRevision: startRevision,
-        onDelete: deleteOne
+        onDelete: deleteOne,
+        // Removing a checklist line from this folder, and putting them back.
+        chkOff: (submittalChkOff || {})[chosen.key] || null,
+        onRemoveChk: (code) => onChangeChkOff && onChangeChkOff({
+          ...(submittalChkOff || {}),
+          [chosen.key]: { ...((submittalChkOff || {})[chosen.key] || {}), [code]: true }
+        }),
+        onRestoreChk: (catKey) => {
+          const next = { ...(submittalChkOff || {}) };
+          delete next[catKey];
+          if (onChangeChkOff) onChangeChkOff(next);
+        }
       }),
     printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
     bulkReport ? sbH(SbBulkReport, { report: bulkReport, lang, isRTL, onClose: () => setBulkReport(null) }) : null
@@ -15027,17 +15329,27 @@ function ProjectDashboardApp() {
   // cancelled" no longer look the same (29.8.26).
   const offBoardsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
     const ex = projectExtras[pid] || {};
+    // Either way of taking a line off a board counts: unticking "הצגה", or
+    // removing the row outright (30.8.26).
     const off = (rows) => Object.keys(rows || {}).reduce((o, code) => {
-      if ((rows[code] || {}).hidden) o[code] = true;
+      const r = rows[code] || {};
+      if (r.hidden || r.removed) o[code] = true;
       return o;
     }, {});
     acc[pid] = {
       lli: off(ex.lliRows),
       sd: off(ex.sdRows),
-      submittal: (ex.submittals || []).reduce((o, rec) => {
-        if (rec && rec.hidden && rec.boqCode) o[rec.boqCode] = true;
-        return o;
-      }, {})
+      submittal: Object.assign(
+        (ex.submittals || []).reduce((o, rec) => {
+          if (rec && rec.hidden && rec.boqCode) o[rec.boqCode] = true;
+          return o;
+        }, {}),
+        // Checklist rows she removed from a submittal folder by hand.
+        Object.keys(ex.submittalChkOff || {}).reduce((o, catKey) => {
+          Object.keys((ex.submittalChkOff || {})[catKey] || {}).forEach((code) => { o[code] = true; });
+          return o;
+        }, {})
+      )
     };
     return acc;
   }, {});
@@ -16141,6 +16453,9 @@ function ProjectDashboardApp() {
         submittalQueue: activeExtras.submittalQueue || [],
         onChangeQueue: (next) => updateProjectExtras(activeProject.id, { submittalQueue: next }),
         submittalPerms: activeExtras.submittalPerms || {},
+        // Checklist lines she took off the submittal board, per discipline.
+        submittalChkOff: activeExtras.submittalChkOff || {},
+        onChangeChkOff: (next) => updateProjectExtras(activeProject.id, { submittalChkOff: next }),
         boqData: activeExtras.boqData || null,
         boqFlags: activeExtras.boqFlagOverrides || {},
         userPerms,
