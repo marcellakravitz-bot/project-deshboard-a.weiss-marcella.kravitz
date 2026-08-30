@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "30.8.2026 \u00b7 build 37";
+var APP_BUILD = "30.8.2026 \u00b7 build 38";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1373,6 +1373,31 @@ var pdfViewer = `
         .lliTable .cMark { width: 80px; }
         .lliTable .cDesc { width: 210px; text-align: start; }
         .lliTable .cSup { width: 115px; }
+        /* A company that came from the contacts rather than from her keyboard:
+           the same text, quieter, so it is obvious which boxes she has filled
+           in herself (30.8.26). */
+        .lliIn.lliFromContacts { color: var(--steel, #5b6472); font-style: italic; }
+        /* The find. Every row the word appears in is tinted; the one she is
+           standing on is brighter and outlined, and the cell the word is
+           actually in glows, so the eye lands on the word and not just the
+           line (30.8.26). */
+        .lliTable tbody tr.lliHit > td { background: #fdf6d8; }
+        .lliTable tbody tr.lliHitNow > td { background: #fdeeb0; box-shadow: inset 0 0 0 1px #d9a400; }
+        .lliTable tbody tr td.lliCellHit { background: #fde68a; }
+        .lliTable tbody tr.lliHitNow td.lliCellHit { background: #fbd34d; }
+        .lliFindCount {
+          font-size: 11.5px; font-weight: 800; color: var(--steel, #5b6472);
+          min-width: 34px; text-align: center;
+        }
+        .lliFindCount.none { color: #c0392b; }
+        .lliFindStep {
+          width: 22px; height: 22px; border-radius: 6px; cursor: pointer;
+          border: 1px solid var(--line, #e3e6ea); background: #fff;
+          color: var(--accent, #0F3460); font-size: 15px; font-weight: 800; line-height: 1;
+          font-family: inherit; padding: 0;
+        }
+        .lliFindStep:hover:not(:disabled) { background: var(--accent-soft, #eef2f8); }
+        .lliFindStep:disabled { opacity: .4; cursor: default; }
         .lliTable .cImg { width: 196px; }
         .lliTable .cQty { width: 75px; }
         .lliTable .cUnit { width: 55px; color: var(--steel); font-weight: 700; }
@@ -1582,12 +1607,32 @@ var pdfViewer = `
            three-line paragraph from the bill of quantities, and with automatic
            layout that one row decided the width of the whole table — so opening
            a group made every row jump sideways. */
-        .sbChkTable { table-layout: fixed; }
+        .sbChkTable { table-layout: fixed; width: 100%; }
+        /* The declared widths are the whole cell, padding included, so the sum
+           of the columns is the width of the table and nothing is pushed off
+           the right-hand edge (30.8.26). */
+        .sbChkTable th, .sbChkTable td { box-sizing: border-box; }
         .sbChkTable td { text-align: center; }
-        .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 130px; }
-        .sbChkTable th.cChkNo { width: 110px; }
-        .sbChkTable th.cChkSup { width: 120px; }
-        .sbChkTable th.cChkDate { width: 88px; }
+        .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 96px; }
+        .sbChkTable th.cChkNo { width: 84px; }
+        /* The description needs a width of its own: with a fixed layout a
+           column that declares none is squeezed to nothing, and "גריל OD1"
+           came out one letter per line (30.8.26). */
+        .sbChkTable th.cDesc { width: 240px; }
+        /* Not a column so much as a gutter: it holds the chevron and nothing
+           else, and it has no rules of its own, so the BOQ numbers beside it
+           read as one straight centred column (30.8.26). */
+        .sbChkTable th.cChkChev, .sbChkTable td.sbChkChev {
+          width: 30px; padding-inline: 0; border-inline: none; text-align: center;
+        }
+        .sbChkTable td.sbChkChev .sbRevToggle { margin: 0; }
+        .sbChkTable th.cChkDocs, .sbChkTable td.sbChkDocsCell { width: 56px; }
+        .sbChkTable th.cChkSup { width: 118px; }
+        /* Room for "Approval target date" to wrap onto two lines instead of
+           running under its neighbour (30.8.26). */
+        .sbChkTable th.cChkDate { width: 78px; }
+        .sbChkTable thead th { white-space: normal; line-height: 1.2; padding: 6px 4px; font-size: 10.5px; }
+        .sbChkTable tbody td { padding-inline: 5px; }
         .sbChkTable td.sbChkNo { font-weight: 800; dir: ltr; }
         /* The description gets the room that is left, and reads whole. */
         .sbChkTable td.sbChkDesc { white-space: normal; overflow: visible; text-overflow: clip; }
@@ -1598,12 +1643,31 @@ var pdfViewer = `
           vertical-align: middle; cursor: help;
         }
         .sbChkDocs {
-          display: inline-flex; align-items: center; gap: 3px; margin-inline-start: 6px;
-          padding: 1px 6px; border-radius: 999px; background: var(--accent-soft, #e6ecf5);
+          display: inline-flex; align-items: center; gap: 3px;
+          padding: 2px 8px; border-radius: 999px; background: var(--accent-soft, #e6ecf5);
+          border: 1px solid transparent; cursor: pointer; font-family: inherit;
           color: var(--accent-ink, #0F3460); font-size: 10.5px; font-weight: 800; vertical-align: middle;
         }
-        .sbChkTable th.cPills, .sbChkTable td.sbChkPills { width: 210px; }
-        .sbChkTable th.cAct, .sbChkTable td.sbChkAct { width: 118px; }
+        .sbChkDocs:hover { border-color: var(--accent, #0F3460); }
+        /* A company that came from the contacts rather than from her keyboard. */
+        .sbCellIn.sbFromContacts { color: var(--steel, #5b6472); font-style: italic; }
+        /* Taking the submittal board away: one discipline, or all of them. */
+        .sbExportBar {
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          flex-wrap: wrap; margin-top: 12px;
+        }
+        .sbExportAll { margin: 16px 0 4px; }
+        .sbExportAllLabel {
+          font-size: 12px; font-weight: 800; color: var(--steel, #5b6472);
+        }
+        .sbChkTable th.cPills, .sbChkTable td.sbChkPills { width: 120px; }
+        /* Wide enough for the two buttons to sit side by side: the one that
+           starts a submittal, and the one that takes the line off the board. */
+        .sbChkTable th.cAct, .sbChkTable td.sbChkAct { width: 132px; }
+        .sbChkTable td.sbChkAct {
+          display: table-cell; white-space: nowrap;
+        }
+        .sbChkTable td.sbChkAct .sbChkAdd { vertical-align: middle; }
         .sbChkTable .sbChkCode { font-weight: 800; }
         .sbChkTable .sbChkDesc { text-align: start; overflow-wrap: anywhere; }
         /* Three lines is enough to recognise the item; the full wording is on
@@ -5209,7 +5273,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -7083,9 +7147,61 @@ async function loadExcelJs() {
 
 // A picture in a cell: big enough to see what the thing is, small enough that a
 // sheet of eighty rows is still a sheet (30.8.26).
-var BOARD_XLSX_IMG_W = 88;
-var BOARD_XLSX_IMG_H = 66;
-var BOARD_XLSX_IMG_ROW = 54;
+var BOARD_XLSX_IMG_ROW = 58;   // row height, in points
+var BOARD_XLSX_EMU = 9525;     // EMU per pixel, which is what Excel measures in
+// Excel's own arithmetic: a column of width w is about w*7+5 pixels across, and
+// a row of h points is h*96/72 pixels tall. Needed to fit a picture inside a
+// cell without stretching it out of shape.
+function boardColPx(w) { return Math.max(24, (Number(w) || 10) * 7 + 5); }
+function boardRowPx(pt) { return (Number(pt) || 15) * 96 / 72; }
+// How big the picture actually is. Excel is told the box to draw it in, so
+// without this every photo comes out stretched to the shape of the cell.
+function boardImageSize(dataUrl) {
+  return new Promise((resolve) => {
+    try {
+      const im = new Image();
+      im.onload = () => resolve({ w: im.naturalWidth || 1, h: im.naturalHeight || 1 });
+      im.onerror = () => resolve(null);
+      im.src = dataUrl;
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
+// ---------------------------------------------------------------------------
+// A number has to arrive in the sheet as a number and a date as a date, or
+// Excel marks every cell with a green corner and asks her to convert them one
+// by one. Item numbers are the exception that proves it: "08.11.0010" is a
+// name, not a quantity, and a leading zero is the giveaway (30.8.26).
+// ---------------------------------------------------------------------------
+var BOARD_DATE_FMT = "dd/mm/yy";
+function boardCellValue(v, kind) {
+  if (v == null || v === "") return { value: null };
+  if (typeof v === "number") return { value: v, numFmt: Number.isInteger(v) ? "0" : "0.##" };
+  const str = String(v).trim();
+  if (!str || str === "—" || str === "-") return { value: str === "" ? null : str };
+  // dd/mm/yy or dd/mm/yyyy — what sbFmtDate writes everywhere in this app.
+  if (kind !== "text") {
+    const d = /^(\d{1,2})\/(\d{1,2})\/(\d{2}|\d{4})$/.exec(str);
+    if (d) {
+      const yr = d[3].length === 2 ? 2000 + Number(d[3]) : Number(d[3]);
+      const dt = new Date(Date.UTC(yr, Number(d[2]) - 1, Number(d[1])));
+      if (!isNaN(dt.getTime())) return { value: dt, numFmt: BOARD_DATE_FMT };
+    }
+  }
+  if (kind === "date") return { value: str };
+  // A plain number. Never a string with a leading zero, never one carrying a
+  // letter or a second dot — those are item numbers and type marks.
+  if (kind === "number" || (kind == null && /^-?\d+(\.\d+)?$/.test(str))) {
+    if (/^0\d/.test(str)) return { value: str };
+    const num = Number(str.replace(/,/g, ""));
+    if (!isNaN(num) && /^-?[\d,]+(\.\d+)?$/.test(str)) {
+      return { value: num, numFmt: Number.isInteger(num) ? "0" : "0.##" };
+    }
+  }
+  return { value: str };
+}
 async function boardExportXlsx(opts) {
   const { fileName } = opts;
   let ExcelJS = null;
@@ -7125,7 +7241,7 @@ function boardImageKind(dataUrl) {
 
 async function boardXlsxStyled(ExcelJS, opts) {
   const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows,
-          imgCol, imgs } = opts;
+          imgCol, imgs, colTypes } = opts;
   const P = boardExportPalette(accent);
   const wb = new ExcelJS.Workbook();
   wb.creator = "A. Weiss";
@@ -7157,6 +7273,10 @@ async function boardXlsxStyled(ExcelJS, opts) {
   r2.alignment = { horizontal: "center", vertical: "middle" };
   ws.getRow(2).height = 20;
 
+  // The widths are set before anything is placed in the sheet, so a picture is
+  // fitted to the column it will actually sit in.
+  ws.columns = widths.map((w) => ({ width: w }));
+
   const hr = ws.getRow(3);
   head.forEach((h, i) => {
     const c = hr.getCell(i + 1);
@@ -7168,11 +7288,16 @@ async function boardXlsxStyled(ExcelJS, opts) {
   });
   hr.height = 30;
 
-  body.forEach((row, ri) => {
+  for (let ri = 0; ri < body.length; ri++) {
+    const row = body[ri];
     const r = ws.getRow(4 + ri);
     row.forEach((v, ci) => {
       const c = r.getCell(ci + 1);
-      c.value = v === "" || v == null ? null : v;
+      // Numbers as numbers, dates as dates: no green corners, no "convert"
+      // prompt, and the columns sort and total the way she expects (30.8.26).
+      const cell = boardCellValue(v, colTypes ? colTypes[ci] : null);
+      c.value = cell.value;
+      if (cell.numFmt) c.numFmt = cell.numFmt;
       c.font = { size: 10, name: "Arial", color: { argb: "FF" + boardHexNoHash(P.ink) } };
       c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
       c.border = { top: thin, left: thin, bottom: thin, right: thin };
@@ -7182,25 +7307,48 @@ async function boardXlsxStyled(ExcelJS, opts) {
       if (alertRows && alertRows[ri]) c.fill = fill("#fbe3e3");
       else if (ri % 2 === 1) c.fill = fill(P.zebra);
     });
-    // A photo on the board is a photo in the workbook — in the cell, not in a
-    // separate list. Wherever a board exports pictures, this is what puts them
-    // there (30.8.26).
+    // A photo on the board is a photo in the workbook, INSIDE the cell: both
+    // corners of the picture are pinned to the cell, so it sits in the grid
+    // instead of floating over it, and it moves and hides with its row
+    // (30.8.26).
     const pic = imgCol != null && imgs ? imgs[ri] : null;
     const kind = pic ? boardImageKind(pic) : null;
     if (kind) {
+      r.height = BOARD_XLSX_IMG_ROW;
+      const boxW = boardColPx(widths[imgCol]);
+      const boxH = boardRowPx(BOARD_XLSX_IMG_ROW);
+      const nat = await boardImageSize(pic);
+      // Fitted to the cell at its own proportions — a photo of a door must not
+      // come out square because the cell is — and centred in what is left.
+      let dw = Math.round(boxW - 6);
+      let dh = Math.round(boxH - 6);
+      if (nat && nat.w && nat.h) {
+        const scale = Math.min((boxW - 6) / nat.w, (boxH - 6) / nat.h);
+        dw = Math.max(8, Math.round(nat.w * scale));
+        dh = Math.max(8, Math.round(nat.h * scale));
+      }
+      const left = Math.max(0, Math.round((boxW - dw) / 2));
+      const top = Math.max(0, Math.round((boxH - dh) / 2));
       const id = wb.addImage({ base64: pic, extension: kind });
-      // Anchored inside the cell with a hair of margin, and sized to the row so
-      // it never sits on top of the one below.
+      // Both corners are given in real EMU rather than as a fraction of the
+      // cell: the fraction is measured in units of the library's own that do
+      // not match the sheet's geometry, which stretched every picture out of
+      // shape. Same cell top and bottom, so it belongs to the cell — it moves
+      // with the row, hides with it, and never floats over the grid (30.8.26).
       ws.addImage(id, {
-        tl: { col: imgCol + 0.06, row: 3 + ri + 0.06 },
-        ext: { width: BOARD_XLSX_IMG_W, height: BOARD_XLSX_IMG_H },
+        tl: {
+          nativeCol: imgCol, nativeColOff: left * BOARD_XLSX_EMU,
+          nativeRow: 3 + ri, nativeRowOff: top * BOARD_XLSX_EMU
+        },
+        br: {
+          nativeCol: imgCol, nativeColOff: (left + dw) * BOARD_XLSX_EMU,
+          nativeRow: 3 + ri, nativeRowOff: (top + dh) * BOARD_XLSX_EMU
+        },
         editAs: "oneCell"
       });
-      r.height = BOARD_XLSX_IMG_ROW;
     }
-  });
+  }
 
-  ws.columns = widths.map((w) => ({ width: w }));
   // The filter goes on the header row, so the sheet arrives ready to be sliced
   // by supplier or by status without anybody setting it up.
   ws.autoFilter = { from: { row: 3, column: 1 }, to: { row: 3 + body.length, column: n } };
@@ -7231,7 +7379,13 @@ function boardXlsxPlain(opts) {
 // A4 landscape is 210mm tall; the page margin is what keeps the frame off the
 // edge of the paper.
 var PRINT_PAGE_MM = 210;
-var PRINT_MARGIN_MM = 8;
+// The white edge of the paper. 12mm is the measurement the reports were set up
+// with and the one she signed off on; 8mm put the frame too close to the edge
+// (30.8.26).
+var PRINT_MARGIN_MM = 12;
+// A4 landscape is 297mm across. The frame lives inside the margin on all four
+// sides, so its box is the paper less twice the margin.
+var PRINT_WIDE_MM = 297;
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
           alertRows, toneRows, noStamp, issuedLabel, fileName } = opts;
@@ -7286,16 +7440,23 @@ body { width: auto; font-family: 'Assistant', 'Inter', Arial, sans-serif; color:
 @media screen { body { width: 297mm; padding: ${PRINT_MARGIN_MM}mm; background: #eef1f5; } }
 /* One printed page: its own frame, its own heading, its own rows. Nothing
    flows across the border because nothing flows at all — the script below
-   deals the rows into pages before printing. */
+   deals the rows into pages before printing.
+   Every page is a WHOLE page: the box is the full sheet less the margin, so the
+   last page is framed edge to edge even when one row is left on it (30.8.26). */
 .page {
   border: 1.5px solid ${P.accent}; border-radius: 12px;
   padding: 5mm 6mm; background: #fff;
   page-break-after: always; break-after: page;
   overflow: hidden;
+  height: ${PRINT_PAGE_MM - 2 * PRINT_MARGIN_MM}mm;
+  width: ${PRINT_WIDE_MM - 2 * PRINT_MARGIN_MM}mm;
+  /* A column, so the closing image can be pushed to the foot of the sheet. */
+  display: flex; flex-direction: column;
 }
+.page > .pgBody { flex: 1 1 auto; min-height: 0; }
 .page:last-child { page-break-after: auto; break-after: auto; }
-@media screen { .page { margin-bottom: 8mm; box-shadow: 0 2px 14px -6px rgba(0,0,0,.35); } }
-#src { position: absolute; left: -9999px; top: 0; width: 273mm; }
+@media screen { .page { margin: 0 auto 8mm; box-shadow: 0 2px 14px -6px rgba(0,0,0,.35); } }
+#src { position: absolute; left: -9999px; top: 0; width: ${PRINT_WIDE_MM - 2 * PRINT_MARGIN_MM - 12}mm; }
 
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 10px; }
@@ -7324,9 +7485,10 @@ tbody tr.ok td, tbody tr.ok:nth-child(even) td { background: #e3f3e6; }
 td.img { padding: 2px; }
 td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: block; margin: 0 auto; }
 ${printedStampCss(4)}
-/* The closing image belongs to the last page, under the last rows on it. */
-.footImg { margin-top: 6mm; text-align: center; }
-.footImg img { max-height: 16mm; }
+/* The closing image belongs to the last page — at the FOOT of it, whether that
+   page carries ten rows or one (30.8.26). */
+.footImg { margin-top: auto; padding-top: 4mm; text-align: center; flex: 0 0 auto; }
+.footImg img { max-height: 15mm; }
 </style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
@@ -7345,44 +7507,55 @@ ${footImg}</div><div id="pages"></div><div id="mm" style="position:absolute;left
   var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
   var foot = document.getElementById("footimg");
   if (foot) foot.remove();
-  // A4 landscape, less the page margin the stylesheet sets, less the frame's
-  // own padding: what is actually left for rows.
-  var room = (${PRINT_PAGE_MM} - 2 * ${PRINT_MARGIN_MM} - 3) * px;
+  // Every page is the same box — the whole sheet less the margin — so a page
+  // is full when its content no longer fits inside it, not when it happens to
+  // be the last one (30.8.26).
+  var pages = [];
   function newPage() {
     var pg = document.createElement("div");
     pg.className = "page";
-    pg.appendChild(hdr.cloneNode(true));
+    var body = document.createElement("div");
+    body.className = "pgBody";
+    body.appendChild(hdr.cloneNode(true));
     var t = document.createElement("table");
     if (colg) t.appendChild(colg.cloneNode(true));
     t.appendChild(thead.cloneNode(true));
     var tb = document.createElement("tbody");
     t.appendChild(tb);
-    pg.appendChild(t);
+    body.appendChild(t);
+    pg.appendChild(body);
     out.appendChild(pg);
-    return { pg: pg, tb: tb };
+    var rec = { pg: pg, tb: tb };
+    pages.push(rec);
+    return rec;
   }
+  // The page has a fixed height and hides what will not fit, so anything taller
+  // than the box shows up as scrollHeight running past clientHeight.
+  function overflows(pg) { return pg.scrollHeight > pg.clientHeight + 1; }
   var cur = newPage();
   for (var i = 0; i < rows.length; i++) {
     cur.tb.appendChild(rows[i]);
     // One row too many: it starts the next page instead of hanging over the
     // edge of this one.
-    if (cur.pg.scrollHeight > room && cur.tb.children.length > 1) {
+    if (overflows(cur.pg) && cur.tb.children.length > 1) {
       var next = newPage();
       next.tb.appendChild(rows[i]);
       cur = next;
     }
   }
-  // The closing image goes under the last rows. If it no longer fits there it
-  // gets a page of its own rather than being pushed over the frame.
+  // The closing image sits at the foot of the LAST page. If the rows already on
+  // that page leave no room for it, the last rows move down a page and the
+  // image follows them, so it is never squeezed over the border.
   if (foot) {
     cur.pg.appendChild(foot);
-    if (cur.pg.scrollHeight > room) {
+    var guard = 0;
+    while (overflows(cur.pg) && cur.tb.children.length > 0 && guard++ < 200) {
+      var moved = cur.tb.lastElementChild;
       foot.remove();
-      var last = document.createElement("div");
-      last.className = "page";
-      last.appendChild(hdr.cloneNode(true));
-      last.appendChild(foot);
-      out.appendChild(last);
+      var page = newPage();
+      if (moved) page.tb.appendChild(moved);
+      page.pg.appendChild(foot);
+      cur = page;
     }
   }
   src.remove();
@@ -7503,6 +7676,7 @@ var LLI_L = {
   hide: { en: "Not for ordering", he: "לא להזמנה" },
   showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
   showCol: { en: "Show", he: "הצגה" },
+  fromContacts: { en: "From the project contacts", he: "מתוך אנשי הקשר של הפרויקט" },
   // Taking the line off this board altogether. Nothing is deleted from the
   // bill of quantities — the routing table keeps its tick, in grey (30.8.26).
   removeRow: { en: "Remove from this list", he: "הסרה מהרשימה" },
@@ -7514,6 +7688,10 @@ var LLI_L = {
   ordersOf: { en: "ordered", he: "הוזמנו" },
   rowsOf: { en: "rows", he: "שורות" },
   findMark: { en: "Find a mark", he: "חיפוש לפי איפיון" },
+  // The box searches the whole table now, not just the mark column (30.8.26).
+  findAny: { en: "Find anything in the table", he: "חיפוש חופשי בטבלה" },
+  findNext: { en: "Next match", he: "התוצאה הבאה" },
+  findPrev: { en: "Previous match", he: "התוצאה הקודמת" },
   alsoSd: { en: "Also on the shop-drawing board", he: "מופיע גם בטבלת SD" },
   alsoSubmittal: { en: "Also on the submittal checklist", he: "מופיע גם בסבמיטלים" },
   clearFind: { en: "Clear", he: "ניקוי" },
@@ -7547,7 +7725,7 @@ var LLI_L = {
   nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." }
 };
 
-function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand }) {
+function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -7561,7 +7739,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // The picture cell she last clicked. Ctrl+V lands there.
   const [pasteAt, setPasteAt] = useState6(null);
   // Searching the board by the mark she gave a row.
+  // Ctrl-F, in the board. She types a word and the table walks her to every row
+  // it appears in, one at a time, marking the cell it was found in — the way a
+  // spreadsheet does it. It does NOT filter: hiding the rows around a hit
+  // throws away the context that makes it worth finding (30.8.26).
   const [markQuery, setMarkQuery] = useState6("");
+  const [hitIx, setHitIx] = useState6(0);
+  const hitRef = useRef5(null);
   // The row whose cell last held the cursor. A new row is added under it.
   const focusRowRef = useRef5(null);
   // The scrolling box the rows live in, and the timer that scrolls it while a
@@ -7643,6 +7827,15 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const markList = Array.from(new Set(
     all.map((r) => String(lliRowOf(data, r.code).typeMark || "").trim()).filter(Boolean)
   )).sort();
+  // Who does each trade on this project, read once off the contacts list.
+  const tradeCache = {};
+  const tradeOf = (categoryKey) => {
+    if (!categoryKey) return "";
+    if (!(categoryKey in tradeCache)) {
+      tradeCache[categoryKey] = boardTradeCompany(contacts, contactsCatalog, categoryKey, lang);
+    }
+    return tradeCache[categoryKey];
+  };
   const markNeedle = markQuery.trim().toLowerCase();
   // A row she removed from this list is off it until she puts it back. It is
   // not deleted from the bill of quantities: the routing table still shows it,
@@ -7654,10 +7847,50 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     (cat === "all" || r.category === cat) &&
     // The administrator sees the whole board — the "הצגה" tick tells her which
     // rows are on it. A client sees only the rows that are on (29.8.26).
-    (canEdit || !isHidden(r)) &&
-    (!markNeedle || String(lliRowOf(data, r.code).typeMark || "").toLowerCase().indexOf(markNeedle) >= 0)
+    (canEdit || !isHidden(r))
   );
   const orderedCount = visible.filter((r) => lliRowOf(data, r.code).ordered).length;
+
+  // ---------------------------------------------------------------------------
+  // The find. Every word on a row is searchable — its number, its trade, its
+  // mark, its description, the supplier, the order number, the dates, the
+  // status — so "דלת" finds the doors wherever they were written down
+  // (30.8.26).
+  // ---------------------------------------------------------------------------
+  const rowWords = (r) => {
+    const v = lliRowOf(data, r.code);
+    const c = boardCategoryOf(r.category);
+    return [
+      r.source === "boq" ? r.code : L("manual"),
+      c ? sbText(c, lang) : "",
+      v.typeMark, v.desc || r.title, v.supplier || tradeOf(r.category),
+      r.qty == null ? "" : String(r.qty),
+      r.unit ? boqUnit(r.unit, lang) : "",
+      v.qtyActual, v.po,
+      v.poDate ? sbFmtDate(v.poDate) : "",
+      v.poFile ? v.poFile.name || "" : "",
+      v.eta ? sbFmtDate(v.eta) : "",
+      v.ordered ? lliStatusLabel(v.status, lang) : "",
+      r.longLead ? L("longLead") : ""
+    ].filter(Boolean).join(" \u0000 ").toLowerCase();
+  };
+  const hitCodes = markNeedle
+    ? visible.filter((r) => rowWords(r).indexOf(markNeedle) >= 0).map((r) => r.code)
+    : [];
+  // A new word starts from its first hit; walking past the end comes round.
+  const hitAt = hitCodes.length ? ((hitIx % hitCodes.length) + hitCodes.length) % hitCodes.length : 0;
+  const hitNow = hitCodes.length ? hitCodes[hitAt] : null;
+  const isHit = (code) => markNeedle && hitCodes.indexOf(code) >= 0;
+  // Which cell the word is actually in, so the eye lands on it and not just on
+  // the row.
+  const cellHit = (text) =>
+    markNeedle && String(text == null ? "" : text).toLowerCase().indexOf(markNeedle) >= 0
+      ? " lliCellHit" : "";
+  // The row she is standing on is brought into view, the way Ctrl-F does it.
+  useEffect5(() => {
+    const el = hitRef.current;
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [hitNow]);
 
   // A row added by hand belongs with its own trade, not in a bin at the bottom
   // of the board. Once she picks its category it joins the chapter where the
@@ -7850,6 +8083,14 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       L("poDate"), L("poFile"), L("eta"), L("status"), L("longLead")
     ];
     const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 9];
+    // What each column IS, so the workbook stores it as that. The item number
+    // is text on purpose: "08.11.0010" is a name, and Excel would eat the
+    // leading zero and the second dot (30.8.26).
+    const types = [
+      "text", "text", "text", "text", "text",
+      "number", "text", "number", "text", "text",
+      "date", "text", "date", "text", "text"
+    ];
     const cat = (k) => {
       const c = boardCategoryOf(k);
       return c ? sbText(c, lang) : "";
@@ -7868,7 +8109,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
           cat(r.category),
           v.typeMark,
           v.desc || r.title,
-          v.supplier,
+          v.supplier || tradeOf(r.category),
           r.qty == null ? "" : r.qty,
           r.unit ? boqUnit(r.unit, lang) : "",
           v.qtyActual,
@@ -7884,7 +8125,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         alerts.push(needsOrder(r));
       });
     });
-    return { head, body, widths, imgs, alerts };
+    return { head, body, widths, types, imgs, alerts };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -7902,6 +8143,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
       fileName: boardFileName(projectName, "LLI", "xlsx"),
       head, body, widths, alertRows: g.alerts,
+      // The photo column is text; everything else keeps the kind the board
+      // gave it.
+      colTypes: g.types.slice(0, 4).concat(["text"], g.types.slice(4)),
       imgCol: 4, imgs: g.imgs,
       accent: (printBrand || {}).accent, isRTL
     });
@@ -8041,17 +8285,51 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         type: "search",
         className: "lliMarkInput",
         list: "lliMarkList",
-        placeholder: L("findMark"),
+        placeholder: L("findAny"),
         value: markQuery,
-        onChange: (e) => setMarkQuery(e.target.value)
+        onChange: (e) => { setMarkQuery(e.target.value); setHitIx(0); },
+        // Enter walks to the next one, exactly as it does in a browser's find.
+        onKeyDown: (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            setHitIx((i) => i + (e.shiftKey ? -1 : 1));
+          }
+        }
       }),
       sbH(
         "datalist",
         { id: "lliMarkList" },
         markList.map((m) => sbH("option", { key: m, value: m }))
       ),
+      markQuery.trim()
+        ? sbH(
+            React15.Fragment,
+            null,
+            sbH(
+              "span",
+              { className: `lliFindCount ${hitCodes.length ? "" : "none"}`.trim(), dir: "ltr" },
+              hitCodes.length ? `${hitAt + 1}/${hitCodes.length}` : "0"
+            ),
+            sbH(
+              "button",
+              {
+                type: "button", className: "lliFindStep", title: L("findPrev"),
+                disabled: !hitCodes.length, onClick: () => setHitIx((i) => i - 1)
+              },
+              "‹"
+            ),
+            sbH(
+              "button",
+              {
+                type: "button", className: "lliFindStep", title: L("findNext"),
+                disabled: !hitCodes.length, onClick: () => setHitIx((i) => i + 1)
+              },
+              "›"
+            )
+          )
+        : null,
       markQuery
-        ? sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => setMarkQuery("") }, L("clearFind"))
+        ? sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => { setMarkQuery(""); setHitIx(0); } }, L("clearFind"))
         : null
     ),
     sbH(
@@ -8121,7 +8399,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     "tr",
                     {
                       key: r.code,
-                      className: `${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""}`.trim(),
+                      // The row the find is standing on carries the reference,
+                      // so the board can bring it into view (30.8.26).
+                      ref: hitNow === r.code ? hitRef : void 0,
+                      className: `${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""}`.trim(),
                       // Wherever she puts the cursor in this row, this is now
                       // the row a new one is added under.
                       onFocusCapture: () => { focusRowRef.current = r.code; },
@@ -8186,7 +8467,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                       : null,
                     sbH(
                       "td",
-                      { className: "cSec" },
+                      { className: `cSec${cellHit(r.source === "boq" ? r.code : L("manual"))}` },
                       sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
                       r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
                       // Under "ידני": the two boards this hand-made row also
@@ -8233,12 +8514,12 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     ),
                     sbH(
                       "td",
-                      { className: "cMark" },
+                      { className: `cMark${cellHit(v.typeMark)}` },
                       sbH("input", { type: "text", className: "lliIn", value: v.typeMark, readOnly: !canEdit, onChange: (e) => patch(r.code, { typeMark: e.target.value }) })
                     ),
                     sbH(
                       "td",
-                      { className: "cDesc" },
+                      { className: `cDesc${cellHit(v.desc || r.title)}` },
                       sbH("textarea", {
                         className: "lliIn lliDesc",
                         rows: 2,
@@ -8253,14 +8534,19 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     ),
                     sbH(
                       "td",
-                      { className: "cSup" },
+                      { className: `cSup${cellHit(v.supplier || tradeOf(r.category))}` },
                       sbH("input", {
                         type: "text",
-                        className: "lliIn",
+                        className: `lliIn ${!v.supplier && tradeOf(r.category) ? "lliFromContacts" : ""}`.trim(),
                         // Never filled from the BOQ. The manufacturer named
                         // there is a specification, not the company that will
-                        // deliver — that one is typed here.
-                        value: v.supplier,
+                        // deliver. The company that WILL deliver is already in
+                        // the project's contacts — "קבלן חשמל, חברת X" — so the
+                        // trade's own contractor is offered here. Nothing is
+                        // invented: with no matching contact the box stays empty
+                        // for her to fill (30.8.26).
+                        value: v.supplier || tradeOf(r.category),
+                        title: !v.supplier && tradeOf(r.category) ? L("fromContacts") : undefined,
                         readOnly: !canEdit,
                         onChange: (e) => patch(r.code, { supplier: e.target.value })
                       })
@@ -8575,7 +8861,7 @@ var SD_L = {
   allStatuses: { en: "All statuses", he: "כל הסטטוסים" }
 };
 
-function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows }) {
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -8711,6 +8997,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       L("status"), L("submittedAt"), L("approvedAt")
     ];
     const widths = [15, 13, 38, 12, 13, 20, 17, 17, 13, 13];
+    const types = [
+      "text", "text", "text", "number", "date", "text", "text", "text", "date", "date"
+    ];
     const cat2 = (k) => {
       const c = boardCategoryOf(k);
       return c ? sbText(c, lang) : "";
@@ -8748,7 +9037,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         ]);
       });
     });
-    return { head, body, widths, tone };
+    return { head, body, widths, types, tone };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -8759,7 +9048,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const res = await boardExportXlsx({
       title: exportTitle(), subtitle: exportSub(), sheetName: "SD",
       fileName: boardFileName(projectName, "SD", "xlsx"),
-      head: g.head, body: g.body, widths: g.widths,
+      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -9808,6 +10097,74 @@ function boardCategoryOf(key) {
   return BOARD_CATEGORIES.find((c) => c.key === key) || null;
 }
 
+// ---------------------------------------------------------------------------
+// Who does this trade on this project.
+//
+// The contacts list already holds it — "קבלן חשמל, חברת X" — so a supplier
+// column that makes her type the same company on forty rows is asking her to
+// keep two lists in step by hand. This reads the company off the contacts, by
+// matching the board's trade to the contact's discipline. When nothing matches
+// the field is left EMPTY: a guessed contractor on a purchase order is worse
+// than a blank one, and she said so (30.8.26).
+// ---------------------------------------------------------------------------
+// The words that mark a contact's discipline as belonging to a board category.
+// Both languages, because a project's contacts may be typed in either.
+var BOARD_TRADE_WORDS = {
+  electrical: ["electrical", "elv", "low voltage", "חשמל", "מתח נמוך"],
+  lighting: ["lighting", "תאורה"],
+  hvac: ["hvac", "air condition", "מיזוג"],
+  plumbing: ["plumbing", "sprinkler", "אינסטלציה", "ספרינקלר"],
+  ceiling: ["ceiling", "תקרות", "תקרה"],
+  flooring: ["flooring", "ריצוף", "חיפויים"],
+  cladding: ["cladding", "finishes", "drywall", "gypsum", "paint", "גמרים", "גבס", "צבע", "חיפוי"],
+  architecture: ["architect", "interior design", "אדריכל", "עיצוב פנים"],
+  joinery: ["joinery", "carpentry", "millwork", "נגרות"]
+};
+// A trade word that would otherwise steal a category from the one it belongs
+// to: a lighting contractor is not the electrical contractor, and a doors
+// contractor is not the joinery one unless there is no joiner on the project.
+function boardTradeScore(text, key) {
+  const t = String(text || "").toLowerCase();
+  if (!t) return 0;
+  const words = BOARD_TRADE_WORDS[key] || [];
+  let best = 0;
+  words.forEach((w) => {
+    if (t.indexOf(String(w).toLowerCase()) >= 0) best = Math.max(best, w.length);
+  });
+  if (!best) return 0;
+  // A consultant advises; a contractor or a supplier is who the order goes to.
+  // Prefer the latter when both carry the trade.
+  const isContractor = /contractor|supplier|קבלן|ספק/.test(t);
+  return best * 10 + (isContractor ? 5 : 0);
+}
+// The company that does `categoryKey` on this project, or "" when the contacts
+// do not say. `contacts` is the project's own list; `catalog` resolves the ids.
+function boardTradeCompany(contacts, catalog, categoryKey, lang) {
+  if (!categoryKey || !contacts || !contacts.length) return "";
+  const cat = catalog || {};
+  let bestScore = 0;
+  let bestName = "";
+  contacts.forEach((row) => {
+    if (!row) return;
+    // A supplier or a sub-contractor — never the main contractor, never the
+    // supervision, never a consultant standing in for the trade.
+    if (row.group !== "suppliers") return;
+    const disc = [
+      catalogLabel(catalogFind(cat.disciplines || [], row.disciplineId), "he"),
+      catalogLabel(catalogFind(cat.disciplines || [], row.disciplineId), "en"),
+      bilingual(row.discipline, "he"),
+      bilingual(row.discipline, "en")
+    ].filter(Boolean).join(" ");
+    const score = boardTradeScore(disc, categoryKey);
+    if (score > bestScore) {
+      const name = catalogLabel(catalogFind(cat.companies || [], row.companyId), lang)
+        || bilingual(row.company, lang) || "";
+      if (name) { bestScore = score; bestName = name; }
+    }
+  });
+  return bestName;
+}
+
 // The sub-category catalogue, exactly as Marcella supplied it (18.8.26,
 // "תת קטגוריה לסבמיטלים.xlsx"). English first, Hebrew second — the English term
 // is what gets stored, so switching the language never rewrites the record.
@@ -10020,6 +10377,11 @@ var SB_L = {
   notesCol: { en: "My notes", he: "הערות שלי" },
   // The three dates on the tracking table say which date they are. "Date" on
   // its own was read as any of them (30.8.26).
+  docsCol: { en: "Files", he: "קבצים" },
+  fromContacts: { en: "From the project contacts", he: "מתוך אנשי הקשר של הפרויקט" },
+  issuedOn: { en: "Report issued on", he: "תאריך הנפקת דוח" },
+  nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." },
+  exportAll: { en: "All disciplines", he: "כל הקטגוריות" },
   sentCol: { en: "Submission date", he: "תאריך הגשה" },
   targetCol: { en: "Approval target date", he: "תאריך יעד לאישור" },
   clientOkCol: { en: "Client approval date", he: "תאריך אישור לקוח" },
@@ -11769,6 +12131,176 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
 
 // ------------------------------------------------------------- folder + list
 // The date a submittal actually went out, and the date it came back signed.
+// ---------------------------------------------------------------------------
+// Putting a specification on the checklist line it answers.
+//
+// The model is asked to do this and usually can, but it is the wrong place to
+// depend on: the checklist line says "כבלי N2XY" and the datasheet says
+// "N2XY 5x2.5", and a model that reads them as different things opens a
+// submittal of its own for every cross-section. The app already knows how to
+// see through that — it is the same size-stripping, stemming comparison that
+// makes the bill of quantities group those cables into ONE product — so the
+// match is computed here as well, and the model's answer is only accepted when
+// it names a line that actually exists (30.8.26).
+// ---------------------------------------------------------------------------
+// A type code is the strongest thing either side can carry: N2XY, FL-01, OD1,
+// XLPE, 5SY6. Letters and digits together, or an all-capital word that is not a
+// unit — never a plain word and never a bare number.
+var SB_MATCH_STOP = /^(mm|cm|kg|pvc|iso|en|iec|vde|ul|ce|din|astm|type|model|series|rev|no|pdf|תו|תקן|דגם|סוג|מק|קט)$/i;
+function sbTypeCodes(text) {
+  const out = [];
+  String(text || "")
+    .replace(/[(),;:\[\]{}\/]/g, " ")
+    .split(/\s+/)
+    .forEach((raw) => {
+      const w = raw.replace(/["'׳״.]/g, "").trim();
+      if (!w || w.length < 2 || w.length > 14) return;
+      if (SB_MATCH_STOP.test(w)) return;
+      // A measurement is not a type code.
+      if (/^\d+(\.\d+)?([x×\-\/]\d+(\.\d+)?)*$/.test(w)) return;
+      const hasLetter = /[a-z]/i.test(w);
+      const hasDigit = /\d/.test(w);
+      if (hasLetter && (hasDigit || (w === w.toUpperCase() && w.length >= 3))) {
+        out.push(w.toUpperCase());
+      }
+    });
+  return Array.from(new Set(out));
+}
+// How much two descriptions look like the same product. 0 is nothing in common.
+function sbMatchScore(productText, lineText) {
+  const pCodes = sbTypeCodes(productText);
+  const lCodes = sbTypeCodes(lineText);
+  const shared = pCodes.filter((c) => lCodes.indexOf(c) >= 0);
+  // A shared type code all but settles it: "N2XY" on both sides is the same
+  // cable whatever cross-section either of them names.
+  if (shared.length) return 100 + shared.join("").length;
+  // Otherwise: the words each side is left with once sizes are stripped and
+  // Hebrew plurals are stemmed — exactly what groups the BOQ itself.
+  const pw = boqFamilySig(productText).split(" ").filter((w) => w.length > 1);
+  const lw = boqFamilySig(lineText).split(" ").filter((w) => w.length > 1);
+  if (!pw.length || !lw.length) return 0;
+  const set = new Set(pw);
+  const hit = lw.filter((w) => set.has(w));
+  if (!hit.length) return 0;
+  // Scored against the SHORTER side, so a long datasheet title does not dilute
+  // a short checklist line it plainly matches.
+  const ratio = hit.length / Math.min(pw.length, lw.length);
+  return Math.round(ratio * 90);
+}
+// The line this product answers, or "" when nothing on the list plausibly is.
+// `checklist` is [{ code, name }]; `said` is what the model returned.
+function sbMatchChecklist(product, checklist, said) {
+  const list = (checklist || []).filter((c) => c && c.code);
+  if (!list.length) return "";
+  // The model's answer counts only if it names a line that exists.
+  const claimed = String(said || "").trim();
+  if (claimed && list.some((c) => c.code === claimed)) return claimed;
+  const p = product || {};
+  const text = [p.typeId, p.itemDescription, p.modelCode, p.manufacturer,
+    ...(Array.isArray(p.files) ? p.files : [])].filter(Boolean).join(" ");
+  if (!text.trim()) return "";
+  let best = null;
+  let bestScore = 0;
+  let runnerUp = 0;
+  list.forEach((c) => {
+    const score = sbMatchScore(text, c.name || c.code);
+    if (score > bestScore) { runnerUp = bestScore; bestScore = score; best = c; }
+    else if (score > runnerUp) { runnerUp = score; }
+  });
+  // Below this a "match" is two words that happen to be common. And when two
+  // lines score the same, neither is the answer — filing it under the wrong one
+  // is worse than leaving it for her to place (30.8.26).
+  if (!best || bestScore < 45) return "";
+  if (bestScore === runnerUp) return "";
+  return best.code;
+}
+
+// ---------------------------------------------------------------------------
+// The submittal board, as a grid that can be printed or put in a workbook.
+//
+// It is built from the same two things the screen is built from — the bill of
+// quantities' checklist and the submittals filed against it — so the sheet she
+// takes away says exactly what the table in front of her says. One discipline
+// at a time, or all of them at once with a discipline column (30.8.26).
+// ---------------------------------------------------------------------------
+var SB_EXPORT_CLIENT_COLS = ["submittalNo", "chkItem", "chkDesc", "supplierCol", "sentCol", "status", "clientOkCol"];
+function sbBoardGrid(opts) {
+  const { list, boqData, boqFlags, chkOff, lang, audience, categories, withCategory, tradeFor } = opts;
+  const L = (k) => sbText(SB_L[k], lang);
+  const today = new Date().toISOString().slice(0, 10);
+  const auto = (boqData || {}).flags || {};
+  const head = [];
+  const widths = [];
+  const types = [];
+  const keys = [];
+  const col = (key, label, width, kind) => { keys.push(key); head.push(label); widths.push(width); types.push(kind); };
+  if (withCategory) col("catCol", L("catCol"), 14, "text");
+  col("submittalNo", L("submittalNo"), 15, "text");
+  col("chkItem", L("chkItem"), 14, "text");
+  col("chkDesc", L("chkDesc"), 40, "text");
+  col("docsCol", L("docsCol"), 9, "number");
+  col("supplierCol", L("supplierCol"), 20, "text");
+  col("sentCol", L("sentCol"), 13, "date");
+  col("targetCol", L("targetCol"), 14, "date");
+  col("status", L("status"), 16, "text");
+  col("clientOkCol", L("clientOkCol"), 14, "date");
+
+  const body = [];
+  const tone = [];
+  (categories || []).forEach((cat) => {
+    const off = ((chkOff || {})[cat.key]) || {};
+    const groups = boqProducts(boqData, auto, boqFlags, "submittal", cat.key).filter((pr) => !off[pr.code]);
+    const mine = (list || []).filter((x) => x.category === cat.key);
+    const trade = tradeFor ? tradeFor(cat.key) : "";
+    groups.forEach((pr) => {
+      // Everything filed against this product, newest revision first.
+      const codes = [pr.code].concat((pr.items || []).map((it) => it.code));
+      const hits = mine.filter((x) => x.boqCode && codes.indexOf(x.boqCode) >= 0);
+      const lead = hits.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
+      const st = lead ? sbStatusOf(lead) : null;
+      const signed = lead ? sbSignedAt(lead) : null;
+      const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
+      const docs = hits.reduce((n, x) => n + ((x.attachments || []).length), 0);
+      // The fan she set for all three boards: signed off green, in somebody's
+      // hands orange, past its approval date and still not approved red.
+      tone.push(
+        signed || st === "approved" || st === "approved_as_noted" ? "ok"
+          : (due && due < today && !signed) ? "late"
+          : lead && lead.sent ? "wait"
+          : ""
+      );
+      const cells = {
+        catCol: sbText(cat, lang),
+        submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
+        chkItem: pr.code,
+        chkDesc: (lead && (lead.itemDescription || lead.typeId)) || boqText({ he: pr.he, en: pr.en }, lang),
+        docsCol: docs || "",
+        supplierCol: (lead && lead.supplier) || trade || "",
+        sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
+        targetCol: due ? sbFmtDate(due) : "",
+        status: lead ? (lead.sent ? sbStatusLabel(st, lang) : L("draft")) : L("chkMissing"),
+        clientOkCol: signed ? sbFmtDate(signed.slice(0, 10)) : ""
+      };
+      body.push(keys.map((k) => cells[k]));
+    });
+  });
+  // A client's copy carries what a client is owed: what the item is, who is
+  // supplying it, when it went in and where it stands. The internal target date
+  // and the paperwork count stay on her side (30.8.26).
+  if (audience === "client") {
+    const want = keys.map((k, i) => ((withCategory && k === "catCol") || SB_EXPORT_CLIENT_COLS.indexOf(k) >= 0 ? i : -1))
+      .filter((i) => i >= 0);
+    return {
+      head: want.map((i) => head[i]),
+      widths: want.map((i) => widths[i]),
+      types: want.map((i) => types[i]),
+      body: body.map((r) => want.map((i) => r[i])),
+      tone
+    };
+  }
+  return { head, body, widths, types, tone };
+}
+
 function sbSignedAt(rec) {
   const rv = (rec && rec.reviews || [])[0] || {};
   return rv.decision && rv.signedAt ? rv.signedAt : null;
@@ -12268,10 +12800,51 @@ function SubmittalFolder({
   boqFlags,
   chkOff,
   onRemoveChk,
-  onRestoreChk
+  onRestoreChk,
+  tradeCompany,
+  projectName,
+  printBrand
 }) {
   const L = (k) => sbText(SB_L[k], lang);
   const [bulkBusy, setBulkBusy] = useState6(null);
+  // Who the sheet is for, and in which language — the same two questions the
+  // ordering board asks before it prints (30.8.26).
+  const [exportAsk, setExportAsk] = useState6(null);
+  const [exportNote, setExportNote] = useState6(null);
+  const gridFor = (lg, who) => sbBoardGrid({
+    list, boqData, boqFlags,
+    chkOff: { [category.key]: chkOff || {} },
+    lang: lg, audience: who,
+    categories: [category],
+    tradeFor: () => tradeCompany || ""
+  });
+  const onFolderExcel = async () => {
+    const g = gridFor(lang, "admin");
+    if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
+    setExportNote(null);
+    const res = await boardExportXlsx({
+      title: projectName || "",
+      subtitle: `${sbText(category, lang)} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      sheetName: category.en,
+      fileName: boardFileName(projectName, `SUB - ${category.en}`, "xlsx"),
+      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      accent: (printBrand || {}).accent, isRTL
+    });
+    if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+  };
+  const onFolderPdf = (lg, who) => {
+    const g = gridFor(lg, who);
+    if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
+    setExportNote(null);
+    boardExportPdf({
+      title: projectName || "",
+      fileName: boardFileName(projectName, `SUB - ${category.en}`, ""),
+      subtitle: `${L("trackingList")} · ${sbText(category, lg)}`,
+      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      head: g.head, body: g.body, widths: g.widths, toneRows: g.tone,
+      accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
+    });
+  };
   // The submittal whose private notes are open.
   const [notesFor, setNotesFor] = useState6(null);
   // One file, one submittal. The serial runs on as they are made, so the
@@ -12540,8 +13113,15 @@ function SubmittalFolder({
                     // and the BOQ number follows it (30.8.26).
                     sbH("thead", null, sbH("tr", null,
                       sbH("th", { className: "cChkNo" }, L("submittalNo")),
+                      // The chevron that opens a group gets a slot of its own
+                      // between the serial and the BOQ number. It reads as a
+                      // gutter rather than a column, and it is what keeps the
+                      // BOQ numbers in one straight centred line whether or not
+                      // a row has lines under it (30.8.26).
+                      sbH("th", { className: "cChkChev" }, ""),
                       sbH("th", { className: "cCode" }, L("chkItem")),
                       sbH("th", { className: "cDesc" }, L("chkDesc")),
+                      sbH("th", { className: "cChkDocs" }, L("docsCol")),
                       sbH("th", { className: "cChkSup" }, L("supplierCol")),
                       sbH("th", { className: "cChkDate" }, L("sentCol")),
                       sbH("th", { className: "cChkDate" }, L("targetCol")),
@@ -12572,13 +13152,11 @@ function SubmittalFolder({
                         "tr",
                         { key: r.code, className: r.count ? "sbChkOn" : "" },
                         sbH("td", { className: "sbChkNo" }, lead ? sbNumber(lead.category, lead.seq) : "—"),
+                        // The gutter: only the chevron lives here, so the BOQ
+                        // number beside it is never pushed off centre.
                         sbH(
                           "td",
-                          { dir: "ltr", className: "sbChkCode" },
-                          r.code,
-                          r.product.flags.review
-                            ? sbH("span", { className: "lliReviewTag", title: L("chkReviewTitle") }, L("chkReview"))
-                            : null,
+                          { className: "sbChkChev" },
                           r.lines.length
                             ? sbH(
                                 "button",
@@ -12593,6 +13171,7 @@ function SubmittalFolder({
                               )
                             : null
                         ),
+                        sbH("td", { dir: "ltr", className: "sbChkCode" }, r.code),
                         sbH(
                           "td",
                           { className: "sbChkDesc", dir: "auto" },
@@ -12600,18 +13179,35 @@ function SubmittalFolder({
                           // is one; the bill of quantities' own wording when
                           // there is not.
                           (lead && (lead.itemDescription || lead.typeId)) || boqText(r.node, lang),
-                          docCount
-                            ? sbH(
-                                "span",
-                                { className: "sbChkDocs", title: `${docCount} ${L("chkDocs")}` },
-                                sbH(FileTextIcon, { size: 12, strokeWidth: 2 }),
-                                docCount
-                              )
+                          // A line the classification was unsure about.
+                          r.product.flags.review
+                            ? sbH("span", { className: "lliReviewTag", title: L("chkReviewTitle") }, L("chkReview"))
                             : null,
                           // Something is wrong with the papers themselves.
                           warn
                             ? sbH("span", { className: "sbChkWarn", title: warn }, "!")
                             : null
+                        ),
+                        // The papers attached to this submittal. A document mark
+                        // means there are files on it; pressing it opens the
+                        // submittal, where they are all listed at the bottom
+                        // (30.8.26).
+                        sbH(
+                          "td",
+                          { className: "sbChkDocsCell" },
+                          docCount
+                            ? sbH(
+                                "button",
+                                {
+                                  type: "button",
+                                  className: "sbChkDocs",
+                                  title: `${docCount} ${L("chkDocs")}`,
+                                  onClick: () => lead && onOpen && onOpen(lead)
+                                },
+                                sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
+                                docCount
+                              )
+                            : sbH("span", { className: "sbChkDash" }, "—")
                         ),
                         sbH(
                           "td",
@@ -12619,12 +13215,16 @@ function SubmittalFolder({
                           lead && canEdit
                             ? sbH("input", {
                                 type: "text",
-                                className: "sbCellIn",
-                                value: lead.supplier || "",
+                                // The trade's own contractor, off the project's
+                                // contacts. Empty when the contacts do not name
+                                // one — never a guess (30.8.26).
+                                className: `sbCellIn ${!lead.supplier && tradeCompany ? "sbFromContacts" : ""}`.trim(),
+                                value: lead.supplier || tradeCompany || "",
+                                title: !lead.supplier && tradeCompany ? L("fromContacts") : undefined,
                                 placeholder: "—",
                                 onChange: (e) => onPatch && onPatch(lead, { supplier: e.target.value })
                               })
-                            : (lead && lead.supplier) || "—"
+                            : (lead && (lead.supplier || tradeCompany)) || "—"
                         ),
                         sbH("td", { dir: "ltr" }, lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "—"),
                         sbH("td", { dir: "ltr" }, leadDue ? sbFmtDate(leadDue) : "—"),
@@ -12670,6 +13270,7 @@ function SubmittalFolder({
                           // is started from it, so it carries no buttons and no
                           // columns of its own (30.8.26).
                           sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
+                          sbH("td", { className: "sbChkChev" }),
                           sbH(
                             "td",
                             { dir: "ltr", className: "sbChkCode" },
@@ -12685,12 +13286,37 @@ function SubmittalFolder({
                               eq ? L("chkEquiv") : L("chkSpecific")
                             )
                           ),
-                          sbH("td", { colSpan: 6 })
+                          sbH("td", { colSpan: 7 })
                         );
                       });
                       return [head, ...kids];
                     }))
                   )
+                ),
+                // The sheet she takes away. Same two questions the ordering
+                // board asks — who it is for, and in which language — and the
+                // same house template on the other side (30.8.26).
+                sbH(
+                  "div",
+                  { className: "sbExportBar" },
+                  exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
+                  sbH(
+                    "button",
+                    { type: "button", className: "ghostBtn small", onClick: onFolderExcel },
+                    sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"
+                  ),
+                  sbH(
+                    "button",
+                    { type: "button", className: "ghostBtn small", onClick: () => setExportAsk(() => onFolderPdf) },
+                    sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"
+                  ),
+                  exportAsk
+                    ? sbH(PrintLangAsk, {
+                        withAudience: true,
+                        onPick: (lg, who) => { setExportAsk(null); exportAsk(lg, who); },
+                        onClose: () => setExportAsk(null)
+                      })
+                    : null
                 )
               )
       );
@@ -13004,6 +13630,45 @@ function SubmittalCard({
   const projectId = project && project.id;
   const pName = (project && project.name) || projectName || "";
 
+  // ------------------------------------------------- the whole board at once
+  const [allAsk, setAllAsk] = useState6(null);
+  const [allNote, setAllNote] = useState6(null);
+  const allGrid = (lg, who) => sbBoardGrid({
+    list: visibleList, boqData, boqFlags,
+    chkOff: submittalChkOff || {},
+    lang: lg, audience: who,
+    categories: SUBMITTAL_CATEGORIES,
+    withCategory: true,
+    tradeFor: (key) => boardTradeCompany(contacts, contactsCatalog, key, lg)
+  });
+  const onAllExcel = async () => {
+    const g = allGrid(lang, "admin");
+    if (!g.body.length) { setAllNote(L("nothingToExport")); return; }
+    setAllNote(null);
+    const res = await boardExportXlsx({
+      title: pName,
+      subtitle: `${L("trackingList")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      sheetName: "Submittals",
+      fileName: boardFileName(pName, "SUB", "xlsx"),
+      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      accent: (printBrand || {}).accent, isRTL
+    });
+    if (res && res.styled === false) setAllNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+  };
+  const onAllPdf = (lg, who) => {
+    const g = allGrid(lg, who);
+    if (!g.body.length) { setAllNote(L("nothingToExport")); return; }
+    setAllNote(null);
+    boardExportPdf({
+      title: pName,
+      fileName: boardFileName(pName, "SUB", ""),
+      subtitle: `${L("trackingList")} · ${sbText(SB_L.exportAll, lg)}`,
+      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      head: g.head, body: g.body, widths: g.widths, toneRows: g.tone,
+      accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
+    });
+  };
+
   // The contractor line is the company itself. The full row in the contacts tab
   // carries a person, a role and a phone — none of that belongs on the form.
   const contractorName = brandName || (() => {
@@ -13033,6 +13698,9 @@ function SubmittalCard({
   // from. Started from the button at the top it is empty, and the submittal
   // belongs to no BOQ line at all — which is exactly what that button is for.
   const startCreate = (preset) => {
+    // The trade's own contractor, off the contacts, so the field is right
+    // before she opens the form rather than after (30.8.26).
+    const trade = boardTradeCompany(contacts, contactsCatalog, chosen.key, lang);
     const rec = sbNewSubmittal({
       category: chosen.key,
       seq: sbNextSeq(list, chosen.key),
@@ -13043,6 +13711,7 @@ function SubmittalCard({
       email: currentEmail || "",
       submittedBy: (currentEmail || "").split("@")[0] || ""
     });
+    if (trade && !rec.supplier) rec.supplier = trade;
     const withPreset = preset
       ? {
           ...rec,
@@ -13188,6 +13857,34 @@ function SubmittalCard({
         );
       })
     ),
+    // The whole board, every discipline at once. In the workbook that is a
+    // discipline column; on paper the disciplines follow one another down the
+    // page. Same two questions as everywhere else (30.8.26).
+    canEdit
+      ? sbH(
+          "div",
+          { className: "sbExportBar sbExportAll" },
+          sbH("span", { className: "sbExportAllLabel" }, L("exportAll")),
+          allNote ? sbH("span", { className: "lliPoNote" }, allNote) : null,
+          sbH(
+            "button",
+            { type: "button", className: "ghostBtn small", onClick: onAllExcel },
+            sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"
+          ),
+          sbH(
+            "button",
+            { type: "button", className: "ghostBtn small", onClick: () => setAllAsk(() => onAllPdf) },
+            sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"
+          ),
+          allAsk
+            ? sbH(PrintLangAsk, {
+                withAudience: true,
+                onPick: (lg, who) => { setAllAsk(null); allAsk(lg, who); },
+                onClose: () => setAllAsk(null)
+              })
+            : null
+        )
+      : null,
     chosen &&
       sbH(SubmittalFolder, {
         category: chosen,
@@ -13352,7 +14049,16 @@ function SubmittalCard({
             rec.specText = text.slice(0, 60000);
             // The checklist line this answers. With it, the submittal shows up
             // on that line instead of only in the list at the top.
-            const onLine = String(pr.boq || "").trim();
+            // The model's answer is taken when it names a line that exists; when
+            // it does not, the app works the match out for itself, the same way
+            // the bill of quantities grouped the line in the first place — so a
+            // datasheet for "N2XY 5x2.5" still lands on "כבלי N2XY" instead of
+            // opening a submittal of its own (30.8.26).
+            const onLine = sbMatchChecklist(
+              { ...pr, files: names },
+              checklist,
+              String(pr.boq || "").trim()
+            );
             if (onLine && checklistCodes.has(onLine)) rec.boqCode = onLine;
             rec.subCategory = sbSubcatCanon(val(pr.subCategory), chosen.key);
             rec.typeId = val(pr.typeId) || rec.typeId;
@@ -13435,7 +14141,12 @@ function SubmittalCard({
           const next = { ...(submittalChkOff || {}) };
           delete next[catKey];
           if (onChangeChkOff) onChangeChkOff(next);
-        }
+        },
+        // The company that does this discipline on this project, out of the
+        // contacts list. Blank when the contacts do not say (30.8.26).
+        tradeCompany: boardTradeCompany(contacts, contactsCatalog, chosen.key, lang),
+        projectName: pName,
+        printBrand
       }),
     printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
     bulkReport ? sbH(SbBulkReport, { report: bulkReport, lang, isRTL, onClose: () => setBulkReport(null) }) : null
