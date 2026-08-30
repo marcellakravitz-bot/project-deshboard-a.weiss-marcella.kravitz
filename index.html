@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "30.8.2026 \u00b7 build 38";
+var APP_BUILD = "30.8.2026 \u00b7 build 39";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1651,6 +1651,60 @@ var pdfViewer = `
         .sbChkDocs:hover { border-color: var(--accent, #0F3460); }
         /* A company that came from the contacts rather than from her keyboard. */
         .sbCellIn.sbFromContacts { color: var(--steel, #5b6472); font-style: italic; }
+        /* The review list. Deliberately quieter than the checklist above it —
+           it is a short list of things waiting on her, not the main table. */
+        /* Two of the attached papers disagree. Loud enough to be seen, calm
+           enough to live on the form until somebody settles it (30.8.26). */
+        .sbConflict {
+          margin-top: 10px; border: 1px solid #f0c6c0; background: #fdf1ef;
+          border-radius: 10px; padding: 9px 12px;
+        }
+        .sbConflictTitle {
+          display: flex; align-items: center; gap: 5px;
+          font-size: 12px; font-weight: 800; color: #b3261e; margin-bottom: 4px;
+        }
+        .sbConflict ul { margin: 0; padding-inline-start: 18px; }
+        .sbConflict li { font-size: 11.5px; color: var(--ink, #14181f); line-height: 1.5; }
+
+        .sbReview { margin-top: 20px; }
+        .sbReviewHint {
+          text-align: center; font-size: 11.5px; color: var(--mist, #8a929e);
+          margin: 2px 0 6px;
+        }
+        .sbReviewTable { table-layout: fixed; width: 100%; }
+        .sbReviewTable th, .sbReviewTable td { box-sizing: border-box; }
+        .sbReviewTable th.cRvFiles { width: 190px; }
+        .sbReviewTable th.cRvProd { width: 160px; }
+        .sbReviewTable th.cRvFind { width: 210px; }
+        .sbReviewTable th.cRvBoq { width: 230px; }
+        .sbReviewTable th.cRvConf { width: 80px; }
+        .sbReviewTable th.cRvAct { width: 130px; }
+        .sbReviewTable td { vertical-align: top; padding: 8px 6px; text-align: center; }
+        .sbRvFile {
+          font-size: 11px; color: var(--steel, #5b6472); word-break: break-all;
+          text-align: start;
+        }
+        .sbRvReason {
+          display: inline-block; border-radius: 999px; padding: 2px 9px;
+          font-size: 10.5px; font-weight: 800;
+        }
+        /* The line is right and nothing has been opened on it — the one worth
+           acting on. A genuine no-match is just grey. */
+        .sbRvReason.no_submittal_line { background: #fdeed8; color: #8a5a12; }
+        .sbRvReason.several { background: #e6ecf5; color: var(--accent-ink, #0F3460); }
+        .sbRvReason.no_match { background: #eef0f3; color: var(--steel, #5b6472); }
+        .sbRvWhy { font-size: 10.5px; color: var(--mist, #8a929e); margin-top: 4px; text-align: start; }
+        .sbRvLine { display: flex; gap: 6px; align-items: baseline; justify-content: center; margin-bottom: 3px; }
+        .sbRvCode { font-weight: 800; font-size: 11.5px; }
+        .sbRvName { font-size: 11px; color: var(--steel, #5b6472); }
+        .sbRvConf {
+          display: inline-block; border-radius: 999px; padding: 2px 9px;
+          font-size: 10.5px; font-weight: 800; background: #eef0f3; color: var(--steel, #5b6472);
+        }
+        .sbRvConf.high { background: #e3f3e6; color: #1a7f4b; }
+        .sbRvConf.low { background: #fbe3e3; color: #b3261e; }
+        .sbRvAct { white-space: nowrap; }
+
         /* Taking the submittal board away: one discipline, or all of them. */
         .sbExportBar {
           display: flex; align-items: center; justify-content: center; gap: 10px;
@@ -5207,7 +5261,9 @@ function CardView({
   onChangeRoomsData,
   userPerms,
   submittalChkOff,
-  onChangeChkOff
+  onChangeChkOff,
+  submittalReview,
+  onChangeReview
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -5273,7 +5329,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -7525,19 +7581,31 @@ ${footImg}</div><div id="pages"></div><div id="mm" style="position:absolute;left
     body.appendChild(t);
     pg.appendChild(body);
     out.appendChild(pg);
-    var rec = { pg: pg, tb: tb };
+    var rec = { pg: pg, tb: tb, body: body };
     pages.push(rec);
     return rec;
   }
   // The page has a fixed height and hides what will not fit, so anything taller
   // than the box shows up as scrollHeight running past clientHeight.
   function overflows(pg) { return pg.scrollHeight > pg.clientHeight + 1; }
+  // How much clear paper is left between the last row and the inside of the
+  // frame. Measured, not inferred: the page has a fixed height and hides the
+  // overflow, so scrollHeight alone cannot see past the bottom border.
+  function footRoom(rec) {
+    var cs = getComputedStyle(rec.pg);
+    var floor = rec.pg.getBoundingClientRect().bottom
+      - parseFloat(cs.paddingBottom || 0) - parseFloat(cs.borderBottomWidth || 0);
+    return floor - rec.tb.getBoundingClientRect().bottom;
+  }
   var cur = newPage();
   for (var i = 0; i < rows.length; i++) {
     cur.tb.appendChild(rows[i]);
-    // One row too many: it starts the next page instead of hanging over the
-    // edge of this one.
-    if (overflows(cur.pg) && cur.tb.children.length > 1) {
+    // A page stops ONE ROW SHORT of full. Filled to the last millimetre the
+    // rows sat on the frame's bottom border and the sheet read as bottom-heavy;
+    // a row's worth of air under the table is what makes every page look the
+    // same, and look right (30.8.26).
+    var spare = rows[i].getBoundingClientRect().height;
+    if (cur.tb.children.length > 1 && footRoom(cur) < spare) {
       var next = newPage();
       next.tb.appendChild(rows[i]);
       cur = next;
@@ -7546,6 +7614,18 @@ ${footImg}</div><div id="pages"></div><div id="mm" style="position:absolute;left
   // The closing image sits at the foot of the LAST page. If the rows already on
   // that page leave no room for it, the last rows move down a page and the
   // image follows them, so it is never squeezed over the border.
+  // Balance every page: the air left under the table is split, half of it
+  // moved above the heading, so the block sits in the middle of the frame
+  // instead of hanging from the top of it. A page that is only half full is
+  // left alone — its heading belongs at the top, not floating in the middle
+  // (30.8.26).
+  var rowH = rows.length ? rows[0].getBoundingClientRect().height : 18;
+  pages.forEach(function (rec) {
+    var gap = footRoom(rec);
+    if (gap <= 2) return;
+    var lift = Math.min(gap / 2, rowH * 2.5);
+    rec.body.style.paddingTop = Math.round(lift) + "px";
+  });
   if (foot) {
     cur.pg.appendChild(foot);
     var guard = 0;
@@ -10382,6 +10462,27 @@ var SB_L = {
   issuedOn: { en: "Report issued on", he: "תאריך הנפקת דוח" },
   nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." },
   exportAll: { en: "All disciplines", he: "כל הקטגוריות" },
+  // The review list: documents the sorting could not place by itself. It is
+  // not a bin — every row says what the reading found and why it stopped
+  // (30.8.26).
+  reviewTitle: { en: "Documents waiting to be placed", he: "מסמכים הממתינים לשיוך" },
+  reviewHint: {
+    en: "These were read but not filed. Each row says what was found and why it stopped there.",
+    he: "המסמכים נקראו אך לא שויכו. כל שורה אומרת מה נמצא ולמה העבודה נעצרה שם."
+  },
+  reviewFiles: { en: "Documents", he: "מסמכים" },
+  reviewProduct: { en: "What it is", he: "מהו המוצר" },
+  reviewFinding: { en: "What was found", he: "ממצא" },
+  reviewSuggested: { en: "Suggested BOQ line", he: "סעיף BOQ מוצע" },
+  reviewConfidence: { en: "Confidence", he: "רמת התאמה" },
+  reviewNoLine: { en: "Submittal probably missing on this line", he: "כנראה חסר סבמיטל בשורה הזו" },
+  reviewSeveral: { en: "Several lines fit — pick one", he: "כמה שורות מתאימות — יש לבחור" },
+  reviewNoMatch: { en: "Nothing on the checklist matches", he: "אין בצ׳ק‑ליסט סעיף מתאים" },
+  confHigh: { en: "High", he: "גבוהה" },
+  confMedium: { en: "Medium", he: "בינונית" },
+  confLow: { en: "Low", he: "נמוכה" },
+  reviewOpenHere: { en: "Open a submittal on this line", he: "פתיחת סבמיטל בשורה הזו" },
+  reviewDismiss: { en: "Remove from the list", he: "הסרה מהרשימה" },
   sentCol: { en: "Submission date", he: "תאריך הגשה" },
   targetCol: { en: "Approval target date", he: "תאריך יעד לאישור" },
   clientOkCol: { en: "Client approval date", he: "תאריך אישור לקוח" },
@@ -10549,6 +10650,13 @@ var SB_L = {
   loadThis: { en: "Take this one", he: "לקחת את זה" },
   remaining: { en: "still to do", he: "נותרו לביצוע" },
   notRelevant: { en: "not relevant to the rest of the documents", he: "לא נמצא רלוונטי לשאר המסמכים" },
+  // Two of the attached papers say different things about the same fact.
+  // Nothing is chosen and nothing is hidden — she is told (30.8.26).
+  conflictFound: {
+    en: "The attached documents disagree — please check:",
+    he: "יש סתירה בין המסמכים המצורפים — נדרשת בדיקה:"
+  },
+  conflictTitle: { en: "Conflicting information", he: "מידע סותר" },
   worklistDone: { en: "The worklist is finished.", he: "רשימת העבודה הושלמה." },
   olderVersions: { en: "Earlier versions", he: "גירסאות קודמות" },
   newVersionNote: {
@@ -11501,13 +11609,17 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
       const v = o[k];
       return v && String(v).trim() ? String(v).trim() : sbText(SB_NO_INFO, lang);
     };
+    const said = (k) => (o[k] && String(o[k]).trim() ? String(o[k]).trim() : "");
     set({
       typeId: d.typeId || pick("typeId"),
       itemDescription: pick("itemDescription"),
       modelCode: pick("modelCode"),
-      manufacturer: pick("manufacturer"),
-      infoEn: o.infoEn && String(o.infoEn).trim() ? String(o.infoEn).trim() : SB_NO_INFO.en,
-      infoHe: o.infoHe && String(o.infoHe).trim() ? String(o.infoHe).trim() : SB_NO_INFO.he,
+      // Her rule of 30.8.26 (§15): the maker's name off the papers, and when
+      // the papers do not name one, the supplier already recorded here. Never
+      // a guess and never a search — an unnamed manufacturer stays unnamed.
+      manufacturer: said("manufacturer") || d.supplier || pick("manufacturer"),
+      infoEn: said("infoEn") || SB_NO_INFO.en,
+      infoHe: said("infoHe") || SB_NO_INFO.he,
       docs: o.docs && typeof o.docs === "object" ? { ...d.docs, ...o.docs } : d.docs,
       // Only if the model picked one of ours; anything else is ignored rather
       // than written into the form.
@@ -11515,6 +11627,12 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
         const c = sbSubcatCanon(o.subCategory || "", d.category);
         return sbSubcats(d.category).some((r) => r[0] === c) ? c : d.subCategory || "";
       })(),
+      // Where two of the assigned documents disagree, nothing is chosen and
+      // nothing is hidden: the disagreement is kept on the record and shown
+      // (§21). The review and approval section is never touched (§29).
+      conflicts: Array.isArray(o.conflicts)
+        ? o.conflicts.map((c) => String(c || "").trim()).filter(Boolean).slice(0, 8)
+        : [],
       attachments: sbScopeAttachments(d.attachments, o.pages),
       aiFilledAt: new Date().toISOString()
     });
@@ -11562,6 +11680,13 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
           // The catalogue for this discipline. The model may only choose from
           // it, so the field stays a real sub-category and not a free phrase.
           subCategories: sbSubcats(d.category).map((r) => r[0]),
+          // What the system already holds about this submittal. The supplier is
+          // what the manufacturer field falls back to when the documents do not
+          // name one, and the bill-of-quantities wording is where a project
+          // type mark comes from — neither is ever guessed (30.8.26).
+          supplier: d.supplier || "",
+          boqText: d.boqText || "",
+          typeMark: d.typeMark || "",
           fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
         }
       });
@@ -11592,7 +11717,16 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
         setAiMsg([`${L("foundProducts")} (${products.length}). ${L("worklistHint")}`, unusedLine].filter(Boolean).join("\n"));
       } else {
         applyProduct(products[0]);
-        setAiMsg([lang === "he" ? "הטופס מולא מתוך המסמכים שהועלו." : "Filled from the uploaded documents.", unusedLine].filter(Boolean).join("\n"));
+        // A disagreement between two of the papers is said out loud, here and
+        // on the record — it is never resolved quietly (30.8.26, §21).
+        const clash = Array.isArray(products[0] && products[0].conflicts)
+          ? products[0].conflicts.map((c) => String(c || "").trim()).filter(Boolean)
+          : [];
+        setAiMsg([
+          lang === "he" ? "הטופס מולא מתוך המסמכים שהועלו." : "Filled from the uploaded documents.",
+          clash.length ? `${L("conflictFound")}\n${clash.map((c) => `\u2022 ${c}`).join("\n")}` : "",
+          unusedLine
+        ].filter(Boolean).join("\n"));
       }
     } catch (ex) {
       console.warn("[awdash] submittal-ai not reachable", ex);
@@ -12001,6 +12135,18 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
           )
         : null,
       aiMsg ? sbH("p", { className: "sbAiMsg" }, aiMsg) : null,
+      // A disagreement between the attached papers stays on the record until
+      // somebody settles it — it does not vanish with the message (30.8.26).
+      (d.conflicts || []).length
+        ? sbH(
+            "div",
+            { className: "sbConflict" },
+            sbH("div", { className: "sbConflictTitle" },
+              sbH(AlertTriangle2, { size: 13, strokeWidth: 2.4 }), " ", L("conflictTitle")),
+            sbH("ul", null, (d.conflicts || []).map((c, i) =>
+              sbH("li", { key: i, dir: "auto" }, c)))
+          )
+        : null,
       sbH(
         "ul",
         { className: "sbAttList" },
@@ -12803,7 +12949,10 @@ function SubmittalFolder({
   onRestoreChk,
   tradeCompany,
   projectName,
-  printBrand
+  printBrand,
+  reviewRows,
+  onPlaceReview,
+  onDismissReview
 }) {
   const L = (k) => sbText(SB_L[k], lang);
   const [bulkBusy, setBulkBusy] = useState6(null);
@@ -12824,7 +12973,7 @@ function SubmittalFolder({
     setExportNote(null);
     const res = await boardExportXlsx({
       title: projectName || "",
-      subtitle: `${sbText(category, lang)} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      subtitle: `SUBMITTAL — ${sbText(category, lang)} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
       sheetName: category.en,
       fileName: boardFileName(projectName, `SUB - ${category.en}`, "xlsx"),
       head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
@@ -12839,7 +12988,9 @@ function SubmittalFolder({
     boardExportPdf({
       title: projectName || "",
       fileName: boardFileName(projectName, `SUB - ${category.en}`, ""),
-      subtitle: `${L("trackingList")} · ${sbText(category, lg)}`,
+      // The board's name leads the line, the way "LLI — מעקב הזמנות" does on
+      // the ordering report (30.8.26).
+      subtitle: `SUBMITTAL — ${L("trackingList")} · ${sbText(category, lg)}`,
       issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
       head: g.head, body: g.body, widths: g.widths, toneRows: g.tone,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
@@ -13321,6 +13472,79 @@ function SubmittalFolder({
               )
       );
     })(),
+    // ------------------------------------------------- the review list
+    // Documents the sorting read but could not file. Her instruction of
+    // 30.8.26: this is not where things go by default, and when something does
+    // land here it must say what was found — the line it probably belongs to,
+    // that line's wording, and how sure the reading was — so she can place it
+    // in one press instead of starting again.
+    canEdit && (reviewRows || []).length
+      ? sbH(
+          "div",
+          { className: "sbReview" },
+          sbH("div", { className: "sbListTitle" }, L("reviewTitle")),
+          sbH("p", { className: "sbReviewHint" }, L("reviewHint")),
+          sbH(
+            "div",
+            { className: "sbTableWrap" },
+            sbH(
+              "table",
+              { className: "sbTable sbReviewTable" },
+              sbH("thead", null, sbH("tr", null,
+                sbH("th", { className: "cRvFiles" }, L("reviewFiles")),
+                sbH("th", { className: "cRvProd" }, L("reviewProduct")),
+                sbH("th", { className: "cRvFind" }, L("reviewFinding")),
+                sbH("th", { className: "cRvBoq" }, L("reviewSuggested")),
+                sbH("th", { className: "cRvConf" }, L("reviewConfidence")),
+                sbH("th", { className: "cRvAct" }, "")
+              )),
+              sbH("tbody", null, (reviewRows || []).map((r) => {
+                const reasonLabel = r.reason === "no_submittal_line" ? L("reviewNoLine")
+                  : r.reason === "several" ? L("reviewSeveral")
+                  : L("reviewNoMatch");
+                const lines = r.reason === "several" ? (r.candidates || [])
+                  : (r.boq ? [{ code: r.boq, name: r.boqName }] : []);
+                return sbH(
+                  "tr",
+                  { key: r.id, className: `sbRvRow ${r.reason}` },
+                  sbH("td", { className: "sbRvFiles", dir: "auto" },
+                    (r.files || []).map((f, i) => sbH("div", { key: `${f}-${i}`, className: "sbRvFile" }, f))),
+                  sbH("td", { dir: "auto" }, r.product || "—"),
+                  sbH("td", { dir: "auto" },
+                    sbH("span", { className: `sbRvReason ${r.reason}` }, reasonLabel),
+                    r.why ? sbH("div", { className: "sbRvWhy" }, r.why) : null),
+                  sbH("td", { className: "sbRvBoq" },
+                    lines.length
+                      ? lines.map((c) => sbH("div", { key: c.code, className: "sbRvLine" },
+                          sbH("span", { className: "sbRvCode", dir: "ltr" }, c.code),
+                          c.name ? sbH("span", { className: "sbRvName", dir: "auto" }, c.name) : null))
+                      : sbH("span", { className: "sbChkDash" }, "—")),
+                  sbH("td", null,
+                    r.confidence
+                      ? sbH("span", { className: `sbRvConf ${r.confidence}` },
+                          L(r.confidence === "high" ? "confHigh" : r.confidence === "low" ? "confLow" : "confMedium"))
+                      : sbH("span", { className: "sbChkDash" }, "—")),
+                  sbH("td", { className: "sbRvAct" },
+                    // One press opens the submittal that is missing, on the
+                    // line the reading suggested, with these documents on it.
+                    lines.length === 1 && onPlaceReview
+                      ? sbH("button", {
+                          type: "button", className: "sbChkAdd", title: L("reviewOpenHere"),
+                          onClick: () => onPlaceReview(r, lines[0].code)
+                        }, sbH(Plus2, { size: 12, strokeWidth: 2.6 }), " ", L("chkAdd"))
+                      : null,
+                    onDismissReview
+                      ? sbH("button", {
+                          type: "button", className: "sbRowDel", title: L("reviewDismiss"),
+                          onClick: () => onDismissReview(r)
+                        }, sbH(Trash2, { size: 13, strokeWidth: 2 }))
+                      : null)
+                );
+              }))
+            )
+          )
+        )
+      : null,
     sbH("div", { className: "sbListTitle" }, canEdit ? L("trackingList") : L("submittalList")),
     rows.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
@@ -13535,7 +13759,9 @@ function SubmittalCard({
   boqFlags,
   userPerms,
   submittalChkOff,
-  onChangeChkOff
+  onChangeChkOff,
+  submittalReview,
+  onChangeReview
 }) {
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
@@ -13647,7 +13873,7 @@ function SubmittalCard({
     setAllNote(null);
     const res = await boardExportXlsx({
       title: pName,
-      subtitle: `${L("trackingList")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      subtitle: `SUBMITTAL — ${L("trackingList")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
       sheetName: "Submittals",
       fileName: boardFileName(pName, "SUB", "xlsx"),
       head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
@@ -13662,7 +13888,7 @@ function SubmittalCard({
     boardExportPdf({
       title: pName,
       fileName: boardFileName(pName, "SUB", ""),
-      subtitle: `${L("trackingList")} · ${sbText(SB_L.exportAll, lg)}`,
+      subtitle: `SUBMITTAL — ${L("trackingList")} · ${sbText(SB_L.exportAll, lg)}`,
       issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
       head: g.head, body: g.body, widths: g.widths, toneRows: g.tone,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
@@ -13975,8 +14201,16 @@ function SubmittalCard({
           // The checklist this folder already shows, in the model's terms.
           const checklist = boqProducts(
             boqData, (boqData || {}).flags || {}, boqFlags, "submittal", chosen.key
-          ).map((pr) => ({ code: pr.code, name: boqText(pr, lang) }));
+          ).map((pr) => ({
+            code: pr.code,
+            name: boqText(pr, lang),
+            // Whether anything has been opened on this line yet. A line that is
+            // right but empty is a submittal that is probably MISSING, and that
+            // is a different answer from "no match" (30.8.26).
+            has: (list || []).some((x) => x.category === chosen.key && x.boqCode === pr.code)
+          }));
           const checklistCodes = new Set(checklist.map((c) => c.code));
+          const checklistName = checklist.reduce((acc, c) => { acc[c.code] = c.name; return acc; }, {});
 
           let out = null;
           let aiDown = false;
@@ -13994,8 +14228,11 @@ function SubmittalCard({
                   // loaded specification belongs on one of THESE lines — a new
                   // list beside the one she already has helps nobody (29.8.26).
                   checklist,
-                  subCategories: sbSubcats(chosen.key).map((r) => r[0]),
-                  fields: ["typeId", "itemDescription", "modelCode", "manufacturer", "infoEn", "infoHe", "subCategory"]
+                  // Stage A: sort the documents onto the checklist and nothing
+                  // else. No form is filled here, nothing is looked up, and no
+                  // document is suggested — that is stage B, and it happens
+                  // when she opens a submittal and asks for it (30.8.26).
+                  mode: "assign"
                 }
               });
               if (res.error) throw res.error;
@@ -14007,10 +14244,10 @@ function SubmittalCard({
           }
 
           const val = (v) => (v && String(v).trim() ? String(v).trim() : "");
-          const products = out && Array.isArray(out.products) && out.products.length
-            ? out.products
-            : out && (out.typeId || out.itemDescription) ? [out] : [];
-          const unused = new Set((out && Array.isArray(out.unusedFiles) ? out.unusedFiles : []).map(String));
+          // Stage A answers with packages — documents grouped by the product
+          // they describe — and a review list for what it could not place.
+          const products = out && Array.isArray(out.packages) ? out.packages : [];
+          const review = out && Array.isArray(out.review) ? out.review : [];
 
           // Which file belongs to which product. The model names them; a file
           // it did not place is reported, never filed on a guess.
@@ -14047,6 +14284,17 @@ function SubmittalCard({
             }
             rec.attachments = atts;
             rec.specText = text.slice(0, 60000);
+            // What stage A worked out about the package, kept so stage B does
+            // not have to work it out again — and so the row has something to
+            // show before anybody presses "fill".
+            rec.assigned = {
+              product: val(pr.product),
+              manufacturer: val(pr.manufacturer),
+              model: val(pr.model),
+              confidence: val(pr.confidence),
+              why: val(pr.why),
+              at: new Date().toISOString()
+            };
             // The checklist line this answers. With it, the submittal shows up
             // on that line instead of only in the list at the top.
             // The model's answer is taken when it names a line that exists; when
@@ -14059,27 +14307,15 @@ function SubmittalCard({
               checklist,
               String(pr.boq || "").trim()
             );
-            if (onLine && checklistCodes.has(onLine)) rec.boqCode = onLine;
-            rec.subCategory = sbSubcatCanon(val(pr.subCategory), chosen.key);
-            rec.typeId = val(pr.typeId) || rec.typeId;
-            rec.itemDescription = val(pr.itemDescription) || rec.itemDescription;
-            rec.modelCode = val(pr.modelCode) || rec.modelCode;
-            rec.manufacturer = val(pr.manufacturer) || rec.manufacturer;
-            rec.infoEn = val(pr.infoEn) || rec.infoEn;
-            rec.infoHe = val(pr.infoHe) || rec.infoHe;
-            if (pr.docs && typeof pr.docs === "object") rec.docs = { ...(rec.docs || {}), ...pr.docs };
-            // What the model found wrong with the papers themselves: an expiry
-            // that has passed, a certificate that never arrived. Kept on the
-            // record so the row can say so without asking again (29.8.26).
-            if (pr.checks && typeof pr.checks === "object") {
-              rec.checks = {
-                expires: String(pr.checks.expires || "").slice(0, 10),
-                expired: !!pr.checks.expired,
-                missing: Array.isArray(pr.checks.missing) ? pr.checks.missing.map(String) : [],
-                note: String(pr.checks.note || "").trim()
-              };
+            if (onLine && checklistCodes.has(onLine)) {
+              rec.boqCode = onLine;
+              rec.boqText = checklistName[onLine] || "";
             }
-            rec.aiFilledAt = new Date().toISOString();
+            // NOTHING ELSE IS WRITTEN HERE. Sorting the papers and filling in
+            // the form are two different jobs, and the form is filled when she
+            // opens the submittal and asks for it — her instruction of
+            // 30.8.26. What arrives from this step is a submittal that exists,
+            // sits on the right line, and holds the right documents.
             made.push(rec);
           }
 
@@ -14091,17 +14327,63 @@ function SubmittalCard({
             made.push(rec);
           }
 
-          // Whatever nobody claimed: named on screen, and — when the service
-          // simply did not answer — filed as it used to be, one per document,
-          // so nothing she uploaded is lost.
-          // A product the checklist has no line for is not a mistake — it is a
-          // submittal she will see at the top of the folder, and it is worth
-          // saying which ones those were.
+          // A package that was placed on no line is still a submittal she can
+          // see at the top of the folder — worth naming, so she knows.
           made.forEach((rec) => {
             if (!rec.boqCode && (rec.attachments || []).length) {
-              offList.push(rec.itemDescription || rec.typeId || (rec.attachments[0] || {}).name || "");
+              offList.push((rec.assigned && rec.assigned.product) || (rec.attachments[0] || {}).name || "");
             }
           });
+
+          // The review list. NOT a bin: a document arrives here only after a
+          // real attempt, and it arrives WITH what the attempt found — the
+          // bill-of-quantities line it belongs to, that line's wording, whether
+          // the trouble is a missing submittal or a genuine no-match, and how
+          // sure the reading was. Her instruction of 30.8.26 (§9).
+          const reviewRows = [];
+          for (const r of review) {
+            const names = (Array.isArray(r.files) ? r.files : [])
+              .map(String)
+              .filter((n) => byName[n] && !taken.has(n));
+            if (!names.length) continue;
+            names.forEach((n) => { taken.add(n); });
+            // The documents themselves are put away now, so that placing the
+            // row later is one press and not another upload.
+            const holdId = `rv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+            const atts = [];
+            let text = "";
+            for (const n of names) {
+              const d = byName[n];
+              const stored = await sbUploadFile(projectId, holdId, d.file).catch(() => null);
+              if (stored) atts.push({ ...stored, name: d.file.name, size: d.file.size });
+              if (d.text) text += `${text ? "\n\n" : ""}${d.text}`;
+            }
+            const code = String(r.boq || "").trim();
+            const cands = (Array.isArray(r.candidates) ? r.candidates : [])
+              .map((c) => String((c && c.code) || c || "").trim())
+              .filter((c) => checklistCodes.has(c));
+            reviewRows.push({
+              id: holdId,
+              attachments: atts,
+              specText: text.slice(0, 60000),
+              files: names,
+              product: val(r.product),
+              // "no_submittal_line" — the line is right, nothing opened on it.
+              // "several" — more than one line fits. "no_match" — none does.
+              reason: ["no_submittal_line", "several", "no_match"].indexOf(String(r.reason)) >= 0
+                ? String(r.reason) : "no_match",
+              boq: checklistCodes.has(code) ? code : "",
+              boqName: checklistCodes.has(code) ? (checklistName[code] || "") : "",
+              candidates: cands.map((c) => ({ code: c, name: checklistName[c] || "" })),
+              confidence: ["high", "medium", "low"].indexOf(String(r.confidence)) >= 0
+                ? String(r.confidence) : "",
+              why: val(r.why)
+            });
+          }
+
+          // Files nobody spoke for at all. When the service did not answer they
+          // are filed one per document, exactly as before, so nothing she
+          // uploaded is lost.
           const homeless = [];
           for (const d of docs) {
             if (taken.has(d.file.name)) continue;
@@ -14117,8 +14399,15 @@ function SubmittalCard({
           }
 
           if (made.length) commit((list || []).concat(made));
-          if (homeless.length || offList.length || aiDown) {
-            setBulkReport({ homeless, offList: offList.filter(Boolean), aiDown });
+          // Whatever is left for her to place is kept on the project, not just
+          // shown once and forgotten.
+          if (reviewRows.length && onChangeReview) {
+            onChangeReview((submittalReview || []).concat(
+              reviewRows.map((r) => ({ ...r, category: chosen.key, at: new Date().toISOString() }))
+            ));
+          }
+          if (homeless.length || offList.length || aiDown || reviewRows.length) {
+            setBulkReport({ homeless, offList: offList.filter(Boolean), aiDown, review: reviewRows });
           }
         },
         onOpen: openExisting,
@@ -14146,7 +14435,40 @@ function SubmittalCard({
         // contacts list. Blank when the contacts do not say (30.8.26).
         tradeCompany: boardTradeCompany(contacts, contactsCatalog, chosen.key, lang),
         projectName: pName,
-        printBrand
+        printBrand,
+        // What the sorting could not place in this discipline.
+        reviewRows: (submittalReview || []).filter((r) => r && r.category === chosen.key),
+        // Opening the submittal the reading says is missing, on the line it
+        // named, carrying the documents it had already read (30.8.26).
+        onPlaceReview: (row, code) => {
+          const trade = boardTradeCompany(contacts, contactsCatalog, chosen.key, lang);
+          const rec = sbNewSubmittal({
+            category: chosen.key,
+            seq: sbNextSeq(list, chosen.key),
+            projectName: pName,
+            contractor: contractorName,
+            disciplineEn: chosen.en,
+            disciplineHe: chosen.he,
+            email: currentEmail || "",
+            submittedBy: (currentEmail || "").split("@")[0] || ""
+          });
+          if (trade && !rec.supplier) rec.supplier = trade;
+          rec.boqCode = code;
+          rec.boqText = row.boqName || "";
+          rec.attachments = row.attachments || [];
+          rec.specText = row.specText || "";
+          commit((list || []).concat([rec]));
+          if (onChangeReview) {
+            onChangeReview((submittalReview || []).filter((x) => x.id !== row.id));
+          }
+          setDraft(rec);
+          setOpenId(rec.id);
+        },
+        onDismissReview: (row) => {
+          if (onChangeReview) {
+            onChangeReview((submittalReview || []).filter((x) => x.id !== row.id));
+          }
+        }
       }),
     printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
     bulkReport ? sbH(SbBulkReport, { report: bulkReport, lang, isRTL, onClose: () => setBulkReport(null) }) : null
@@ -17167,6 +17489,9 @@ function ProjectDashboardApp() {
         // Checklist lines she took off the submittal board, per discipline.
         submittalChkOff: activeExtras.submittalChkOff || {},
         onChangeChkOff: (next) => updateProjectExtras(activeProject.id, { submittalChkOff: next }),
+        // Documents the sorting could not place, kept for her to place.
+        submittalReview: activeExtras.submittalReview || [],
+        onChangeReview: (next) => updateProjectExtras(activeProject.id, { submittalReview: next }),
         boqData: activeExtras.boqData || null,
         boqFlags: activeExtras.boqFlagOverrides || {},
         userPerms,
