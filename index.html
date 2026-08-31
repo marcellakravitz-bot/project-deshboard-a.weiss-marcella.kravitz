@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "30.8.2026 \u00b7 build 39";
+var APP_BUILD = "30.8.2026 \u00b7 build 40";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1665,6 +1665,58 @@ var pdfViewer = `
         }
         .sbConflict ul { margin: 0; padding-inline-start: 18px; }
         .sbConflict li { font-size: 11.5px; color: var(--ink, #14181f); line-height: 1.5; }
+
+        /* Save and send: one button drawn twice. Identical box, identical
+           colour, identical type — the icon and the word are the only
+           difference between them (30.8.26). */
+        .sbFormBtn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+          min-width: 132px; height: 38px; padding: 0 18px;
+          border: none; border-radius: 10px;
+          background: var(--accent, #0F3460); color: #fff;
+          font-family: inherit; font-size: 13.5px; font-weight: 700; line-height: 1;
+          cursor: pointer;
+        }
+        .sbFormBtn:hover { filter: brightness(1.08); }
+        .sbFormBtn:active { filter: brightness(.94); }
+        .sbFormBtn span { line-height: 1; }
+
+        /* Suggested documents. Visibly a list of LINKS and not a list of
+           attachments — nothing here is part of the submittal until she
+           uploads it (30.8.26). */
+        .sbSuggest {
+          margin-top: 18px; border: 1px dashed var(--line, #e3e6ea);
+          border-radius: 12px; padding: 12px 14px; background: #fbfcfd;
+        }
+        .sbSugList { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+        .sbSugList li {
+          border: 1px solid var(--line, #e3e6ea); border-radius: 10px;
+          background: #fff; padding: 10px 12px;
+        }
+        .sbSugHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+        .sbSugType { font-size: 12.5px; font-weight: 800; color: var(--accent-ink, #0F3460); }
+        .sbSugMatch {
+          border-radius: 999px; padding: 1px 8px; font-size: 10px; font-weight: 800;
+          background: #eef0f3; color: var(--steel, #5b6472);
+        }
+        .sbSugMatch.exact { background: #e3f3e6; color: #1a7f4b; }
+        .sbSugMatch.series { background: #e6ecf5; color: var(--accent-ink, #0F3460); }
+        .sbSugSrc { font-size: 10.5px; font-weight: 700; color: var(--mist, #8a929e); }
+        .sbSugName { font-size: 12px; margin-top: 3px; }
+        .sbSugProd { font-size: 11px; color: var(--steel, #5b6472); margin-top: 2px; }
+        .sbSugWhy { font-size: 11px; color: var(--mist, #8a929e); margin-top: 4px; }
+        .sbSugLinks { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+        .sbSugLink {
+          display: inline-flex; align-items: center; gap: 5px;
+          border: 1px solid var(--line, #e3e6ea); border-radius: 999px;
+          padding: 3px 11px; font-size: 11.5px; font-weight: 700;
+          color: var(--accent, #0F3460); text-decoration: none; background: #fff;
+        }
+        .sbSugLink:hover { background: var(--accent-soft, #eef2f8); }
+        .sbSugLink.file { border-color: var(--accent, #0F3460); }
+        .sbSugFoot {
+          font-size: 10.5px; color: var(--mist, #8a929e); margin: 10px 0 0; text-align: center;
+        }
 
         .sbReview { margin-top: 20px; }
         .sbReviewHint {
@@ -10082,7 +10134,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
 // every label carries both languages so the site-wide EN/HE switch flips the
 // whole document, no runtime translation.
 // -----------------------------------------------------------------------------
-import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw, PenLine, Stamp, Save as SaveIcon2, SendHorizonal as SendIcon2 } from "lucide-react";
+import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw, PenLine, Stamp, Save as SaveIcon2, SendHorizonal as SendIcon2, Globe as Globe2 } from "lucide-react";
 var sbH = React15.createElement;
 
 // -----------------------------------------------------------------------------
@@ -10482,6 +10534,9 @@ var SB_L = {
   confMedium: { en: "Medium", he: "בינונית" },
   confLow: { en: "Low", he: "נמוכה" },
   reviewOpenHere: { en: "Open a submittal on this line", he: "פתיחת סבמיטל בשורה הזו" },
+  // The list under the checklist, once the checklist exists: it holds only what
+  // has no line of its own (30.8.26).
+  unplacedList: { en: "Submittals on no checklist line", he: "סבמיטלים ללא שיוך לצ׳ק‑ליסט" },
   reviewDismiss: { en: "Remove from the list", he: "הסרה מהרשימה" },
   sentCol: { en: "Submission date", he: "תאריך הגשה" },
   targetCol: { en: "Approval target date", he: "תאריך יעד לאישור" },
@@ -10657,6 +10712,32 @@ var SB_L = {
     he: "יש סתירה בין המסמכים המצורפים — נדרשת בדיקה:"
   },
   conflictTitle: { en: "Conflicting information", he: "מידע סותר" },
+  // AI suggested documents: what the package is missing, found on the official
+  // sites. A recommendation is NOT part of the submittal (30.8.26, §23–28).
+  suggestTitle: { en: "AI suggested documents", he: "המלצות AI למסמכים חסרים" },
+  suggestHint: {
+    en: "After the form is filled, the AI looks on the manufacturer's and the certifying bodies' own sites for documents this submittal does not have.",
+    he: "אחרי מילוי הטופס, ה‑AI מחפש באתרי היצרן וגופי התקינה מסמכים שחסרים לסבמיטל הזה."
+  },
+  suggestRun: { en: "Look for missing documents", he: "חיפוש מסמכים חסרים" },
+  suggestWorking: { en: "Searching the official sites…", he: "מחפש באתרים הרשמיים…" },
+  suggestAfterFill: {
+    en: "Fill the form first — there is nothing to search for until the product is known.",
+    he: "קודם יש למלא את הטופס — אין מה לחפש לפני שידוע מהו המוצר."
+  },
+  suggestNone: {
+    en: "Nothing official was found that the package does not already have.",
+    he: "לא נמצא מסמך רשמי שאין כבר בחבילה."
+  },
+  suggestPage: { en: "Official page", he: "העמוד הרשמי" },
+  suggestFile: { en: "Download", he: "הורדה" },
+  suggestNotAttached: {
+    en: "These are recommendations only. Nothing was downloaded and nothing was attached — a document becomes part of this submittal when you upload it.",
+    he: "אלה המלצות בלבד. שום דבר לא הורד ולא צורף — מסמך נכנס לסבמיטל רק כשמעלים אותו."
+  },
+  matchExact: { en: "This exact model", he: "הדגם המדויק" },
+  matchSeries: { en: "This series", he: "הסדרה" },
+  matchMaker: { en: "Manufacturer general", he: "כללי של היצרן" },
   worklistDone: { en: "The worklist is finished.", he: "רשימת העבודה הושלמה." },
   olderVersions: { en: "Earlier versions", he: "גירסאות קודמות" },
   newVersionNote: {
@@ -10936,9 +11017,20 @@ function fnErrorAdvice(raw, isRTL) {
     return t("הבקשה נדחתה — צריך להתחבר מחדש לאתר ולנסות שוב.",
              "The request was refused — sign in again and retry.");
   }
-  if (/\bbad_task\b|\bbad_answer\b/.test(m)) {
+  if (/\bbad_task\b/.test(m)) {
     return t("הפונקציה קיבלה בקשה שהיא לא מכירה. סימן שהגרסה שבסופרבייס ישנה מהאתר — צריך להעלות את submittal-ai מחדש ולעשות Deploy.",
              "The function did not recognise the request. The deployed version is older than the site — paste submittal-ai again and Deploy.");
+  }
+  // Two different failures used to share one sentence, and the sentence
+  // belonged to the other one. bad_answer is the MODEL's reply coming back
+  // unreadable — nothing to do with which version is deployed (30.8.26).
+  if (/\bbad_answer\b/.test(m)) {
+    return t("המודל החזיר תשובה שלא ניתן היה לקרוא — לרוב מפני שהיא נקטעה באמצע. כדאי פשוט לנסות שוב; אם זה חוזר על אותו קובץ, כדאי לצמצם את מספר המפרטים שנטענים יחד.",
+             "The model's answer came back unreadable — usually because it was cut off part-way. Try again; if it repeats on the same file, load fewer specifications at once.");
+  }
+  if (/\bno_checklist\b/.test(m)) {
+    return t("אין צ׳ק‑ליסט לשייך אליו. צריך להעלות כתב כמויות לפרויקט ולסווג אותו לפני טעינת מפרטים.",
+             "There is no checklist to sort onto. Upload the bill of quantities for this project and classify it before loading specifications.");
   }
   if (/credit balance|insufficient (credit|funds)|billing/.test(m)) {
     return t("נגמר הקרדיט בחשבון ה‑AI. יש להטעין ב‑platform.claude.com → Settings → Billing → Buy credits.",
@@ -11467,6 +11559,9 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
   const [busy, setBusy] = useState6(null);
   const [err, setErr] = useState6(null);
   const [aiMsg, setAiMsg] = useState6(null);
+  // The suggested-documents panel keeps its own message, so a search that found
+  // nothing does not wipe what the fill said.
+  const [sugMsg, setSugMsg] = useState6(null);
   const L = (k) => sbText(SB_L[k], lang);
   const set = (patch) => setD((prev) => ({ ...prev, ...patch }));
   const ro = !canEdit;
@@ -11636,6 +11731,47 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
       attachments: sbScopeAttachments(d.attachments, o.pages),
       aiFilledAt: new Date().toISOString()
     });
+  };
+  // --------------------------------------------------------- suggested documents
+  // Runs on its own, after the fill, and only when she asks. It reads what the
+  // form now says about the product and what the package already holds, and it
+  // brings back links — never files. Her instruction of 30.8.26 (§23–28).
+  const runSuggest = async () => {
+    setSugMsg(null);
+    setBusy("suggest");
+    try {
+      // What kind of document is already here, so the same thing is not
+      // recommended back to her.
+      const have = [];
+      SB_DOC_ROWS.forEach((row) => {
+        if ((d.docs || {})[row.key]) have.push(sbText(row, "en"));
+      });
+      (d.attachments || []).forEach((a) => { if (a && a.name) have.push(a.name); });
+      const { data, error } = await supabase.functions.invoke("submittal-ai", {
+        body: {
+          mode: "suggest",
+          lang,
+          category: d.category,
+          product: [d.itemDescription, d.typeId].filter((x) => x && String(x).trim()
+            && String(x).trim() !== sbText(SB_NO_INFO, lang)).join(" — "),
+          manufacturer: d.manufacturer && d.manufacturer !== sbText(SB_NO_INFO, lang) ? d.manufacturer : "",
+          model: d.modelCode && d.modelCode !== sbText(SB_NO_INFO, lang) ? d.modelCode : "",
+          typeId: d.typeId || "",
+          info: lang === "he" ? d.infoHe || "" : d.infoEn || "",
+          have
+        }
+      });
+      if (error) throw new Error(await fnFail(error, data, isRTL));
+      const found = (data && Array.isArray(data.suggestions) ? data.suggestions : [])
+        .filter((r) => r && r.pageUrl);
+      set({ suggested: found, suggestedAt: new Date().toISOString() });
+      if (!found.length) setSugMsg(L("suggestNone"));
+    } catch (ex) {
+      console.warn("[awdash] suggested documents", ex);
+      setSugMsg(String((ex && ex.message) || ex || ""));
+    } finally {
+      setBusy(null);
+    }
   };
   const runAi = async () => {
     setAiMsg(null);
@@ -12183,6 +12319,83 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
       )
     ),
 
+    // ------- AI SUGGESTED DOCUMENTS
+    // Her instruction of 30.8.26 (§23–28): only AFTER the form has been filled
+    // and the package looked at. The model searches the web for the official
+    // documents this submittal is missing and shows where they are. NOTHING is
+    // downloaded and nothing is attached — a recommendation becomes part of the
+    // submittal only when she uploads it herself.
+    ro
+      ? null
+      : sbH(
+          "div",
+          { className: "sbSuggest" },
+          sbH("div", { className: "sbSpecsHead" },
+            sbH(Sparkles, { size: 15, strokeWidth: 2 }), " ", L("suggestTitle")),
+          sbH("p", { className: "sbAiHint" }, L("suggestHint")),
+          sbH(
+            "div",
+            { className: "sbSpecsRow" },
+            sbH(
+              "button",
+              {
+                type: "button",
+                className: `sbAiBtn ${busy === "suggest" ? "busy" : ""}`.trim(),
+                onClick: runSuggest,
+                disabled: busy === "suggest" || !d.aiFilledAt
+              },
+              busy === "suggest"
+                ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
+                : sbH(Globe2, { size: 14, strokeWidth: 2 }),
+              " ",
+              busy === "suggest" ? L("suggestWorking") : L("suggestRun")
+            )
+          ),
+          // The button waits for the fill: there is nothing to search FOR until
+          // the form knows what the product is.
+          !d.aiFilledAt ? sbH("p", { className: "sbAiHint" }, L("suggestAfterFill")) : null,
+          sugMsg ? sbH("p", { className: "sbAiMsg" }, sugMsg) : null,
+          (d.suggested || []).length
+            ? sbH(
+                "ul",
+                { className: "sbSugList" },
+                (d.suggested || []).map((r, i) => sbH(
+                  "li",
+                  { key: `${r.pageUrl}-${i}` },
+                  sbH(
+                    "div",
+                    { className: "sbSugHead" },
+                    sbH("span", { className: "sbSugType", dir: "auto" }, r.docType || "—"),
+                    sbH("span", { className: `sbSugMatch ${r.matchLevel}` },
+                      L(r.matchLevel === "exact" ? "matchExact"
+                        : r.matchLevel === "series" ? "matchSeries" : "matchMaker")),
+                    r.source ? sbH("span", { className: "sbSugSrc" }, r.source) : null
+                  ),
+                  r.name ? sbH("div", { className: "sbSugName", dir: "auto" }, r.name) : null,
+                  r.product ? sbH("div", { className: "sbSugProd", dir: "auto" }, r.product) : null,
+                  r.why ? sbH("div", { className: "sbSugWhy", dir: "auto" }, r.why) : null,
+                  sbH(
+                    "div",
+                    { className: "sbSugLinks" },
+                    sbH("a", {
+                      href: r.pageUrl, target: "_blank", rel: "noopener noreferrer",
+                      className: "sbSugLink"
+                    }, sbH(Globe2, { size: 12, strokeWidth: 2 }), " ", L("suggestPage")),
+                    r.fileUrl
+                      ? sbH("a", {
+                          href: r.fileUrl, target: "_blank", rel: "noopener noreferrer",
+                          className: "sbSugLink file"
+                        }, sbH(Download2, { size: 12, strokeWidth: 2 }), " ", L("suggestFile"))
+                      : null
+                  )
+                ))
+              )
+            : null,
+          (d.suggested || []).length
+            ? sbH("p", { className: "sbSugFoot" }, L("suggestNotAttached"))
+            : null
+        ),
+
     // ------- the worklist: several products found in one set of specifications
     (queue || []).length
       ? sbH(
@@ -12257,18 +12470,21 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
       : sbH(
           "div",
           { className: "sbSaveRow" },
-          // Two buttons that do different things should not look the same. A
-          // diskette for saving, a paper plane for sending (29.8.26).
+          // The same button twice — same size, same colour, same type — and it
+          // is the ICON that says which is which: a diskette for saving, a
+          // paper plane for sending. One of them was a pale ghost button and
+          // the other a dark solid one, and they were different sizes with it
+          // (30.8.26).
           sbH(
             "button",
-            { type: "button", className: "ghostBtn small sbActBtn", onClick: () => onSave({ ...d, sent: false }) },
-            sbH(SaveIcon2, { size: 14, strokeWidth: 2.2 }),
+            { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: false }) },
+            sbH(SaveIcon2, { size: 15, strokeWidth: 2.2 }),
             sbH("span", null, L("save"))
           ),
           sbH(
             "button",
-            { type: "button", className: "functionEditBtn sbActBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
-            sbH(SendIcon2, { size: 14, strokeWidth: 2.2 }),
+            { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
+            sbH(SendIcon2, { size: 15, strokeWidth: 2.2 }),
             sbH("span", null, L("send"))
           )
         )
@@ -13021,12 +13237,29 @@ function SubmittalFolder({
   // One line per serial — the latest revision. The earlier ones live behind the
   // little arrow next to it, because that is history, not work in progress.
   const [openFamily, setOpenFamily] = useState6(null);
+  // A submittal that answers a line of the checklist lives THERE, in the table
+  // above — that table IS the list. What is left underneath is only what could
+  // not be placed on a line. Without this the same submittal appeared twice,
+  // once on its line and once again in the list below it (30.8.26).
+  const onChecklist = (() => {
+    if (!boqData || !canEdit) return null;
+    const off = chkOff || {};
+    const codes = new Set();
+    boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", category.key)
+      .filter((pr) => !off[pr.code])
+      .forEach((pr) => {
+        codes.add(pr.code);
+        (pr.items || []).forEach((it) => codes.add(it.code));
+      });
+    return codes;
+  })();
+  const isPlaced = (s) => !!(onChecklist && s.boqCode && onChecklist.has(s.boqCode));
   const families = (() => {
     const bySeq = {};
     // A draft has not been submitted to anyone. Only the administrator, who is
     // the one writing it, sees it in the list at all.
     (list || [])
-      .filter((s) => s.category === category.key)
+      .filter((s) => s.category === category.key && !isPlaced(s))
       .forEach((s) => {
       const k = String(s.seq);
       bySeq[k] = bySeq[k] || [];
@@ -13545,8 +13778,15 @@ function SubmittalFolder({
           )
         )
       : null,
-    sbH("div", { className: "sbListTitle" }, canEdit ? L("trackingList") : L("submittalList")),
-    rows.length === 0
+    // With a checklist in front of her, this list has one job: what is NOT on
+    // it. When there is nothing of that kind, the list does not appear at all.
+    onChecklist && rows.length === 0
+      ? null
+      : sbH("div", { className: "sbListTitle" },
+          !canEdit ? L("submittalList") : onChecklist ? L("unplacedList") : L("trackingList")),
+    onChecklist && rows.length === 0
+      ? null
+      : rows.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
       : sbH(
           "div",
