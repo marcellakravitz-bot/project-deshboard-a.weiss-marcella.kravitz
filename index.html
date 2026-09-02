@@ -221,7 +221,8 @@ import {
   Leaf,
   Users,
   Camera,
-  Ruler
+  Ruler,
+  Receipt
 } from "lucide-react";
 var COPY = {
   he: {
@@ -251,6 +252,7 @@ var COPY = {
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "sd", icon: Ruler, title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
+      { key: "changeInstructions", icon: Receipt, title: "\u05D4\u05D5\u05E8\u05D0\u05D5\u05EA \u05E9\u05D9\u05E0\u05D5\u05D9", sub: "Change Instructions", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
       { key: "contacts", icon: Users, title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
       { key: "photos", icon: Camera, title: "Site Photos", sub: "Updated Weekly", locked: true }
@@ -372,6 +374,7 @@ var COPY = {
       { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "sd", icon: Ruler, title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
+      { key: "changeInstructions", icon: Receipt, title: "Change Instructions", sub: "Pricing & Approvals", locked: true },
       { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
       { key: "contacts", icon: Users, title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
       { key: "photos", icon: Camera, title: "Site Photos", sub: "Updated Weekly", locked: true }
@@ -472,7 +475,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 54";
+var APP_BUILD = "2.9.2026 · build 57";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1221,6 +1224,297 @@ var pdfViewer = `
         .lliFilter {
           display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-bottom: 10px;
         }
+
+        /* ---------------------------------------------------------------
+           RFI. The register and the detailed form share the site's own
+           vocabulary — the same chips as the LLI board, the same grey
+           pills as every export row, the same section bars as a submittal —
+           so the module reads as part of the site and not as a bolt-on.
+           --------------------------------------------------------------- */
+        .rfiBody { gap: 0; }
+        .rfiWrap { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+        .rfiTools {
+          display: flex; align-items: center; justify-content: center;
+          gap: 10px; flex-wrap: wrap; padding: 4px 0 2px;
+        }
+        .rfiChips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .rfiSearch, .rfiSel {
+          border: 1px solid var(--line); border-radius: 8px; padding: 7px 11px;
+          font-size: 13px; font-family: inherit; background: #fff; color: var(--steel);
+          min-width: 150px;
+        }
+        .rfiSearch:focus, .rfiSel:focus { outline: none; border-color: var(--accent); }
+        .rfiAddBtn {
+          display: inline-flex; align-items: center; gap: 6px;
+          background: #14181f; color: #fff; border: none; border-radius: 999px;
+          padding: 8px 18px; font-weight: 700; font-size: 13px; cursor: pointer;
+          font-family: inherit;
+        }
+        .rfiAddBtn:hover { background: var(--accent-ink, #103460); }
+        .rfiEmpty { text-align: center; color: var(--mist); font-weight: 600; padding: 26px 0; }
+        .rfiTableWrap { overflow-x: auto; }
+        .rfiTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        .rfiTable th {
+          background: #f4f5f7; color: var(--steel); font-weight: 800; font-size: 12px;
+          padding: 9px 8px; border-bottom: 1px solid var(--line); white-space: nowrap;
+          text-align: inherit;
+        }
+        .rfiTable td { padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+        .rfiTable tbody tr:hover { background: #fafbfc; }
+        .rfiTable .cNo { width: 62px; }
+        .rfiTable .cSub { min-width: 200px; }
+        .rfiTable .cAct { width: 66px; white-space: nowrap; }
+        .rfiRow.st-cancelled, .rfiRow.st-closed { color: var(--mist); }
+        .rfiLink {
+          background: none; border: none; padding: 0; font: inherit; cursor: pointer;
+          color: var(--accent-ink); font-weight: 700; text-align: inherit;
+        }
+        .rfiLink:hover { text-decoration: underline; }
+        .rfiSt, .rfiPr {
+          display: inline-block; border-radius: 999px; padding: 3px 10px;
+          font-size: 11.5px; font-weight: 800; white-space: nowrap;
+        }
+        .rfiSt { background: #eef0f2; color: #4b5563; }
+        .rfiSt.st-open, .rfiSt.st-pending { background: #fff4e5; color: #a15c00; }
+        .rfiSt.st-answered { background: #e8f5ee; color: #1a7f4b; }
+        .rfiSt.st-closed { background: #eef0f2; color: #6b7280; }
+        .rfiSt.st-cancelled { background: #fdf2f3; color: #b02a37; }
+        .rfiPr { background: #eef0f2; color: #4b5563; }
+        .rfiPr.pr-high { background: #fff4e5; color: #a15c00; }
+        .rfiPr.pr-urgent { background: #fdf2f3; color: #b02a37; }
+        .rfiRisk { display: inline-flex; vertical-align: middle; margin-inline-start: 5px; }
+        .rfiRisk.warn { color: #d08700; }
+        .rfiRisk.critical { color: #b02a37; }
+        .rfiIconBtn {
+          border: 1px solid var(--line); background: #fff; color: var(--mist);
+          border-radius: 7px; width: 26px; height: 26px; cursor: pointer; padding: 0;
+          display: inline-flex; align-items: center; justify-content: center;
+          margin-inline-end: 4px;
+        }
+        .rfiIconBtn:hover { color: var(--accent-ink); border-color: var(--accent); }
+        .rfiIconBtn.danger:hover { color: #b02a37; border-color: #e6b3ba; }
+        .rfiIconBtn:disabled { opacity: .35; cursor: default; }
+        .rfiExportRow {
+          display: flex; gap: 10px; justify-content: center; align-items: center;
+          flex-wrap: wrap; margin-top: 6px;
+        }
+        .rfiGrayPill {
+          display: inline-flex; align-items: center; gap: 6px;
+          background: #e9ebee; color: #2b3440; border: 1px solid var(--line);
+          border-radius: 999px; padding: 8px 18px; font-weight: 700; font-size: 13px;
+          cursor: pointer; font-family: inherit;
+        }
+        .rfiGrayPill:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .rfiGrayPill:disabled { opacity: .45; cursor: default; }
+        .rfiNote { color: #a15c00; font-weight: 700; font-size: 12.5px; }
+        .rfiErr { color: #b02a37; font-weight: 700; text-align: center; }
+
+        /* ---- the detailed form ---- */
+        .rfiFormWrap { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+        .rfiFormHead {
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          padding-bottom: 10px; border-bottom: 1px solid var(--line-soft);
+        }
+        .rfiFormTitle { font-weight: 800; font-size: 15px; color: var(--accent-ink); }
+        .rfiBackBtn {
+          display: inline-flex; align-items: center; gap: 5px; background: none;
+          border: none; color: var(--steel); font-weight: 700; font-size: 12.5px;
+          cursor: pointer; font-family: inherit; padding: 0;
+        }
+        .rfiBackBtn:hover { color: var(--accent-ink); }
+        .rfiSecBar {
+          margin: 16px 0 10px; padding: 6px 12px; border-radius: 7px;
+          background: var(--accent-soft, #eef2f8); color: var(--accent-ink, #103460);
+          font-weight: 800; font-size: 12.5px; letter-spacing: .02em;
+        }
+        .rfiGrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px; }
+        .rfiGrid.one { grid-template-columns: 1fr; }
+        @media (max-width: 900px) { .rfiGrid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 620px) { .rfiGrid { grid-template-columns: 1fr; } }
+        .rfiField { display: flex; flex-direction: column; gap: 4px; }
+        .rfiField.wide { grid-column: 1 / -1; }
+        .rfiFieldLabel { font-size: 11.5px; font-weight: 700; color: var(--mist); }
+        .rfiIn {
+          border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+          font-size: 13px; font-family: inherit; background: #fff; color: var(--steel);
+          width: 100%;
+        }
+        .rfiIn:focus { outline: none; border-color: var(--accent); }
+        .rfiIn[readonly] { background: #fafbfc; }
+        .rfiArea { resize: vertical; line-height: 1.5; }
+        .rfiRo { background: #fafbfc; display: block; min-height: 33px; font-weight: 600; }
+
+        /* ---- files and screenshots ---- */
+        .rfiFiles { display: flex; flex-direction: column; gap: 12px; }
+        .rfiFileList { display: flex; flex-direction: column; gap: 6px; }
+        .rfiFileRow {
+          display: flex; align-items: center; gap: 8px; font-size: 12.5px;
+          padding: 5px 8px; border: 1px solid var(--line-soft); border-radius: 8px;
+          background: #fff;
+        }
+        .rfiShareSel {
+          margin-inline-start: auto; border: 1px solid var(--line); border-radius: 7px;
+          padding: 4px 8px; font-size: 11.5px; font-family: inherit; background: #fff;
+        }
+        .rfiAttachBtn {
+          align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+          border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px;
+          font-size: 12.5px; font-weight: 700; cursor: pointer; background: #fff;
+          color: var(--steel); font-family: inherit;
+        }
+        .rfiAttachBtn:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .rfiPasteBox {
+          position: relative; display: flex; flex-direction: column; align-items: center;
+          justify-content: center; gap: 6px; min-height: 96px;
+          border: 1.5px dashed var(--line); border-radius: 10px; background: #fafbfc;
+          color: var(--mist); font-size: 12px; font-weight: 700; cursor: pointer;
+        }
+        .rfiPasteBox.ro { cursor: default; }
+        .rfiPasteBox:not(.ro):hover { border-color: var(--accent); background: var(--accent-soft); }
+        .rfiPasteBox.sel {
+          border-style: solid; border-color: var(--accent, #0F3460);
+          box-shadow: 0 0 0 2px var(--accent-soft, #e6ecf5);
+        }
+        .rfiPasteBox:focus-visible { outline: 2px solid var(--accent, #0F3460); outline-offset: 1px; }
+        .rfiShots { display: flex; flex-wrap: wrap; gap: 12px; }
+        .rfiShot {
+          width: 210px; display: flex; flex-direction: column; gap: 5px;
+          border: 1px solid var(--line-soft); border-radius: 10px; padding: 8px; background: #fff;
+        }
+        .rfiShot img { width: 100%; border-radius: 6px; display: block; }
+        .rfiCap { font-size: 12px; }
+        .rfiShotActs { display: flex; gap: 4px; }
+
+        /* ---- the internal half ---- */
+        .rfiInternal {
+          border: 1px dashed var(--line); border-radius: 12px; padding: 14px;
+          background: #fbfcfd; display: flex; flex-direction: column; gap: 10px;
+        }
+        .rfiSubHead {
+          font-size: 12px; font-weight: 800; color: var(--steel);
+          margin-top: 4px; text-transform: none;
+        }
+        .rfiNotice {
+          display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+          border-radius: 8px; padding: 8px 12px; font-size: 12.5px; font-weight: 600;
+        }
+        .rfiNotice.calendar { background: #eef2f8; color: #103460; }
+        .rfiNotice.warn { background: #fff4e5; color: #a15c00; }
+        .rfiNotice.critical { background: #fdf2f3; color: #b02a37; }
+        .rfiFuList { display: flex; flex-direction: column; gap: 5px; }
+        .rfiFuRow {
+          display: flex; align-items: center; gap: 9px; font-size: 12.5px;
+          padding: 5px 8px; border-radius: 7px; background: #fff;
+          border: 1px solid var(--line-soft);
+        }
+        .rfiFuRow.done { opacity: .55; text-decoration: line-through; }
+        .rfiFuType { font-weight: 800; color: var(--accent-ink); white-space: nowrap; }
+        .rfiFuNote { flex: 1; }
+        .rfiFuWhen { color: var(--mist); font-size: 11.5px; white-space: nowrap; }
+        .rfiFuAdd { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .rfiFuAdd .rfiIn { width: auto; flex: 1; min-width: 160px; }
+        .rfiCiCheck {
+          display: inline-flex; align-items: center; gap: 8px;
+          font-size: 12.5px; font-weight: 700; cursor: pointer;
+        }
+        .rfiCiPick { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+        .rfiCiPick .rfiIn { width: auto; min-width: 220px; }
+        .rfiCiDone { display: flex; align-items: center; gap: 6px; color: #1a7f4b; font-weight: 700; margin: 0; }
+        .rfiHint { color: var(--mist); font-size: 11.5px; margin: 6px 0 0; }
+        .rfiTimeline { display: flex; flex-direction: column; gap: 3px; max-height: 240px; overflow-y: auto; }
+        .rfiTlRow { display: flex; gap: 10px; font-size: 11.5px; padding: 3px 0; border-bottom: 1px solid #eef0f3; }
+        .rfiTlWhen { color: var(--mist); white-space: nowrap; min-width: 108px; }
+        .rfiTlWho { color: var(--mist); min-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .rfiTlWhat { font-weight: 600; }
+        .rfiFormActions {
+          display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+          margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-soft);
+        }
+
+
+        /* ---- Change Instructions ---- */
+        .ciWrap { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+        .ciQueue {
+          border: 1px solid #f0d9a8; background: #fffaf0; border-radius: 12px;
+          padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
+        }
+        .ciQueueHead { font-size: 12.5px; color: #7a5a00; }
+        .ciHint { color: #a1791f; font-weight: 600; }
+        .ciQueueRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+        .ciQueueSrc {
+          font-weight: 800; font-size: 12px; background: #fff; border: 1px solid #f0d9a8;
+          border-radius: 999px; padding: 3px 10px; white-space: nowrap;
+        }
+        .ciQueueSub { flex: 1; font-size: 12.5px; font-weight: 600; min-width: 140px; }
+        .ciIn {
+          border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+          font-size: 12.5px; font-family: inherit; background: #fff; color: var(--steel);
+        }
+        .ciChapters { display: flex; flex-direction: column; gap: 8px; }
+        .ciChapter { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+        .ciChapterHead {
+          width: 100%; display: flex; align-items: center; gap: 10px;
+          padding: 11px 14px; background: #f7f8fa; border: none; cursor: pointer;
+          font-family: inherit; font-size: 13px; color: var(--steel); text-align: inherit;
+        }
+        .ciChapterHead:hover { background: #f1f3f6; }
+        .ciChapterName { font-weight: 800; flex: 1; }
+        .ciChapterCount { color: var(--mist); font-size: 12px; font-weight: 700; white-space: nowrap; }
+        .ciChapterSum {
+          font-weight: 800; color: var(--accent-ink); white-space: nowrap;
+          background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px;
+        }
+        .ciChapterBody { padding: 10px 14px 14px; border-top: 1px solid var(--line-soft); }
+        .ciNone { color: var(--mist); font-size: 12.5px; font-weight: 600; margin: 6px 0 10px; }
+        .ciAddRow {
+          display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
+          border: 1px dashed var(--line); background: #fff; color: var(--steel);
+          border-radius: 999px; padding: 7px 16px; font-size: 12.5px; font-weight: 700;
+          cursor: pointer; font-family: inherit;
+        }
+        .ciAddRow:hover { border-color: var(--accent); color: var(--accent-ink); }
+        .ciTable td, .ciPriceTable td { padding: 5px 6px; }
+        .ciTable .cItemNo, .ciPriceTable .cUnit { white-space: nowrap; }
+        .cMoney { text-align: inherit; white-space: nowrap; }
+        .ciCalc { font-weight: 700; color: var(--accent-ink); }
+        .ciCellIn, .ciCellSel {
+          border: 1px solid var(--line-soft); border-radius: 6px; padding: 5px 7px;
+          font-size: 12px; font-family: inherit; background: #fff; color: var(--steel);
+          width: 100%; min-width: 74px;
+        }
+        .ciCellIn:focus, .ciCellSel:focus { outline: none; border-color: var(--accent); }
+        .ciCellIn[readonly] { background: #fafbfc; }
+        .ciPriceTable .cQty, .ciPriceTable .cMoney { width: 100px; }
+        .ciPriceTable .cMk { width: 160px; }
+        .ciTotalRow td { font-weight: 800; background: #f7f8fa; border-top: 2px solid var(--accent); }
+        .ciFormWrap { gap: 6px; }
+        .ciDocHead {
+          display: flex; align-items: center; justify-content: space-between; gap: 16px;
+          padding: 12px 4px; border-bottom: 2.5px solid var(--accent, #1A559E); margin-bottom: 6px;
+        }
+        .ciDocMid { text-align: center; flex: 1; }
+        .ciDocProject { font-weight: 800; font-size: 15px; color: var(--accent-ink); }
+        .ciDocLabel { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: var(--mist); margin-top: 2px; }
+        .ciDocDate { font-size: 11.5px; color: var(--mist); white-space: nowrap; }
+        .ciDocLogo { max-height: 40px; max-width: 130px; object-fit: contain; }
+        .ciSrcTag {
+          font-size: 11.5px; font-weight: 700; color: var(--mist);
+          border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px;
+        }
+        .ciNotes { display: flex; flex-direction: column; gap: 6px; }
+        .ciNoteRow { display: flex; align-items: center; gap: 6px; }
+        .ciNoteRow .rfiIn { flex: 1; }
+        .ciDocs { display: flex; flex-direction: column; gap: 8px; }
+        .ciDocName { font-weight: 800; font-size: 12.5px; }
+        .ciDocAdd { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .ciDocAdd .rfiIn { width: auto; flex: 1; min-width: 200px; }
+        .ciRevs { display: flex; flex-direction: column; gap: 4px; }
+        .ciRevRow {
+          display: flex; gap: 14px; font-size: 12px; padding: 5px 8px;
+          border: 1px solid var(--line-soft); border-radius: 7px; background: #fff;
+        }
+        .ciRevNo { font-weight: 800; color: var(--accent-ink); min-width: 56px; }
+
         .lliChip {
           border: 1px solid var(--line); background: #fff; color: var(--steel);
           border-radius: 999px; padding: 5px 13px; cursor: pointer;
@@ -2190,6 +2484,20 @@ var pdfViewer = `
           width: 22px; height: 22px; background: rgba(20,24,31,.72); color: #fff;
           cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
         }
+        /* Choosing a file lives inside the frame, in the corner, so the frame
+           itself is free to take a paste. Same idea as the LLI board's cell. */
+        .sbImgPick {
+          position: absolute; bottom: 6px; inset-inline-end: 6px; width: 26px; height: 26px;
+          border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--mist);
+          cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+          box-shadow: 0 1px 3px rgba(20,24,31,.10);
+        }
+        .sbImgPick:hover { color: var(--accent-ink); border-color: var(--accent); }
+        .sbImgBox.sel {
+          border-style: solid; border-color: var(--accent, #0F3460);
+          box-shadow: 0 0 0 2px var(--accent-soft, #e6ecf5);
+        }
+        .sbImgBox:focus-visible { outline: 2px solid var(--accent, #0F3460); outline-offset: 1px; }
 
         .sbDocs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
         @media (max-width: 700px) { .sbDocs { grid-template-columns: 1fr; } }
@@ -5292,9 +5600,26 @@ function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRT
   const [zoom, setZoom] = useState7(null);
   const inputRef = useRef6(null);
   const list = photos || [];
+  // A screenshot pasted straight into the gallery, the same way it works on the
+  // LLI board and inside a submittal. Clicking anywhere in the card is enough:
+  // the card itself takes the keyboard focus. (2.9.26)
+  const onPaste = (e) => {
+    if (!canEdit || !onUploadPhotos) return;
+    const f = sbClipboardImage(e);
+    if (!f) return;
+    e.preventDefault();
+    const named = f.name ? f : new File([f], "pasted-image.png", { type: f.type || "image/png" });
+    onUploadPhotos([named]);
+  };
   return /* @__PURE__ */ React16.createElement(
     "div",
-    { className: "functionPageBody photoBody", style: { flexDirection: "column" } },
+    {
+      className: "functionPageBody photoBody",
+      style: { flexDirection: "column" },
+      tabIndex: canEdit ? 0 : void 0,
+      onPaste: canEdit ? onPaste : void 0,
+      title: canEdit ? (isRTL ? "\u05d0\u05e4\u05e9\u05e8 \u05d2\u05dd \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05ea\u05de\u05d5\u05e0\u05d4 \u05e2\u05dd Ctrl+V" : "You can also paste a picture with Ctrl+V") : void 0
+    },
     canEdit && /* @__PURE__ */ React16.createElement(
       "div",
       { className: "photoUploadRow" },
@@ -5362,6 +5687,14 @@ function CardView({
   boqData,
   boqFlags,
   lliRows,
+  rfiRows,
+  onChangeRfiRows,
+  onAddToChangeInstructions,
+  ciRows,
+  onChangeCiRows,
+  ciQueue,
+  onChangeCiQueue,
+  projectMarkup,
   onChangeLliRows,
   sdRows,
   onChangeSdRows,
@@ -5392,11 +5725,15 @@ function CardView({
   const isSubmittal = cardKey === "submittal";
   const isLli = cardKey === "lli";
   const isSd = cardKey === "sd";
+  const isRfi = cardKey === "rfi";
+  const isCi = cardKey === "changeInstructions";
   const showRooms = cardKey === "rooms";
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
-  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || showRooms ? "wide" : ""}` }, showRooms && /* @__PURE__ */ React14.createElement(
+  // RFI carries its own screens, so it does not want the generic "upload a
+  // file" modal that the plain cards get.
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || showRooms ? "wide" : ""}` }, showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
@@ -5437,7 +5774,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -8143,15 +8480,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // or a copied image on the clipboard as a file, so the same path that handles
   // an uploaded file handles this one — it is only the way in that differs.
   const onImagePaste = async (code, e) => {
-    const items = (e.clipboardData && e.clipboardData.items) || [];
-    let file = null;
-    for (let i = 0; i < items.length && !file; i++) {
-      if (items[i].kind === "file" && /^image\//.test(items[i].type || "")) file = items[i].getAsFile();
-    }
-    if (!file) {
-      const fs2 = (e.clipboardData && e.clipboardData.files) || [];
-      if (fs2.length && /^image\//.test(fs2[0].type || "")) file = fs2[0];
-    }
+    const file = sbClipboardImage(e);
     if (!file) return;
     e.preventDefault();
     setBusyRow(code);
@@ -9666,6 +9995,1999 @@ function roomsMarkOf(data, key) {
 // the whole feature: one place to maintain, and the room screen stays current
 // because nothing is copied (29.8.26).
 // -----------------------------------------------------------------------------
+
+
+// -----------------------------------------------------------------------------
+// RFI — Request for Information
+//
+// Two screens in one card: the register, which is the list everybody works
+// from, and the detailed form behind it. The split matters because the register
+// is what gets exported to the client and the form is where the internal
+// thinking lives — the timeline, the follow-ups, the schedule warning. None of
+// that reaches the official PDF, which is Marcella's rule and the reason the
+// export builds its own column list rather than printing the screen.
+//
+// Working days, holidays and the response due date come from sbRfiDueDate.
+// See the engine above: Sunday to Thursday, the day it was raised is not day 1,
+// and a public holiday is stepped over rather than counted.
+// -----------------------------------------------------------------------------
+var RFI_L = {
+  title: { en: "RFI", he: "RFI" },
+  lead: { en: "Requests for Information", he: "בקשות למידע" },
+  add: { en: "New RFI", he: "RFI חדש" },
+  none: { en: "No RFIs yet.", he: "עדיין אין RFI." },
+  noneFiltered: { en: "Nothing matches the filter.", he: "אין תוצאות לסינון." },
+  search: { en: "Search", he: "חיפוש" },
+  back: { en: "Back to the list", he: "חזרה לרשימה" },
+  del: { en: "Delete", he: "מחיקה" },
+  confirmDel: { en: "Delete this RFI? This cannot be undone.", he: "למחוק את ה‑RFI? הפעולה אינה הפיכה." },
+  nothingToExport: { en: "Nothing to export.", he: "אין מה לייצא." },
+
+  // ---- columns -------------------------------------------------------------
+  no: { en: "RFI No.", he: "מס' RFI" },
+  discipline: { en: "Discipline", he: "תחום" },
+  subject: { en: "Subject", he: "נושא" },
+  description: { en: "Description / Question", he: "תיאור / שאלה" },
+  dateRaised: { en: "Date Raised", he: "תאריך פתיחה" },
+  raisedBy: { en: "Raised By", he: "ע\"י" },
+  responsibility: { en: "Responsibility", he: "אחריות" },
+  priority: { en: "Priority", he: "דחיפות" },
+  dueDate: { en: "Response Due Date", he: "מועד נדרש למענה" },
+  drawingUpdate: { en: "Drawing Update Required", he: "נדרש עדכון תוכניות" },
+  response: { en: "Response", he: "תשובה" },
+  respondedBy: { en: "Responded By", he: "נענה ע\"י" },
+  responseDate: { en: "Response Date", he: "תאריך מענה" },
+  remarks: { en: "Remarks", he: "הערות" },
+  status: { en: "Status", he: "סטטוס" },
+  location: { en: "Location", he: "מיקום" },
+  references: { en: "References", he: "אסמכתאות" },
+  projectName: { en: "Project Name", he: "שם הפרויקט" },
+
+  // ---- value lists ---------------------------------------------------------
+  respMain: { en: "Main Contractor", he: "קבלן ראשי" },
+  respSup: { en: "Supervision", he: "פיקוח" },
+  respSupClient: { en: "Supervision / Client", he: "פיקוח / לקוח" },
+  prLow: { en: "Low", he: "נמוכה" },
+  prNormal: { en: "Normal", he: "רגילה" },
+  prHigh: { en: "High", he: "גבוהה" },
+  prUrgent: { en: "Urgent", he: "דחופה" },
+  stDraft: { en: "Draft", he: "טיוטה" },
+  stOpen: { en: "Open", he: "פתוח" },
+  stPending: { en: "Pending Response", he: "ממתין למענה" },
+  stAnswered: { en: "Answered", he: "נענה" },
+  stClosed: { en: "Closed", he: "סגור" },
+  stCancelled: { en: "Cancelled", he: "בוטל" },
+  yes: { en: "Yes", he: "כן" },
+  no2: { en: "No", he: "לא" },
+  tbd: { en: "TBD", he: "טרם נקבע" },
+  all: { en: "All", he: "הכל" },
+
+  // ---- sections ------------------------------------------------------------
+  secDetails: { en: "RFI details", he: "פרטי ה‑RFI" },
+  secQuestion: { en: "Question", he: "השאלה" },
+  secAnswer: { en: "Response", he: "המענה" },
+  secFiles: { en: "Attachments and images", he: "מסמכים ותמונות" },
+  secInternal: { en: "Internal — not printed", he: "פנימי — אינו מודפס" },
+
+  // ---- attachments ---------------------------------------------------------
+  addFile: { en: "Attach a file", he: "צירוף קובץ" },
+  internalOnly: { en: "Internal only", he: "לשימוש פנימי בלבד" },
+  shared: { en: "Available to RFI recipients", he: "זמין למקבלי ה‑RFI" },
+  pasteBox: { en: "Paste a screenshot here", he: "להדביק כאן צילום מסך" },
+  pasteHint: {
+    en: "Click the frame, then Ctrl+V. The corner button chooses a file.",
+    he: "לוחצים על המסגרת ואז Ctrl+V. הכפתור בפינה בוחר קובץ."
+  },
+  pickFile: { en: "Choose a file", he: "בחירת קובץ" },
+  caption: { en: "Caption", he: "כיתוב" },
+  moveUp: { en: "Move up", he: "העברה למעלה" },
+  moveDown: { en: "Move down", he: "העברה למטה" },
+  remove: { en: "Remove", he: "הסרה" },
+
+  // ---- schedule ------------------------------------------------------------
+  scheduleLink: { en: "Related schedule activity", he: "פעילות מקושרת בלוח הזמנים" },
+  schedulePick: { en: "Link an activity", he: "קישור פעילות" },
+  scheduleWarn: { en: "Schedule warning", he: "אזהרת לוח זמנים" },
+  scheduleCrit: { en: "Critical schedule risk", he: "סיכון קריטי ללוח הזמנים" },
+  scheduleWarnText: {
+    en: "The response is due close to the start of this activity.",
+    he: "מועד המענה סמוך למועד תחילת הפעילות."
+  },
+  scheduleCritText: {
+    en: "The response is due on or after the day this activity starts.",
+    he: "מועד המענה חל ביום תחילת הפעילות או אחריו."
+  },
+  calendarNotice: { en: "Calendar notice", he: "הערת לוח שנה" },
+  calendarNoticeText: {
+    en: "A public holiday was stepped over when working out the due date:",
+    he: "חג נלקח בחשבון ולא נספר בחישוב מועד המענה:"
+  },
+
+  // ---- follow up and timeline ---------------------------------------------
+  followUp: { en: "Follow up", he: "מעקב" },
+  addFollowUp: { en: "Add a follow-up", he: "הוספת פעולת המשך" },
+  fuType: { en: "Type", he: "סוג" },
+  fuNote: { en: "What has to happen", he: "מה נדרש" },
+  fuDone: { en: "Done", he: "בוצע" },
+  fuShopDrawing: { en: "Shop Drawing", he: "תוכנית ייצור" },
+  fuSubmittal: { en: "Submittal", he: "סבמיטל" },
+  fuDrawing: { en: "Drawing Update", he: "עדכון תוכנית" },
+  fuConsultant: { en: "Consultant Clarification", he: "הבהרת יועץ" },
+  fuSite: { en: "Site Action", he: "פעולה באתר" },
+  fuCoord: { en: "Coordination", he: "תיאום" },
+  fuOther: { en: "Other", he: "אחר" },
+  timeline: { en: "History", he: "היסטוריה" },
+  evCreated: { en: "RFI created", he: "RFI נוצר" },
+  evIssued: { en: "RFI issued", he: "RFI הופק" },
+  evStatus: { en: "Status changed", he: "שינוי סטטוס" },
+  evResponse: { en: "Response received", he: "התקבל מענה" },
+  evFile: { en: "Attachment added", he: "נוסף קובץ" },
+  evDrawing: { en: "Drawing Update Required changed", he: "שינוי בנדרש עדכון תוכניות" },
+  evFollowUp: { en: "Follow-up added", he: "נוספה פעולת המשך" },
+  evFollowDone: { en: "Follow-up completed", he: "פעולת המשך הושלמה" },
+  evClosed: { en: "RFI closed", he: "RFI נסגר" },
+
+  // ---- change instructions -------------------------------------------------
+  addToCi: { en: "Add to Change Instructions", he: "הוסף לרשימת הוראות שינוי" },
+  pickChapter: { en: "Choose a BOQ chapter", he: "בחירת פרק כתב כמויות" },
+  ciNote: {
+    en: "This is a management flag only. It is not an approval of any change in cost or contract.",
+    he: "זהו סימון ניהולי בלבד. אין בו אישור לשינוי כספי או חוזי."
+  },
+  ciAdded: { en: "Sent to the change instructions list", he: "הועבר לרשימת הוראות השינוי" },
+
+  // ---- actions -------------------------------------------------------------
+  saveDraft: { en: "Save draft", he: "שמירת טיוטה" },
+  issue: { en: "Issue RFI", he: "הפקת RFI" },
+  close: { en: "Close RFI", he: "סגירת RFI" },
+  pdf: { en: "PDF", he: "PDF" },
+  issuedOn: { en: "Report issued on", he: "תאריך הנפקת דוח" }
+};
+
+var RFI_RESP = ["main", "supervision", "supervisionClient"];
+var RFI_RESP_L = { main: "respMain", supervision: "respSup", supervisionClient: "respSupClient" };
+var RFI_PRIORITIES = ["low", "normal", "high", "urgent"];
+var RFI_PRIORITY_L = { low: "prLow", normal: "prNormal", high: "prHigh", urgent: "prUrgent" };
+var RFI_STATUSES = ["draft", "open", "pending", "answered", "closed", "cancelled"];
+var RFI_STATUS_L = {
+  draft: "stDraft", open: "stOpen", pending: "stPending",
+  answered: "stAnswered", closed: "stClosed", cancelled: "stCancelled"
+};
+var RFI_DRAWING = ["tbd", "yes", "no"];
+var RFI_DRAWING_L = { tbd: "tbd", yes: "yes", no: "no2" };
+var RFI_FU_TYPES = ["shopDrawing", "submittal", "drawing", "consultant", "site", "coordination", "other"];
+var RFI_FU_L = {
+  shopDrawing: "fuShopDrawing", submittal: "fuSubmittal", drawing: "fuDrawing",
+  consultant: "fuConsultant", site: "fuSite", coordination: "fuCoord", other: "fuOther"
+};
+
+function rfiToday() { return new Date().toISOString().slice(0, 10); }
+function rfiNextNo(rows) {
+  let max = 0;
+  Object.keys(rows || {}).forEach((k) => {
+    const n = parseInt(String((rows[k] || {}).no || "").replace(/\D/g, ""), 10);
+    if (n > max) max = n;
+  });
+  return String(max + 1).padStart(3, "0");
+}
+function rfiBlank(rows, who) {
+  const dateRaised = rfiToday();
+  return {
+    id: `r-${Date.now()}`,
+    no: rfiNextNo(rows),
+    discipline: "",
+    subject: "",
+    description: "",
+    dateRaised,
+    raisedBy: who || "",
+    responsibility: "supervision",
+    priority: "normal",
+    drawingUpdate: "tbd",
+    response: "",
+    respondedBy: "",
+    responseDate: "",
+    remarks: "",
+    status: "draft",
+    location: "",
+    references: "",
+    files: [],
+    images: [],
+    scheduleLinks: [],
+    followUps: [],
+    timeline: [],
+    ci: null
+  };
+}
+// The due date is never stored: it is a function of the date raised and the
+// priority, and storing it would let the two drift apart the first time a
+// priority is changed.
+function rfiDue(r) {
+  return sbRfiDueDate(r && r.dateRaised, r && r.priority);
+}
+
+function RfiCard({
+  appIsRTL, rows, onChangeRows, canEdit, projectId, projectName, printBrand,
+  boqData, scheduleData, currentEmail, onAddToChangeInstructions
+}) {
+  const lang = appIsRTL ? "he" : "en";
+  const isRTL = appIsRTL;
+  const L = (k) => sbText(RFI_L[k] || { en: k, he: k }, lang);
+  const [openId, setOpenId] = useState6(null);
+  const [q, setQ] = useState6("");
+  const [fStatus, setFStatus] = useState6("all");
+  const [fPriority, setFPriority] = useState6("all");
+  const [note, setNote] = useState6(null);
+
+  const all = Object.keys(rows || {})
+    .map((k) => rows[k])
+    .filter((r) => r && r.id)
+    .sort((a, b) => String(a.no).localeCompare(String(b.no), "en", { numeric: true }));
+
+  const patch = (id, next) => {
+    if (!onChangeRows) return;
+    const cur = (rows || {})[id] || {};
+    onChangeRows({ ...(rows || {}), [id]: { ...cur, ...next } });
+  };
+  // Every change worth remembering goes on the record as it happens. The list
+  // is only ever appended to — an RFI's history is the one thing in here that
+  // must not be rewritten.
+  const log = (id, evKey, detail) => {
+    const cur = (rows || {})[id] || {};
+    const now = new Date();
+    const line = {
+      at: now.toISOString(),
+      by: currentEmail || "",
+      ev: evKey,
+      detail: detail || ""
+    };
+    patch(id, { timeline: [...(cur.timeline || []), line] });
+  };
+  const patchLogged = (id, next, evKey, detail) => {
+    const cur = (rows || {})[id] || {};
+    const now = new Date();
+    const line = { at: now.toISOString(), by: currentEmail || "", ev: evKey, detail: detail || "" };
+    onChangeRows({
+      ...(rows || {}),
+      [id]: { ...cur, ...next, timeline: [...(cur.timeline || []), line] }
+    });
+  };
+
+  const addRfi = () => {
+    if (!canEdit) return;
+    const r = rfiBlank(rows, currentEmail);
+    r.timeline = [{ at: new Date().toISOString(), by: currentEmail || "", ev: "evCreated", detail: "" }];
+    onChangeRows({ ...(rows || {}), [r.id]: r });
+    setOpenId(r.id);
+  };
+  const delRfi = (id) => {
+    if (!canEdit) return;
+    if (!window.confirm(L("confirmDel"))) return;
+    const next = { ...(rows || {}) };
+    delete next[id];
+    onChangeRows(next);
+    setOpenId(null);
+  };
+
+  const shown = all.filter((r) => {
+    if (fStatus !== "all" && r.status !== fStatus) return false;
+    if (fPriority !== "all" && r.priority !== fPriority) return false;
+    const s = q.trim().toLowerCase();
+    if (!s) return true;
+    return [r.no, r.subject, r.description, r.discipline, r.response, r.remarks, r.location, r.references]
+      .some((v) => String(v || "").toLowerCase().includes(s));
+  });
+
+  // ---------------------------------------------------------------------------
+  //  the register
+  // ---------------------------------------------------------------------------
+  const exportGrid = () => {
+    const head = [
+      L("no"), L("discipline"), L("subject"), L("dateRaised"), L("raisedBy"),
+      L("responsibility"), L("priority"), L("dueDate"), L("drawingUpdate"), L("status")
+    ];
+    const widths = [70, 110, 240, 90, 130, 110, 90, 100, 110, 100];
+    const types = ["text", "text", "text", "date", "text", "text", "text", "date", "text", "text"];
+    const body = shown.map((r) => [
+      r.no,
+      r.discipline || "",
+      r.subject || "",
+      sbFmtDate(r.dateRaised),
+      r.raisedBy || "",
+      L(RFI_RESP_L[r.responsibility] || "respSup"),
+      L(RFI_PRIORITY_L[r.priority] || "prNormal"),
+      sbFmtDate(rfiDue(r).due),
+      L(RFI_DRAWING_L[r.drawingUpdate] || "tbd"),
+      L(RFI_STATUS_L[r.status] || "stOpen")
+    ]);
+    return { head, body, widths, types };
+  };
+  const onExcel = async () => {
+    const g = exportGrid();
+    if (!g.body.length) { setNote(L("nothingToExport")); return; }
+    setNote(null);
+    const res = await boardExportXlsx({
+      title: (projectName || "").trim() || L("title"),
+      subtitle: `${L("title")} · ${sbFmtDate(rfiToday())}`,
+      sheetName: "RFI",
+      fileName: boardFileName(projectName, "RFI", "xlsx"),
+      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      accent: (printBrand || {}).accent, isRTL
+    });
+    if (res && res.styled === false) setNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+  };
+  const onPdf = (printLang) => {
+    const g = exportGrid();
+    if (!g.body.length) { setNote(L("nothingToExport")); return; }
+    boardExportPdf({
+      title: (projectName || "").trim() || L("title"),
+      fileName: boardFileName(projectName, "RFI", ""),
+      subtitle: L("title"),
+      issuedLabel: `${L("issuedOn")} ${sbFmtDate(rfiToday())}`,
+      head: g.head, body: g.body, widths: g.widths,
+      accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
+    });
+  };
+  const [printAsk, setPrintAsk] = useState6(null);
+
+  const statusChip = (key) =>
+    sbH("button", {
+      key,
+      type: "button",
+      className: `lliChip ${fStatus === key ? "on" : ""}`,
+      onClick: () => setFStatus(key)
+    }, key === "all" ? L("all") : L(RFI_STATUS_L[key]));
+
+  const register = sbH(
+    "div",
+    { className: "rfiWrap" },
+    sbH(
+      "div",
+      { className: "rfiTools" },
+      sbH("input", {
+        type: "text", className: "rfiSearch", value: q,
+        onChange: (e) => setQ(e.target.value), placeholder: L("search")
+      }),
+      sbH("div", { className: "rfiChips" }, ["all", ...RFI_STATUSES].map(statusChip)),
+      sbH(
+        "select",
+        {
+          className: "rfiSel", value: fPriority,
+          onChange: (e) => setFPriority(e.target.value)
+        },
+        sbH("option", { value: "all" }, L("priority") + ": " + L("all")),
+        RFI_PRIORITIES.map((p) => sbH("option", { key: p, value: p }, L(RFI_PRIORITY_L[p])))
+      ),
+      canEdit
+        ? sbH("button", { type: "button", className: "rfiAddBtn", onClick: addRfi },
+            sbH(Plus2, { size: 15, strokeWidth: 2.2 }), " ", L("add"))
+        : null
+    ),
+    all.length === 0
+      ? sbH("p", { className: "rfiEmpty" }, L("none"))
+      : shown.length === 0
+        ? sbH("p", { className: "rfiEmpty" }, L("noneFiltered"))
+        : sbH(
+            "div",
+            { className: "rfiTableWrap" },
+            sbH(
+              "table",
+              { className: "rfiTable" },
+              sbH("thead", null, sbH("tr", null,
+                sbH("th", { className: "cNo" }, L("no")),
+                sbH("th", { className: "cDis" }, L("discipline")),
+                sbH("th", { className: "cSub" }, L("subject")),
+                sbH("th", { className: "cDt" }, L("dateRaised")),
+                sbH("th", { className: "cBy" }, L("raisedBy")),
+                sbH("th", { className: "cResp" }, L("responsibility")),
+                sbH("th", { className: "cPr" }, L("priority")),
+                sbH("th", { className: "cDue" }, L("dueDate")),
+                sbH("th", { className: "cDw" }, L("drawingUpdate")),
+                sbH("th", { className: "cSt" }, L("status")),
+                sbH("th", { className: "cAct" }, "")
+              )),
+              sbH("tbody", null, shown.map((r) => {
+                const due = rfiDue(r);
+                const risk = rfiScheduleRisk(r, scheduleData);
+                return sbH(
+                  "tr",
+                  { key: r.id, className: `rfiRow st-${r.status}` },
+                  sbH("td", { className: "cNo", dir: "ltr" }, sbH("b", null, r.no)),
+                  sbH("td", { className: "cDis" }, r.discipline || "—"),
+                  sbH("td", { className: "cSub" },
+                    sbH("button", { type: "button", className: "rfiLink", onClick: () => setOpenId(r.id) },
+                      r.subject || "—")),
+                  sbH("td", { className: "cDt", dir: "ltr" }, sbFmtDate(r.dateRaised)),
+                  sbH("td", { className: "cBy", dir: "ltr" }, r.raisedBy || "—"),
+                  sbH("td", { className: "cResp" }, L(RFI_RESP_L[r.responsibility] || "respSup")),
+                  sbH("td", { className: "cPr" },
+                    sbH("span", { className: `rfiPr pr-${r.priority}` }, L(RFI_PRIORITY_L[r.priority] || "prNormal"))),
+                  sbH("td", { className: "cDue", dir: "ltr" },
+                    sbFmtDate(due.due),
+                    risk
+                      ? sbH("span", {
+                          className: `rfiRisk ${risk.level}`,
+                          title: risk.level === "critical" ? L("scheduleCritText") : L("scheduleWarnText")
+                        }, sbH(AlertTriangle, { size: 13, strokeWidth: 2.2 }))
+                      : null),
+                  sbH("td", { className: "cDw" }, L(RFI_DRAWING_L[r.drawingUpdate] || "tbd")),
+                  sbH("td", { className: "cSt" },
+                    sbH("span", { className: `rfiSt st-${r.status}` }, L(RFI_STATUS_L[r.status] || "stOpen"))),
+                  sbH("td", { className: "cAct" },
+                    sbH("button", { type: "button", className: "rfiIconBtn", title: L("subject"), onClick: () => setOpenId(r.id) },
+                      sbH(Pencil, { size: 14, strokeWidth: 2 })),
+                    canEdit
+                      ? sbH("button", { type: "button", className: "rfiIconBtn danger", title: L("del"), onClick: () => delRfi(r.id) },
+                          sbH(Trash2, { size: 14, strokeWidth: 2 }))
+                      : null)
+                );
+              }))
+            )
+          ),
+    sbH(
+      "div",
+      { className: "rfiExportRow" },
+      sbH("button", { type: "button", className: "rfiGrayPill", onClick: onExcel },
+        sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
+      sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => onPdf) },
+        sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF"),
+      note ? sbH("span", { className: "rfiNote" }, note) : null
+    ),
+    printAsk
+      ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); onPdf(lg); }, onClose: () => setPrintAsk(null) })
+      : null
+  );
+
+  const open = openId ? (rows || {})[openId] : null;
+  return sbH(
+    "div",
+    { className: "functionPageBody rfiBody", style: { flexDirection: "column" } },
+    open
+      ? sbH(RfiForm, {
+          lang, isRTL, L, rec: open, canEdit, projectId, projectName, printBrand,
+          boqData, scheduleData, currentEmail,
+          onBack: () => setOpenId(null),
+          onPatch: (next, ev, detail) => (ev ? patchLogged(open.id, next, ev, detail) : patch(open.id, next)),
+          onAddToChangeInstructions
+        })
+      : register
+  );
+}
+
+// Is the response due uncomfortably close to an activity this RFI is tied to?
+// "Close" is three working days; "critical" is on or after the day the activity
+// starts. The AI may suggest raising the priority because of this, but nothing
+// here changes it on its own — that is Marcella's rule for the whole module.
+function rfiScheduleRisk(r, scheduleData) {
+  const links = (r && r.scheduleLinks) || [];
+  if (!links.length) return null;
+  const due = rfiDue(r).due;
+  if (!due) return null;
+  const dueD = sbDateUTC(due);
+  let worst = null;
+  links.forEach((lk) => {
+    const start = sbDateUTC(lk.start);
+    if (!start || !dueD) return;
+    if (dueD.getTime() >= start.getTime()) {
+      worst = { level: "critical", activity: lk.name, start: lk.start };
+    } else if (!worst) {
+      const gap = Math.round((start.getTime() - dueD.getTime()) / 86400000);
+      if (gap <= 5) worst = { level: "warn", activity: lk.name, start: lk.start };
+    }
+  });
+  return worst;
+}
+
+
+// -----------------------------------------------------------------------------
+// The detailed RFI form.
+//
+// Everything above the "internal" rule goes on the official PDF. Everything
+// below it — the timeline, the schedule warning, the follow-ups, the holiday
+// notice, the change-instructions flag — stays inside the site. That division
+// is the reason this form is laid out the way it is, rather than as one long
+// list of fields: the printed document has to be predictable.
+// -----------------------------------------------------------------------------
+function RfiForm({
+  lang, isRTL, L, rec, canEdit, projectId, projectName, printBrand,
+  boqData, scheduleData, currentEmail, onBack, onPatch, onAddToChangeInstructions
+}) {
+  const d = rec || {};
+  const ro = !canEdit;
+  const [busy, setBusy] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [imgSel, setImgSel] = useState6(false);
+  const [fuType, setFuType] = useState6("shopDrawing");
+  const [fuNote, setFuNote] = useState6("");
+  const [ciOpen, setCiOpen] = useState6(false);
+  const [ciChapter, setCiChapter] = useState6("");
+  const [printAsk, setPrintAsk] = useState6(null);
+
+  const set = (next) => { if (!ro) onPatch(next); };
+  const setLogged = (next, ev, detail) => { if (!ro) onPatch(next, ev, detail); };
+
+  const due = rfiDue(d);
+  const risk = rfiScheduleRisk(d, scheduleData);
+
+  // ---- fields --------------------------------------------------------------
+  const field = (key, opts) => {
+    const o = opts || {};
+    return sbH(
+      "label",
+      { className: `rfiField ${o.wide ? "wide" : ""}`.trim(), key },
+      sbH("span", { className: "rfiFieldLabel" }, L(key)),
+      o.textarea
+        ? sbH("textarea", {
+            className: "rfiIn rfiArea", rows: o.rows || 5, readOnly: ro,
+            value: d[o.name || key] || "",
+            onChange: (e) => set({ [o.name || key]: e.target.value })
+          })
+        : sbH("input", {
+            className: "rfiIn", type: o.type || "text", readOnly: ro,
+            dir: o.dir, value: d[o.name || key] || "",
+            onChange: (e) => set({ [o.name || key]: e.target.value })
+          })
+    );
+  };
+  const select = (key, list, labelMap, onPick) =>
+    sbH(
+      "label",
+      { className: "rfiField", key },
+      sbH("span", { className: "rfiFieldLabel" }, L(key)),
+      sbH(
+        "select",
+        {
+          className: "rfiIn", disabled: ro, value: d[key] || list[0],
+          onChange: (e) => (onPick ? onPick(e.target.value) : set({ [key]: e.target.value }))
+        },
+        list.map((v) => sbH("option", { key: v, value: v }, L(labelMap[v])))
+      )
+    );
+  const readOnlyField = (key, value) =>
+    sbH(
+      "label",
+      { className: "rfiField", key },
+      sbH("span", { className: "rfiFieldLabel" }, L(key)),
+      sbH("span", { className: "rfiIn rfiRo", dir: "ltr" }, value || "—")
+    );
+
+  // ---- attachments ---------------------------------------------------------
+  const onPickFile = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setErr(null);
+    setBusy("file");
+    try {
+      const up = await sbUploadFile(projectId, d.id, f);
+      const next = [...(d.files || []), {
+        id: `f-${Date.now()}`, name: f.name, path: up.path,
+        inline: up.inline, dataUrl: up.dataUrl || null, share: "internal"
+      }];
+      setLogged({ files: next }, "evFile", f.name);
+    } catch (ex) {
+      setErr(lang === "he" ? "לא הצלחתי להעלות את הקובץ." : "Could not upload the file.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  const openFile = async (att) => {
+    const url = att.dataUrl || (await sbFileUrl(att));
+    if (url) window.open(url, "_blank", "noopener");
+  };
+  const dropFile = async (att) => {
+    await sbRemoveFile(att);
+    set({ files: (d.files || []).filter((x) => x.id !== att.id) });
+  };
+
+  // ---- pasted screenshots --------------------------------------------------
+  const putImage = async (f) => {
+    setErr(null);
+    setBusy("image");
+    try {
+      const thumb = await sbMakeThumb(f, 900);
+      const named = f.name ? f : new File([f], "pasted-image.png", { type: f.type || "image/png" });
+      const next = [...(d.images || []), {
+        id: `i-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        thumb, name: named.name, caption: ""
+      }];
+      setLogged({ images: next }, "evFile", named.name);
+    } catch (ex) {
+      setErr(lang === "he" ? "לא הצלחתי לקרוא את התמונה." : "Could not read the image.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  const onImagePaste = async (e) => {
+    const f = sbClipboardImage(e);
+    if (!f) return;
+    e.preventDefault();
+    await putImage(f);
+  };
+  useEffect5(() => {
+    if (ro || !imgSel) return;
+    const onWindowPaste = (e) => onImagePaste(e);
+    window.addEventListener("paste", onWindowPaste);
+    return () => window.removeEventListener("paste", onWindowPaste);
+  }, [ro, imgSel, d.id, (d.images || []).length]);
+  const onPickImageFile = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (f) await putImage(f);
+  };
+  const moveImage = (id, delta) => {
+    const list = [...(d.images || [])];
+    const i = list.findIndex((x) => x.id === id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    const t = list[i]; list[i] = list[j]; list[j] = t;
+    set({ images: list });
+  };
+
+  // ---- follow up -----------------------------------------------------------
+  const addFollowUp = () => {
+    if (ro || !fuNote.trim()) return;
+    const item = {
+      id: `fu-${Date.now()}`, type: fuType, note: fuNote.trim(),
+      at: new Date().toISOString(), by: currentEmail || "", done: false
+    };
+    setLogged({ followUps: [...(d.followUps || []), item] }, "evFollowUp", L(RFI_FU_L[fuType]));
+    setFuNote("");
+  };
+  const toggleFollowUp = (id) => {
+    if (ro) return;
+    const list = (d.followUps || []).map((x) => (x.id === id ? { ...x, done: !x.done } : x));
+    const hit = list.find((x) => x.id === id);
+    setLogged({ followUps: list }, hit && hit.done ? "evFollowDone" : "evFollowUp", hit ? hit.note : "");
+  };
+
+  // ---- change instructions -------------------------------------------------
+  const chapters = ((boqData && boqData.chapters) || []).map((c) => ({
+    code: c.code, name: lang === "he" ? c.he : c.en
+  }));
+  const confirmCi = () => {
+    if (!ciChapter) return;
+    const ch = chapters.find((c) => c.code === ciChapter);
+    const entry = {
+      chapter: ciChapter,
+      chapterName: ch ? ch.name : "",
+      at: new Date().toISOString(),
+      by: currentEmail || ""
+    };
+    set({ ci: entry });
+    setCiOpen(false);
+    if (onAddToChangeInstructions) {
+      onAddToChangeInstructions({
+        sourceModule: "RFI",
+        sourceNo: d.no,
+        sourceId: d.id,
+        subject: d.subject || "",
+        chapter: ciChapter,
+        requestedBy: d.raisedBy || "",
+        addedBy: currentEmail || "",
+        addedAt: entry.at
+      });
+    }
+  };
+
+  // ---- actions -------------------------------------------------------------
+  const issue = () => setLogged({ status: "open" }, "evIssued", "");
+  const closeRfi = () => setLogged({ status: "closed" }, "evClosed", "");
+  const onStatus = (v) => setLogged({ status: v }, "evStatus", L(RFI_STATUS_L[v] || "stOpen"));
+  const onPriority = (v) => set({ priority: v });
+  const onDrawing = (v) => setLogged({ drawingUpdate: v }, "evDrawing", L(RFI_DRAWING_L[v] || "tbd"));
+  const onResponse = (v) => {
+    const first = !String(d.response || "").trim() && String(v || "").trim();
+    if (first) {
+      onPatch(
+        { response: v, respondedBy: currentEmail || "", responseDate: rfiToday(), status: "answered" },
+        "evResponse", ""
+      );
+    } else {
+      set({ response: v });
+    }
+  };
+
+  const printPdf = (printLang) => rfiPrint(d, printLang, printBrand, projectName);
+
+  const sec = (key) => sbH("div", { className: "rfiSecBar" }, L(key));
+
+  return sbH(
+    "div",
+    { className: "rfiFormWrap" },
+    sbH(
+      "div",
+      { className: "rfiFormHead" },
+      sbH("button", { type: "button", className: "rfiBackBtn", onClick: onBack },
+        sbH(isRTL ? ArrowRight9 : ArrowLeft9, { size: 14, strokeWidth: 2.4 }), " ", L("back")),
+      sbH("span", { className: "rfiFormTitle", dir: "ltr" }, `RFI ${d.no}`),
+      sbH("span", { className: `rfiSt st-${d.status}` }, L(RFI_STATUS_L[d.status] || "stOpen"))
+    ),
+
+    err ? sbH("p", { className: "rfiErr" }, err) : null,
+
+    sec("secDetails"),
+    sbH(
+      "div",
+      { className: "rfiGrid" },
+      readOnlyField("projectName", projectName),
+      readOnlyField("no", d.no),
+      field("discipline"),
+      field("subject", { wide: true }),
+      readOnlyField("dateRaised", sbFmtDate(d.dateRaised)),
+      readOnlyField("raisedBy", d.raisedBy),
+      select("responsibility", RFI_RESP, RFI_RESP_L),
+      select("priority", RFI_PRIORITIES, RFI_PRIORITY_L, onPriority),
+      readOnlyField("dueDate", sbFmtDate(due.due)),
+      select("status", RFI_STATUSES, RFI_STATUS_L, onStatus),
+      field("location"),
+      field("references", { wide: true }),
+      select("drawingUpdate", RFI_DRAWING, RFI_DRAWING_L, onDrawing)
+    ),
+
+    sec("secQuestion"),
+    sbH("div", { className: "rfiGrid one" }, field("description", { textarea: true, rows: 6 })),
+
+    sec("secAnswer"),
+    sbH(
+      "div",
+      { className: "rfiGrid" },
+      sbH(
+        "label",
+        { className: "rfiField wide" },
+        sbH("span", { className: "rfiFieldLabel" }, L("response")),
+        sbH("textarea", {
+          className: "rfiIn rfiArea", rows: 5, readOnly: ro,
+          value: d.response || "",
+          onChange: (e) => onResponse(e.target.value)
+        })
+      ),
+      readOnlyField("respondedBy", d.respondedBy),
+      readOnlyField("responseDate", sbFmtDate(d.responseDate)),
+      field("remarks", { textarea: true, rows: 3, wide: true })
+    ),
+
+    sec("secFiles"),
+    sbH(
+      "div",
+      { className: "rfiFiles" },
+      sbH(
+        "div",
+        { className: "rfiFileList" },
+        (d.files || []).map((f) =>
+          sbH(
+            "div",
+            { className: "rfiFileRow", key: f.id },
+            sbH(FileTextIcon, { size: 14, strokeWidth: 2 }),
+            sbH("button", { type: "button", className: "rfiLink", onClick: () => openFile(f) }, f.name),
+            sbH(
+              "select",
+              {
+                className: "rfiShareSel", disabled: ro, value: f.share || "internal",
+                onChange: (e) => set({
+                  files: (d.files || []).map((x) => (x.id === f.id ? { ...x, share: e.target.value } : x))
+                })
+              },
+              sbH("option", { value: "internal" }, L("internalOnly")),
+              sbH("option", { value: "shared" }, L("shared"))
+            ),
+            ro ? null : sbH("button", { type: "button", className: "rfiIconBtn danger", title: L("remove"), onClick: () => dropFile(f) },
+              sbH(Trash2, { size: 13, strokeWidth: 2 }))
+          )
+        ),
+        ro ? null : sbH(
+          "label",
+          { className: "rfiAttachBtn" },
+          sbH(Upload4, { size: 14, strokeWidth: 2 }), " ",
+          busy === "file" ? "…" : L("addFile"),
+          sbH("input", { type: "file", style: { display: "none" }, onChange: onPickFile })
+        )
+      ),
+
+      // The paste frame, the same rule as everywhere else in the site.
+      sbH(
+        "div",
+        {
+          className: `rfiPasteBox ${imgSel ? "sel" : ""} ${ro ? "ro" : ""}`.trim(),
+          tabIndex: ro ? void 0 : 0,
+          title: ro ? void 0 : L("pasteHint"),
+          onClick: ro ? void 0 : () => setImgSel(true),
+          onFocus: ro ? void 0 : () => setImgSel(true),
+          onBlur: ro ? void 0 : () => setImgSel(false),
+          onDoubleClick: ro ? void 0 : (e) => {
+            const inp = e.currentTarget.querySelector("input[type=file]");
+            if (inp) inp.click();
+          },
+          onPaste: ro ? void 0 : onImagePaste
+        },
+        sbH(ImagePlus, { size: 22, strokeWidth: 1.6 }),
+        sbH("span", null, busy === "image" ? "…" : L("pasteBox")),
+        ro ? null : sbH("button", {
+          type: "button", className: "sbImgPick", title: L("pickFile"),
+          onClick: (e) => {
+            e.stopPropagation();
+            const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
+            if (inp) inp.click();
+          }
+        }, sbH(Upload4, { size: 12, strokeWidth: 2.4 })),
+        ro ? null : sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPickImageFile })
+      ),
+
+      (d.images || []).length
+        ? sbH("div", { className: "rfiShots" }, (d.images || []).map((im, i) =>
+            sbH(
+              "div",
+              { className: "rfiShot", key: im.id },
+              sbH("img", { src: im.thumb, alt: "" }),
+              sbH("input", {
+                className: "rfiIn rfiCap", type: "text", readOnly: ro,
+                placeholder: L("caption"), value: im.caption || "",
+                onChange: (e) => set({
+                  images: (d.images || []).map((x) => (x.id === im.id ? { ...x, caption: e.target.value } : x))
+                })
+              }),
+              ro ? null : sbH(
+                "div",
+                { className: "rfiShotActs" },
+                sbH("button", { type: "button", className: "rfiIconBtn", title: L("moveUp"), disabled: i === 0, onClick: () => moveImage(im.id, -1) }, "↑"),
+                sbH("button", { type: "button", className: "rfiIconBtn", title: L("moveDown"), disabled: i === (d.images || []).length - 1, onClick: () => moveImage(im.id, 1) }, "↓"),
+                sbH("button", { type: "button", className: "rfiIconBtn danger", title: L("remove"), onClick: () => set({ images: (d.images || []).filter((x) => x.id !== im.id) }) },
+                  sbH(Trash2, { size: 13, strokeWidth: 2 }))
+              )
+            )
+          ))
+        : null
+    ),
+
+    // ------------------------------------------------------------------ internal
+    sec("secInternal"),
+    sbH(
+      "div",
+      { className: "rfiInternal" },
+
+      due.skipped && due.skipped.length
+        ? sbH(
+            "div",
+            { className: "rfiNotice calendar" },
+            sbH("b", null, L("calendarNotice")), " ", L("calendarNoticeText"), " ",
+            due.skipped.map((s) => `${sbFmtDate(s.date)} — ${lang === "he" ? s.name.he : s.name.en}`).join("; ")
+          )
+        : null,
+
+      risk
+        ? sbH(
+            "div",
+            { className: `rfiNotice ${risk.level}` },
+            sbH(AlertTriangle, { size: 14, strokeWidth: 2.2 }), " ",
+            sbH("b", null, risk.level === "critical" ? L("scheduleCrit") : L("scheduleWarn")), " ",
+            risk.level === "critical" ? L("scheduleCritText") : L("scheduleWarnText"),
+            risk.activity ? ` — ${risk.activity} (${sbFmtDate(risk.start)})` : ""
+          )
+        : null,
+
+      // ---- follow up ---------------------------------------------------------
+      sbH("div", { className: "rfiSubHead" }, L("followUp")),
+      (d.followUps || []).length
+        ? sbH("div", { className: "rfiFuList" }, (d.followUps || []).map((f) =>
+            sbH(
+              "div",
+              { className: `rfiFuRow ${f.done ? "done" : ""}`.trim(), key: f.id },
+              sbH("button", {
+                type: "button", className: `boqTick ${f.done ? "on" : ""}`,
+                title: L("fuDone"), onClick: () => toggleFollowUp(f.id)
+              }, f.done ? "✓" : ""),
+              sbH("span", { className: "rfiFuType" }, L(RFI_FU_L[f.type] || "fuOther")),
+              sbH("span", { className: "rfiFuNote" }, f.note),
+              sbH("span", { className: "rfiFuWhen", dir: "ltr" }, sbFmtDate(String(f.at || "").slice(0, 10)))
+            )
+          ))
+        : null,
+      ro ? null : sbH(
+        "div",
+        { className: "rfiFuAdd" },
+        sbH("select", { className: "rfiIn", value: fuType, onChange: (e) => setFuType(e.target.value) },
+          RFI_FU_TYPES.map((v) => sbH("option", { key: v, value: v }, L(RFI_FU_L[v])))),
+        sbH("input", {
+          className: "rfiIn", type: "text", value: fuNote,
+          placeholder: L("fuNote"), onChange: (e) => setFuNote(e.target.value)
+        }),
+        sbH("button", { type: "button", className: "rfiGrayPill", onClick: addFollowUp },
+          sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addFollowUp"))
+      ),
+
+      // ---- change instructions ----------------------------------------------
+      sbH("div", { className: "rfiSubHead" }, L("addToCi")),
+      d.ci
+        ? sbH("p", { className: "rfiCiDone" },
+            sbH(Check2, { size: 14, strokeWidth: 2.4 }), " ",
+            `${L("ciAdded")} — ${d.ci.chapter} ${d.ci.chapterName || ""}`)
+        : sbH(
+            "div",
+            null,
+            sbH(
+              "label",
+              { className: "rfiCiCheck" },
+              sbH("input", { type: "checkbox", disabled: ro, checked: ciOpen, onChange: (e) => setCiOpen(e.target.checked) }),
+              sbH("span", null, L("addToCi"))
+            ),
+            ciOpen
+              ? sbH(
+                  "div",
+                  { className: "rfiCiPick" },
+                  sbH("select", { className: "rfiIn", value: ciChapter, onChange: (e) => setCiChapter(e.target.value) },
+                    sbH("option", { value: "" }, L("pickChapter")),
+                    chapters.map((c) => sbH("option", { key: c.code, value: c.code }, `${c.code} ${c.name}`))),
+                  sbH("button", { type: "button", className: "rfiGrayPill", disabled: !ciChapter, onClick: confirmCi },
+                    L("addToCi"))
+                )
+              : null,
+            sbH("p", { className: "rfiHint" }, L("ciNote"))
+          ),
+
+      // ---- timeline ----------------------------------------------------------
+      sbH("div", { className: "rfiSubHead" }, L("timeline")),
+      sbH("div", { className: "rfiTimeline" }, (d.timeline || []).slice().reverse().map((e, i) =>
+        sbH(
+          "div",
+          { className: "rfiTlRow", key: i },
+          sbH("span", { className: "rfiTlWhen", dir: "ltr" },
+            `${sbFmtDate(String(e.at || "").slice(0, 10))} ${String(e.at || "").slice(11, 16)}`),
+          sbH("span", { className: "rfiTlWho", dir: "ltr" }, e.by || "—"),
+          sbH("span", { className: "rfiTlWhat" }, L(e.ev) + (e.detail ? ` — ${e.detail}` : ""))
+        )
+      ))
+    ),
+
+    sbH(
+      "div",
+      { className: "rfiFormActions" },
+      ro ? null : sbH("button", { type: "button", className: "rfiGrayPill", onClick: issue },
+        sbH(SendIcon2, { size: 15, strokeWidth: 2 }), " ", L("issue")),
+      ro ? null : sbH("button", { type: "button", className: "rfiGrayPill", onClick: closeRfi },
+        sbH(Check2, { size: 15, strokeWidth: 2 }), " ", L("close")),
+      sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => printPdf) },
+        sbH(Download2, { size: 15, strokeWidth: 2 }), " ", L("pdf"))
+    ),
+    printAsk
+      ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printPdf(lg); }, onClose: () => setPrintAsk(null) })
+      : null
+  );
+}
+
+
+// -----------------------------------------------------------------------------
+// The official RFI document.
+//
+// What is NOT here is the point: no timeline, no schedule risk, no priority
+// recommendation, no holiday notice, no follow-ups, no AI, no change-instruction
+// flag. Those are how the office thinks, and the office's thinking does not go
+// out to a consultant. Attachments marked "internal only" are left out too.
+// -----------------------------------------------------------------------------
+function rfiPrint(rec, printLang, brand, projectName) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  const lang = printLang === "en" ? "en" : "he";
+  const isRTL = lang === "he";
+  const L = (k) => sbText(RFI_L[k] || { en: k, he: k }, lang);
+  const b = brand || {};
+  const accent = b.accent || "#1A559E";
+  const esc = (v) => String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const nl = (v) => esc(v).replace(/\n/g, "<br>");
+  const d = rec || {};
+  const due = rfiDue(d);
+
+  const row = (label, value) =>
+    `<tr><th>${esc(label)}</th><td>${esc(value || "—")}</td></tr>`;
+
+  const shots = (d.images || []).map((im) => `
+    <figure class="shot">
+      <img src="${im.thumb}" alt="">
+      ${im.caption ? `<figcaption>${esc(im.caption)}</figcaption>` : ""}
+    </figure>`).join("");
+
+  const shared = (d.files || []).filter((f) => f.share === "shared");
+  const files = shared.length
+    ? `<div class="block">
+         <h3>${esc(L("secFiles"))}</h3>
+         <ul class="files">${shared.map((f) => `<li>${esc(f.name)}</li>`).join("")}</ul>
+       </div>`
+    : "";
+
+  const html = `<!doctype html><html dir="${isRTL ? "rtl" : "ltr"}" lang="${lang}">
+<head><meta charset="utf-8"><title>RFI ${esc(d.no)}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, "Segoe UI", sans-serif; color: #14181f; margin: 0; font-size: 12px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px;
+          border-bottom: 2.5px solid ${accent}; padding-bottom: 10px; margin-bottom: 14px; }
+  .head img { max-height: 42px; max-width: 150px; object-fit: contain; }
+  .head .mid { text-align: center; flex: 1; }
+  .head .proj { font-size: 15px; font-weight: 800; color: ${accent}; }
+  .head .doc { font-size: 12px; font-weight: 700; letter-spacing: .08em; color: #6b7280; margin-top: 2px; }
+  .head .date { font-size: 11px; color: #6b7280; white-space: nowrap; }
+  h3 { font-size: 12px; font-weight: 800; color: ${accent}; margin: 16px 0 6px;
+       border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  table.kv { width: 100%; border-collapse: collapse; }
+  table.kv th { text-align: ${isRTL ? "right" : "left"}; width: 34%; font-weight: 700;
+                color: #4b5563; padding: 4px 8px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
+  table.kv td { padding: 4px 8px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
+  .prose { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; min-height: 54px;
+           line-height: 1.55; white-space: pre-wrap; }
+  .shots { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  figure.shot { margin: 0; width: 47%; break-inside: avoid; }
+  figure.shot img { width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; }
+  figcaption { font-size: 10.5px; color: #6b7280; margin-top: 3px; }
+  ul.files { margin: 4px 0 0; padding-inline-start: 18px; }
+  .foot { margin-top: 18px; border-top: 1px solid #e5e7eb; padding-top: 8px;
+          font-size: 10px; color: #9aa3af; display: flex; justify-content: space-between; }
+  .block { break-inside: avoid; }
+</style></head>
+<body>
+  <div class="head">
+    ${b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : "<span></span>"}
+    <div class="mid">
+      <div class="proj">${esc(projectName || "")}</div>
+      <div class="doc">REQUEST FOR INFORMATION</div>
+    </div>
+    <div class="date">${esc(sbFmtDate(d.dateRaised))}</div>
+  </div>
+
+  <table class="kv">
+    ${row(L("no"), d.no)}
+    ${row(L("discipline"), d.discipline)}
+    ${row(L("subject"), d.subject)}
+    ${row(L("dateRaised"), sbFmtDate(d.dateRaised))}
+    ${row(L("raisedBy"), d.raisedBy)}
+    ${row(L("responsibility"), L(RFI_RESP_L[d.responsibility] || "respSup"))}
+    ${row(L("priority"), L(RFI_PRIORITY_L[d.priority] || "prNormal"))}
+    ${row(L("dueDate"), sbFmtDate(due.due))}
+    ${row(L("location"), d.location)}
+    ${row(L("references"), d.references)}
+    ${row(L("drawingUpdate"), L(RFI_DRAWING_L[d.drawingUpdate] || "tbd"))}
+    ${row(L("status"), L(RFI_STATUS_L[d.status] || "stOpen"))}
+  </table>
+
+  <div class="block">
+    <h3>${esc(L("description"))}</h3>
+    <div class="prose">${nl(d.description)}</div>
+  </div>
+
+  <div class="block">
+    <h3>${esc(L("response"))}</h3>
+    <div class="prose">${nl(d.response)}</div>
+    <table class="kv" style="margin-top:6px">
+      ${row(L("respondedBy"), d.respondedBy)}
+      ${row(L("responseDate"), sbFmtDate(d.responseDate))}
+    </table>
+  </div>
+
+  ${d.remarks ? `<div class="block"><h3>${esc(L("remarks"))}</h3><div class="prose">${nl(d.remarks)}</div></div>` : ""}
+  ${shots ? `<div class="block"><h3>${esc(L("secFiles"))}</h3><div class="shots">${shots}</div></div>` : ""}
+  ${files}
+
+  <div class="foot">
+    <span>${esc(b.name || "A. Weiss")}</span>
+    <span>RFI ${esc(d.no)} · ${esc(sbFmtDate(rfiToday()))}</span>
+  </div>
+  <script>window.onload = function () { setTimeout(function () { window.print(); }, 250); };<\/script>
+</body></html>`;
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+
+
+
+// -----------------------------------------------------------------------------
+// Change Instructions — הוראות שינוי
+//
+// The register is organised by bill-of-quantities chapter, and every chapter is
+// shown whether or not it has anything in it. That is deliberate: an empty
+// chapter is information — it says nobody has priced a change there yet — and a
+// list that hides its empty chapters makes that impossible to see.
+//
+// The number is 99.XX.XXX: 99 is fixed, XX is the chapter, XXX runs inside that
+// chapter alone. It is handed out when the item is confirmed and never handed
+// out again, so 99.07.002 means the same thing in a year as it does today, even
+// if 99.07.001 was deleted in between.
+//
+// Nothing in here decides that money is owed. Moving an item in from an RFI is
+// a management act; the approval columns are filled in by a person.
+// -----------------------------------------------------------------------------
+var CI_L = {
+  title: { en: "Change Instructions", he: "הוראות שינוי" },
+  add: { en: "Add a row", he: "הוספת שורה" },
+  fromQueue: { en: "Waiting to be filed", he: "ממתינות לשיוך" },
+  fromQueueHint: {
+    en: "Sent here from another module. Choose a chapter to file it.",
+    he: "הועברו לכאן ממודול אחר. יש לבחור פרק כדי לשייך."
+  },
+  pickChapter: { en: "Choose a BOQ chapter", he: "בחירת פרק כתב כמויות" },
+  file: { en: "File it", he: "שיוך" },
+  none: { en: "Nothing in this chapter yet.", he: "אין עדיין הוראות שינוי בפרק הזה." },
+  noBoq: {
+    en: "This project has no bill of quantities yet. Upload one in project settings.",
+    he: "לפרויקט הזה עדיין אין כתב כמויות. אפשר להעלות אותו בהגדרות הפרויקט."
+  },
+  count: { en: "change instructions", he: "הוראות שינוי" },
+  back: { en: "Back to the list", he: "חזרה לרשימה" },
+  confirmDel: { en: "Delete this change instruction? This cannot be undone.", he: "למחוק את הוראת השינוי? הפעולה אינה הפיכה." },
+  nothingToExport: { en: "Nothing to export.", he: "אין מה לייצא." },
+  del: { en: "Delete", he: "מחיקה" },
+
+  // ---- register columns ----------------------------------------------------
+  itemNo: { en: "Change Instruction Item No.", he: "מס' סעיף" },
+  description: { en: "Description", he: "תיאור" },
+  submitted: { en: "Submitted Amount", he: "סכום שהוגש" },
+  requestedBy: { en: "Requested By", he: "מבקש ההוראה" },
+  instruction: { en: "Change Instruction", he: "הוראת שינוי" },
+  view: { en: "View", he: "צפייה" },
+  approvalStatus: { en: "Approval Status", he: "סטטוס אישור" },
+  approvedAmount: { en: "Approved Amount", he: "סכום שאושר" },
+  approvalDate: { en: "Approval Date", he: "תאריך אישור" },
+  invoiceNo: { en: "A. Weiss Invoice No.", he: "מס' חשבונית א. וייס" },
+  paymentDate: { en: "Payment Date", he: "תאריך תשלום" },
+  paymentStatus: { en: "Payment Status", he: "סטטוס תשלום" },
+  remarks: { en: "Remarks", he: "הערות" },
+
+  apPending: { en: "Pending Approval", he: "ממתין לאישור" },
+  apApproved: { en: "Approved", he: "אושר" },
+  apPartial: { en: "Partially Approved", he: "אושר חלקית" },
+  apNot: { en: "Not Approved", he: "לא אושר" },
+  pyNot: { en: "Not Paid", he: "לא שולם" },
+  pyPartial: { en: "Partially Paid", he: "שולם חלקית" },
+  pyPaid: { en: "Paid", he: "שולם" },
+
+  // ---- the form ------------------------------------------------------------
+  subject: { en: "Subject", he: "נושא" },
+  date: { en: "Date", he: "תאריך" },
+  notes: { en: "Notes", he: "הערות" },
+  addNote: { en: "Add a note", he: "הוספת הערה" },
+  pricing: { en: "Pricing", he: "טבלת תמחור" },
+  addItem: { en: "Add an item", he: "הוספת סעיף" },
+  itemDesc: { en: "Description", he: "תיאור" },
+  unit: { en: "Unit", he: "יחידת מידה" },
+  qty: { en: "Quantity", he: "כמות" },
+  markup: { en: "Main Contractor Markup", he: "רווח קבלן ראשי" },
+  applyMarkup: { en: "Apply project markup", he: "החלת רווח הפרויקט" },
+  noMarkup: { en: "No markup", he: "ללא רווח" },
+  basePrice: { en: "Base Unit Price", he: "מחיר יחידה בסיס" },
+  unitPrice: { en: "Unit Price", he: "מחיר יחידה" },
+  lineTotal: { en: "Total", he: "סה\"כ" },
+  totalExVat: { en: "Total price excluding VAT", he: "סה\"כ מחיר לא כולל מע\"מ" },
+  docs: { en: "Supporting documents", he: "מסמכים מצורפים" },
+  docTitle: { en: "Document title", he: "כותרת המסמך" },
+  docTitlePh: { en: "e.g. Electrical subcontractor quotation", he: "לדוגמה: הצעת מחיר קבלן חשמל" },
+  attach: { en: "Attach a document", he: "צירוף מסמך" },
+  remove: { en: "Remove", he: "הסרה" },
+  revisions: { en: "Revision history", he: "היסטוריית מהדורות" },
+  revision: { en: "Revision", he: "מהדורה" },
+  issueDate: { en: "Issue Date", he: "תאריך הפקה" },
+  issuedBy: { en: "Issued By", he: "הופק ע\"י" },
+  generatePdf: { en: "Generate PDF", he: "הפקת PDF" },
+  print: { en: "Print", he: "הדפסה" },
+  source: { en: "Came from", he: "מקור" },
+  issuedOn: { en: "Report issued on", he: "תאריך הנפקת דוח" },
+  ciNote: {
+    en: "Filing an item here is a management record. It is not an approval of any change in cost or contract.",
+    he: "שיוך פריט לרשימה הוא רישום ניהולי. אין בו אישור לשינוי כספי או חוזי."
+  }
+};
+
+var CI_APPROVAL = ["pending", "approved", "partial", "not"];
+var CI_APPROVAL_L = { pending: "apPending", approved: "apApproved", partial: "apPartial", not: "apNot" };
+var CI_PAYMENT = ["notPaid", "partial", "paid"];
+var CI_PAYMENT_L = { notPaid: "pyNot", partial: "pyPartial", paid: "pyPaid" };
+var CI_UNITS = ["unit", "m", "m2", "m3", "ls", "hour", "day"];
+var CI_UNIT_L = {
+  unit: { en: "Unit", he: "יח'" }, m: { en: "m", he: "מ'" },
+  m2: { en: "m²", he: "מ\"ר" }, m3: { en: "m³", he: "מ\"ק" },
+  ls: { en: "LS", he: "קומפ'" }, hour: { en: "Hour", he: "שעה" }, day: { en: "Day", he: "יום" }
+};
+
+// 99.XX.XXX — 99 is fixed, XX is the chapter, XXX runs inside that chapter.
+// Handed out once and never re-used, so a gap in the numbers is a fact about
+// the project's history rather than something to be tidied away.
+function ciNextNo(rows, chapter) {
+  const ch = String(chapter || "").padStart(2, "0");
+  let max = 0;
+  Object.keys(rows || {}).forEach((k) => {
+    const r = rows[k] || {};
+    const m = /^99\.(\d{2})\.(\d{3})$/.exec(String(r.itemNo || ""));
+    if (m && m[1] === ch) {
+      const n = parseInt(m[2], 10);
+      if (n > max) max = n;
+    }
+  });
+  return `99.${ch}.${String(max + 1).padStart(3, "0")}`;
+}
+// Money, rounded at every step to agorot.
+//
+// Without this, 100 with a 12% markup comes back as 112.00000000000001 — which
+// is how binary floating point represents it, and which turns into a total
+// nobody can reconcile once it is multiplied by a quantity and summed over
+// twenty lines. Rounding here means the number on the screen, the number in the
+// PDF and the number in the Excel are the same number.
+function ciRound(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+function ciLineTotal(line, projectMarkup) {
+  const qty = Number(line.qty) || 0;
+  const base = Number(line.basePrice) || 0;
+  const pct = line.markup === "none" ? 0 : (Number(projectMarkup) || 0);
+  const unitPrice = ciRound(base * (1 + pct / 100));
+  return { unitPrice, total: ciRound(qty * unitPrice) };
+}
+function ciSubmittedAmount(rec, projectMarkup) {
+  return ciRound(((rec && rec.lines) || []).reduce(
+    (sum, l) => sum + ciLineTotal(l, projectMarkup).total, 0
+  ));
+}
+function ciMoney(v, lang) {
+  const n = Number(v) || 0;
+  try {
+    return new Intl.NumberFormat(lang === "he" ? "he-IL" : "en-IL", {
+      style: "currency", currency: "ILS", maximumFractionDigits: 0
+    }).format(n);
+  } catch (e) {
+    return "₪" + Math.round(n).toLocaleString();
+  }
+}
+function ciBlank(rows, chapter, seed) {
+  const s = seed || {};
+  return {
+    id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    itemNo: ciNextNo(rows, chapter),
+    chapter: String(chapter || "").padStart(2, "0"),
+    subject: s.subject || "",
+    date: new Date().toISOString().slice(0, 10),
+    requestedBy: s.requestedBy || "",
+    notes: [],
+    lines: [],
+    docs: [],
+    approvalStatus: "pending",
+    approvedAmount: "",
+    approvalDate: "",
+    invoiceNo: "",
+    paymentDate: "",
+    paymentStatus: "notPaid",
+    remarks: "",
+    revisions: [],
+    source: s.sourceModule ? { module: s.sourceModule, no: s.sourceNo, id: s.sourceId } : null
+  };
+}
+
+function ChangeInstructionsCard({
+  appIsRTL, rows, onChangeRows, queue, onChangeQueue, canEdit,
+  projectId, projectName, printBrand, boqData, projectMarkup, currentEmail
+}) {
+  const lang = appIsRTL ? "he" : "en";
+  const isRTL = appIsRTL;
+  const L = (k) => sbText(CI_L[k] || { en: k, he: k }, lang);
+  const [openId, setOpenId] = useState6(null);
+  const [openCh, setOpenCh] = useState6({});
+  const [queuePick, setQueuePick] = useState6({});
+  const [note, setNote] = useState6(null);
+  const [printAsk, setPrintAsk] = useState6(null);
+
+  const chapters = ((boqData && boqData.chapters) || []).map((c) => ({
+    code: String(c.code || "").padStart(2, "0"),
+    name: lang === "he" ? c.he : c.en
+  }));
+  const markup = Number(projectMarkup) || 0;
+
+  const all = Object.keys(rows || {}).map((k) => rows[k]).filter((r) => r && r.id);
+  const byChapter = {};
+  chapters.forEach((c) => { byChapter[c.code] = []; });
+  all.forEach((r) => {
+    const ch = String(r.chapter || "").padStart(2, "0");
+    if (!byChapter[ch]) byChapter[ch] = [];
+    byChapter[ch].push(r);
+  });
+  Object.keys(byChapter).forEach((ch) => {
+    byChapter[ch].sort((a, b) => String(a.itemNo).localeCompare(String(b.itemNo), "en", { numeric: true }));
+  });
+
+  const patch = (id, next) => {
+    if (!onChangeRows) return;
+    onChangeRows({ ...(rows || {}), [id]: { ...((rows || {})[id] || {}), ...next } });
+  };
+  const addManual = (chapter) => {
+    if (!canEdit) return;
+    const r = ciBlank(rows, chapter, { requestedBy: currentEmail });
+    onChangeRows({ ...(rows || {}), [r.id]: r });
+    setOpenId(r.id);
+  };
+  const del = (id) => {
+    if (!canEdit) return;
+    if (!window.confirm(L("confirmDel"))) return;
+    const next = { ...(rows || {}) };
+    delete next[id];
+    onChangeRows(next);
+    setOpenId(null);
+  };
+  // An item sent over from an RFI, an LLI row or a submittal. The chapter can
+  // be suggested but never assumed: the number depends on it, and a number
+  // handed out under the wrong chapter cannot be taken back.
+  const fileFromQueue = (entry) => {
+    const ch = queuePick[entry.sourceId] || entry.chapter || "";
+    if (!ch) return;
+    const r = ciBlank(rows, ch, entry);
+    onChangeRows({ ...(rows || {}), [r.id]: r });
+    if (onChangeQueue) onChangeQueue((queue || []).filter((x) => x.sourceId !== entry.sourceId));
+    setOpenId(r.id);
+  };
+
+  const chapterTotal = (ch) =>
+    (byChapter[ch] || []).reduce((sum, r) => sum + ciSubmittedAmount(r, markup), 0);
+
+  // ---- exports --------------------------------------------------------------
+  const exportGrid = () => {
+    const head = [
+      L("itemNo"), L("description"), L("submitted"), L("requestedBy"),
+      L("approvalStatus"), L("approvedAmount"), L("approvalDate"),
+      L("invoiceNo"), L("paymentDate"), L("paymentStatus"), L("remarks")
+    ];
+    const widths = [100, 240, 110, 130, 120, 110, 100, 120, 100, 110, 160];
+    const types = ["text", "text", "number", "text", "text", "number", "date", "text", "date", "text", "text"];
+    const body = [];
+    chapters.forEach((c) => {
+      (byChapter[c.code] || []).forEach((r) => {
+        body.push([
+          r.itemNo, r.subject || "", Math.round(ciSubmittedAmount(r, markup)),
+          r.requestedBy || "", L(CI_APPROVAL_L[r.approvalStatus] || "apPending"),
+          r.approvedAmount === "" ? "" : Number(r.approvedAmount) || 0,
+          sbFmtDate(r.approvalDate), r.invoiceNo || "", sbFmtDate(r.paymentDate),
+          L(CI_PAYMENT_L[r.paymentStatus] || "pyNot"), r.remarks || ""
+        ]);
+      });
+    });
+    return { head, body, widths, types };
+  };
+  const onExcel = async () => {
+    const g = exportGrid();
+    if (!g.body.length) { setNote(L("nothingToExport")); return; }
+    setNote(null);
+    const res = await boardExportXlsx({
+      title: (projectName || "").trim() || L("title"),
+      subtitle: `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      sheetName: "CI",
+      fileName: boardFileName(projectName, L("title"), "xlsx"),
+      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      accent: (printBrand || {}).accent, isRTL
+    });
+    if (res && res.styled === false) setNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+  };
+  const onPdf = (printLang) => {
+    const g = exportGrid();
+    if (!g.body.length) { setNote(L("nothingToExport")); return; }
+    boardExportPdf({
+      title: (projectName || "").trim() || L("title"),
+      fileName: boardFileName(projectName, L("title"), ""),
+      subtitle: L("title"),
+      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      head: g.head, body: g.body, widths: g.widths,
+      accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
+    });
+  };
+
+  // ---- the waiting list -----------------------------------------------------
+  const pending = (queue || []).filter((x) => x && x.sourceId);
+  const queueBlock = pending.length
+    ? sbH(
+        "div",
+        { className: "ciQueue" },
+        sbH("div", { className: "ciQueueHead" },
+          sbH("b", null, L("fromQueue")), " ", sbH("span", { className: "ciHint" }, L("fromQueueHint"))),
+        pending.map((e) =>
+          sbH(
+            "div",
+            { className: "ciQueueRow", key: e.sourceId },
+            sbH("span", { className: "ciQueueSrc", dir: "ltr" }, `${e.sourceModule} ${e.sourceNo}`),
+            sbH("span", { className: "ciQueueSub" }, e.subject || "—"),
+            sbH(
+              "select",
+              {
+                className: "ciIn",
+                value: queuePick[e.sourceId] || e.chapter || "",
+                onChange: (ev) => setQueuePick((s) => ({ ...s, [e.sourceId]: ev.target.value }))
+              },
+              sbH("option", { value: "" }, L("pickChapter")),
+              chapters.map((c) => sbH("option", { key: c.code, value: c.code }, `${c.code} ${c.name}`))
+            ),
+            canEdit
+              ? sbH("button", {
+                  type: "button", className: "rfiGrayPill",
+                  disabled: !(queuePick[e.sourceId] || e.chapter),
+                  onClick: () => fileFromQueue(e)
+                }, L("file"))
+              : null
+          )
+        )
+      )
+    : null;
+
+  // ---- the register ---------------------------------------------------------
+  const register = sbH(
+    "div",
+    { className: "ciWrap" },
+    queueBlock,
+    chapters.length === 0
+      ? sbH("p", { className: "rfiEmpty" }, L("noBoq"))
+      : sbH("div", { className: "ciChapters" }, chapters.map((c) => {
+          const list = byChapter[c.code] || [];
+          const isOpen = openCh[c.code] !== false;
+          return sbH(
+            "div",
+            { className: "ciChapter", key: c.code },
+            sbH(
+              "button",
+              {
+                type: "button", className: "ciChapterHead",
+                onClick: () => setOpenCh((s) => ({ ...s, [c.code]: !isOpen }))
+              },
+              sbH(ChevronDown2, {
+                size: 16, strokeWidth: 2,
+                style: { transform: isOpen ? "none" : "rotate(-90deg)", transition: "transform .15s" }
+              }),
+              sbH("span", { className: "ciChapterName" }, `${c.code} ${c.name}`),
+              sbH("span", { className: "ciChapterCount" }, `${list.length} ${L("count")}`),
+              sbH("span", { className: "ciChapterSum", dir: "ltr" }, ciMoney(chapterTotal(c.code), lang))
+            ),
+            isOpen
+              ? sbH(
+                  "div",
+                  { className: "ciChapterBody" },
+                  list.length === 0
+                    ? sbH("p", { className: "ciNone" }, L("none"))
+                    : sbH(
+                        "div",
+                        { className: "rfiTableWrap" },
+                        sbH(
+                          "table",
+                          { className: "rfiTable ciTable" },
+                          sbH("thead", null, sbH("tr", null,
+                            sbH("th", { className: "cItemNo" }, L("itemNo")),
+                            sbH("th", null, L("description")),
+                            sbH("th", { className: "cMoney" }, L("submitted")),
+                            sbH("th", null, L("requestedBy")),
+                            sbH("th", { className: "cAct" }, L("instruction")),
+                            sbH("th", null, L("approvalStatus")),
+                            sbH("th", { className: "cMoney" }, L("approvedAmount")),
+                            sbH("th", null, L("approvalDate")),
+                            sbH("th", null, L("invoiceNo")),
+                            sbH("th", null, L("paymentDate")),
+                            sbH("th", null, L("paymentStatus")),
+                            sbH("th", null, L("remarks")),
+                            sbH("th", { className: "cAct" }, "")
+                          )),
+                          sbH("tbody", null, list.map((r) =>
+                            sbH(
+                              "tr",
+                              { key: r.id },
+                              sbH("td", { className: "cItemNo", dir: "ltr" }, sbH("b", null, r.itemNo)),
+                              sbH("td", null,
+                                sbH("button", { type: "button", className: "rfiLink", onClick: () => setOpenId(r.id) },
+                                  r.subject || "—")),
+                              sbH("td", { className: "cMoney", dir: "ltr" }, ciMoney(ciSubmittedAmount(r, markup), lang)),
+                              sbH("td", null, r.requestedBy || "—"),
+                              sbH("td", { className: "cAct" },
+                                sbH("button", { type: "button", className: "rfiLink", onClick: () => setOpenId(r.id) }, L("view"))),
+                              sbH("td", null,
+                                sbH("select", {
+                                  className: "ciCellSel", disabled: !canEdit, value: r.approvalStatus || "pending",
+                                  onChange: (e) => patch(r.id, { approvalStatus: e.target.value })
+                                }, CI_APPROVAL.map((v) => sbH("option", { key: v, value: v }, L(CI_APPROVAL_L[v]))))),
+                              sbH("td", { className: "cMoney" },
+                                sbH("input", {
+                                  className: "ciCellIn", type: "number", dir: "ltr", readOnly: !canEdit,
+                                  value: r.approvedAmount === "" || r.approvedAmount == null ? "" : r.approvedAmount,
+                                  onChange: (e) => patch(r.id, { approvedAmount: e.target.value })
+                                })),
+                              sbH("td", null,
+                                sbH("input", {
+                                  className: "ciCellIn", type: "date", dir: "ltr", readOnly: !canEdit,
+                                  value: r.approvalDate || "",
+                                  onChange: (e) => patch(r.id, { approvalDate: e.target.value })
+                                })),
+                              sbH("td", null,
+                                sbH("input", {
+                                  className: "ciCellIn", type: "text", dir: "ltr", readOnly: !canEdit,
+                                  value: r.invoiceNo || "",
+                                  onChange: (e) => patch(r.id, { invoiceNo: e.target.value })
+                                })),
+                              sbH("td", null,
+                                sbH("input", {
+                                  className: "ciCellIn", type: "date", dir: "ltr", readOnly: !canEdit,
+                                  value: r.paymentDate || "",
+                                  onChange: (e) => patch(r.id, { paymentDate: e.target.value })
+                                })),
+                              sbH("td", null,
+                                sbH("select", {
+                                  className: "ciCellSel", disabled: !canEdit, value: r.paymentStatus || "notPaid",
+                                  onChange: (e) => patch(r.id, { paymentStatus: e.target.value })
+                                }, CI_PAYMENT.map((v) => sbH("option", { key: v, value: v }, L(CI_PAYMENT_L[v]))))),
+                              sbH("td", null,
+                                sbH("input", {
+                                  className: "ciCellIn", type: "text", readOnly: !canEdit,
+                                  value: r.remarks || "",
+                                  onChange: (e) => patch(r.id, { remarks: e.target.value })
+                                })),
+                              sbH("td", { className: "cAct" },
+                                canEdit
+                                  ? sbH("button", { type: "button", className: "rfiIconBtn danger", title: L("del"), onClick: () => del(r.id) },
+                                      sbH(Trash2, { size: 14, strokeWidth: 2 }))
+                                  : null)
+                            )
+                          ))
+                        )
+                      ),
+                  canEdit
+                    ? sbH("button", { type: "button", className: "ciAddRow", onClick: () => addManual(c.code) },
+                        sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("add"))
+                    : null
+                )
+              : null
+          );
+        })),
+    sbH("p", { className: "rfiHint", style: { textAlign: "center" } }, L("ciNote")),
+    sbH(
+      "div",
+      { className: "rfiExportRow" },
+      sbH("button", { type: "button", className: "rfiGrayPill", onClick: onExcel },
+        sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
+      sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => onPdf) },
+        sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF"),
+      note ? sbH("span", { className: "rfiNote" }, note) : null
+    ),
+    printAsk
+      ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); onPdf(lg); }, onClose: () => setPrintAsk(null) })
+      : null
+  );
+
+  const open = openId ? (rows || {})[openId] : null;
+  return sbH(
+    "div",
+    { className: "functionPageBody rfiBody", style: { flexDirection: "column" } },
+    open
+      ? sbH(CiForm, {
+          lang, isRTL, L, rec: open, canEdit, projectId, projectName, printBrand,
+          markup, currentEmail,
+          onBack: () => setOpenId(null),
+          onPatch: (next) => patch(open.id, next)
+        })
+      : register
+  );
+}
+
+
+// -----------------------------------------------------------------------------
+// The detailed change instruction.
+//
+// The pricing table keeps two prices per line on purpose. The base price is
+// what somebody was actually quoted; the unit price is that plus the main
+// contractor's markup. Storing only the second would lose the first the moment
+// the markup changed, and the base price is the number you need when a client
+// asks where a figure came from.
+//
+// Submitted and approved amounts are likewise kept apart. Submitted is computed
+// from the lines and moves when they move; approved is typed by a person and
+// stays where it was put.
+// -----------------------------------------------------------------------------
+function CiForm({
+  lang, isRTL, L, rec, canEdit, projectId, projectName, printBrand,
+  markup, currentEmail, onBack, onPatch
+}) {
+  const d = rec || {};
+  const ro = !canEdit;
+  const [busy, setBusy] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [docTitle, setDocTitle] = useState6("");
+  const [printAsk, setPrintAsk] = useState6(null);
+  const set = (next) => { if (!ro) onPatch(next); };
+
+  const lines = d.lines || [];
+  const total = ciSubmittedAmount(d, markup);
+
+  // ---- notes ---------------------------------------------------------------
+  const addNote = () => set({ notes: [...(d.notes || []), { id: `n-${Date.now()}`, text: "" }] });
+  const moveNote = (id, delta) => {
+    const list = [...(d.notes || [])];
+    const i = list.findIndex((x) => x.id === id);
+    const j = i + delta;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    const t = list[i]; list[i] = list[j]; list[j] = t;
+    set({ notes: list });
+  };
+
+  // ---- pricing lines -------------------------------------------------------
+  const addLine = () => set({
+    lines: [...lines, {
+      id: `l-${Date.now()}-${Math.random().toString(36).slice(2, 5)}`,
+      desc: "", unit: "unit", qty: "", markup: "project", basePrice: "", remarks: ""
+    }]
+  });
+  const setLine = (id, next) => set({ lines: lines.map((l) => (l.id === id ? { ...l, ...next } : l)) });
+  const delLine = (id) => set({ lines: lines.filter((l) => l.id !== id) });
+
+  // ---- supporting documents ------------------------------------------------
+  const onPickDoc = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    setErr(null);
+    setBusy("doc");
+    try {
+      const up = await sbUploadFile(projectId, d.id, f);
+      set({
+        docs: [...(d.docs || []), {
+          id: `d-${Date.now()}`, title: docTitle.trim() || f.name,
+          name: f.name, path: up.path, inline: up.inline, dataUrl: up.dataUrl || null
+        }]
+      });
+      setDocTitle("");
+    } catch (ex) {
+      setErr(lang === "he" ? "לא הצלחתי להעלות את המסמך." : "Could not upload the document.");
+    } finally {
+      setBusy(null);
+    }
+  };
+  const openDoc = async (doc) => {
+    const url = doc.dataUrl || (await sbFileUrl(doc));
+    if (url) window.open(url, "_blank", "noopener");
+  };
+  const dropDoc = async (doc) => {
+    await sbRemoveFile(doc);
+    set({ docs: (d.docs || []).filter((x) => x.id !== doc.id) });
+  };
+
+  // ---- issuing -------------------------------------------------------------
+  // A new revision freezes what was sent. The lines can go on changing after
+  // it; what was submitted on that date does not.
+  const issue = (printLang) => {
+    const rev = {
+      rev: (d.revisions || []).length + 1,
+      at: new Date().toISOString().slice(0, 10),
+      by: currentEmail || "",
+      amount: Math.round(total)
+    };
+    if (!ro) onPatch({ revisions: [...(d.revisions || []), rev] });
+    ciPrint({ ...d, revisions: [...(d.revisions || []), rev] }, printLang, printBrand, projectName, markup, lang);
+  };
+  const justPrint = (printLang) => ciPrint(d, printLang, printBrand, projectName, markup, lang);
+
+  const sec = (key) => sbH("div", { className: "rfiSecBar" }, L(key));
+  const cellIn = (l, key, type) => sbH("input", {
+    className: "ciCellIn", type: type || "text", readOnly: ro, dir: type === "number" ? "ltr" : void 0,
+    value: l[key] == null ? "" : l[key],
+    onChange: (e) => setLine(l.id, { [key]: e.target.value })
+  });
+
+  return sbH(
+    "div",
+    { className: "rfiFormWrap ciFormWrap" },
+
+    sbH(
+      "div",
+      { className: "rfiFormHead" },
+      sbH("button", { type: "button", className: "rfiBackBtn", onClick: onBack },
+        sbH(isRTL ? ArrowRight9 : ArrowLeft9, { size: 14, strokeWidth: 2.4 }), " ", L("back")),
+      sbH("span", { className: "rfiFormTitle", dir: "ltr" }, d.itemNo),
+      d.source
+        ? sbH("span", { className: "ciSrcTag", dir: "ltr" }, `${L("source")}: ${d.source.module} ${d.source.no || ""}`)
+        : null
+    ),
+
+    err ? sbH("p", { className: "rfiErr" }, err) : null,
+
+    // ---- the document header, as it will print -----------------------------
+    sbH(
+      "div",
+      { className: "ciDocHead" },
+      sbH("span", { className: "ciDocDate", dir: "ltr" }, sbFmtDate(d.date)),
+      sbH("div", { className: "ciDocMid" },
+        sbH("div", { className: "ciDocProject" }, projectName || ""),
+        sbH("div", { className: "ciDocLabel" }, L("title"))),
+      (printBrand || {}).logoUrl
+        ? sbH("img", { className: "ciDocLogo", src: printBrand.logoUrl, alt: "" })
+        : sbH("span", null)
+    ),
+
+    sbH(
+      "div",
+      { className: "rfiGrid" },
+      sbH("label", { className: "rfiField wide" },
+        sbH("span", { className: "rfiFieldLabel" }, L("subject")),
+        sbH("input", {
+          className: "rfiIn", type: "text", readOnly: ro, value: d.subject || "",
+          onChange: (e) => set({ subject: e.target.value })
+        })),
+      sbH("label", { className: "rfiField" },
+        sbH("span", { className: "rfiFieldLabel" }, L("date")),
+        sbH("input", {
+          className: "rfiIn", type: "date", dir: "ltr", readOnly: ro, value: d.date || "",
+          onChange: (e) => set({ date: e.target.value })
+        })),
+      sbH("label", { className: "rfiField" },
+        sbH("span", { className: "rfiFieldLabel" }, L("requestedBy")),
+        sbH("input", {
+          className: "rfiIn", type: "text", readOnly: ro, value: d.requestedBy || "",
+          onChange: (e) => set({ requestedBy: e.target.value })
+        }))
+    ),
+
+    // ---- notes -------------------------------------------------------------
+    sec("notes"),
+    sbH("div", { className: "ciNotes" },
+      (d.notes || []).map((n, i) =>
+        sbH(
+          "div",
+          { className: "ciNoteRow", key: n.id },
+          sbH("input", {
+            className: "rfiIn", type: "text", readOnly: ro, value: n.text || "",
+            onChange: (e) => set({ notes: (d.notes || []).map((x) => (x.id === n.id ? { ...x, text: e.target.value } : x)) })
+          }),
+          ro ? null : sbH("button", { type: "button", className: "rfiIconBtn", disabled: i === 0, onClick: () => moveNote(n.id, -1) }, "↑"),
+          ro ? null : sbH("button", { type: "button", className: "rfiIconBtn", disabled: i === (d.notes || []).length - 1, onClick: () => moveNote(n.id, 1) }, "↓"),
+          ro ? null : sbH("button", { type: "button", className: "rfiIconBtn danger", onClick: () => set({ notes: (d.notes || []).filter((x) => x.id !== n.id) }) },
+            sbH(Trash2, { size: 13, strokeWidth: 2 }))
+        )),
+      ro ? null : sbH("button", { type: "button", className: "ciAddRow", onClick: addNote },
+        sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addNote"))
+    ),
+
+    // ---- pricing -----------------------------------------------------------
+    sec("pricing"),
+    sbH(
+      "div",
+      { className: "rfiTableWrap" },
+      sbH(
+        "table",
+        { className: "rfiTable ciPriceTable" },
+        sbH("thead", null, sbH("tr", null,
+          sbH("th", null, L("itemDesc")),
+          sbH("th", { className: "cUnit" }, L("unit")),
+          sbH("th", { className: "cQty" }, L("qty")),
+          sbH("th", { className: "cMk" }, L("markup")),
+          sbH("th", { className: "cMoney" }, L("basePrice")),
+          sbH("th", { className: "cMoney" }, L("unitPrice")),
+          sbH("th", { className: "cMoney" }, L("lineTotal")),
+          sbH("th", null, L("remarks")),
+          sbH("th", { className: "cAct" }, "")
+        )),
+        sbH("tbody", null, lines.map((l) => {
+          const calc = ciLineTotal(l, markup);
+          return sbH(
+            "tr",
+            { key: l.id },
+            sbH("td", null, cellIn(l, "desc")),
+            sbH("td", { className: "cUnit" },
+              sbH("select", {
+                className: "ciCellSel", disabled: ro, value: l.unit || "unit",
+                onChange: (e) => setLine(l.id, { unit: e.target.value })
+              }, CI_UNITS.map((u) => sbH("option", { key: u, value: u }, sbText(CI_UNIT_L[u], lang))))),
+            sbH("td", { className: "cQty" }, cellIn(l, "qty", "number")),
+            sbH("td", { className: "cMk" },
+              sbH("select", {
+                className: "ciCellSel", disabled: ro, value: l.markup || "project",
+                onChange: (e) => setLine(l.id, { markup: e.target.value })
+              },
+                sbH("option", { value: "project" }, `${L("applyMarkup")} (${markup}%)`),
+                sbH("option", { value: "none" }, L("noMarkup")))),
+            sbH("td", { className: "cMoney" }, cellIn(l, "basePrice", "number")),
+            sbH("td", { className: "cMoney ciCalc", dir: "ltr" }, ciMoney(calc.unitPrice, lang)),
+            sbH("td", { className: "cMoney ciCalc", dir: "ltr" }, ciMoney(calc.total, lang)),
+            sbH("td", null, cellIn(l, "remarks")),
+            sbH("td", { className: "cAct" },
+              ro ? null : sbH("button", { type: "button", className: "rfiIconBtn danger", onClick: () => delLine(l.id) },
+                sbH(Trash2, { size: 13, strokeWidth: 2 })))
+          );
+        })),
+        sbH("tfoot", null, sbH("tr", { className: "ciTotalRow" },
+          sbH("td", { colSpan: 6 }, L("totalExVat")),
+          sbH("td", { className: "cMoney", dir: "ltr" }, ciMoney(total, lang)),
+          sbH("td", { colSpan: 2 }, "")
+        ))
+      )
+    ),
+    ro ? null : sbH("button", { type: "button", className: "ciAddRow ciAddItem", onClick: addLine },
+      sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addItem")),
+
+    // ---- supporting documents ----------------------------------------------
+    sec("docs"),
+    sbH(
+      "div",
+      { className: "ciDocs" },
+      (d.docs || []).map((doc) =>
+        sbH(
+          "div",
+          { className: "rfiFileRow", key: doc.id },
+          sbH(FileTextIcon, { size: 14, strokeWidth: 2 }),
+          sbH("span", { className: "ciDocName" }, doc.title),
+          sbH("button", { type: "button", className: "rfiLink", onClick: () => openDoc(doc) }, doc.name),
+          ro ? null : sbH("button", { type: "button", className: "rfiIconBtn danger", title: L("remove"), onClick: () => dropDoc(doc) },
+            sbH(Trash2, { size: 13, strokeWidth: 2 }))
+        )),
+      ro ? null : sbH(
+        "div",
+        { className: "ciDocAdd" },
+        sbH("input", {
+          className: "rfiIn", type: "text", value: docTitle, placeholder: L("docTitlePh"),
+          onChange: (e) => setDocTitle(e.target.value)
+        }),
+        sbH("label", { className: "rfiAttachBtn" },
+          sbH(Upload4, { size: 14, strokeWidth: 2 }), " ",
+          busy === "doc" ? "…" : L("attach"),
+          sbH("input", { type: "file", style: { display: "none" }, onChange: onPickDoc }))
+      )
+    ),
+
+    // ---- revisions ---------------------------------------------------------
+    (d.revisions || []).length
+      ? sbH(
+          "div",
+          null,
+          sec("revisions"),
+          sbH("div", { className: "ciRevs" }, (d.revisions || []).slice().reverse().map((r) =>
+            sbH("div", { className: "ciRevRow", key: r.rev },
+              sbH("span", { className: "ciRevNo", dir: "ltr" }, `Rev.${r.rev}`),
+              sbH("span", { dir: "ltr" }, sbFmtDate(r.at)),
+              sbH("span", { dir: "ltr" }, r.by || "—"),
+              sbH("span", { dir: "ltr" }, ciMoney(r.amount, lang)))
+          ))
+        )
+      : null,
+
+    sbH(
+      "div",
+      { className: "rfiFormActions" },
+      sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => issue) },
+        sbH(Download2, { size: 15, strokeWidth: 2 }), " ", L("generatePdf")),
+      sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => justPrint) },
+        sbH(Printer, { size: 15, strokeWidth: 2 }), " ", L("print"))
+    ),
+    printAsk
+      ? sbH(PrintLangAsk, { onPick: (lg) => { const f = printAsk; setPrintAsk(null); f(lg); }, onClose: () => setPrintAsk(null) })
+      : null
+  );
+}
+
+
+// -----------------------------------------------------------------------------
+// The printed change instruction.
+//
+// Header: the date on one side, the A. Weiss logo on the other, the project
+// name and subject in the middle, the item number, then a rule. Then the notes,
+// the pricing table with the total excluding VAT, and the supporting documents
+// listed by their titles.
+//
+// The base price is not printed. A client is being shown a price, not the
+// arithmetic behind it — and the markup is A. Weiss's business.
+// -----------------------------------------------------------------------------
+function ciPrint(rec, printLang, brand, projectName, markup, uiLang) {
+  const w = window.open("", "_blank");
+  if (!w) return;
+  const lang = printLang === "en" ? "en" : "he";
+  const isRTL = lang === "he";
+  const L = (k) => sbText(CI_L[k] || { en: k, he: k }, lang);
+  const b = brand || {};
+  const accent = b.accent || "#1A559E";
+  const esc = (v) => String(v == null ? "" : v)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const d = rec || {};
+  const lines = d.lines || [];
+  const total = ciSubmittedAmount(d, markup);
+  const rev = (d.revisions || []).length ? (d.revisions || [])[(d.revisions || []).length - 1] : null;
+
+  const rows = lines.map((l) => {
+    const calc = ciLineTotal(l, markup);
+    return `<tr>
+      <td>${esc(l.desc)}</td>
+      <td class="c">${esc(sbText(CI_UNIT_L[l.unit] || CI_UNIT_L.unit, lang))}</td>
+      <td class="n">${esc(l.qty || "")}</td>
+      <td class="n">${esc(ciMoney(calc.unitPrice, lang))}</td>
+      <td class="n">${esc(ciMoney(calc.total, lang))}</td>
+      <td>${esc(l.remarks || "")}</td>
+    </tr>`;
+  }).join("");
+
+  const notes = (d.notes || []).filter((n) => String(n.text || "").trim());
+  const notesBlock = notes.length
+    ? `<div class="block"><h3>${esc(L("notes"))}</h3>
+         <ol class="notes">${notes.map((n) => `<li>${esc(n.text)}</li>`).join("")}</ol></div>`
+    : "";
+
+  const docs = (d.docs || []);
+  const docsBlock = docs.length
+    ? `<div class="block"><h3>${esc(L("docs"))}</h3>
+         <ul class="files">${docs.map((x) =>
+           `<li><b>${esc(x.title)}</b> — ${esc(x.name)}</li>`).join("")}</ul></div>`
+    : "";
+
+  const html = `<!doctype html><html dir="${isRTL ? "rtl" : "ltr"}" lang="${lang}">
+<head><meta charset="utf-8"><title>${esc(d.itemNo)}</title>
+<style>
+  @page { size: A4; margin: 14mm; }
+  * { box-sizing: border-box; }
+  body { font-family: Arial, "Segoe UI", sans-serif; color: #14181f; margin: 0; font-size: 12px; }
+  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+  .head img { max-height: 44px; max-width: 150px; object-fit: contain; }
+  .head .mid { text-align: center; flex: 1; }
+  .head .proj { font-size: 15px; font-weight: 800; color: ${accent}; }
+  .head .subj { font-size: 12.5px; font-weight: 700; margin-top: 3px; }
+  .head .itemno { font-size: 12px; font-weight: 800; color: #4b5563; margin-top: 2px; letter-spacing: .04em; }
+  .head .date { font-size: 11px; color: #6b7280; white-space: nowrap; }
+  .rule { border: none; border-top: 2.5px solid ${accent}; margin: 10px 0 16px; }
+  h3 { font-size: 12px; font-weight: 800; color: ${accent}; margin: 16px 0 6px;
+       border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+  ol.notes { margin: 4px 0 0; padding-inline-start: 20px; line-height: 1.6; }
+  table.price { width: 100%; border-collapse: collapse; margin-top: 6px; }
+  table.price th { background: ${accent}; color: #fff; font-size: 11px; font-weight: 800;
+                   padding: 7px 8px; text-align: ${isRTL ? "right" : "left"}; }
+  table.price td { padding: 6px 8px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
+  table.price td.n { text-align: ${isRTL ? "left" : "right"}; direction: ltr; white-space: nowrap; }
+  table.price td.c { text-align: center; }
+  tr.total td { font-weight: 800; font-size: 12.5px; border-top: 2px solid ${accent};
+                border-bottom: none; padding-top: 9px; }
+  ul.files { margin: 4px 0 0; padding-inline-start: 18px; line-height: 1.6; }
+  .foot { margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 8px;
+          font-size: 10px; color: #9aa3af; display: flex; justify-content: space-between; }
+  .block { break-inside: avoid; }
+</style></head>
+<body>
+  <div class="head">
+    <div class="date">${esc(sbFmtDate(d.date))}</div>
+    <div class="mid">
+      <div class="proj">${esc(projectName || "")}</div>
+      <div class="subj">${esc(d.subject || "")}</div>
+      <div class="itemno">${esc(L("itemNo"))}: ${esc(d.itemNo)}${rev ? ` · Rev.${rev.rev}` : ""}</div>
+    </div>
+    ${b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : "<span></span>"}
+  </div>
+  <hr class="rule">
+
+  ${notesBlock}
+
+  <div class="block">
+    <h3>${esc(L("pricing"))}</h3>
+    <table class="price">
+      <thead><tr>
+        <th>${esc(L("itemDesc"))}</th>
+        <th>${esc(L("unit"))}</th>
+        <th>${esc(L("qty"))}</th>
+        <th>${esc(L("unitPrice"))}</th>
+        <th>${esc(L("lineTotal"))}</th>
+        <th>${esc(L("remarks"))}</th>
+      </tr></thead>
+      <tbody>
+        ${rows}
+        <tr class="total">
+          <td colspan="4">${esc(L("totalExVat"))}</td>
+          <td class="n">${esc(ciMoney(total, lang))}</td>
+          <td></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  ${docsBlock}
+
+  <div class="foot">
+    <span>${esc(b.name || "A. Weiss")}</span>
+    <span>${esc(d.itemNo)}${rev ? ` · ${esc(L("issuedBy"))}: ${esc(rev.by)} · ${esc(sbFmtDate(rev.at))}` : ""}</span>
+  </div>
+  <script>window.onload = function () { setTimeout(function () { window.print(); }, 250); };<\/script>
+</body></html>`;
+
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+}
+
+
 function lliRoomMarks(boqData, boqFlags, lliRows, lang) {
   const out = {};
   const data = lliRows || {};
@@ -9876,6 +12198,11 @@ function roomsFromSheet(aoa) {
 // -----------------------------------------------------------------------------
 var ROOMS_L = {
   title: { en: "Search by room", he: "חיפוש לפי חדר" },
+  pasteHint: {
+    en: "Click the cell, then Ctrl+V to paste a picture. Double-click to choose a file.",
+    he: "\u05dc\u05d5\u05d7\u05e6\u05d9\u05dd \u05e2\u05dc \u05d4\u05ea\u05d0 \u05d5\u05d0\u05d6 Ctrl+V \u05dc\u05d4\u05d3\u05d1\u05e7\u05ea \u05ea\u05de\u05d5\u05e0\u05d4. \u05dc\u05d7\u05d9\u05e6\u05d4 \u05db\u05e4\u05d5\u05dc\u05d4 \u05dc\u05d1\u05d7\u05d9\u05e8\u05ea \u05e7\u05d5\u05d1\u05e5."
+  },
+  pickFile: { en: "Choose a file", he: "\u05d1\u05d7\u05d9\u05e8\u05ea \u05e7\u05d5\u05d1\u05e5" },
   lead: { en: "Type a room number to see what is specified in it.", he: "הקלידו מספר חדר כדי לראות מה מאופיין בו." },
   placeholder: { en: "Room number", he: "מספר חדר" },
   search: { en: "Search", he: "חיפוש" },
@@ -9918,6 +12245,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
   const [markQuery, setMarkQuery] = useState6("");
   const [showHidden, setShowHidden] = useState6(false);
   const [busy, setBusy] = useState6(null);
+  const [markPasteAt, setMarkPasteAt] = useState6(null);
 
   const base = data || roomsBlank();
   // The LLI board's contribution, merged in at read time. It is never written
@@ -9957,6 +12285,9 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
     const f = e.target.files && e.target.files[0];
     e.target.value = "";
     if (!f) return;
+    await putMarkImage(key, f);
+  };
+  const putMarkImage = async (key, f) => {
     setBusy(key);
     try {
       patchMark(key, { image: await sbMakeThumb(f, 640) });
@@ -9966,6 +12297,20 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
       setBusy(null);
     }
   };
+  // The same rule as the LLI board: click the picture cell to choose it, then
+  // Ctrl+V. The corner button is for choosing a file instead. (2.9.26)
+  const onMarkPaste = async (key, e) => {
+    const f = sbClipboardImage(e);
+    if (!f) return;
+    e.preventDefault();
+    await putMarkImage(key, f);
+  };
+  useEffect5(() => {
+    if (!canEdit || !markPasteAt) return;
+    const onWindowPaste = (e) => onMarkPaste(markPasteAt, e);
+    window.addEventListener("paste", onWindowPaste);
+    return () => window.removeEventListener("paste", onWindowPaste);
+  }, [canEdit, markPasteAt, d]);
   const go = (value) => {
     const v = String(value == null ? query : value).trim().toUpperCase();
     setQuery(v);
@@ -10059,9 +12404,30 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
                 onChange: (e) => patchMark(m.key, { desc: e.target.value })
               })),
               sbH("td", { className: "cIm" },
-                sbH("label", { className: `lliImgBox ${canEdit ? "" : "ro"}` },
+                sbH("div", {
+                    className: `lliImgBox ${canEdit ? "" : "ro"} ${markPasteAt === m.key ? "sel" : ""}`.trim(),
+                    tabIndex: canEdit ? 0 : void 0,
+                    title: canEdit ? L("pasteHint") : void 0,
+                    onClick: canEdit ? () => setMarkPasteAt(m.key) : void 0,
+                    onFocus: canEdit ? () => setMarkPasteAt(m.key) : void 0,
+                    onDoubleClick: canEdit ? (e) => {
+                      const inp = e.currentTarget.querySelector("input[type=file]");
+                      if (inp) inp.click();
+                    } : void 0,
+                    onPaste: canEdit ? (e) => onMarkPaste(m.key, e) : void 0
+                  },
                   v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
-                  busy === m.key ? sbH("span", { className: "lliImgBusy" }, "…") : null,
+                  busy === m.key ? sbH("span", { className: "lliImgBusy" }, sbH("span", { className: "sbSpin" })) : null,
+                  canEdit ? sbH("button", {
+                    type: "button",
+                    className: "lliImgPick",
+                    title: L("pickFile"),
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
+                      if (inp) inp.click();
+                    }
+                  }, sbH(Upload4, { size: 10, strokeWidth: 2.4 })) : null,
                   canEdit ? sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onMarkImage(m.key, e) }) : null
                 ),
                 v.image && canEdit ? sbH("button", { type: "button", className: "lliImgClear", onClick: () => patchMark(m.key, { image: null }) }, "×") : null
@@ -10620,6 +12986,11 @@ var SB_L = {
   manufacturer: { en: "Manufacturer", he: "יצרן" },
   picture: { en: "Picture", he: "תמונה" },
   addPicture: { en: "Add picture", he: "העלאת תמונה" },
+  pasteHint: {
+    en: "Click the box, then Ctrl+V to paste a picture. Double-click to choose a file.",
+    he: "\u05dc\u05d5\u05d7\u05e6\u05d9\u05dd \u05e2\u05dc \u05d4\u05de\u05e1\u05d2\u05e8\u05ea \u05d5\u05d0\u05d6 Ctrl+V \u05dc\u05d4\u05d3\u05d1\u05e7\u05ea \u05ea\u05de\u05d5\u05e0\u05d4. \u05dc\u05d7\u05d9\u05e6\u05d4 \u05db\u05e4\u05d5\u05dc\u05d4 \u05dc\u05d1\u05d7\u05d9\u05e8\u05ea \u05e7\u05d5\u05d1\u05e5."
+  },
+  pickFile: { en: "Choose a file", he: "\u05d1\u05d7\u05d9\u05e8\u05ea \u05e7\u05d5\u05d1\u05e5" },
   documents: { en: "SUBMITTED DOCUMENTS", he: "מסמכים מצורפים" },
   additional: { en: "Additional Information", he: "מידע נוסף" },
   additionalEn: { en: "General information (English)", he: "מידע כללי על הציוד באנגלית" },
@@ -11200,6 +13571,123 @@ async function sbRemoveFile(att) {
 }
 // Images keep a small inline thumbnail as well, so the form and the printout
 // draw instantly and do not depend on a signed URL that expires.
+// ---------------------------------------------------------------------------
+//  Working days, Israeli calendar.
+//
+//  The week runs Sunday to Thursday. Friday and Saturday are not counted, and
+//  neither is a public holiday that is a day off (יום שבתון). The eve of a
+//  holiday stays a working day, which is what Marcella asked for.
+//
+//  The day an RFI is raised is not day 1: counting starts on the next working
+//  day. So an RFI raised on a Sunday with Priority Urgent (1 working day) is
+//  due on Monday.
+//
+//  The holidays are derived from the Hebrew calendar through Intl, not from a
+//  table someone has to maintain and not from a web service that can be down
+//  when a due date is being worked out. The result is cached per year.
+// ---------------------------------------------------------------------------
+var SB_YOM_TOV = {
+  "1 Tishri":  { he: "ראש השנה", en: "Rosh Hashanah" },
+  "2 Tishri":  { he: "ראש השנה", en: "Rosh Hashanah" },
+  "10 Tishri": { he: "יום כיפור", en: "Yom Kippur" },
+  "15 Tishri": { he: "סוכות", en: "Sukkot" },
+  "22 Tishri": { he: "שמחת תורה", en: "Simchat Torah" },
+  "15 Nisan":  { he: "פסח", en: "Passover" },
+  "21 Nisan":  { he: "שביעי של פסח", en: "Seventh of Passover" },
+  "6 Sivan":   { he: "שבועות", en: "Shavuot" }
+};
+var SB_HOLIDAY_CACHE = {};
+function sbISO(d) { return d.toISOString().slice(0, 10); }
+function sbDateUTC(iso) {
+  const p = String(iso || "").slice(0, 10).split("-");
+  if (p.length !== 3) return null;
+  const d = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+  return isNaN(d.getTime()) ? null : d;
+}
+function sbIsraelHolidays(year) {
+  if (SB_HOLIDAY_CACHE[year]) return SB_HOLIDAY_CACHE[year];
+  const out = {};
+  try {
+    const fmt = new Intl.DateTimeFormat("en-u-ca-hebrew", {
+      day: "numeric", month: "long", year: "numeric", timeZone: "UTC"
+    });
+    let iyar5 = null;
+    const d = new Date(Date.UTC(year, 0, 1));
+    while (d.getUTCFullYear() === year) {
+      const parts = fmt.formatToParts(d);
+      const day = (parts.find((p) => p.type === "day") || {}).value;
+      const mon = (parts.find((p) => p.type === "month") || {}).value;
+      const key = day + " " + mon;
+      if (SB_YOM_TOV[key]) out[sbISO(d)] = SB_YOM_TOV[key];
+      if (key === "5 Iyar") iyar5 = new Date(d.getTime());
+      d.setUTCDate(d.getUTCDate() + 1);
+    }
+    // Independence Day moves so that it never touches Shabbat:
+    //   5 Iyar on Friday or Saturday  → the Thursday before
+    //   5 Iyar on Monday              → the Tuesday after (6 Iyar)
+    if (iyar5) {
+      const dow = iyar5.getUTCDay();
+      const obs = new Date(iyar5.getTime());
+      if (dow === 5) obs.setUTCDate(obs.getUTCDate() - 1);
+      else if (dow === 6) obs.setUTCDate(obs.getUTCDate() - 2);
+      else if (dow === 1) obs.setUTCDate(obs.getUTCDate() + 1);
+      out[sbISO(obs)] = { he: "יום העצמאות", en: "Independence Day" };
+    }
+  } catch (e) {
+    console.warn("[awdash] the Hebrew calendar is unavailable in this browser", e);
+  }
+  SB_HOLIDAY_CACHE[year] = out;
+  return out;
+}
+function sbHolidayOn(d) {
+  return sbIsraelHolidays(d.getUTCFullYear())[sbISO(d)] || null;
+}
+function sbIsWorkingDay(d) {
+  const dow = d.getUTCDay();
+  if (dow === 5 || dow === 6) return false;
+  return !sbHolidayOn(d);
+}
+function sbAddWorkingDays(startISO, days) {
+  const start = sbDateUTC(startISO);
+  if (!start || !(days > 0)) return { due: null, skipped: [] };
+  const skipped = [];
+  const d = new Date(start.getTime());
+  let counted = 0;
+  let guard = 0;
+  while (counted < days && guard++ < 400) {
+    d.setUTCDate(d.getUTCDate() + 1);
+    const dow = d.getUTCDay();
+    if (dow === 5 || dow === 6) continue;
+    const h = sbHolidayOn(d);
+    if (h) { skipped.push({ date: sbISO(d), name: h }); continue; }
+    counted++;
+  }
+  return { due: sbISO(d), skipped };
+}
+var SB_RFI_DAYS = { low: 7, normal: 5, high: 3, urgent: 1 };
+function sbRfiDueDate(dateRaised, priority) {
+  return sbAddWorkingDays(dateRaised, SB_RFI_DAYS[String(priority || "normal").toLowerCase()] || 5);
+}
+
+// A picture off the clipboard.
+//
+// Chrome, Edge and Safari all put a screenshot or a copied image on the
+// clipboard as a file, so once it is pulled out here the same path that
+// handles an uploaded file handles this one too — only the way in differs.
+// Returns null for a clipboard carrying anything else, which is what lets the
+// same handler sit on a cell without ever swallowing pasted text. (2.9.26)
+function sbClipboardImage(e) {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].kind === "file" && /^image\//.test(items[i].type || "")) {
+      const f = items[i].getAsFile();
+      if (f) return f;
+    }
+  }
+  const fs = (e.clipboardData && e.clipboardData.files) || [];
+  if (fs.length && /^image\//.test(fs[0].type || "")) return fs[0];
+  return null;
+}
 function sbMakeThumb(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -11635,6 +14123,7 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
+  const [imgSel, setImgSel] = useState6(false);
   const [err, setErr] = useState6(null);
   const [aiMsg, setAiMsg] = useState6(null);
   // The suggested-documents panel keeps its own message, so a search that found
@@ -11703,19 +14192,38 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
   const onPickImage = async (e) => {
     const f = e.target.files && e.target.files[0];
     e.target.value = "";
-    if (!f) return;
+    if (f) await putImage(f);
+  };
+  // The picture cube takes a file from the corner button, and a screenshot
+  // straight off the clipboard — click the cube once, then Ctrl+V. The same
+  // rule as the LLI board and the room marks, so there is one way to do this
+  // everywhere in the site. (2.9.26)
+  const putImage = async (f) => {
     setErr(null);
     setBusy("image");
     try {
       const thumb = await sbMakeThumb(f);
-      const up = await sbUploadFile(projectId, d.id, f);
-      set({ image: { name: f.name, thumb, path: up.path, inline: up.inline, dataUrl: up.inline ? null : null } });
+      const named = f.name ? f : new File([f], "pasted-image.png", { type: f.type || "image/png" });
+      const up = await sbUploadFile(projectId, d.id, named);
+      set({ image: { name: named.name, thumb, path: up.path, inline: up.inline, dataUrl: up.inline ? null : null } });
     } catch (ex) {
-      setErr(lang === "he" ? "לא הצלחתי להעלות את התמונה." : "Could not upload the image.");
+      setErr(lang === "he" ? "\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05dc\u05d5\u05ea \u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4." : "Could not upload the image.");
     } finally {
       setBusy(null);
     }
   };
+  const onImagePasteSb = async (e) => {
+    const f = sbClipboardImage(e);
+    if (!f) return;
+    e.preventDefault();
+    await putImage(f);
+  };
+  useEffect5(() => {
+    if (ro || !imgSel) return;
+    const onWindowPaste = (e) => onImagePasteSb(e);
+    window.addEventListener("paste", onWindowPaste);
+    return () => window.removeEventListener("paste", onWindowPaste);
+  }, [ro, imgSel, d.id]);
 
   // ---- specification PDFs --------------------------------------------------
   const onPickSpec = async (e) => {
@@ -12065,10 +14573,25 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
         field("modelCode"),
         field("manufacturer")
       ),
-      // The picture cube. Clicking it opens the file picker.
+      // The picture cube. One click selects it and Ctrl+V drops a screenshot
+      // in; the corner button chooses a file. It used to be a <label> around a
+      // hidden file input, so a click opened the operating system's dialog —
+      // and pasting into that dialog does nothing. (2.9.26)
       sbH(
-        "label",
-        { className: `sbImgBox ${ro ? "ro" : ""}` },
+        "div",
+        {
+          className: `sbImgBox ${ro ? "ro" : ""} ${imgSel ? "sel" : ""}`.trim(),
+          tabIndex: ro ? void 0 : 0,
+          title: ro ? void 0 : L("pasteHint"),
+          onClick: ro ? void 0 : () => setImgSel(true),
+          onFocus: ro ? void 0 : () => setImgSel(true),
+          onBlur: ro ? void 0 : () => setImgSel(false),
+          onDoubleClick: ro ? void 0 : (e) => {
+            const inp = e.currentTarget.querySelector("input[type=file]");
+            if (inp) inp.click();
+          },
+          onPaste: ro ? void 0 : onImagePasteSb
+        },
         d.image && d.image.thumb
           ? sbH(React15.Fragment, null,
               sbH("img", { src: d.image.thumb, alt: "" }),
@@ -12096,6 +14619,16 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
               sbH(ImagePlus, { size: 26, strokeWidth: 1.6 }),
               sbH("span", null, busy === "image" ? "…" : L("addPicture"))
             ),
+        ro ? null : sbH("button", {
+          type: "button",
+          className: "sbImgPick",
+          title: L("pickFile"),
+          onClick: (e) => {
+            e.stopPropagation();
+            const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
+            if (inp) inp.click();
+          }
+        }, sbH(Upload4, { size: 12, strokeWidth: 2.4 })),
         ro ? null : sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPickImage })
       )
     ),
@@ -16257,7 +18790,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null }), /* @__PURE__ */ React15.createElement("div", { className: "blockRule" }), /* @__PURE__ */ React15.createElement(PlansUploadBlock, { isRTL, projectId: p.id, plans: (plansByProject || {})[p.id] || null, onPlansChange: (next) => onPlansChange && onPlansChange(p.id, next), rooms: (roomsByProject || {})[p.id] || null, onRoomsChange: (next) => onRoomsChange && onRoomsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date"), field("\u05E8\u05D5\u05D5\u05D7 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9 %", "Main contractor markup %", "markupPct", "number")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null }), /* @__PURE__ */ React15.createElement("div", { className: "blockRule" }), /* @__PURE__ */ React15.createElement(PlansUploadBlock, { isRTL, projectId: p.id, plans: (plansByProject || {})[p.id] || null, onPlansChange: (next) => onPlansChange && onPlansChange(p.id, next), rooms: (roomsByProject || {})[p.id] || null, onRoomsChange: (next) => onRoomsChange && onRoomsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -16538,9 +19071,11 @@ function ProjectDashboardApp() {
     const sds = {};
     const rms = {};
     const flagOverrides = {};
+    const rfis = {};
+    const cis = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, ...others } = entry;
+      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
@@ -16548,8 +19083,12 @@ function ProjectDashboardApp() {
       if (sdRows) sds[pid] = sdRows;
       if (roomsData) rms[pid] = roomsData;
       if (boqFlagOverrides) flagOverrides[pid] = boqFlagOverrides;
+      // RFI is a part of its own for the same reason the boards are: it grows,
+      // and a row per project is what the database rules key on. (2.9.26)
+      if (rfiRows) rfis[pid] = rfiRows;
+      if (ciRows) cis[pid] = ciRows;
     });
-    return { rest, schedules, boqs, llis, sds, rms, flagOverrides };
+    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis };
   };
   // The seven parts a project is stored in. "project-extras" is the base
   // object; the rest are single fields hung off it. Each part is one row per
@@ -16561,7 +19100,9 @@ function ProjectDashboardApp() {
     ["project-lli", "lliRows"],
     ["project-sd", "sdRows"],
     ["project-rooms", "roomsData"],
-    ["project-boq-flags", "boqFlagOverrides"]
+    ["project-boq-flags", "boqFlagOverrides"],
+    ["project-rfi", "rfiRows"],
+    ["project-ci", "ciRows"]
   ];
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -16628,7 +19169,7 @@ function ProjectDashboardApp() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
     (async () => {
-      const { rest, schedules, boqs, llis, sds, rms, flagOverrides } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis } = splitExtras(projectExtras);
       const byPart = {
         "project-extras": rest,
         "project-schedules": schedules,
@@ -16636,7 +19177,9 @@ function ProjectDashboardApp() {
         "project-lli": llis,
         "project-sd": sds,
         "project-rooms": rms,
-        "project-boq-flags": flagOverrides
+        "project-boq-flags": flagOverrides,
+        "project-rfi": rfis,
+        "project-ci": cis
       };
       let failed = null;
       // One row per project. saveAppState skips a row whose content has not
@@ -17870,6 +20413,21 @@ function ProjectDashboardApp() {
         userPerms,
         lliRows: activeExtras.lliRows || {},
         onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
+        rfiRows: activeExtras.rfiRows || {},
+        onChangeRfiRows: (next) => updateProjectExtras(activeProject.id, { rfiRows: next }),
+        ciRows: activeExtras.ciRows || {},
+        onChangeCiRows: (next) => updateProjectExtras(activeProject.id, { ciRows: next }),
+        ciQueue: activeExtras.ciQueue || [],
+        onChangeCiQueue: (next) => updateProjectExtras(activeProject.id, { ciQueue: next }),
+        projectMarkup: activeProject.markupPct || 0,
+        // Where an RFI, an LLI row or a submittal is sent when somebody ticks
+        // "add to change instructions". The change-instructions register reads
+        // this list; nothing here decides that a change is owed. (2.9.26)
+        onAddToChangeInstructions: (entry) => {
+          const cur = activeExtras.ciQueue || [];
+          if (cur.some((x) => x.sourceModule === entry.sourceModule && x.sourceId === entry.sourceId)) return;
+          updateProjectExtras(activeProject.id, { ciQueue: [...cur, entry] });
+        },
         sdRows: activeExtras.sdRows || {},
         onChangeSdRows: (next) => updateProjectExtras(activeProject.id, { sdRows: next }),
         roomsData: activeExtras.roomsData || null,
