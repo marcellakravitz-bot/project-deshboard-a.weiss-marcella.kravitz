@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "31.8.2026 \u00b7 build 42";
+var APP_BUILD = "31.8.2026 \u00b7 build 43";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -16703,7 +16703,6 @@ function ProjectDashboardApp() {
   }, []);
   const closeMenu = () => {
     setMenuOpen(false);
-    setAdminAuthError(false);
     setLoginError(null);
     setTimeout(() => setMenuView("options"), 250);
   };
@@ -18029,7 +18028,6 @@ function ProjectDashboardApp() {
       style: { marginTop: 6 },
       onClick: () => {
         setMenuView("options");
-        setAdminAuthError(false);
       }
     },
     /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }),
@@ -18041,7 +18039,6 @@ function ProjectDashboardApp() {
       className: "loginBack",
       onClick: () => {
         setMenuView("options");
-        setAdminAuthError(false);
         setLoginError(null);
       }
     },
