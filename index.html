@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 50";
+var APP_BUILD = "2.9.2026 · build 51";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -11201,6 +11201,28 @@ function sbMakeThumb(file) {
 }
 // A signature keeps its transparency, so a scanned stamp sits on the paper
 // rather than inside a white box.
+// Postgres refuses a JSON document containing a NUL character or a lone half of
+// a surrogate pair, and rejects the entire row with a 400. Both turn up in text
+// extracted from uploaded PDFs and Word files. Strip them on the way to the
+// server rather than lose the save. (2.9.26)
+function sbJsonSafe(v) {
+  if (typeof v === "string") {
+    return v
+      .replace(/\u0000/g, "")
+      .replace(/[\uD800-\uDBFF](?![\uDC00-\uDFFF])/g, "")
+      .replace(/([^\uD800-\uDBFF]|^)([\uDC00-\uDFFF])/g, "$1");
+  }
+  if (Array.isArray(v)) return v.map(sbJsonSafe);
+  if (v && typeof v === "object") {
+    if (v instanceof Date) return v;
+    const out = {};
+    for (const k in v) {
+      if (Object.prototype.hasOwnProperty.call(v, k)) out[sbJsonSafe(k)] = sbJsonSafe(v[k]);
+    }
+    return out;
+  }
+  return v;
+}
 function sbMakeSignature(file) {
   return new Promise((resolve) => {
     const reader = new FileReader();
@@ -16275,10 +16297,18 @@ function ProjectDashboardApp() {
   const lastWritten = useRef5({});
   const saveAppState = async (key, value) => {
     if (!canWriteServer && VIEWER_WRITABLE.indexOf(key) < 0) return null;
-    const json = JSON.stringify(value ?? null);
+    // Text pulled out of an uploaded PDF or Word file can carry a NUL byte or
+    // half of a surrogate pair. Postgres cannot hold either inside JSON and
+    // rejects the whole row with a 400 — which looked like "saving failed" with
+    // no clue why, and quietly lost the submittal. Cleaned on the way out.
+    const safe = sbJsonSafe(value ?? null);
+    const json = JSON.stringify(safe);
     if (lastWritten.current[key] === json) return null;
-    const { error } = await supabase.from("app_state").upsert({ key, value, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-    if (error) throw error;
+    const { error } = await supabase.from("app_state").upsert({ key, value: safe, updated_at: (/* @__PURE__ */ new Date()).toISOString() });
+    if (error) {
+      console.error("[awdash] app_state write refused", key, error.message, error.details || "", error.hint || "", error.code || "");
+      throw new Error((error.message || "save failed") + (error.details ? " — " + error.details : ""));
+    }
     lastWritten.current[key] = json;
     return true;
   };
