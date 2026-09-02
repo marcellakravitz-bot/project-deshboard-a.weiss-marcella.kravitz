@@ -472,7 +472,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 53";
+var APP_BUILD = "2.9.2026 · build 54";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -16610,8 +16610,23 @@ function ProjectDashboardApp() {
       }
     })();
   }, [isAuthenticated]);
+  // Wait until typing stops before writing.
+  //
+  // This effect runs on every change to projectExtras — which means every
+  // keystroke. Some of these rows are megabytes (the LLI board carries its
+  // product photos inside the JSON), so typing a supplier name used to fire
+  // one multi-megabyte write per letter, all of them racing each other. It
+  // half-worked until the row-level rules added a little cost per write, and
+  // then the server started cancelling them on the statement timeout.
+  //
+  // A pause of a second and a bit collapses a burst of typing into one save.
+  // Nothing is lost: the last state always wins, and the local copy is written
+  // immediately either way. (2.9.26)
+  const saveTimerRef = useRef5(null);
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
     (async () => {
       const { rest, schedules, boqs, llis, sds, rms, flagOverrides } = splitExtras(projectExtras);
       const byPart = {
@@ -16643,6 +16658,10 @@ function ProjectDashboardApp() {
       } catch (e) {
       }
     })();
+    }, 1200);
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [projectExtras, extrasLoaded, isAuthenticated]);
   const updateProjectExtras = (projectId, patch) => {
     setProjectExtras((prev) => ({
