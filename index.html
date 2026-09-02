@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "31.8.2026 \u00b7 build 43";
+var APP_BUILD = "31.8.2026 \u00b7 build 44";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2902,9 +2902,15 @@ var drawer = `
         .fieldError {
           margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: #ff6b5e;
         }
+        /* The answer to "forgot my password" was small grey text under a small
+           grey link, on white. Easy to miss entirely — so it is a box now
+           (31.8.26). */
         .resetNote {
-          margin: 10px 0 0; font-size: 12px; line-height: 1.55;
-          color: var(--steel, #5b6472); text-align: center;
+          margin: 12px 0 0; padding: 10px 12px;
+          border: 1px solid var(--accent, #0F3460); border-radius: 10px;
+          background: var(--accent-soft, #eef2f8);
+          font-size: 12.5px; line-height: 1.6; font-weight: 600;
+          color: var(--accent-ink, #0F3460); text-align: center;
         }
         .forgotLink {
           display: block; text-align: center; margin-top: 14px; font-size: 12.5px;
@@ -17060,7 +17066,11 @@ function ProjectDashboardApp() {
   const [resetMsg, setResetMsg] = useState6(null);
   const [resetBusy, setResetBusy] = useState6(false);
   const sendPasswordReset = async () => {
+    // Logged out loud on purpose: when this did not appear to do anything there
+    // was no way to tell from the outside whether the press had even reached
+    // the handler (31.8.26).
     const email = form.email.trim().toLowerCase();
+    console.log("[awdash] password reset pressed, email:", email || "(empty)");
     if (!email) {
       setResetMsg(isRTL ? "צריך למלא כתובת מייל קודם." : "Enter your e-mail address first.");
       return;
@@ -17072,6 +17082,7 @@ function ProjectDashboardApp() {
       const { data, error } = await supabase.functions.invoke("password-reset", {
         body: { email, redirectTo }
       });
+      console.log("[awdash] password reset answer:", data, error || "");
       if (error) throw error;
       setResetMsg(data && data.sent
         ? (isRTL
