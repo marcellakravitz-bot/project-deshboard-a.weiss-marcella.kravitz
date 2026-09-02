@@ -172,6 +172,36 @@ async function loadAppState(key, tries = 3) {
   }
   throw lastErr || new Error(`load ${key} failed`);
 }
+// One row per project, keyed "<name>:<projectId>".
+//
+// Until now every project lived inside a single row — "project-extras" held
+// them all — so any signed-in person who could read that row read every
+// project, and the filtering by permission happened in the browser, which is
+// not a place where filtering can be enforced. Split into a row per project,
+// the database itself can say who may read which, keyed on the suffix.
+//
+// The list is not asked for by id: a LIKE on the prefix returns exactly the
+// rows this person is allowed to see, whatever they are. (2.9.26)
+async function loadProjectRows(key, tries = 3) {
+  let lastErr = null;
+  for (let i = 0; i < tries; i++) {
+    try {
+      const { data, error } = await supabase.from("app_state").select("key, value").like("key", key + ":%");
+      if (error) throw error;
+      const out = {};
+      (data || []).forEach((r) => {
+        const pid = String(r.key || "").slice(key.length + 1);
+        if (pid) out[pid] = r.value;
+      });
+      return { rows: out, count: (data || []).length };
+    } catch (e) {
+      lastErr = e;
+      console.warn(`[awdash] load ${key}:* attempt ${i + 1} failed`, e);
+      await new Promise((r) => setTimeout(r, 400 * (i + 1)));
+    }
+  }
+  throw lastErr || new Error(`load ${key}:* failed`);
+}
 function awdashHasProjects(val) {
   try {
     return Array.isArray(val) && val.some((c) => Array.isArray(c && c.projects) && c.projects.some((p) => p && p.name));
@@ -442,7 +472,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 52";
+var APP_BUILD = "2.9.2026 · build 53";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -16300,7 +16330,9 @@ function ProjectDashboardApp() {
   const canWriteServer = appRole === "admin";
   const lastWritten = useRef5({});
   const saveAppState = async (key, value) => {
-    if (!canWriteServer && VIEWER_WRITABLE.indexOf(key) < 0) return null;
+    // "project-extras:p-123" is governed by the rule for "project-extras".
+    const base = String(key).split(":")[0];
+    if (!canWriteServer && VIEWER_WRITABLE.indexOf(base) < 0) return null;
     // Text pulled out of an uploaded PDF or Word file can carry a NUL byte or
     // half of a surrogate pair. Postgres cannot hold either inside JSON and
     // rejects the whole row with a 400 — which looked like "saving failed" with
@@ -16519,40 +16551,57 @@ function ProjectDashboardApp() {
     });
     return { rest, schedules, boqs, llis, sds, rms, flagOverrides };
   };
+  // The seven parts a project is stored in. "project-extras" is the base
+  // object; the rest are single fields hung off it. Each part is one row per
+  // project — see loadProjectRows.
+  const EXTRA_PARTS = [
+    ["project-extras", null],
+    ["project-schedules", "scheduleData"],
+    ["project-boq", "boqData"],
+    ["project-lli", "lliRows"],
+    ["project-sd", "sdRows"],
+    ["project-rooms", "roomsData"],
+    ["project-boq-flags", "boqFlagOverrides"]
+  ];
   useEffect5(() => {
     if (!isAuthenticated) return;
     (async () => {
       try {
-        const value = await loadAppState("project-extras");
-        rememberLoaded("project-extras", value);
-        console.log("[awdash] load project-extras", !!value);
-        let merged = value || {};
-        try {
-          const sch = await loadAppState("project-schedules");
-          rememberLoaded("project-schedules", sch);
-          if (sch) {
-            merged = { ...merged };
-            Object.keys(sch).forEach((pid) => {
-              merged[pid] = { ...merged[pid] || {}, scheduleData: sch[pid] };
-            });
-          }
-        } catch (e2) {
-          console.error("[awdash] load project-schedules failed", e2);
-        }
-        for (const [key, field] of [["project-boq", "boqData"], ["project-lli", "lliRows"], ["project-sd", "sdRows"], ["project-rooms", "roomsData"], ["project-boq-flags", "boqFlagOverrides"]]) {
+        let merged = {};
+        let anyLegacy = false;
+        for (const [key, field] of EXTRA_PARTS) {
+          let byPid = null;
           try {
-            const side = await loadAppState(key);
-            rememberLoaded(key, side);
-            if (side) {
-              merged = { ...merged };
-              Object.keys(side).forEach((pid) => {
-                merged[pid] = { ...merged[pid] || {}, [field]: side[pid] };
-              });
+            const res = await loadProjectRows(key);
+            if (res.count > 0) {
+              byPid = res.rows;
+              Object.keys(res.rows).forEach((pid) => rememberLoaded(key + ":" + pid, res.rows[pid]));
             }
-          } catch (e3) {
-            console.error(`[awdash] load ${key} failed`, e3);
+          } catch (eRows) {
+            console.error(`[awdash] load ${key}:* failed`, eRows);
+            if (key === "project-extras") throw eRows;
           }
+          if (!byPid) {
+            // Nothing split yet for this part: read the old single row that
+            // holds every project at once. Written back split, on the next save.
+            let legacy = null;
+            try {
+              legacy = await loadAppState(key);
+            } catch (eOld) {
+              console.error(`[awdash] load ${key} failed`, eOld);
+              if (key === "project-extras") throw eOld;
+            }
+            rememberLoaded(key, legacy);
+            if (legacy) anyLegacy = true;
+            byPid = legacy || {};
+          }
+          Object.keys(byPid).forEach((pid) => {
+            merged[pid] = field
+              ? { ...merged[pid] || {}, [field]: byPid[pid] }
+              : { ...merged[pid] || {}, ...byPid[pid] || {} };
+          });
         }
+        console.log("[awdash] load project data, projects:", Object.keys(merged).length, anyLegacy ? "(some parts still in the old combined rows)" : "(all split by project)");
         setProjectExtras(merged);
         setExtrasLoaded(true);
       } catch (e) {
@@ -16565,21 +16614,26 @@ function ProjectDashboardApp() {
     if (!isAuthenticated || !extrasLoaded) return;
     (async () => {
       const { rest, schedules, boqs, llis, sds, rms, flagOverrides } = splitExtras(projectExtras);
+      const byPart = {
+        "project-extras": rest,
+        "project-schedules": schedules,
+        "project-boq": boqs,
+        "project-lli": llis,
+        "project-sd": sds,
+        "project-rooms": rms,
+        "project-boq-flags": flagOverrides
+      };
       let failed = null;
-      for (const [key, value] of [
-        ["project-extras", rest],
-        ["project-schedules", schedules],
-        ["project-boq", boqs],
-        ["project-lli", llis],
-        ["project-sd", sds],
-        ["project-rooms", rms],
-        ["project-boq-flags", flagOverrides]
-      ]) {
-        try {
-          await saveAppState(key, value);
-        } catch (e) {
-          console.error(`[awdash] save ${key} failed`, e);
-          failed = e && e.message || String(e);
+      // One row per project. saveAppState skips a row whose content has not
+      // changed, so an edit to one project writes one row, not twenty-eight.
+      for (const [key, byPid] of Object.entries(byPart)) {
+        for (const pid of Object.keys(byPid || {})) {
+          try {
+            await saveAppState(key + ":" + pid, byPid[pid]);
+          } catch (e) {
+            console.error(`[awdash] save ${key}:${pid} failed`, e);
+            failed = e && e.message || String(e);
+          }
         }
       }
       // A silent failure here is how work goes missing. Say it out loud.
