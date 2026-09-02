@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 \u00b7 build 46";
+var APP_BUILD = "2.9.2026 · build 47";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -14789,74 +14789,9 @@ function SbBulkReport({ report, lang, isRTL, onClose }) {
   );
 }
 // src/App.jsx
-function CreateUserPanel({ isRTL, setUserPerms }) {
-  const inputStyle = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff" };
-  const [email, setEmail] = useState6("");
-  const [role, setRole] = useState6("client");
-  // Signing rights belong to the person, not to the role: two people with the
-  // same role on the same project are not always both entitled to sign.
-  const [signSubmittal, setSignSubmittal] = useState6(false);
-  const [signSd, setSignSd] = useState6(false);
-  const [busy, setBusy] = useState6(false);
-  const [msg, setMsg] = useState6(null);
-  const submit = async () => {
-    const clean = (email || "").trim().toLowerCase();
-    if (!clean) {
-      setMsg({ ok: false, text: isRTL ? "צריך להזין אימייל" : "Email is required" });
-      return;
-    }
-    setBusy(true);
-    setMsg(null);
-    try {
-      const redirectTo = window.location.origin + window.location.pathname;
-      const { data, error } = await supabase.functions.invoke("admin-create-user", { body: { email: clean, role, redirectTo } });
-      if (error) {
-        let detail = error.message || (isRTL ? "שגיאה בשליחת ההזמנה" : "Error sending invitation");
-        try {
-          const body = await error.context.json();
-          if (body && body.error) detail = body.error;
-        } catch (e2) {
-        }
-        setMsg({ ok: false, text: detail });
-      } else if (data && data.error) {
-        setMsg({ ok: false, text: data.error });
-      } else {
-        // The invitation went out; record what this person may sign.
-        try {
-          if (setUserPerms) setUserPerms(clean, { signSubmittal, signSd });
-        } catch (e3) {
-          console.warn("[awdash] could not save the signing rights", e3);
-        }
-        setMsg({ ok: true, text: (isRTL ? "נשלחה הזמנה במייל ל: " : "Invitation sent to: ") + clean });
-        setEmail("");
-        setSignSubmittal(false);
-        setSignSd(false);
-      }
-    } catch (e) {
-      setMsg({ ok: false, text: String(e) });
-    }
-    setBusy(false);
-  };
-  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel", style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הוספת משתמש" : "Add user"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרי תפקיד והזיני אימייל. תישלח הזמנה שבה המשתמש בוחר סיסמה משלו." : "Choose a role and email. An invitation is sent for the user to set their own password."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "email", placeholder: isRTL ? "אימייל" : "Email", value: email, onChange: (e) => setEmail(e.target.value), dir: "ltr", style: { ...inputStyle, minWidth: 240 } }), /* @__PURE__ */ React15.createElement("select", { value: role, onChange: (e) => setRole(e.target.value), style: inputStyle }, /* @__PURE__ */ React15.createElement("option", { value: "client" }, isRTL ? "לקוח" : "Client"), /* @__PURE__ */ React15.createElement("option", { value: "contractor" }, isRTL ? "קבלן ראשי" : "Main contractor")), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: submit, disabled: busy }, busy ? isRTL ? "שולח…" : "Sending…" : isRTL ? "שליחת הזמנה" : "Send invitation")), /* @__PURE__ */ React15.createElement(
-    "div",
-    { className: "userPermRows" },
-    [
-      { key: "sub", on: signSubmittal, set: setSignSubmittal, he: "אישור חתימה על מסמכי Submittal", en: "May sign Submittal documents" },
-      { key: "sd", on: signSd, set: setSignSd, he: "אישור חתימה על SD", en: "May sign SD documents" }
-    ].map((row) => /* @__PURE__ */ React15.createElement(
-      "label",
-      { key: row.key, className: "userPermRow" },
-      /* @__PURE__ */ React15.createElement("span", null, isRTL ? row.he : row.en),
-      /* @__PURE__ */ React15.createElement("button", {
-        type: "button",
-        className: `permSwitch ${row.on ? "on" : ""}`,
-        role: "switch",
-        "aria-checked": row.on,
-        onClick: () => row.set(!row.on)
-      }, /* @__PURE__ */ React15.createElement("span", null))
-    ))
-  ), msg && /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 12, fontWeight: 700, color: msg.ok ? "#1a7f4b" : "#b02a37" } }, msg.text));
-}
+// CreateUserPanel removed 2.9.26: it invited people without saying which
+// projects they get, so once the storage rules are on those accounts see
+// nothing. The Add-user panel, which does ask, is used in both places now.
 function PasswordResetPanel({ isRTL }) {
   const inputStyle = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff" };
   const [email, setEmail] = useState6("");
@@ -15024,6 +14959,12 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
   };
   const [users, setUsers] = useState6(null);
   const [access, setAccess] = useState6([]);
+  // Which projects a user may open. The invitation writes these rows, but
+  // people move between projects afterwards, so the list has to be editable
+  // here too — otherwise the only way to change access is to delete the
+  // account and invite it again.
+  const [accessEdit, setAccessEdit] = useState6(null);
+  const [accessPick, setAccessPick] = useState6({});
   const [discMap, setDiscMap] = useState6({});
   const [err, setErr] = useState6(null);
   const [busy, setBusy] = useState6(false);
@@ -15120,6 +15061,33 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
     await load();
     setBusy(false);
   };
+  const openAccess = (u) => {
+    const pick = {};
+    access.filter((a) => a.user_id === u.id).forEach((a) => { pick[a.project_id] = true; });
+    setAccessPick(pick);
+    setAccessEdit(u.id);
+  };
+  // Written straight to project_access. That table is closed by RLS: only a
+  // system administrator may write to it, and the check runs in the database,
+  // not here — so this button is safe even though it lives in the browser.
+  const saveAccess = async (u) => {
+    const ids = projects.filter((p) => accessPick[p.id]).map((p) => p.id);
+    setBusy(true);
+    setErr(null);
+    try {
+      const del = await supabase.from("project_access").delete().eq("user_id", u.id);
+      if (del.error) throw new Error(del.error.message);
+      if (ids.length) {
+        const ins = await supabase.from("project_access").insert(ids.map((pid) => ({ user_id: u.id, project_id: pid, role: u.role || "client", email: u.email })));
+        if (ins.error) throw new Error(ins.error.message);
+      }
+      setAccessEdit(null);
+      await load();
+    } catch (e) {
+      setErr((isRTL ? "לא ניתן היה לשמור את ההרשאות: " : "Could not save project access: ") + String(e.message || e));
+    }
+    setBusy(false);
+  };
   const cellS = { padding: "9px 10px", borderBottom: "1px solid var(--line-soft)", fontSize: 13, textAlign: isRTL ? "right" : "left", verticalAlign: "middle" };
   const headS = { padding: "9px 10px", borderBottom: "1px solid var(--line)", fontSize: 13, fontWeight: 800, background: "#f4f5f7", textAlign: isRTL ? "right" : "left" };
   const roleLabel = (r) => r === "admin" ? isRTL ? "מנהל" : "Admin" : r === "contractor" ? isRTL ? "קבלן ראשי" : "Contractor" : isRTL ? "לקוח" : "Client";
@@ -15200,7 +15168,7 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
   const th = (label) => /* @__PURE__ */ React15.createElement("th", { style: headS }, label);
   return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), ), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12 } }, err) : !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "חתימה Submittal" : "Signs Submittal"), th(isRTL ? "חתימה SD" : "Signs SD"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
     const disc = discMap[(u.email || "").toLowerCase()];
-    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, projOf(u)), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSubmittal")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSd")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
+    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? projOf(u) : React15.createElement(React15.Fragment, null, React15.createElement("button", { type: "button", onClick: () => accessEdit === u.id ? setAccessEdit(null) : openAccess(u), title: isRTL ? "\u05dc\u05d7\u05d9\u05e6\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea" : "Click to edit access", style: { background: "none", border: "none", padding: 0, font: "inherit", color: "var(--steel)", cursor: "pointer", textDecoration: "underline dotted", textAlign: isRTL ? "right" : "left" } }, projOf(u)), accessEdit === u.id && React15.createElement("div", { style: { marginTop: 8, border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px", background: "#fff", minWidth: 200 } }, projects.length === 0 ? React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "\u05d0\u05d9\u05df \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd." : "No projects.") : React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, projects.map((pr) => React15.createElement("label", { key: pr.id, style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600 } }, React15.createElement("input", { type: "checkbox", checked: !!accessPick[pr.id], onChange: (ev) => setAccessPick((prev) => ({ ...prev, [pr.id]: ev.target.checked })) }), React15.createElement("span", null, pr.name)))), React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } }, React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: busy, onClick: () => saveAccess(u) }, isRTL ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "Save"), React15.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setAccessEdit(null) }, isRTL ? "\u05d1\u05d9\u05d8\u05d5\u05dc" : "Cancel"))))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSubmittal")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSd")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
   })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen((o) => !o), style: grayPill }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 15, strokeWidth: 2 }), " ", isRTL ? "עריכת מסמך ה‑PDF" : "Edit PDF document")), pdfOpen && /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 520, marginInline: "auto", marginTop: 12, border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "#fbfcfd", textAlign: isRTL ? "right" : "left" } }, /* @__PURE__ */ React15.createElement("label", { style: { display: "block", fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה" : "Footer text"), /* @__PURE__ */ React15.createElement("textarea", { value: pdfFooter, onChange: (e) => setPdfFooter(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text shown at the bottom of the document", style: { width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" } }, pdfLogo ? /* @__PURE__ */ React15.createElement("img", { src: pdfLogo, alt: "", style: { height: 34, maxWidth: 120, objectFit: "contain" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfLogo }))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } }, pdfFooterImg ? /* @__PURE__ */ React15.createElement("img", { src: pdfFooterImg, alt: "", style: { height: 40, maxWidth: 240, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfFooterImg })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "גוון המסמך" : "Document color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setPdfAccent(pal.accent), style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: pdfAccent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })))), /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center", marginTop: 14 } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen(false), style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center", marginTop: 14, flexWrap: "wrap" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportCsv, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", "Excel"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPrintAsk(() => exportPdf), style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", "PDF"), printAsk && /* @__PURE__ */ React15.createElement(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); exportPdf(lg); }, onClose: () => setPrintAsk(null) })))));
 }
 function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms }) {
@@ -17819,7 +17787,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(CreateUserPanel, { isRTL, setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
