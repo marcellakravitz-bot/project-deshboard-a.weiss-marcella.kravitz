@@ -475,7 +475,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 57";
+var APP_BUILD = "2.9.2026 · build 58";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1231,7 +1231,6 @@ var pdfViewer = `
            pills as every export row, the same section bars as a submittal —
            so the module reads as part of the site and not as a bolt-on.
            --------------------------------------------------------------- */
-        .rfiBody { gap: 0; }
         .rfiWrap { display: flex; flex-direction: column; gap: 12px; width: 100%; }
         .rfiTools {
           display: flex; align-items: center; justify-content: center;
@@ -1357,7 +1356,7 @@ var pdfViewer = `
           padding: 4px 8px; font-size: 11.5px; font-family: inherit; background: #fff;
         }
         .rfiAttachBtn {
-          align-self: flex-start; display: inline-flex; align-items: center; gap: 6px;
+          align-self: center; display: inline-flex; align-items: center; gap: 6px;
           border: 1px solid var(--line); border-radius: 999px; padding: 7px 16px;
           font-size: 12.5px; font-weight: 700; cursor: pointer; background: #fff;
           color: var(--steel); font-family: inherit;
@@ -1376,9 +1375,21 @@ var pdfViewer = `
           box-shadow: 0 0 0 2px var(--accent-soft, #e6ecf5);
         }
         .rfiPasteBox:focus-visible { outline: 2px solid var(--accent, #0F3460); outline-offset: 1px; }
-        .rfiShots { display: flex; flex-wrap: wrap; gap: 12px; }
+        /* Three to a row. One screenshot per line turned a page of evidence
+           into a page of scrolling. (2.9.26) */
+        .rfiAnswers { display: flex; flex-direction: column; gap: 12px; }
+        .rfiAnswer {
+          border: 1px solid var(--line-soft); border-radius: 10px; padding: 10px 12px;
+          background: #fff; display: flex; flex-direction: column; gap: 7px;
+        }
+        .rfiAnswerHead { display: flex; align-items: center; justify-content: space-between; }
+        .rfiAnswerNo { font-size: 11.5px; font-weight: 800; color: var(--accent-ink); }
+        .rfiAnswerMeta { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; }
+        .rfiAddAnswer { align-self: center; }
+        .rfiShots { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+        @media (max-width: 900px) { .rfiShots { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         .rfiShot {
-          width: 210px; display: flex; flex-direction: column; gap: 5px;
+          display: flex; flex-direction: column; gap: 5px;
           border: 1px solid var(--line-soft); border-radius: 10px; padding: 8px; background: #fff;
         }
         .rfiShot img { width: 100%; border-radius: 6px; display: block; }
@@ -1431,6 +1442,47 @@ var pdfViewer = `
           margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-soft);
         }
 
+
+
+        /* ---------------------------------------------------------------
+           One size, always.
+           
+           The rule she set: the screen is as wide and as tall when a chapter
+           is closed as when it is open. Nothing about what is inside may
+           change the frame.
+           
+           This is not only tidiness. The whole app is drawn inside a box that
+           is scaled to the window's width, so a page tall enough to make the
+           document scroll takes a scrollbar, the box measures narrower, and
+           EVERYTHING shrinks — which is why the top bar drifted away and the
+           site got smaller the moment these two modules were added. A fixed
+           height with the scrolling on the inside settles all of it. (2.9.26)
+           --------------------------------------------------------------- */
+        .functionPageBody.rfiBody {
+          height: calc(var(--appvh, 760px) - 196px);
+          min-height: 420px;
+          gap: 0;
+        }
+        .rfiWrap, .ciWrap, .rfiFormWrap {
+          flex: 1; min-height: 0; display: flex; flex-direction: column;
+        }
+        /* The part that scrolls, in each of the four screens. */
+        .rfiWrap > .rfiTableWrap,
+        .ciWrap > .ciChapters {
+          flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto;
+          scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+        }
+        .rfiFormWrap { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+        .rfiWrap > .rfiEmpty { flex: 1; display: flex; align-items: center; justify-content: center; }
+        /* The tools and the export row are the frame, not the content. */
+        .rfiWrap > .rfiTools, .rfiWrap > .rfiExportRow,
+        .ciWrap > .ciQueue, .ciWrap > .rfiExportRow { flex: 0 0 auto; }
+
+        /* Edge to edge. These two registers are wide tables and every
+           millimetre of the window is a column she can read. */
+        .functionPage.wide:has(.rfiBody) { padding-inline: 10px; }
+        .rfiBody .rfiTableWrap, .rfiBody .ciChapters { width: 100%; }
+        .ciChapterBody > .rfiTableWrap { overflow-x: auto; }
 
         /* ---- Change Instructions ---- */
         .ciWrap { display: flex; flex-direction: column; gap: 12px; width: 100%; }
@@ -5695,6 +5747,7 @@ function CardView({
   ciQueue,
   onChangeCiQueue,
   projectMarkup,
+  appRole,
   onChangeLliRows,
   sdRows,
   onChangeSdRows,
@@ -5727,6 +5780,9 @@ function CardView({
   const isSd = cardKey === "sd";
   const isRfi = cardKey === "rfi";
   const isCi = cardKey === "changeInstructions";
+  // Only the system administrator writes here. A main contractor who is
+  // allowed to edit everything else on the project still reads this one.
+  const ciCanEdit = canEdit && appRole === "admin";
   const showRooms = cardKey === "rooms";
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
@@ -5763,7 +5819,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -5774,7 +5830,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -7988,7 +8044,11 @@ td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: bl
 ${printedStampCss(4)}
 /* The closing image belongs to the last page — at the FOOT of it, whether that
    page carries ten rows or one (30.8.26). */
-.footImg { margin-top: auto; padding-top: 4mm; text-align: center; flex: 0 0 auto; }
+.footImg { margin-top: auto; padding-top: 4mm; padding-bottom: 3mm; text-align: center; flex: 0 0 auto; }
+.pageStamp { flex: 0 0 auto; text-align: center; font-size: 7.5px; font-weight: 700;
+  color: #9aa3af; padding-top: 2mm; letter-spacing: .02em; }
+/* Without a closing image the stamp is what holds the foot of the frame. */
+.page > .pageStamp:nth-child(2) { margin-top: auto; }
 .footImg img { max-height: 15mm; }
 </style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
@@ -8065,9 +8125,17 @@ ${footImg}</div><div id="pages"></div><div id="mm" style="position:absolute;left
   // left alone — its heading belongs at the top, not floating in the middle
   // (30.8.26).
   var rowH = rows.length ? rows[0].getBoundingClientRect().height : 18;
+  var sheet = pages.length ? pages[0].pg.clientHeight : 0;
+  // How much clear paper counts as "this page is short rather than unbalanced".
+  var SHORT = sheet * 0.35;
   pages.forEach(function (rec) {
     var gap = footRoom(rec);
     if (gap <= 2) return;
+    // A nearly full page reads as bottom-heavy, and half the leftover moved
+    // above the heading settles it. A page with a lot of clear paper is not
+    // unbalanced, it is short — lifting its heading into the middle of an
+    // empty frame only makes it look like a fault (2.9.26).
+    if (gap > SHORT) return;
     var lift = Math.min(gap / 2, rowH * 2.5);
     rec.body.style.paddingTop = Math.round(lift) + "px";
   });
@@ -8082,6 +8150,29 @@ ${footImg}</div><div id="pages"></div><div id="mm" style="position:absolute;left
       page.pg.appendChild(foot);
       cur = page;
     }
+  }
+  // The last page closes under its own content. A frame the height of the whole
+  // sheet with three rows at the top of it and fifteen centimetres of nothing
+  // underneath does not read as a page — it reads as something that failed to
+  // finish printing. Full pages keep the full frame, so a long report is still
+  // uniform (2.9.26).
+  var last = pages[pages.length - 1];
+  if (last && sheet && footRoom(last) > SHORT) {
+    last.pg.style.height = "auto";
+    last.pg.style.minHeight = "0";
+  }
+  // The printed-on stamp goes INSIDE each frame. Left as one fixed element on
+  // the sheet it sits at the same height on every page, which is right until a
+  // page closes early — and then it is marooned in the middle of blank paper
+  // with the frame finishing well above it (2.9.26).
+  var stamp = document.querySelector(".printedStamp");
+  if (stamp) {
+    stamp.remove();
+    pages.forEach(function (rec) {
+      var c = stamp.cloneNode(true);
+      c.className = "pageStamp";
+      rec.pg.appendChild(c);
+    });
   }
   src.remove();
 })();
@@ -10064,10 +10155,11 @@ var RFI_L = {
 
   // ---- sections ------------------------------------------------------------
   secDetails: { en: "RFI details", he: "פרטי ה‑RFI" },
-  secQuestion: { en: "Question", he: "השאלה" },
   secAnswer: { en: "Response", he: "המענה" },
   secFiles: { en: "Attachments and images", he: "מסמכים ותמונות" },
-  secInternal: { en: "Internal — not printed", he: "פנימי — אינו מודפס" },
+  addResponse: { en: "Add another response", he: "הוספת תשובה" },
+  responseNo: { en: "Response", he: "תשובה" },
+  alreadyIssued: { en: "Already issued", he: "כבר הופק" },
 
   // ---- attachments ---------------------------------------------------------
   addFile: { en: "Attach a file", he: "צירוף קובץ" },
@@ -10183,13 +10275,12 @@ function rfiBlank(rows, who) {
     responsibility: "supervision",
     priority: "normal",
     drawingUpdate: "tbd",
-    response: "",
-    respondedBy: "",
-    responseDate: "",
+    // A rolling event gets more than one answer. Kept as a list from the start,
+    // rather than a single field that somebody has to overwrite — the earlier
+    // answer is usually the reason the later one was needed. (2.9.26)
+    responses: [],
     remarks: "",
     status: "draft",
-    location: "",
-    references: "",
     files: [],
     images: [],
     scheduleLinks: [],
@@ -10201,6 +10292,20 @@ function rfiBlank(rows, who) {
 // The due date is never stored: it is a function of the date raised and the
 // priority, and storing it would let the two drift apart the first time a
 // priority is changed.
+// Answers, whatever shape the record is in.
+//
+// Records written before 2.9.26 carry one `response` string with `respondedBy`
+// and `responseDate` beside it. Reading them through here means the older RFIs
+// keep working and print correctly without a migration that rewrites data
+// nobody asked to have rewritten.
+function rfiResponses(r) {
+  const list = (r && r.responses) || [];
+  if (list.length) return list;
+  if (r && String(r.response || "").trim()) {
+    return [{ id: "legacy", text: r.response, by: r.respondedBy || "", at: r.responseDate || "" }];
+  }
+  return [];
+}
 function rfiDue(r) {
   return sbRfiDueDate(r && r.dateRaised, r && r.priority);
 }
@@ -10670,22 +10775,38 @@ function RfiForm({
   };
 
   // ---- actions -------------------------------------------------------------
-  const issue = () => setLogged({ status: "open" }, "evIssued", "");
-  const closeRfi = () => setLogged({ status: "closed" }, "evClosed", "");
+  // An RFI is issued once. After that the work is answering it, and the button
+  // that produced it must not be able to produce it again — a second "issued"
+  // event in the history is a question a year from now that nobody can answer.
+  const issued = (d.timeline || []).some((e) => e.ev === "evIssued") || d.status !== "draft";
+  const issue = () => {
+    if (issued) return;
+    setLogged({ status: "open" }, "evIssued", "");
+    if (onBack) onBack();
+  };
+  const closeRfi = () => {
+    setLogged({ status: "closed" }, "evClosed", "");
+    if (onBack) onBack();
+  };
   const onStatus = (v) => setLogged({ status: v }, "evStatus", L(RFI_STATUS_L[v] || "stOpen"));
   const onPriority = (v) => set({ priority: v });
   const onDrawing = (v) => setLogged({ drawingUpdate: v }, "evDrawing", L(RFI_DRAWING_L[v] || "tbd"));
-  const onResponse = (v) => {
-    const first = !String(d.response || "").trim() && String(v || "").trim();
-    if (first) {
-      onPatch(
-        { response: v, respondedBy: currentEmail || "", responseDate: rfiToday(), status: "answered" },
-        "evResponse", ""
-      );
-    } else {
-      set({ response: v });
-    }
+  const answers = rfiResponses(d);
+  const setAnswer = (id, next) =>
+    set({ responses: answers.map((a) => (a.id === id ? { ...a, ...next } : a)) });
+  const addAnswer = () => {
+    if (ro) return;
+    const item = {
+      id: `a-${Date.now()}`, text: "",
+      by: currentEmail || "", at: rfiToday()
+    };
+    const wasFirst = answers.length === 0;
+    onPatch(
+      { responses: [...answers, item], ...(wasFirst ? { status: "answered" } : {}) },
+      "evResponse", ""
+    );
   };
+  const dropAnswer = (id) => set({ responses: answers.filter((a) => a.id !== id) });
 
   const printPdf = (printLang) => rfiPrint(d, printLang, printBrand, projectName);
 
@@ -10719,31 +10840,61 @@ function RfiForm({
       select("priority", RFI_PRIORITIES, RFI_PRIORITY_L, onPriority),
       readOnlyField("dueDate", sbFmtDate(due.due)),
       select("status", RFI_STATUSES, RFI_STATUS_L, onStatus),
-      field("location"),
-      field("references", { wide: true }),
-      select("drawingUpdate", RFI_DRAWING, RFI_DRAWING_L, onDrawing)
+      // The calendar notice belongs beside the date it explains, not at the
+      // bottom of the screen where nobody reading the date will find it.
+      due.skipped && due.skipped.length
+        ? sbH("div", { className: "rfiField wide" },
+            sbH("div", { className: "rfiNotice calendar" },
+              sbH("b", null, L("calendarNotice")), " ", L("calendarNoticeText"), " ",
+              due.skipped.map((x) => `${sbFmtDate(x.date)} — ${lang === "he" ? x.name.he : x.name.en}`).join("; ")))
+        : null,
+      select("drawingUpdate", RFI_DRAWING, RFI_DRAWING_L, onDrawing),
+      // The question sits directly under the subject: they are one thought.
+      sbH("label", { className: "rfiField wide" },
+        sbH("span", { className: "rfiFieldLabel" }, L("description")),
+        sbH("textarea", {
+          className: "rfiIn rfiArea", rows: 6, readOnly: ro, value: d.description || "",
+          onChange: (e) => set({ description: e.target.value })
+        }))
     ),
-
-    sec("secQuestion"),
-    sbH("div", { className: "rfiGrid one" }, field("description", { textarea: true, rows: 6 })),
 
     sec("secAnswer"),
     sbH(
       "div",
-      { className: "rfiGrid" },
-      sbH(
-        "label",
-        { className: "rfiField wide" },
-        sbH("span", { className: "rfiFieldLabel" }, L("response")),
-        sbH("textarea", {
-          className: "rfiIn rfiArea", rows: 5, readOnly: ro,
-          value: d.response || "",
-          onChange: (e) => onResponse(e.target.value)
-        })
+      { className: "rfiAnswers" },
+      answers.map((a, i) =>
+        sbH(
+          "div",
+          { className: "rfiAnswer", key: a.id || i },
+          sbH("div", { className: "rfiAnswerHead" },
+            sbH("span", { className: "rfiAnswerNo" }, `${L("responseNo")} ${i + 1}`),
+            ro ? null : sbH("button", {
+              type: "button", className: "rfiIconBtn danger", title: L("remove"),
+              onClick: () => dropAnswer(a.id)
+            }, sbH(Trash2, { size: 13, strokeWidth: 2 }))),
+          sbH("textarea", {
+            className: "rfiIn rfiArea", rows: 4, readOnly: ro, value: a.text || "",
+            onChange: (e) => setAnswer(a.id, { text: e.target.value })
+          }),
+          sbH("div", { className: "rfiAnswerMeta" },
+            sbH("label", { className: "rfiField" },
+              sbH("span", { className: "rfiFieldLabel" }, L("respondedBy")),
+              sbH("input", {
+                className: "rfiIn", type: "text", dir: "ltr", readOnly: ro, value: a.by || "",
+                onChange: (e) => setAnswer(a.id, { by: e.target.value })
+              })),
+            sbH("label", { className: "rfiField" },
+              sbH("span", { className: "rfiFieldLabel" }, L("responseDate")),
+              sbH("input", {
+                className: "rfiIn", type: "date", dir: "ltr", readOnly: ro, value: a.at || "",
+                onChange: (e) => setAnswer(a.id, { at: e.target.value })
+              })))
+        )
       ),
-      readOnlyField("respondedBy", d.respondedBy),
-      readOnlyField("responseDate", sbFmtDate(d.responseDate)),
-      field("remarks", { textarea: true, rows: 3, wide: true })
+      ro ? null : sbH("button", { type: "button", className: "rfiGrayPill rfiAddAnswer", onClick: addAnswer },
+        sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addResponse")),
+      sbH("div", { className: "rfiGrid one", style: { marginTop: 10 } },
+        field("remarks", { textarea: true, rows: 3 }))
     ),
 
     sec("secFiles"),
@@ -10838,20 +10989,11 @@ function RfiForm({
         : null
     ),
 
-    // ------------------------------------------------------------------ internal
-    sec("secInternal"),
+    // The follow-ups, the schedule warning and the history. None of it prints;
+    // it does not need a banner saying so on every screen.
     sbH(
       "div",
       { className: "rfiInternal" },
-
-      due.skipped && due.skipped.length
-        ? sbH(
-            "div",
-            { className: "rfiNotice calendar" },
-            sbH("b", null, L("calendarNotice")), " ", L("calendarNoticeText"), " ",
-            due.skipped.map((s) => `${sbFmtDate(s.date)} — ${lang === "he" ? s.name.he : s.name.en}`).join("; ")
-          )
-        : null,
 
       risk
         ? sbH(
@@ -10940,9 +11082,11 @@ function RfiForm({
     sbH(
       "div",
       { className: "rfiFormActions" },
-      ro ? null : sbH("button", { type: "button", className: "rfiGrayPill", onClick: issue },
-        sbH(SendIcon2, { size: 15, strokeWidth: 2 }), " ", L("issue")),
-      ro ? null : sbH("button", { type: "button", className: "rfiGrayPill", onClick: closeRfi },
+      ro ? null : sbH("button", {
+        type: "button", className: "rfiGrayPill", onClick: issue,
+        disabled: issued, title: issued ? L("alreadyIssued") : void 0
+      }, sbH(SendIcon2, { size: 15, strokeWidth: 2 }), " ", L("issue")),
+      ro || d.status === "closed" ? null : sbH("button", { type: "button", className: "rfiGrayPill", onClick: closeRfi },
         sbH(Check2, { size: 15, strokeWidth: 2 }), " ", L("close")),
       sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => printPdf) },
         sbH(Download2, { size: 15, strokeWidth: 2 }), " ", L("pdf"))
@@ -10975,6 +11119,7 @@ function rfiPrint(rec, printLang, brand, projectName) {
   const nl = (v) => esc(v).replace(/\n/g, "<br>");
   const d = rec || {};
   const due = rfiDue(d);
+  const answers = rfiResponses(d);
 
   const row = (label, value) =>
     `<tr><th>${esc(label)}</th><td>${esc(value || "—")}</td></tr>`;
@@ -10987,16 +11132,15 @@ function rfiPrint(rec, printLang, brand, projectName) {
 
   const shared = (d.files || []).filter((f) => f.share === "shared");
   const files = shared.length
-    ? `<div class="block">
-         <h3>${esc(L("secFiles"))}</h3>
-         <ul class="files">${shared.map((f) => `<li>${esc(f.name)}</li>`).join("")}</ul>
-       </div>`
+    ? `<ul class="files">${shared.map((f) => `<li>${esc(f.name)}</li>`).join("")}</ul>`
     : "";
 
   const html = `<!doctype html><html dir="${isRTL ? "rtl" : "ltr"}" lang="${lang}">
 <head><meta charset="utf-8"><title>RFI ${esc(d.no)}</title>
 <style>
-  @page { size: A4; margin: 14mm; }
+  /* Portrait. An RFI is a letter — a question, an answer and the pictures that
+     go with them — not a wide table. (2.9.26) */
+  @page { size: A4 portrait; margin: 14mm; }
   * { box-sizing: border-box; }
   body { font-family: Arial, "Segoe UI", sans-serif; color: #14181f; margin: 0; font-size: 12px; }
   .head { display: flex; align-items: center; justify-content: space-between; gap: 16px;
@@ -11014,14 +11158,17 @@ function rfiPrint(rec, printLang, brand, projectName) {
   table.kv td { padding: 4px 8px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
   .prose { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; min-height: 54px;
            line-height: 1.55; white-space: pre-wrap; }
-  .shots { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-  figure.shot { margin: 0; width: 47%; break-inside: avoid; }
+  .shots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 8px; }
+  figure.shot { margin: 0; break-inside: avoid; }
   figure.shot img { width: 100%; border: 1px solid #e5e7eb; border-radius: 6px; }
   figcaption { font-size: 10.5px; color: #6b7280; margin-top: 3px; }
   ul.files { margin: 4px 0 0; padding-inline-start: 18px; }
   .foot { margin-top: 18px; border-top: 1px solid #e5e7eb; padding-top: 8px;
           font-size: 10px; color: #9aa3af; display: flex; justify-content: space-between; }
   .block { break-inside: avoid; }
+  .answer { break-inside: avoid; margin-bottom: 10px; }
+  .answerNo { font-size: 10.5px; font-weight: 800; color: ${accent}; margin-bottom: 3px; }
+  .answerMeta { font-size: 10px; color: #6b7280; margin-top: 3px; text-align: ${isRTL ? "left" : "right"}; direction: ltr; }
 </style></head>
 <body>
   <div class="head">
@@ -11042,8 +11189,6 @@ function rfiPrint(rec, printLang, brand, projectName) {
     ${row(L("responsibility"), L(RFI_RESP_L[d.responsibility] || "respSup"))}
     ${row(L("priority"), L(RFI_PRIORITY_L[d.priority] || "prNormal"))}
     ${row(L("dueDate"), sbFmtDate(due.due))}
-    ${row(L("location"), d.location)}
-    ${row(L("references"), d.references)}
     ${row(L("drawingUpdate"), L(RFI_DRAWING_L[d.drawingUpdate] || "tbd"))}
     ${row(L("status"), L(RFI_STATUS_L[d.status] || "stOpen"))}
   </table>
@@ -11055,16 +11200,18 @@ function rfiPrint(rec, printLang, brand, projectName) {
 
   <div class="block">
     <h3>${esc(L("response"))}</h3>
-    <div class="prose">${nl(d.response)}</div>
-    <table class="kv" style="margin-top:6px">
-      ${row(L("respondedBy"), d.respondedBy)}
-      ${row(L("responseDate"), sbFmtDate(d.responseDate))}
-    </table>
+    ${answers.length
+      ? answers.map((a, i) => `
+          <div class="answer">
+            ${answers.length > 1 ? `<div class="answerNo">${esc(L("responseNo"))} ${i + 1}</div>` : ""}
+            <div class="prose">${nl(a.text)}</div>
+            <div class="answerMeta">${esc(a.by || "")}${a.at ? ` · ${esc(sbFmtDate(a.at))}` : ""}</div>
+          </div>`).join("")
+      : '<div class="prose"></div>'}
   </div>
 
   ${d.remarks ? `<div class="block"><h3>${esc(L("remarks"))}</h3><div class="prose">${nl(d.remarks)}</div></div>` : ""}
-  ${shots ? `<div class="block"><h3>${esc(L("secFiles"))}</h3><div class="shots">${shots}</div></div>` : ""}
-  ${files}
+  ${shots || files ? `<div class="block"><h3>${esc(L("secFiles"))}</h3>${shots ? `<div class="shots">${shots}</div>` : ""}${files}</div>` : ""}
 
   <div class="foot">
     <span>${esc(b.name || "A. Weiss")}</span>
@@ -11273,10 +11420,11 @@ function ChangeInstructionsCard({
   const [note, setNote] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
 
-  const chapters = ((boqData && boqData.chapters) || []).map((c) => ({
-    code: String(c.code || "").padStart(2, "0"),
-    name: lang === "he" ? c.he : c.en
-  }));
+  // Chapter 00 is the bill of quantities' own preamble, not a trade. Nothing is
+  // ever priced against it, so it is left out of this register. (2.9.26)
+  const chapters = ((boqData && boqData.chapters) || [])
+    .map((c) => ({ code: String(c.code || "").padStart(2, "0"), name: lang === "he" ? c.he : c.en }))
+    .filter((c) => c.code !== "00");
   const markup = Number(projectMarkup) || 0;
 
   const all = Object.keys(rows || {}).map((k) => rows[k]).filter((r) => r && r.id);
@@ -11419,7 +11567,10 @@ function ChangeInstructionsCard({
       ? sbH("p", { className: "rfiEmpty" }, L("noBoq"))
       : sbH("div", { className: "ciChapters" }, chapters.map((c) => {
           const list = byChapter[c.code] || [];
-          const isOpen = openCh[c.code] !== false;
+          // Closed unless she opened it. A register with twenty chapters that
+          // all start open is a wall of table, and the point of the grouping is
+          // to be able to see the shape of the project first. (2.9.26)
+          const isOpen = openCh[c.code] === true;
           return sbH(
             "div",
             { className: "ciChapter", key: c.code },
@@ -11533,7 +11684,6 @@ function ChangeInstructionsCard({
               : null
           );
         })),
-    sbH("p", { className: "rfiHint", style: { textAlign: "center" } }, L("ciNote")),
     sbH(
       "div",
       { className: "rfiExportRow" },
@@ -19310,7 +19460,14 @@ function ProjectDashboardApp() {
   const activeGrant = sessionGrants.find((g) => g.projectId === activeProject.id) || null;
   const isSubcontractorHere = activeGrant?.role === "subcontractor";
   const visibleCardKeys = isSubcontractorHere ? activeGrant.allowedCards || [] : null;
-  const canSeeCard = (key) => !visibleCardKeys || visibleCardKeys.includes(key);
+  // Change instructions are money before anybody has agreed to it. The client
+  // does not see the folder at all — not an empty one, not a locked one. The
+  // main contractor sees it and cannot change it; the system administrator is
+  // the only one who edits. (2.9.26)
+  const canSeeCard = (key) => {
+    if (key === "changeInstructions" && appRole !== "admin" && authRole !== "contractor") return false;
+    return !visibleCardKeys || visibleCardKeys.includes(key);
+  };
   // Named, and switched on — unless you are the system administrator, who has
   // to be able to see a project in order to switch it back on.
   const visibleProjects = (activeContractor.projects || []).filter(
@@ -20420,6 +20577,7 @@ function ProjectDashboardApp() {
         ciQueue: activeExtras.ciQueue || [],
         onChangeCiQueue: (next) => updateProjectExtras(activeProject.id, { ciQueue: next }),
         projectMarkup: activeProject.markupPct || 0,
+        appRole,
         // Where an RFI, an LLI row or a submittal is sent when somebody ticks
         // "add to change instructions". The change-instructions register reads
         // this list; nothing here decides that a change is owed. (2.9.26)
