@@ -244,6 +244,7 @@ var COPY = {
       wrongCredentials: "\u05D0\u05D9\u05DE\u05D9\u05D9\u05DC \u05D0\u05D5 \u05E1\u05D9\u05E1\u05DE\u05D4 \u05E9\u05D2\u05D5\u05D9\u05D9\u05DD",
       revokedLines: ["\u05DE\u05E9\u05EA\u05DE\u05E9 \u05D9\u05E7\u05E8", "\u05D4\u05D4\u05E8\u05E9\u05D0\u05D5\u05EA \u05D1\u05D5\u05D8\u05DC\u05D5", "\u05D9\u05E9 \u05DC\u05E4\u05E0\u05D5\u05EA \u05DC\u05DE\u05E0\u05D4\u05DC \u05D4\u05E4\u05E8\u05D5\u05D9\u05E7\u05D8"],
       notFoundLines: ["\u05DE\u05E9\u05EA\u05DE\u05E9 \u05DC\u05D0 \u05E7\u05D9\u05D9\u05DD", "\u05E0\u05D0 \u05DC\u05E4\u05E0\u05D5\u05EA \u05DC\u05DE\u05E0\u05D4\u05DC \u05D4\u05E4\u05E8\u05D5\u05D9\u05E7\u05D8"],
+      legacyLines: ["\u05D4\u05D7\u05E9\u05D1\u05D5\u05DF \u05D4\u05D6\u05D4 \u05E7\u05D9\u05D9\u05DD \u05E8\u05E7 \u05D1\u05D2\u05E8\u05E1\u05D4 \u05D4\u05D9\u05E9\u05E0\u05D4 \u05E9\u05DC \u05D4\u05DE\u05E2\u05E8\u05DB\u05EA", "\u05D9\u05E9 \u05DC\u05E4\u05E0\u05D5\u05EA \u05DC\u05DE\u05E0\u05D4\u05DC \u05D4\u05DE\u05E2\u05E8\u05DB\u05EA \u05DC\u05E7\u05D1\u05DC\u05EA \u05D4\u05D6\u05DE\u05E0\u05D4 \u05DE\u05D7\u05D3\u05E9"],
       setupTitle: "\u05D1\u05D7\u05D9\u05E8\u05EA \u05E1\u05D9\u05E1\u05DE\u05D4",
       setupIntro: "\u05D1\u05E8\u05D5\u05DB\u05D9\u05DD \u05D4\u05D1\u05D0\u05D9\u05DD! \u05D9\u05E9 \u05DC\u05D1\u05D7\u05D5\u05E8 \u05E1\u05D9\u05E1\u05DE\u05D4 \u05DC\u05DB\u05E0\u05D9\u05E1\u05D4 \u05DC\u05DE\u05E2\u05E8\u05DB\u05EA.",
       setupPassword: "\u05E1\u05D9\u05E1\u05DE\u05D4 \u05D7\u05D3\u05E9\u05D4",
@@ -364,6 +365,7 @@ var COPY = {
       wrongCredentials: "Incorrect email or password",
       revokedLines: ["Dear user", "Access has been revoked", "Please contact the project manager"],
       notFoundLines: ["User does not exist", "Please contact the project manager"],
+      legacyLines: ["This account only exists in the old system", "Please ask the system administrator for a new invitation"],
       setupTitle: "Choose a password",
       setupIntro: "Welcome! Please choose a password to access the system.",
       setupPassword: "New password",
@@ -440,7 +442,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 51";
+var APP_BUILD = "2.9.2026 · build 52";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -3920,7 +3922,9 @@ import React4 from "react";
 function LoginErrorMessage({ error, copy, className = "loginFieldError" }) {
   if (!error) return null;
   if (error === "wrong") return /* @__PURE__ */ React4.createElement("p", { className }, copy.wrongCredentials);
-  const lines = error === "revoked" ? copy.revokedLines : copy.notFoundLines;
+  const lines = error === "revoked" ? copy.revokedLines
+    : error === "legacy" ? copy.legacyLines
+    : copy.notFoundLines;
   return /* @__PURE__ */ React4.createElement("p", { className }, lines.map((line, i) => /* @__PURE__ */ React4.createElement("span", { key: i, className: "loginErrorLine" }, line)));
 }
 
@@ -16868,74 +16872,36 @@ function ProjectDashboardApp() {
       }
     } catch (e1) {
     }
-    const matches = findAccountMatches(email);
-    if (matches.length === 0) {
+    // Supabase said no. There used to be a second door here: a list of
+    // accounts kept inside system-state, each with its password in plain text,
+    // and a match there signed the person in with no Supabase session at all.
+    // Every signed-in user could read that list, so it was a way to sign in as
+    // anybody. The door is gone. What is left is a better error message.
+    // (2.9.26)
+    const legacy = findAccountMatches(email);
+    if (legacy.length === 0) {
       setLoginError("notFound");
       return;
     }
-    const usable = matches.filter((m) => m.account.active);
-    if (usable.length === 0) {
+    if (legacy.every((m) => !m.account.active)) {
       setLoginError("revoked");
       return;
     }
-    const awaitingPassword = usable.find((m) => m.account.status === "pending");
-    if (awaitingPassword) {
-      setLoginError(null);
-      setPendingSetup({
-        projectId: awaitingPassword.project.id,
-        kind: awaitingPassword.kind.key,
-        accountId: awaitingPassword.account.id,
-        email
-      });
-      setForm({ email: "", password: "" });
-      return;
-    }
-    const verified = usable.filter((m) => m.account.password === password);
-    if (verified.length === 0) {
-      setLoginError("wrong");
-      return;
-    }
-    setLoginError(null);
-    signInWith(verified, email);
+    console.log("[awdash] legacy-only account attempted sign-in");
+    setLoginError("legacy");
   };
-  const signInWith = (verified, email) => {
-    const grants = verified.map((m) => ({
-      projectId: m.project.id,
-      role: m.kind.role,
-      allowedCards: m.account.allowedCards || []
-    }));
-    const contractorGrants = grants.filter((g) => g.role === "contractor");
-    setIsAuthenticated(true);
-    setLoggedInEmail(email);
-    setSessionGrants(grants);
-    setForm({ email: "", password: "" });
-    if (contractorGrants.length > 0) {
-      setAuthRole("contractor");
-      setEditableProjectIds(contractorGrants.map((g) => g.projectId));
-      setView("projectPicker");
-    } else {
-      setAuthRole(grants[0].role);
-      setEditableProjectIds([]);
-      setSelectedProjectId(grants[0].projectId);
-      setView("dashboard");
-    }
-    closeMenu();
-  };
+// signInWith removed 2.9.26: it granted a session from the account list in
+// system-state, with no Supabase sign-in behind it.
+  // Nothing reaches this any more: the screen it belongs to is only opened by
+  // the legacy sign-in path, which is gone. Kept as a stop, not a door — if
+  // some route ever lands here again it must not write a password into
+  // system-state the way it used to. (2.9.26)
   const handlePasswordSetup = () => {
-    if (!pendingSetup) return;
-    if (setupPassword.length < 4 || setupPassword !== setupPasswordConfirm) {
-      setSetupError(true);
-      return;
-    }
-    setSetupError(false);
-    const { projectId, kind, accountId, email } = pendingSetup;
-    setAccountPassword(projectId, kind, accountId, setupPassword);
-    const grants = findAccountMatches(email).filter((m) => m.account.active);
     setPendingSetup(null);
     setSetupPassword("");
     setSetupPasswordConfirm("");
-    setLoginError(null);
-    if (grants.length > 0) signInWith(grants, email);
+    setSetupError(false);
+    setLoginError("legacy");
   };
   // ---------------------------------------------------------------
   // Browser Back / Forward support.
@@ -17310,16 +17276,8 @@ function ProjectDashboardApp() {
     }
     return matches;
   };
-  const setAccountPassword = (projectId, kind, accountId, password) => {
-    const kindDef = PROJECT_ACCESS_KINDS.find((k) => k.key === kind);
-    const project = activeContractor.projects.find((p) => p.id === projectId);
-    if (!kindDef || !project) return;
-    updateProject(activeContractor.id, projectId, {
-      [kindDef.field]: (project[kindDef.field] || []).map(
-        (a) => a.id === accountId ? { ...a, password, status: "active" } : a
-      )
-    });
-  };
+// setAccountPassword removed 2.9.26: it wrote a password in plain text into
+// system-state, where every signed-in user could read it.
   const handleContractorLogoFile = async (file) => {
     const result = await extractAccentColor(file);
     const reader = new FileReader();
@@ -18003,7 +17961,7 @@ function ProjectDashboardApp() {
     )), PROJECT_ACCESS_KINDS.map((kindDef) => {
       const accounts = p[kindDef.field] || [];
       if (accounts.length === 0) return null;
-      return /* @__PURE__ */ React15.createElement("div", { key: kindDef.key, className: "accessList" }, /* @__PURE__ */ React15.createElement("p", { className: "accessListLabel" }, t.systemAdmin.accessBtn[kindDef.key]), accounts.map((acc) => /* @__PURE__ */ React15.createElement(React15.Fragment, { key: acc.id }, /* @__PURE__ */ React15.createElement("div", { className: "accessRow" }, /* @__PURE__ */ React15.createElement("div", { className: "accessRowInfo" }, /* @__PURE__ */ React15.createElement("span", { className: "accessRowEmail numerals" }, acc.email), acc.status === "pending" ? /* @__PURE__ */ React15.createElement("span", { className: "accessBadge pending" }, t.systemAdmin.invitePending) : /* @__PURE__ */ React15.createElement("span", { className: "accessBadge numerals" }, t.systemAdmin.passwordLabel, ": ", acc.password)), /* @__PURE__ */ React15.createElement("div", { className: "accessRowActions" }, /* @__PURE__ */ React15.createElement(
+      return /* @__PURE__ */ React15.createElement("div", { key: kindDef.key, className: "accessList" }, /* @__PURE__ */ React15.createElement("p", { className: "accessListLabel" }, t.systemAdmin.accessBtn[kindDef.key]), accounts.map((acc) => /* @__PURE__ */ React15.createElement(React15.Fragment, { key: acc.id }, /* @__PURE__ */ React15.createElement("div", { className: "accessRow" }, /* @__PURE__ */ React15.createElement("div", { className: "accessRowInfo" }, /* @__PURE__ */ React15.createElement("span", { className: "accessRowEmail numerals" }, acc.email), acc.status === "pending" ? /* @__PURE__ */ React15.createElement("span", { className: "accessBadge pending" }, t.systemAdmin.invitePending) : /* @__PURE__ */ React15.createElement("span", { className: "accessBadge" }, isRTL ? "\u05e4\u05e2\u05d9\u05dc" : "Active")), /* @__PURE__ */ React15.createElement("div", { className: "accessRowActions" }, /* @__PURE__ */ React15.createElement(
         "button",
         {
           type: "button",
