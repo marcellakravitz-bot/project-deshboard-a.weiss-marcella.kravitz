@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "31.8.2026 \u00b7 build 44";
+var APP_BUILD = "31.8.2026 \u00b7 build 45";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2902,15 +2902,27 @@ var drawer = `
         .fieldError {
           margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: #ff6b5e;
         }
-        /* The answer to "forgot my password" was small grey text under a small
-           grey link, on white. Easy to miss entirely — so it is a box now
-           (31.8.26). */
-        .resetNote {
-          margin: 12px 0 0; padding: 10px 12px;
-          border: 1px solid var(--accent, #0F3460); border-radius: 10px;
-          background: var(--accent-soft, #eef2f8);
-          font-size: 12.5px; line-height: 1.6; font-weight: 600;
-          color: var(--accent-ink, #0F3460); text-align: center;
+        /* Resetting a password happens in a window of its own: it asks for the
+           address instead of borrowing whatever was typed above, and the
+           answer appears where the eye already is (31.8.26). */
+        .forgotPanel { max-width: 420px; width: 92%; background: #fff; }
+        .forgotInput {
+          width: 100%; margin-top: 14px; padding: 10px 12px;
+          border: 1px solid var(--line, #e3e6ea); border-radius: 9px;
+          font-size: 14px; font-family: inherit;
+        }
+        .forgotInput:focus { outline: none; border-color: var(--accent, #0F3460); }
+        .forgotNote {
+          margin: 12px 0 0; padding: 10px 12px; border-radius: 10px;
+          font-size: 12.5px; line-height: 1.6; font-weight: 600; text-align: center;
+          border: 1px solid var(--accent, #0F3460);
+          background: var(--accent-soft, #eef2f8); color: var(--accent-ink, #0F3460);
+        }
+        .forgotNote.good { border-color: #1a7f4b; background: #e3f3e6; color: #14603a; }
+        .forgotNote.warn { border-color: #c0392b; background: #fdf1ef; color: #a32c1e; }
+        .forgotBtns {
+          display: flex; gap: 10px; justify-content: center; align-items: center;
+          margin-top: 18px; flex-wrap: wrap;
         }
         .forgotLink {
           display: block; text-align: center; margin-top: 14px; font-size: 12.5px;
@@ -17056,51 +17068,49 @@ function ProjectDashboardApp() {
       }
     };
   }, []);
-  // "שכחתי סיסמה" — the button existed and did nothing at all: no handler.
+  // "שכחתי סיסמה" — its own window, not a line under the login form.
   //
-  // Who may reset is decided by the SERVER, not here, because this screen has
-  // no idea who is typing until they have signed in. The system administrator
-  // can reset her own password — she is the one person with nobody above her
-  // to ask. Everyone else is told to ask her, which is how an account is
-  // handed out on this project in the first place (31.8.26).
-  const [resetMsg, setResetMsg] = useState6(null);
-  const [resetBusy, setResetBusy] = useState6(false);
-  const sendPasswordReset = async () => {
-    // Logged out loud on purpose: when this did not appear to do anything there
-    // was no way to tell from the outside whether the press had even reached
-    // the handler (31.8.26).
-    const email = form.email.trim().toLowerCase();
-    console.log("[awdash] password reset pressed, email:", email || "(empty)");
-    if (!email) {
-      setResetMsg(isRTL ? "צריך למלא כתובת מייל קודם." : "Enter your e-mail address first.");
+  // Two reasons. The one she asked for: pressing it should ASK for the address
+  // rather than quietly read whatever happens to be in the box above. And the
+  // one the first attempt taught me: an inline button that carries its own
+  // busy flag can be left disabled forever if the call it made never comes
+  // back, and from the outside that looks exactly like a dead button. This one
+  // cannot hang — the request is raced against a timer (31.8.26).
+  const [forgotOpen, setForgotOpen] = useState6(false);
+  const [forgotEmail, setForgotEmail] = useState6("");
+  const [forgotState, setForgotState] = useState6(null);   // null | "sending" | "sent" | "askAdmin" | "error" | "noEmail"
+  const openForgot = () => {
+    console.log("[awdash] forgot-password window opened");
+    setForgotEmail(form.email.trim());
+    setForgotState(null);
+    setForgotOpen(true);
+  };
+  const closeForgot = () => {
+    setForgotOpen(false);
+    setForgotState(null);
+  };
+  const submitForgot = async () => {
+    const email = forgotEmail.trim().toLowerCase();
+    console.log("[awdash] password reset asked for:", email || "(empty)");
+    if (!email || email.indexOf("@") < 0) {
+      setForgotState("noEmail");
       return;
     }
-    setResetBusy(true);
-    setResetMsg(null);
+    setForgotState("sending");
     try {
       const redirectTo = window.location.origin + window.location.pathname;
-      const { data, error } = await supabase.functions.invoke("password-reset", {
-        body: { email, redirectTo }
-      });
-      console.log("[awdash] password reset answer:", data, error || "");
-      if (error) throw error;
-      setResetMsg(data && data.sent
-        ? (isRTL
-            ? "נשלח אליך קישור לבחירת סיסמה חדשה. כדאי לבדוק גם בתיקיית הספאם."
-            : "A link to choose a new password has been sent. Check the spam folder too.")
-        // The same sentence for a user who is not the administrator and for an
-        // address nobody has heard of — otherwise this box becomes a way to
-        // find out who has an account here.
-        : (isRTL
-            ? "לאיפוס סיסמה יש לפנות למנהל המערכת."
-            : "To reset your password, please contact the system administrator."));
+      // Whatever happens, this settles. A promise that never comes back is
+      // what left the old button stuck.
+      const answer = await Promise.race([
+        supabase.functions.invoke("password-reset", { body: { email, redirectTo } }),
+        new Promise((resolve) => setTimeout(() => resolve({ data: null, error: { message: "timeout" } }), 20000))
+      ]);
+      console.log("[awdash] password reset answer:", answer && answer.data, (answer && answer.error) || "");
+      if (answer && answer.error) throw answer.error;
+      setForgotState(answer && answer.data && answer.data.sent ? "sent" : "askAdmin");
     } catch (e) {
-      setResetMsg(isRTL
-        ? "לא הצלחנו לטפל בבקשה כרגע. אפשר לנסות שוב בעוד רגע."
-        : "The request could not be handled right now. Try again in a moment.");
-      console.warn("[awdash] password reset", e);
-    } finally {
-      setResetBusy(false);
+      console.warn("[awdash] password reset failed", e);
+      setForgotState("error");
     }
   };
   const submitNewPw = async () => {
@@ -17991,7 +18001,32 @@ function ProjectDashboardApp() {
       value: newProjectName,
       onChange: (e) => setNewProjectName(e.target.value)
     }
-  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz", /* @__PURE__ */ React15.createElement("span", { className: "buildStamp", dir: "ltr", title: "build" }, APP_BUILD)), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), document.body), scheduleChangeReport && /* @__PURE__ */ createPortal(React15.createElement(
+  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz", /* @__PURE__ */ React15.createElement("span", { className: "buildStamp", dir: "ltr", title: "build" }, APP_BUILD)), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), document.body), forgotOpen && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 700, padding: 20 }, onClick: closeForgot }, /* @__PURE__ */ React15.createElement("div", { className: "panel forgotPanel", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+    /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "איפוס סיסמה" : "Reset password"),
+    /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL
+      ? "יש להזין את כתובת המייל שאיתה נכנסים למערכת."
+      : "Enter the e-mail address you sign in with."),
+    /* @__PURE__ */ React15.createElement("input", {
+      type: "email", dir: "ltr", className: "forgotInput", autoFocus: true,
+      placeholder: "name@company.co.il",
+      value: forgotEmail,
+      onChange: (e) => { setForgotEmail(e.target.value); if (forgotState && forgotState !== "sending") setForgotState(null); },
+      onKeyDown: (e) => { if (e.key === "Enter" && forgotState !== "sending") submitForgot(); }
+    }),
+    forgotState === "noEmail" ? /* @__PURE__ */ React15.createElement("p", { className: "forgotNote warn" }, isRTL ? "צריך למלא כתובת מייל תקינה." : "Enter a valid e-mail address.") : null,
+    forgotState === "sent" ? /* @__PURE__ */ React15.createElement("p", { className: "forgotNote good" }, isRTL
+      ? "נשלח אליך קישור לבחירת סיסמה חדשה. כדאי לבדוק גם בתיקיית הספאם."
+      : "A link to choose a new password has been sent. Check the spam folder too.") : null,
+    forgotState === "askAdmin" ? /* @__PURE__ */ React15.createElement("p", { className: "forgotNote" }, isRTL
+      ? "לאיפוס סיסמה יש לפנות למנהל המערכת."
+      : "To reset your password, please contact the system administrator.") : null,
+    forgotState === "error" ? /* @__PURE__ */ React15.createElement("p", { className: "forgotNote warn" }, isRTL
+      ? "לא הצלחנו לטפל בבקשה כרגע. אפשר לנסות שוב בעוד רגע."
+      : "The request could not be handled right now. Try again in a moment.") : null,
+    /* @__PURE__ */ React15.createElement("div", { className: "forgotBtns" },
+      /* @__PURE__ */ React15.createElement("button", { type: "button", className: "sbFormBtn", disabled: forgotState === "sending", onClick: submitForgot },
+        forgotState === "sending" ? (isRTL ? "שולח\u2026" : "Sending\u2026") : (isRTL ? "שליחה" : "Send")),
+      /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: closeForgot }, isRTL ? "סגירה" : "Close")))), document.body), scheduleChangeReport && /* @__PURE__ */ createPortal(React15.createElement(
       "div",
       { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 640, padding: 20 }, onClick: () => setScheduleChangeReport(null) },
       /* @__PURE__ */ React15.createElement(
@@ -18084,7 +18119,7 @@ function ProjectDashboardApp() {
         if (e.key === "Enter") handleLoginSubmit(e);
       }
     }
-  ))), menuView === "login-unified" && /* @__PURE__ */ React15.createElement(LoginErrorMessage, { error: loginError, copy: t.login, className: "fieldError" }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "primaryBtn", onClick: handleLoginSubmit }, t.login.submit), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "forgotLink", disabled: resetBusy, onClick: sendPasswordReset }, resetBusy ? (isRTL ? "שולח\u2026" : "Sending\u2026") : t.login.forgot), resetMsg && /* @__PURE__ */ React15.createElement("p", { className: "resetNote", dir: "auto" }, resetMsg))))), document.body)))));
+  ))), menuView === "login-unified" && /* @__PURE__ */ React15.createElement(LoginErrorMessage, { error: loginError, copy: t.login, className: "fieldError" }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "primaryBtn", onClick: handleLoginSubmit }, t.login.submit), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "forgotLink", onClick: openForgot }, t.login.forgot))))), document.body)))));
 }
 export {
   ProjectDashboardApp as default
