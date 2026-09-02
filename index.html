@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 49";
+var APP_BUILD = "2.9.2026 · build 50";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -16754,6 +16754,16 @@ function ProjectDashboardApp() {
               console.error("[awdash] profiles select failed", e3);
             }
           }
+        }
+        // "admin" is accepted ONLY from app_metadata, which nothing but the
+        // service role can write. my_role and profiles are ordinary tables the
+        // browser can reach, so a user who managed to write "admin" into their
+        // own profile row would otherwise be handed the administrator screens.
+        // The data behind them is closed by RLS either way, but an admin UI
+        // that opens for the wrong person is a bug, not a subtlety. (2.9.26)
+        if (role === "admin" && metaRole !== "admin") {
+          console.warn("[awdash] admin claimed outside app_metadata - ignored");
+          role = "client";
         }
         console.log("[awdash] detected role:", role);
         const projs = activeContractor.projects || [];
