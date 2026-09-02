@@ -440,7 +440,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 48";
+var APP_BUILD = "2.9.2026 · build 49";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -15024,7 +15024,19 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
         return;
       }
       setUsers(data.users || []);
-      setAccess(data.access || []);
+      // Read the access rows straight from the table rather than trusting the
+      // invite function to hand them back. It is the same data, one hop closer,
+      // and it cannot go stale behind a deployed version of that function.
+      // (2.9.26 — the ticks were being written and then never shown.)
+      try {
+        const acc = await supabase.from("project_access").select("user_id, project_id, role, email");
+        if (acc.error) throw new Error(acc.error.message);
+        console.log("[awdash] project access rows:", (acc.data || []).length);
+        setAccess(acc.data || []);
+      } catch (e4) {
+        console.warn("[awdash] reading project_access directly failed, falling back", e4);
+        setAccess(data.access || []);
+      }
       try {
         const { data: accs } = await supabase.from("disclaimer_acceptances").select("email, version, lang, status, accepted_at").order("accepted_at", { ascending: false });
         const map = {};
@@ -15083,8 +15095,10 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
       // already had is still there — an all-delete-then-insert would have
       // wiped it and then failed to put it back.
       if (add.length) {
-        const ins = await supabase.from("project_access").insert(add.map((pid) => ({ user_id: u.id, project_id: pid, role: u.role || "client", email: u.email })));
+        const ins = await supabase.from("project_access").insert(add.map((pid) => ({ user_id: u.id, project_id: pid, role: u.role || "client", email: u.email }))).select();
         if (ins.error) throw new Error(ins.error.message);
+        console.log("[awdash] project access added:", (ins.data || []).length, "of", add.length);
+        if (!ins.data || ins.data.length !== add.length) throw new Error(isRTL ? "\u05d4\u05e9\u05d5\u05e8\u05d5\u05ea \u05dc\u05d0 \u05e0\u05db\u05ea\u05d1\u05d5" : "the rows were not written");
       }
       if (drop.length) {
         const del = await supabase.from("project_access").delete().eq("user_id", u.id).in("project_id", drop);
