@@ -475,7 +475,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "2.9.2026 · build 58";
+var APP_BUILD = "2.9.2026 · build 59";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -558,7 +558,13 @@ var base = `
 var header = `
         /* ---------- Header ---------- */
         .topbar {
-          position: relative;
+          /* Pinned to the top of the window, not to the top of the document.
+             The bar carries the logo, the language switch and the only way into
+             the menu — if a screen ever grows tall enough to scroll, none of
+             those may scroll away with it. (2.9.26) */
+          position: sticky;
+          top: 0;
+          z-index: 40;
           display: flex;
           align-items: center;
           justify-content: space-between;
