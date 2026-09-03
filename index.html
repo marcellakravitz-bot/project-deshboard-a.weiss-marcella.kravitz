@@ -475,7 +475,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "3.9.2026 · build 60";
+var APP_BUILD = "3.9.2026 · build 61";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1794,6 +1794,33 @@ var pdfViewer = `
         .lliTable .cPo { width: 100px; }
         .lliTable .cPoD { width: 112px; }
         .lliTable .cEta { width: 112px; }
+
+        /* The supplier's own delivery date, and the warning when it lands after
+           the programme needed the material on site. (3.9.26) */
+        .lliEtaCell { display: flex; align-items: center; gap: 5px; }
+        .lliEtaCell .lliIn { flex: 1; min-width: 0; }
+        .lliClashBtn {
+          border: none; background: none; padding: 0; cursor: pointer;
+          color: #c0392b; display: inline-flex; align-items: center; flex-shrink: 0;
+        }
+        .lliClashBtn:hover { color: #8e2119; }
+        .lliClashRow td { background: #fdf2f3; padding: 0; }
+        .lliClashNote {
+          display: flex; align-items: flex-start; gap: 9px;
+          padding: 9px 14px; color: #8e2119; font-size: 12.5px; line-height: 1.55;
+          border-top: 1px solid #f0c4c9; border-bottom: 1px solid #f0c4c9;
+        }
+        .lliClashNote > svg { flex-shrink: 0; margin-top: 1px; }
+        .lliClashText { flex: 1; }
+        .lliClashText ul { margin: 5px 0 0; padding-inline-start: 18px; }
+        .lliClashText li { margin: 2px 0; }
+        .lliClashAct { font-weight: 700; }
+        .lliClashWhen { color: #a15c00; margin-inline-start: 8px; font-weight: 600; }
+        .lliClashClose {
+          border: none; background: none; color: #8e2119; font-size: 17px;
+          line-height: 1; cursor: pointer; padding: 0 2px; flex-shrink: 0;
+        }
+
         .lliTable .cSt { width: 106px; }
         .lliTable .cAct { width: 40px; }
         .lliCatSel { font-size: 11px; font-weight: 700; }
@@ -5842,7 +5869,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -8249,7 +8276,10 @@ function GripIcon({ size }) {
 function lliBlankRow() {
   return {
     typeMark: "", desc: "", image: null, qtyActual: "", ordered: false,
-    po: "", eta: "", status: "pending", hidden: false, byRoom: false,
+    // Two dates, not one: what the programme needs, and what the supplier has
+    // actually committed to. The second is the one that tells you whether the
+    // job is in trouble, and it only means anything next to the first. (3.9.26)
+    po: "", eta: "", etaActual: "", status: "pending", hidden: false, byRoom: false,
     // 28.8.26 — her instruction document. The supplier is the company that will
     // actually deliver, and it is never the manufacturer read out of the BOQ:
     // that one belongs in the description. So this field starts empty and stays
@@ -8260,6 +8290,69 @@ function lliBlankRow() {
     // what is plainly written in it.
     poFile: null, poDate: "", poText: "", category: null
   };
+}
+// -----------------------------------------------------------------------------
+//  Does the supplier's own delivery date land after the programme needed it?
+//
+//  The match between a row on this board and an activity in the schedule is by
+//  name, because that is the only thing the two have in common: the schedule
+//  comes out of MS Project and knows nothing about the bill of quantities.
+//  A type mark ("OD1", "CW05") is the strong signal — it is written on the
+//  drawing and it is written in the programme. Failing that, the description's
+//  own words are used, and two of them have to land, or one long one.
+//
+//  The check is deliberately quiet: no match, no warning. A wrong warning on a
+//  board this size is worse than none, because it teaches you to ignore the
+//  triangle. (3.9.26)
+// -----------------------------------------------------------------------------
+var LLI_MATCH_STOP = [
+  "של", "עם", "לפי", "כולל", "עבור", "מטר", "יחידה", "סוג", "דגם", "מידה",
+  "and", "the", "for", "with", "type", "unit", "size"
+];
+function lliRxEscape(s) {
+  return String(s || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+function lliTokens(s) {
+  // Letters and digits in either alphabet; everything else is a separator.
+  return String(s || "")
+    .replace(/[^0-9A-Za-z֐-׿]+/g, " ")
+    .split(" ")
+    .map((w) => w.trim())
+    .filter((w) => w.length >= 3 && LLI_MATCH_STOP.indexOf(w.toLowerCase()) < 0);
+}
+function lliMatchesActivity(row, taskName) {
+  const name = String(taskName || "");
+  if (!name) return false;
+  const mark = String((row && row.typeMark) || "").trim();
+  if (mark.length >= 2) {
+    const edge = "[^0-9A-Za-z\u0590-\u05FF]";
+    const rx = new RegExp("(^|" + edge + ")" + lliRxEscape(mark) + "(" + edge + "|$)", "i");
+    if (rx.test(name)) return true;
+  }
+  const words = lliTokens((row && row.desc) || "");
+  if (!words.length) return false;
+  const lc = name.toLowerCase();
+  let hits = 0;
+  let longHit = false;
+  words.forEach((w) => {
+    if (lc.indexOf(w.toLowerCase()) >= 0) {
+      hits += 1;
+      if (w.length >= 5) longHit = true;
+    }
+  });
+  return hits >= 2 || longHit;
+}
+function lliScheduleClash(row, scheduleData) {
+  const actual = row && row.etaActual;
+  if (!actual) return null;
+  const tasks = (scheduleData && scheduleData.tasks) || [];
+  const late = tasks
+    .filter((t) => t && t.name && t.start && lliMatchesActivity(row, t.name))
+    // The activity was due to start before the material is going to arrive.
+    .filter((t) => String(t.start) < String(actual))
+    .sort((a, b) => String(a.start).localeCompare(String(b.start)));
+  if (!late.length) return null;
+  return { date: actual, activities: late.map((t) => ({ name: t.name, start: t.start })) };
 }
 function lliRowOf(rows, code) {
   return { ...lliBlankRow(), ...(rows || {})[code] || {} };
@@ -8307,7 +8400,14 @@ var LLI_L = {
   ordered: { en: "Ordered", he: "הוזמן" },
   notOrdered: { en: "Not ordered", he: "לא הוזמן" },
   po: { en: "Purchase order", he: "הזמנת רכש" },
-  eta: { en: "Delivery date", he: "מועד אספקה" },
+  eta: { en: "Required delivery", he: "מועד אספקה נדרש" },
+  etaActual: { en: "Actual delivery (supplier)", he: "מועד אספקה בפועל (ספק)" },
+  clashTitle: { en: "Later than the programme", he: "מאוחר מלוח הזמנים" },
+  clashNote: {
+    en: "The actual delivery date falls after the dates set for these activities in the project schedule:",
+    he: "מועד האספקה בפועל הוא לאחר הגדרת המועדים בפעילויות הבאות בלוח הזמנים של הפרויקט:"
+  },
+  clashClose: { en: "Close", he: "סגירה" },
   status: { en: "Supply status", he: "סטטוס סופק" },
   hide: { en: "Not for ordering", he: "לא להזמנה" },
   showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
@@ -8361,7 +8461,7 @@ var LLI_L = {
   nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." }
 };
 
-function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog }) {
+function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -8374,6 +8474,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [drag, setDrag] = useState6(null);
   // The picture cell she last clicked. Ctrl+V lands there.
   const [pasteAt, setPasteAt] = useState6(null);
+  // Which row has its schedule warning open. One at a time: the note is a
+  // sentence, not a column, and two of them at once is a mess.
+  const [clashAt, setClashAt] = useState6(null);
   // Searching the board by the mark she gave a row.
   // Ctrl-F, in the board. She types a word and the table walks her to every row
   // it appears in, one at a time, marking the cell it was found in — the way a
@@ -8708,16 +8811,16 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const head = [
       L("section"), L("category"), L("typeMark"), L("desc"), L("supplier"),
       L("qtyBoq"), L("unit"), L("qtySurveyor"), L("ordered"), L("poNo"),
-      L("poDate"), L("poFile"), L("eta"), L("status"), L("longLead")
+      L("poDate"), L("poFile"), L("eta"), L("etaActual"), L("status"), L("longLead")
     ];
-    const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 9];
+    const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 12, 9];
     // What each column IS, so the workbook stores it as that. The item number
     // is text on purpose: "08.11.0010" is a name, and Excel would eat the
     // leading zero and the second dot (30.8.26).
     const types = [
       "text", "text", "text", "text", "text",
       "number", "text", "number", "text", "text",
-      "date", "text", "date", "text", "text"
+      "date", "text", "date", "date", "text", "text"
     ];
     const cat = (k) => {
       const c = boardCategoryOf(k);
@@ -8746,6 +8849,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
           v.ordered && v.poDate ? sbFmtDate(v.poDate) : "",
           v.ordered && v.poFile ? v.poFile.name || "" : "",
           v.ordered && v.eta ? sbFmtDate(v.eta) : "",
+          v.ordered && v.etaActual ? sbFmtDate(v.etaActual) : "",
           v.ordered ? lliStatusLabel(v.status, lang) : "",
           r.longLead ? L("longLead") : ""
         ]);
@@ -8782,7 +8886,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // The columns a client's copy carries, by name. Everything that says WHAT the
   // item is and WHEN it lands; nothing about who it was bought from or on what
   // order — that half of the board is hers (29.8.26).
-  const clientKeys = ["section", "category", "typeMark", "desc", "image", "eta", "status", "longLead"];
+  const clientKeys = ["section", "category", "typeMark", "desc", "image", "eta", "etaActual", "status", "longLead"];
   const onPdf = (printLang, audience) => {
     const g = exportGrid(audience);
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
@@ -9008,6 +9112,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                 sbH("th", { className: "cPo" }, L("poNo")),
                 sbH("th", { className: "cPoD" }, L("poDate")),
                 sbH("th", { className: "cEta" }, L("eta")),
+                sbH("th", { className: "cEta" }, L("etaActual")),
                 sbH("th", { className: "cSt" }, L("status")),
                 canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
                 canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null
@@ -9017,13 +9122,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 18 : 15 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 19 : 16 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
                   const dragging = drag && drag.code === r.code;
                   const lineAbove = drag && drag.over === r.code && drag.code !== r.code;
-                  return sbH(
+                  const rowEl = sbH(
                     "tr",
                     {
                       key: r.code,
@@ -9314,6 +9419,30 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                     ),
                     sbH(
                       "td",
+                      { className: "cEta" },
+                      v.ordered
+                        ? sbH(
+                            "div",
+                            { className: "lliEtaCell" },
+                            sbH("input", {
+                              type: "date", className: "lliIn", dir: "ltr", value: v.etaActual, readOnly: !canEdit,
+                              onChange: (e) => patch(r.code, { etaActual: e.target.value })
+                            }),
+                            (() => {
+                              const clash = lliScheduleClash(v, scheduleData);
+                              if (!clash) return null;
+                              return sbH("button", {
+                                type: "button",
+                                className: "lliClashBtn",
+                                title: L("clashTitle"),
+                                onClick: () => setClashAt(clashAt === r.code ? null : r.code)
+                              }, sbH(AlertTriangle, { size: 15, strokeWidth: 2.4 }));
+                            })()
+                          )
+                        : sbH("span", { className: "lliDash" }, "—")
+                    ),
+                    sbH(
+                      "td",
                       { className: "cSt" },
                       v.ordered
                         ? sbH(
@@ -9379,6 +9508,42 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
                           })
                         )
                       : null
+                  );
+                  // The warning itself, in words, on its own line under the row.
+                  // A tooltip would have hidden it the moment she moved the
+                  // mouse to read the activity names. (3.9.26)
+                  const clashOpen = clashAt === r.code ? lliScheduleClash(v, scheduleData) : null;
+                  if (!clashOpen) return rowEl;
+                  return sbH(
+                    React15.Fragment,
+                    { key: `${r.code}-w` },
+                    rowEl,
+                    sbH(
+                      "tr",
+                      { className: "lliClashRow" },
+                      sbH(
+                        "td",
+                        { colSpan: canEdit ? 19 : 16 },
+                        sbH(
+                          "div",
+                          { className: "lliClashNote" },
+                          sbH(AlertTriangle, { size: 15, strokeWidth: 2.4 }),
+                          sbH(
+                            "div",
+                            { className: "lliClashText" },
+                            sbH("b", null, L("clashNote")),
+                            sbH("ul", null, clashOpen.activities.map((a, ai) =>
+                              sbH("li", { key: ai },
+                                sbH("span", { className: "lliClashAct" }, a.name),
+                                sbH("span", { className: "lliClashWhen", dir: "ltr" }, sbFmtDate(a.start)))))
+                          ),
+                          sbH("button", {
+                            type: "button", className: "lliClashClose",
+                            title: L("clashClose"), onClick: () => setClashAt(null)
+                          }, "\u00D7")
+                        )
+                      )
+                    )
                   );
                 }),
                 // Dropping below the last row of a group.
