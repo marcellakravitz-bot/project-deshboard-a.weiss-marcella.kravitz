@@ -475,7 +475,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "3.9.2026 · build 61";
+var APP_BUILD = "3.9.2026 · build 62";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -4139,6 +4139,26 @@ function parseMSProjectXML(xmlText) {
   }).filter((t) => t.name && t.start && t.finish);
   return tasks;
 }
+// The project row is not an activity, and it must not survive into the board.
+// MS Project writes it either at outline level 0 or, in plenty of exports, as
+// the first row at level 1. The old rule dropped level 0 AND the first level-1
+// row, whatever it was — so a file that already carried a level-0 project row
+// silently lost its first real activity. It never showed as an error; the
+// activity was simply not there. The rule now: level 0 is always the project
+// row, and a leading level-1 row is only the project row when it spans the
+// whole programme, which an activity does not. (3.9.26)
+function dropProjectRow(tasks) {
+  const rest = tasks.filter((t) => t.level !== 0);
+  if (rest.length !== tasks.length) return rest;
+  if (rest.length < 2) return rest;
+  const head = rest[0];
+  if (head.level !== 1) return rest;
+  const others = rest.slice(1);
+  const spansAll = others.every(
+    (t) => String(t.start) >= String(head.start) && String(t.finish) <= String(head.finish)
+  );
+  return spansAll ? others : rest;
+}
 async function parseScheduleFile(file) {
   const ext = file.name.split(".").pop().toLowerCase();
   try {
@@ -4157,16 +4177,7 @@ async function parseScheduleFile(file) {
     if (ext === "xml") {
       const text = await file.text();
       const parsedXml = parseMSProjectXML(text);
-      let projectRowDropped = false;
-      const xmlTasks = parsedXml.filter((t) => {
-        if (t.level === 0) return false;
-        if (t.level === 1 && !projectRowDropped) {
-          projectRowDropped = true;
-          return false;
-        }
-        return true;
-      });
-      return { tasks: xmlTasks, parseNote: null };
+      return { tasks: dropProjectRow(parsedXml), parseNote: null };
     }
     if (ext === "pdf") {
       const dataUrl = await fileToDataUrl(file);
@@ -5921,7 +5932,7 @@ function CardView({
         setXmlHelpOpen(false);
       }
     }
-  ))), document.body)));
+  )))), document.body));
 }
 
 // src/contacts/model.js
@@ -19324,13 +19335,24 @@ function ProjectDashboardApp() {
   useEffect5(() => {
     if (!isAuthenticated) return;
     (async () => {
-      try {
-        const value = await loadAppState("user-signatures");
-        rememberLoaded("user-signatures", value);
-        if (value) setUserSignatures(value);
-        setSignaturesLoaded(true);
-      } catch (e) {
-        console.error("[awdash] load user-signatures failed \u2014 auto-save stays OFF", e);
+      // A 401 here on first paint is a token that has not landed yet, and the
+      // cost of losing the race is silent: signaturesLoaded stays false and the
+      // signature never saves again for the whole session. One retry. (3.9.26)
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const value = await loadAppState("user-signatures");
+          rememberLoaded("user-signatures", value);
+          if (value) setUserSignatures(value);
+          setSignaturesLoaded(true);
+          return;
+        } catch (e) {
+          if (attempt === 0) {
+            console.warn("[awdash] load user-signatures failed, retrying", e);
+            await new Promise((r) => setTimeout(r, 1500));
+            continue;
+          }
+          console.error("[awdash] load user-signatures failed \u2014 auto-save stays OFF", e);
+        }
       }
     })();
   }, [isAuthenticated]);
