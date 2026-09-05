@@ -222,7 +222,8 @@ import {
   Users,
   Camera,
   Ruler,
-  Receipt
+  Receipt,
+  Crown
 } from "lucide-react";
 var COPY = {
   he: {
@@ -245,6 +246,7 @@ var COPY = {
     worksStartValue: "01.03.2025",
     handoverValue: "30.11.2027",
     cards: [
+      { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "\u05DE\u05E8\u05DB\u05D6 \u05D4\u05D1\u05E7\u05E8\u05D4 \u05D4\u05D0\u05D9\u05E9\u05D9", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
@@ -367,6 +369,7 @@ var COPY = {
     worksStartValue: "01.03.2025",
     handoverValue: "30.11.2027",
     cards: [
+      { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "Personal Control Center", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
@@ -475,7 +478,7 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "3.9.2026 · build 62";
+var APP_BUILD = "5.9.2026 · build 63";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -3562,6 +3565,123 @@ var admin = `
       
 `;
 
+// src/styles/marcella.js
+// The Marcella board. Its own file because it is the one screen that is not a
+// register of documents: it is a working list, and it is read at a glance.
+var marcella = `
+        .mkBody { flex-direction: column; gap: 14px; }
+        .mkHead {
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; flex-wrap: wrap;
+        }
+        .mkTitle { margin: 0; font-size: 19px; font-weight: 800; color: #103460; }
+        .mkSub { margin: 2px 0 0; font-size: 12px; color: var(--steel); font-weight: 600; }
+
+        /* ---- the seven tiles ---- */
+        .mkTiles {
+          display: grid; gap: 8px;
+          grid-template-columns: repeat(auto-fit, minmax(118px, 1fr));
+        }
+        .mkTile {
+          border: 1px solid var(--line); border-radius: 10px; background: #fff;
+          padding: 9px 11px; cursor: pointer; text-align: start;
+          font-family: inherit; display: flex; flex-direction: column; gap: 2px;
+          transition: border-color .12s, box-shadow .12s;
+        }
+        .mkTile:hover { border-color: var(--accent); }
+        .mkTile.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(26,85,158,.13); }
+        .mkTileNum { font-size: 21px; font-weight: 800; line-height: 1; color: #103460; }
+        .mkTileLbl { font-size: 11px; font-weight: 700; color: var(--steel); }
+        .mkTile.warn .mkTileNum { color: #c0392b; }
+        .mkTile.crit .mkTileNum { color: #a01c2c; }
+        .mkTile.done .mkTileNum { color: #1a7f4b; }
+
+        /* ---- filters ---- */
+        .mkFilters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        .mkIn {
+          border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
+          font-size: 13px; font-family: inherit; background: #fff; color: #16324f;
+          min-width: 0;
+        }
+        .mkIn:focus { outline: none; border-color: var(--accent); }
+        .mkIn[readonly] { background: #fafbfc; }
+        .mkSearch { flex: 1 1 200px; }
+        .mkClear {
+          border: none; background: none; color: var(--steel); font-weight: 700;
+          font-size: 12px; cursor: pointer; font-family: inherit; text-decoration: underline dotted;
+        }
+
+        /* ---- the list ---- */
+        .mkList { display: flex; flex-direction: column; gap: 6px; }
+        .mkRow {
+          display: grid; gap: 8px; align-items: center;
+          grid-template-columns: 26px minmax(160px, 2.2fr) 1fr 96px 96px 1fr 30px;
+          border: 1px solid var(--line); border-left: 4px solid var(--line);
+          border-radius: 9px; background: #fff; padding: 8px 10px;
+        }
+        [dir="rtl"] .mkRow { border-left: 1px solid var(--line); border-right: 4px solid var(--line); }
+        .mkRow.overdue { border-inline-start-color: #c0392b; background: #fff7f6; }
+        .mkRow.crit { border-inline-start-color: #a01c2c; }
+        .mkRow.doneRow { opacity: .58; }
+        .mkRowItem {
+          font-weight: 700; font-size: 13px; color: #16324f; text-align: start;
+          background: none; border: none; padding: 0; cursor: pointer; font-family: inherit;
+        }
+        .mkRowItem:hover { text-decoration: underline; }
+        .mkRowSub { display: block; font-weight: 600; font-size: 11px; color: var(--steel); }
+        .mkChip {
+          display: inline-block; border-radius: 999px; padding: 2px 9px;
+          font-size: 11px; font-weight: 800; white-space: nowrap;
+        }
+        .mkDate { font-size: 12px; font-weight: 700; color: #16324f; }
+        .mkDate.late { color: #c0392b; }
+        .mkDate .mkDateLbl { display: block; font-size: 10px; color: var(--mist); font-weight: 700; }
+        .mkIconBtn {
+          border: 1px solid var(--line); background: #fff; border-radius: 7px;
+          width: 26px; height: 26px; cursor: pointer; color: var(--steel);
+          display: inline-flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .mkIconBtn:hover { border-color: var(--accent); color: var(--accent); }
+        .mkIconBtn.danger:hover { border-color: #c0392b; color: #c0392b; }
+        .mkEmpty {
+          border: 1px dashed var(--line); border-radius: 10px; padding: 22px;
+          text-align: center; color: var(--steel); font-weight: 600; font-size: 13px;
+        }
+
+        /* ---- remind me later ---- */
+        .mkRemind {
+          display: flex; gap: 6px; flex-wrap: wrap; align-items: center;
+          border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; background: #fbfcfd;
+        }
+        .mkPill {
+          border: 1px solid var(--line); background: #fff; border-radius: 999px;
+          padding: 4px 11px; font-size: 12px; font-weight: 700; cursor: pointer;
+          font-family: inherit; color: #16324f;
+        }
+        .mkPill:hover { border-color: var(--accent); color: var(--accent); }
+
+        /* ---- the form ---- */
+        .mkForm { display: flex; flex-direction: column; gap: 12px; }
+        .mkGrid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+        .mkField { display: flex; flex-direction: column; gap: 4px; }
+        .mkField.wide { grid-column: 1 / -1; }
+        .mkFieldLabel { font-size: 11px; font-weight: 800; color: var(--steel); }
+        .mkArea { resize: vertical; line-height: 1.5; }
+        .mkSubHead {
+          font-size: 12px; font-weight: 800; color: #103460; letter-spacing: .02em;
+          border-top: 1px solid var(--line); padding-top: 10px; margin-top: 2px;
+        }
+        .mkBack {
+          display: inline-flex; align-items: center; gap: 6px; background: none;
+          border: none; color: var(--steel); font-weight: 700; font-size: 13px;
+          cursor: pointer; font-family: inherit; padding: 0;
+        }
+        @media (max-width: 900px) {
+          .mkRow { grid-template-columns: 26px 1fr 30px; }
+          .mkRow > .mkHideSm { display: none; }
+        }
+`;
+
 // src/styles/index.js
 var styles = [
   base,
@@ -3573,7 +3693,8 @@ var styles = [
   pdfViewer,
   gantt,
   drawer,
-  admin
+  admin,
+  marcella
 ].join("\n");
 
 // src/lib/format.js
@@ -5790,6 +5911,8 @@ function CardView({
   lliRows,
   rfiRows,
   onChangeRfiRows,
+  marcellaRows,
+  onChangeMarcellaRows,
   onAddToChangeInstructions,
   ciRows,
   onChangeCiRows,
@@ -5830,16 +5953,20 @@ function CardView({
   const isSd = cardKey === "sd";
   const isRfi = cardKey === "rfi";
   const isCi = cardKey === "changeInstructions";
+  const isMarcella = cardKey === "marcella";
   // Only the system administrator writes here. A main contractor who is
   // allowed to edit everything else on the project still reads this one.
   const ciCanEdit = canEdit && appRole === "admin";
+  // Same rule for Marcella: being switched on lets you read the board, not
+  // rewrite somebody else's follow-ups. The database says the same. (5.9.26)
+  const marcellaCanEdit = canEdit && appRole === "admin";
   const showRooms = cardKey === "rooms";
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
-  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || showRooms ? "wide" : ""}` }, showRooms && /* @__PURE__ */ React14.createElement(
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || showRooms ? "wide" : ""}` }, showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
@@ -5869,7 +5996,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -5880,7 +6007,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -12537,6 +12664,644 @@ function roomsFromSheet(aoa) {
   return { rows, marks };
 }
 
+// src/cards/MarcellaCard.jsx
+// -----------------------------------------------------------------------------
+// Marcella 👑 — the personal control centre.
+//
+// This is deliberately NOT another register. LLI, submittals, shop drawings and
+// RFI each own their records; this board owns the *actions* around them, and
+// the ones that never earn a record of their own — a phone call to chase a
+// consultant, a decision from a meeting, a piece of information somebody owes.
+// So a task never copies a record: it links to it (relModule + relRecord).
+//
+// The board answers three questions and nothing else: what needs dealing with
+// now, who am I waiting for, and what turns into a problem if it is left.
+// Everything on the screen is in service of those three.
+// -----------------------------------------------------------------------------
+import { Plus as PlusM, Trash2 as TrashM, Bell as BellM, ArrowLeft as ArrowLeftM, ArrowRight as ArrowRightM } from "lucide-react";
+
+var MK_CATEGORIES = [
+  { key: "today", en: "Today & Follow Up", he: "היום ומעקב" },
+  { key: "waiting", en: "Waiting for Others", he: "ממתינה לאחרים" },
+  { key: "approvals", en: "Approvals", he: "אישורים" },
+  { key: "procurement", en: "Procurement & Delivery", he: "רכש ואספקה" },
+  { key: "coordination", en: "Technical Coordination", he: "תיאום טכני" },
+  { key: "changes", en: "Design Changes", he: "שינויי תכנון" },
+  { key: "meetings", en: "Meetings & Decisions", he: "פגישות והחלטות" },
+  { key: "milestones", en: "Project Milestones", he: "אבני דרך" },
+  { key: "closeout", en: "Closeout", he: "סגירת פרויקט" },
+  { key: "review", en: "Marcella Final Review", he: "בדיקה סופית" }
+];
+// A discipline is a field, not a folder. The same coordination task belongs to
+// HVAC and to Electrical at once, and a category tree cannot say that.
+var MK_DISCIPLINES = [
+  { key: "architecture", en: "Architecture", he: "אדריכלות" },
+  { key: "hvac", en: "HVAC", he: "מיזוג אוויר" },
+  { key: "electrical", en: "Electrical", he: "חשמל" },
+  { key: "plumbing", en: "Plumbing", he: "אינסטלציה" },
+  { key: "bms", en: "BMS", he: "BMS" },
+  { key: "security", en: "Security", he: "ביטחון" },
+  { key: "it", en: "IT", he: "תקשורת" },
+  { key: "av", en: "AV", he: "אודיו-וידאו" },
+  { key: "doors", en: "Doors", he: "דלתות" },
+  { key: "ceilings", en: "Ceilings", he: "תקרות" },
+  { key: "finishes", en: "Finishes", he: "גמר" },
+  { key: "safety", en: "Safety", he: "בטיחות" },
+  { key: "acoustics", en: "Acoustics", he: "אקוסטיקה" },
+  { key: "structural", en: "Structural", he: "קונסטרוקציה" },
+  { key: "other", en: "Other", he: "אחר" }
+];
+var MK_STATUSES = [
+  { key: "notStarted", en: "Not Started", he: "טרם הוחל", color: "#9aa3af" },
+  { key: "inProgress", en: "In Progress", he: "בטיפול", color: "#3a7bd5" },
+  { key: "waiting", en: "Waiting for Others", he: "ממתינה לאחרים", color: "#e08a12" },
+  { key: "review", en: "Pending Review", he: "ממתין לבדיקה", color: "#7a5cc4" },
+  { key: "completed", en: "Completed", he: "הושלם", color: "#1a7f4b" },
+  { key: "na", en: "Not Applicable", he: "לא רלוונטי", color: "#b6bcc4" }
+];
+var MK_PRIORITIES = [
+  { key: "normal", en: "Normal", he: "רגילה", color: "#6b7683" },
+  { key: "high", en: "High", he: "גבוהה", color: "#e08a12" },
+  { key: "critical", en: "Critical", he: "קריטית", color: "#a01c2c" }
+];
+// The four shapes a task comes in. The extra fields each one needs are the only
+// difference; the core record is identical, so a task can change its mind.
+var MK_KINDS = [
+  { key: "task", en: "Action", he: "פעולה" },
+  { key: "info", en: "Information Required", he: "מידע נדרש" },
+  { key: "coord", en: "Coordination / Interface", he: "תיאום וממשק" },
+  { key: "meeting", en: "Meeting Decision", he: "החלטה מפגישה" }
+];
+var MK_MODULES = [
+  { key: "", en: "—", he: "—" },
+  { key: "lli", en: "LLI", he: "LLI" },
+  { key: "submittal", en: "Submittal", he: "סבמיטל" },
+  { key: "sd", en: "Shop Drawing", he: "תוכנית יצור" },
+  { key: "rfi", en: "RFI", he: "RFI" },
+  { key: "ci", en: "Change Instruction", he: "הוראת שינוי" },
+  { key: "schedule", en: "Schedule", he: "לוח זמנים" },
+  { key: "other", en: "Other", he: "אחר" }
+];
+
+var MK_L = {
+  title: { en: "Marcella \u{1F451}", he: "Marcella \u{1F451}" },
+  lead: {
+    en: "What needs dealing with now, who I am waiting for, and what becomes a problem if it is left.",
+    he: "מה צריך טיפול עכשיו, למי אני ממתינה, ומה יהפוך לבעיה אם לא אטפל בו."
+  },
+  newTask: { en: "New task", he: "משימה חדשה" },
+  tFollowToday: { en: "Follow up today", he: "מעקב היום" },
+  tOverdue: { en: "Overdue", he: "באיחור" },
+  tWaiting: { en: "Waiting for others", he: "ממתינה לאחרים" },
+  tDueWeek: { en: "Due this week", he: "לביצוע השבוע" },
+  tCritical: { en: "Critical", he: "קריטיות" },
+  tOpen: { en: "Open tasks", he: "משימות פתוחות" },
+  tCompleted: { en: "Completed", he: "הושלמו" },
+  search: { en: "Search", he: "חיפוש" },
+  allCats: { en: "All categories", he: "כל הקטגוריות" },
+  allDisc: { en: "All disciplines", he: "כל התחומים" },
+  allStatus: { en: "All statuses", he: "כל הסטטוסים" },
+  allPrio: { en: "All priorities", he: "כל רמות העדיפות" },
+  allModules: { en: "All modules", he: "כל המודולים" },
+  anyResp: { en: "Anyone responsible", he: "כל אחראי" },
+  clear: { en: "Clear filters", he: "ניקוי פילטרים" },
+  empty: {
+    en: "Nothing here. Either there is nothing to chase, or the filters are hiding it.",
+    he: "אין כלום כאן. או שאין מה לרדוף, או שהפילטרים מסתירים."
+  },
+  emptyBoard: {
+    en: "The board is empty. A task here is something to do, check, receive, follow up or confirm closed — not a copy of a record that already lives in another folder.",
+    he: "הלוח ריק. משימה כאן היא משהו לעשות, לבדוק, לקבל, לעקוב או לוודא שנסגר — לא העתק של רשומה שכבר יושבת בתיקייה אחרת."
+  },
+  back: { en: "Back to the board", he: "חזרה ללוח" },
+  remind: { en: "Remind me later", he: "תזכורת למועד מאוחר" },
+  rTomorrow: { en: "Tomorrow", he: "מחר" },
+  r3: { en: "In 3 days", he: "בעוד 3 ימים" },
+  r7: { en: "In 1 week", he: "בעוד שבוע" },
+  r14: { en: "In 2 weeks", he: "בעוד שבועיים" },
+  rPick: { en: "Choose date", he: "בחירת תאריך" },
+  // ---- fields ----
+  item: { en: "Checklist item", he: "משימה" },
+  itemPh: { en: "Confirm acoustic consultant detail issued", he: "לוודא שהפרט מהיועץ הוצא" },
+  description: { en: "Description", he: "תיאור" },
+  kind: { en: "Type", he: "סוג" },
+  category: { en: "Category", he: "קטגוריה" },
+  discipline: { en: "Discipline", he: "תחום" },
+  status: { en: "Status", he: "סטטוס" },
+  priority: { en: "Priority", he: "עדיפות" },
+  actionDate: { en: "Action date", he: "תאריך פעולה" },
+  dueDate: { en: "Due date", he: "תאריך יעד" },
+  followUpDate: { en: "Follow up date", he: "תאריך מעקב" },
+  dueShort: { en: "Due", he: "יעד" },
+  fuShort: { en: "Follow up", he: "מעקב" },
+  responsible: { en: "Responsible party", he: "אחראי" },
+  waitingFor: { en: "Waiting for", he: "ממתינה ל" },
+  relModule: { en: "Related module", he: "מודול מקושר" },
+  relRecord: { en: "Related record", he: "רשומה מקושרת" },
+  source: { en: "Source / reference", he: "מקור / אסמכתא" },
+  notes: { en: "Notes", he: "הערות" },
+  link: { en: "Attachment or link", he: "קובץ או קישור" },
+  created: { en: "Created", he: "נוצרה" },
+  completedOn: { en: "Completed on", he: "הושלמה ב" },
+  // information required
+  infoHead: { en: "Information required", he: "מידע נדרש" },
+  requestedFrom: { en: "Requested from", he: "נדרש מ" },
+  requestDate: { en: "Request date", he: "תאריך הבקשה" },
+  requiredBy: { en: "Required by", he: "נדרש עד" },
+  // coordination
+  coordHead: { en: "Coordination and interfaces", he: "תיאום וממשקים" },
+  discA: { en: "Discipline A", he: "תחום א׳" },
+  discB: { en: "Discipline B", he: "תחום ב׳" },
+  issue: { en: "Issue", he: "הנושא" },
+  decisionFrom: { en: "Decision required from", he: "החלטה נדרשת מ" },
+  relDrawing: { en: "Related drawing", he: "תוכנית קשורה" },
+  // meeting
+  meetHead: { en: "Meeting decision", he: "החלטה מפגישה" },
+  meetingDate: { en: "Meeting date", he: "תאריך הפגישה" },
+  decision: { en: "Decision", he: "החלטה" },
+  owner: { en: "Owner", he: "אחראי ההחלטה" },
+  del: { en: "Delete", he: "מחיקה" },
+  delAsk: { en: "Delete this task?", he: "למחוק את המשימה?" },
+  markDone: { en: "Mark completed", he: "סימון כהושלמה" },
+  readOnly: {
+    en: "You can see this board but not change it.",
+    he: "הלוח פתוח לצפייה בלבד."
+  }
+};
+
+function mkText(entry, lang) { return sbText(entry, lang); }
+function mkLabel(list, key, lang) {
+  const it = (list || []).find((x) => x.key === key);
+  return it ? lang === "he" ? it.he : it.en : key || "";
+}
+function mkStatusColor(key) {
+  const s = MK_STATUSES.find((x) => x.key === key);
+  return s ? s.color : "#9aa3af";
+}
+function mkPrioColor(key) {
+  const p = MK_PRIORITIES.find((x) => x.key === key);
+  return p ? p.color : "#6b7683";
+}
+// A task nobody has to act on any more. Both endings count: finished, and
+// decided-not-applicable. Every count on the board turns on this one line, so
+// it lives in one place rather than being re-typed per tile.
+function mkIsClosed(t) {
+  return !!t && (t.status === "completed" || t.status === "na");
+}
+function mkBlank(who) {
+  const today = sbToday();
+  return {
+    id: `m-${Date.now()}-${Math.floor(Math.random() * 1e4)}`,
+    kind: "task",
+    item: "",
+    description: "",
+    category: "today",
+    discipline: "",
+    status: "notStarted",
+    priority: "normal",
+    actionDate: "",
+    dueDate: "",
+    followUpDate: "",
+    responsible: "",
+    waitingFor: "",
+    relModule: "",
+    relRecord: "",
+    source: "",
+    notes: "",
+    link: "",
+    requestedFrom: "",
+    requestDate: "",
+    requiredBy: "",
+    discA: "",
+    discB: "",
+    issue: "",
+    decisionFrom: "",
+    relDrawing: "",
+    meetingDate: "",
+    decision: "",
+    owner: "",
+    createdAt: today,
+    createdBy: who || "",
+    completedAt: ""
+  };
+}
+// The seven tiles. Counted from the same list the table shows, so a number on a
+// tile and the rows behind it can never disagree.
+function mkCounts(list, today) {
+  const t = today || sbToday();
+  const weekEnd = sbAddDays(t, 7);
+  const openList = (list || []).filter((x) => !mkIsClosed(x));
+  return {
+    followToday: openList.filter((x) => x.followUpDate && x.followUpDate <= t).length,
+    overdue: openList.filter((x) => x.dueDate && x.dueDate < t).length,
+    waiting: openList.filter((x) => x.status === "waiting").length,
+    dueWeek: openList.filter((x) => x.dueDate && x.dueDate >= t && x.dueDate <= weekEnd).length,
+    critical: openList.filter((x) => x.priority === "critical").length,
+    open: openList.length,
+    completed: (list || []).filter((x) => x.status === "completed").length
+  };
+}
+// A tile is a filter, not a page of its own. Same predicates as the counts.
+function mkInScope(x, scope, today) {
+  const t = today || sbToday();
+  const weekEnd = sbAddDays(t, 7);
+  if (!scope) return true;
+  if (scope === "completed") return x.status === "completed";
+  if (mkIsClosed(x)) return false;
+  if (scope === "followToday") return !!x.followUpDate && x.followUpDate <= t;
+  if (scope === "overdue") return !!x.dueDate && x.dueDate < t;
+  if (scope === "waiting") return x.status === "waiting";
+  if (scope === "dueWeek") return !!x.dueDate && x.dueDate >= t && x.dueDate <= weekEnd;
+  if (scope === "critical") return x.priority === "critical";
+  if (scope === "open") return true;
+  return true;
+}
+// "In three days" has to mean three days from today, not from whatever the
+// follow-up date happens to say now — otherwise pressing it twice walks the
+// date into next month.
+function mkRemindDate(which, today) {
+  const t = today || sbToday();
+  if (which === "tomorrow") return sbAddDays(t, 1);
+  if (which === "d3") return sbAddDays(t, 3);
+  if (which === "w1") return sbAddDays(t, 7);
+  if (which === "w2") return sbAddDays(t, 14);
+  return "";
+}
+// Overdue first, then whatever is due soonest, then the rest. A task with no
+// dates is not urgent by definition, so it sinks — but it never disappears.
+function mkSort(list, today) {
+  const t = today || sbToday();
+  const rank = (x) => {
+    if (mkIsClosed(x)) return 4;
+    if (x.dueDate && x.dueDate < t) return 0;
+    if (x.followUpDate && x.followUpDate <= t) return 1;
+    if (x.dueDate) return 2;
+    return 3;
+  };
+  return (list || []).slice().sort((a, b) => {
+    const ra = rank(a), rb = rank(b);
+    if (ra !== rb) return ra - rb;
+    const da = a.dueDate || a.followUpDate || "9999-99-99";
+    const db = b.dueDate || b.followUpDate || "9999-99-99";
+    if (da !== db) return da < db ? -1 : 1;
+    return String(a.createdAt || "").localeCompare(String(b.createdAt || ""));
+  });
+}
+
+function MarcellaCard({ appIsRTL, rows, onChangeRows, canEdit, projectId, projectName, currentEmail }) {
+  const lang = appIsRTL ? "he" : "en";
+  const isRTL = appIsRTL;
+  const L = (k) => mkText(MK_L[k] || { en: k, he: k }, lang);
+  const [openId, setOpenId] = useState6(null);
+  const [scope, setScope] = useState6(null);
+  const [q, setQ] = useState6("");
+  const [fCat, setFCat] = useState6("");
+  const [fDisc, setFDisc] = useState6("");
+  const [fStatus, setFStatus] = useState6("");
+  const [fPrio, setFPrio] = useState6("");
+  const [fModule, setFModule] = useState6("");
+  const [fResp, setFResp] = useState6("");
+  const [remindFor, setRemindFor] = useState6(null);
+  const [askDel, setAskDel] = useState6(null);
+
+  const today = sbToday();
+  const all = Object.keys(rows || {}).map((k) => (rows || {})[k]).filter(Boolean);
+  const counts = mkCounts(all, today);
+  const ro = !canEdit;
+
+  const patch = (id, next) => {
+    if (ro) return;
+    const cur = (rows || {})[id];
+    if (!cur) return;
+    const merged = { ...cur, ...next };
+    // The completion date is a consequence of the status, never a field anyone
+    // has to remember to fill in — and it is cleared if the task reopens.
+    if (next.status && next.status !== cur.status) {
+      merged.completedAt = next.status === "completed" ? today : "";
+    }
+    onChangeRows({ ...(rows || {}), [id]: merged });
+  };
+  const addTask = () => {
+    if (ro) return;
+    const rec = mkBlank(currentEmail);
+    onChangeRows({ ...(rows || {}), [rec.id]: rec });
+    setOpenId(rec.id);
+  };
+  const removeTask = (id) => {
+    if (ro) return;
+    const next = { ...(rows || {}) };
+    delete next[id];
+    onChangeRows(next);
+    setAskDel(null);
+    if (openId === id) setOpenId(null);
+  };
+  const clearFilters = () => {
+    setScope(null); setQ(""); setFCat(""); setFDisc("");
+    setFStatus(""); setFPrio(""); setFModule(""); setFResp("");
+  };
+
+  const respList = Array.from(new Set(all.map((x) => (x.responsible || "").trim()).filter(Boolean))).sort();
+  const needle = q.trim().toLowerCase();
+  const filtered = mkSort(all.filter((x) => {
+    if (!mkInScope(x, scope, today)) return false;
+    if (fCat && x.category !== fCat) return false;
+    if (fDisc && x.discipline !== fDisc) return false;
+    if (fStatus && x.status !== fStatus) return false;
+    if (fPrio && x.priority !== fPrio) return false;
+    if (fModule && x.relModule !== fModule) return false;
+    if (fResp && (x.responsible || "").trim() !== fResp) return false;
+    // Completed work stays available, but it does not sit on top of the working
+    // view: it shows only when something actually asks for it.
+    if (!scope && !fStatus && x.status === "completed") return false;
+    if (!needle) return true;
+    return [
+      x.item, x.description, x.notes, x.relRecord, x.source,
+      x.responsible, x.waitingFor, x.issue, x.decision
+    ].some((v) => String(v || "").toLowerCase().includes(needle));
+  }), today);
+
+  const tile = (key, label, cls) => sbH(
+    "button",
+    {
+      key, type: "button",
+      className: `mkTile ${cls || ""} ${scope === key ? "on" : ""}`.trim(),
+      onClick: () => setScope(scope === key ? null : key)
+    },
+    sbH("span", { className: "mkTileNum", dir: "ltr" }, String(counts[key] || 0)),
+    sbH("span", { className: "mkTileLbl" }, label)
+  );
+
+  const remindRow = (rec) => sbH(
+    "div",
+    { className: "mkRemind" },
+    sbH("span", { className: "mkFieldLabel" }, L("remind")),
+    ["tomorrow", "d3", "w1", "w2"].map((w) => sbH(
+      "button",
+      {
+        key: w, type: "button", className: "mkPill",
+        onClick: () => { patch(rec.id, { followUpDate: mkRemindDate(w, today) }); setRemindFor(null); }
+      },
+      L(w === "tomorrow" ? "rTomorrow" : w === "d3" ? "r3" : w === "w1" ? "r7" : "r14")
+    )),
+    sbH("input", {
+      className: "mkIn", type: "date", dir: "ltr", value: rec.followUpDate || "",
+      title: L("rPick"),
+      onChange: (e) => { patch(rec.id, { followUpDate: e.target.value }); setRemindFor(null); }
+    })
+  );
+
+  // ---- the register -------------------------------------------------------
+  const register = sbH(
+    "div",
+    { className: "mkForm" },
+    sbH(
+      "div",
+      { className: "mkHead" },
+      sbH(
+        "div",
+        null,
+        sbH("h2", { className: "mkTitle" }, L("title")),
+        sbH("p", { className: "mkSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
+      ),
+      ro
+        ? sbH("span", { className: "mkSub" }, L("readOnly"))
+        : sbH("button", { type: "button", className: "functionEditBtn", onClick: addTask },
+            sbH(PlusM, { size: 14, strokeWidth: 2.4 }), " ", L("newTask"))
+    ),
+
+    sbH(
+      "div",
+      { className: "mkTiles" },
+      tile("followToday", L("tFollowToday")),
+      tile("overdue", L("tOverdue"), "warn"),
+      tile("waiting", L("tWaiting")),
+      tile("dueWeek", L("tDueWeek")),
+      tile("critical", L("tCritical"), "crit"),
+      tile("open", L("tOpen")),
+      tile("completed", L("tCompleted"), "done")
+    ),
+
+    sbH(
+      "div",
+      { className: "mkFilters" },
+      sbH("input", {
+        className: "mkIn mkSearch", type: "search", value: q,
+        placeholder: L("search"), onChange: (e) => setQ(e.target.value)
+      }),
+      sbH("select", { className: "mkIn", value: fCat, onChange: (e) => setFCat(e.target.value) },
+        sbH("option", { value: "" }, L("allCats")),
+        MK_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, lang === "he" ? c.he : c.en))),
+      sbH("select", { className: "mkIn", value: fDisc, onChange: (e) => setFDisc(e.target.value) },
+        sbH("option", { value: "" }, L("allDisc")),
+        MK_DISCIPLINES.map((c) => sbH("option", { key: c.key, value: c.key }, lang === "he" ? c.he : c.en))),
+      sbH("select", { className: "mkIn", value: fStatus, onChange: (e) => setFStatus(e.target.value) },
+        sbH("option", { value: "" }, L("allStatus")),
+        MK_STATUSES.map((c) => sbH("option", { key: c.key, value: c.key }, lang === "he" ? c.he : c.en))),
+      sbH("select", { className: "mkIn", value: fPrio, onChange: (e) => setFPrio(e.target.value) },
+        sbH("option", { value: "" }, L("allPrio")),
+        MK_PRIORITIES.map((c) => sbH("option", { key: c.key, value: c.key }, lang === "he" ? c.he : c.en))),
+      sbH("select", { className: "mkIn", value: fModule, onChange: (e) => setFModule(e.target.value) },
+        sbH("option", { value: "" }, L("allModules")),
+        MK_MODULES.filter((m) => m.key).map((c) => sbH("option", { key: c.key, value: c.key }, lang === "he" ? c.he : c.en))),
+      sbH("select", { className: "mkIn", value: fResp, onChange: (e) => setFResp(e.target.value) },
+        sbH("option", { value: "" }, L("anyResp")),
+        respList.map((r) => sbH("option", { key: r, value: r }, r))),
+      sbH("button", { type: "button", className: "mkClear", onClick: clearFilters }, L("clear"))
+    ),
+
+    filtered.length
+      ? sbH("div", { className: "mkList" }, filtered.map((x) => {
+          const late = !mkIsClosed(x) && x.dueDate && x.dueDate < today;
+          const fuNow = !mkIsClosed(x) && x.followUpDate && x.followUpDate <= today;
+          return sbH(
+            "div",
+            { key: x.id },
+            sbH(
+              "div",
+              {
+                className: `mkRow ${late ? "overdue" : ""} ${x.priority === "critical" && !mkIsClosed(x) ? "crit" : ""} ${mkIsClosed(x) ? "doneRow" : ""}`.trim()
+              },
+              sbH("button", {
+                type: "button", className: `boqTick ${x.status === "completed" ? "on" : ""}`,
+                title: L("markDone"), disabled: ro,
+                onClick: () => patch(x.id, { status: x.status === "completed" ? "inProgress" : "completed" })
+              }, x.status === "completed" ? "✓" : ""),
+              sbH(
+                "div",
+                null,
+                sbH("button", { type: "button", className: "mkRowItem", onClick: () => setOpenId(x.id) },
+                  x.item || (lang === "he" ? "משימה ללא שם" : "Untitled task")),
+                sbH("span", { className: "mkRowSub" },
+                  [
+                    mkLabel(MK_CATEGORIES, x.category, lang),
+                    x.discipline ? mkLabel(MK_DISCIPLINES, x.discipline, lang) : "",
+                    x.relModule ? `${mkLabel(MK_MODULES, x.relModule, lang)}${x.relRecord ? " " + x.relRecord : ""}` : ""
+                  ].filter(Boolean).join(" · "))
+              ),
+              sbH("span", { className: "mkHideSm" },
+                sbH("span", {
+                  className: "mkChip",
+                  style: { background: mkStatusColor(x.status) + "1f", color: mkStatusColor(x.status) }
+                }, mkLabel(MK_STATUSES, x.status, lang)),
+                x.priority !== "normal"
+                  ? sbH("span", {
+                      className: "mkChip",
+                      style: { background: mkPrioColor(x.priority) + "1f", color: mkPrioColor(x.priority), marginInlineStart: 6 }
+                    }, mkLabel(MK_PRIORITIES, x.priority, lang))
+                  : null),
+              sbH("span", { className: `mkDate mkHideSm ${late ? "late" : ""}`.trim(), dir: "ltr" },
+                sbH("span", { className: "mkDateLbl" }, L("dueShort")),
+                x.dueDate ? sbFmtDate(x.dueDate) : "—"),
+              sbH("span", { className: `mkDate mkHideSm ${fuNow ? "late" : ""}`.trim(), dir: "ltr" },
+                sbH("span", { className: "mkDateLbl" }, L("fuShort")),
+                x.followUpDate ? sbFmtDate(x.followUpDate) : "—"),
+              sbH("span", { className: "mkRowSub mkHideSm" },
+                x.status === "waiting" && x.waitingFor
+                  ? `${L("waitingFor")}: ${x.waitingFor}`
+                  : x.responsible || ""),
+              ro ? sbH("span", null) : sbH("button", {
+                type: "button", className: "mkIconBtn", title: L("remind"),
+                onClick: () => setRemindFor(remindFor === x.id ? null : x.id)
+              }, sbH(BellM, { size: 13, strokeWidth: 2 }))
+            ),
+            remindFor === x.id ? remindRow(x) : null
+          );
+        }))
+      : sbH("div", { className: "mkEmpty" }, all.length ? L("empty") : L("emptyBoard"))
+  );
+
+  // ---- the form -----------------------------------------------------------
+  const rec = openId ? (rows || {})[openId] : null;
+  const set = (next) => patch(openId, next);
+  const field = (key, opts) => {
+    const o = opts || {};
+    const name = o.name || key;
+    return sbH(
+      "label",
+      { className: `mkField ${o.wide ? "wide" : ""}`.trim(), key },
+      sbH("span", { className: "mkFieldLabel" }, L(key)),
+      o.textarea
+        ? sbH("textarea", {
+            className: "mkIn mkArea", rows: o.rows || 3, readOnly: ro,
+            value: rec[name] || "", onChange: (e) => set({ [name]: e.target.value })
+          })
+        : sbH("input", {
+            className: "mkIn", type: o.type || "text", readOnly: ro, dir: o.dir,
+            placeholder: o.ph ? L(o.ph) : undefined,
+            value: rec[name] || "", onChange: (e) => set({ [name]: e.target.value })
+          })
+    );
+  };
+  const pick = (key, list, opts) => {
+    const o = opts || {};
+    const name = o.name || key;
+    return sbH(
+      "label",
+      { className: "mkField", key },
+      sbH("span", { className: "mkFieldLabel" }, L(key)),
+      sbH(
+        "select",
+        {
+          className: "mkIn", disabled: ro, value: rec[name] || "",
+          onChange: (e) => set({ [name]: e.target.value })
+        },
+        o.blank ? sbH("option", { value: "" }, "—") : null,
+        list.filter((c) => c.key).map((c) => sbH("option", { key: c.key, value: c.key }, lang === "he" ? c.he : c.en))
+      )
+    );
+  };
+
+  const form = rec ? sbH(
+    "div",
+    { className: "mkForm" },
+    sbH(
+      "div",
+      { className: "mkHead" },
+      sbH("button", { type: "button", className: "mkBack", onClick: () => setOpenId(null) },
+        sbH(isRTL ? ArrowRightM : ArrowLeftM, { size: 14, strokeWidth: 2.4 }), " ", L("back")),
+      ro ? null : sbH(
+        "div",
+        { style: { display: "flex", gap: 8, alignItems: "center" } },
+        askDel === rec.id
+          ? sbH(
+              "span",
+              { style: { display: "flex", gap: 8, alignItems: "center", fontSize: 12, fontWeight: 700 } },
+              L("delAsk"),
+              sbH("button", { type: "button", className: "mkPill", onClick: () => removeTask(rec.id) },
+                lang === "he" ? "כן" : "Yes"),
+              sbH("button", { type: "button", className: "mkPill", onClick: () => setAskDel(null) },
+                lang === "he" ? "לא" : "No")
+            )
+          : sbH("button", { type: "button", className: "mkIconBtn danger", title: L("del"), onClick: () => setAskDel(rec.id) },
+              sbH(TrashM, { size: 13, strokeWidth: 2 }))
+      )
+    ),
+
+    sbH(
+      "div",
+      { className: "mkGrid" },
+      field("item", { wide: true, ph: "itemPh" }),
+      field("description", { wide: true, textarea: true }),
+      pick("kind", MK_KINDS),
+      pick("category", MK_CATEGORIES),
+      pick("discipline", MK_DISCIPLINES, { blank: true }),
+      pick("status", MK_STATUSES),
+      pick("priority", MK_PRIORITIES),
+      field("actionDate", { type: "date", dir: "ltr" }),
+      field("dueDate", { type: "date", dir: "ltr" }),
+      field("followUpDate", { type: "date", dir: "ltr" }),
+      field("responsible"),
+      field("waitingFor"),
+      pick("relModule", MK_MODULES, { blank: true }),
+      field("relRecord"),
+      field("source"),
+      field("link", { dir: "ltr" })
+    ),
+
+    ro ? null : remindRow(rec),
+
+    rec.kind === "info" ? sbH(
+      "div",
+      null,
+      sbH("div", { className: "mkSubHead" }, L("infoHead")),
+      sbH("div", { className: "mkGrid" },
+        field("requestedFrom"),
+        field("requestDate", { type: "date", dir: "ltr" }),
+        field("requiredBy", { type: "date", dir: "ltr" }))
+    ) : null,
+
+    rec.kind === "coord" ? sbH(
+      "div",
+      null,
+      sbH("div", { className: "mkSubHead" }, L("coordHead")),
+      sbH("div", { className: "mkGrid" },
+        pick("discA", MK_DISCIPLINES, { blank: true }),
+        pick("discB", MK_DISCIPLINES, { blank: true }),
+        field("issue", { wide: true, textarea: true, rows: 2 }),
+        field("decisionFrom"),
+        field("relDrawing"))
+    ) : null,
+
+    rec.kind === "meeting" ? sbH(
+      "div",
+      null,
+      sbH("div", { className: "mkSubHead" }, L("meetHead")),
+      sbH("div", { className: "mkGrid" },
+        field("meetingDate", { type: "date", dir: "ltr" }),
+        field("decision", { wide: true, textarea: true, rows: 2 }),
+        field("owner"))
+    ) : null,
+
+    sbH("div", { className: "mkSubHead" }, L("notes")),
+    sbH("div", { className: "mkGrid" }, field("notes", { wide: true, textarea: true, rows: 4 })),
+
+    sbH("p", { className: "mkSub", dir: "ltr" },
+      `${L("created")} ${sbFmtDate(rec.createdAt)}${rec.completedAt ? ` · ${L("completedOn")} ${sbFmtDate(rec.completedAt)}` : ""}`)
+  ) : null;
+
+  return sbH("div", { className: "functionPageBody mkBody" }, rec ? form : register);
+}
+
 // src/cards/RoomsCard.jsx
 // -----------------------------------------------------------------------------
 // The room screen: a landing page with one question on it, and the answer
@@ -18131,9 +18896,9 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
   };
   const grayPill = { display: "inline-flex", alignItems: "center", gap: 6, background: "#e9ebee", color: "#2b3440", border: "1px solid var(--line)", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
   const th = (label) => /* @__PURE__ */ React15.createElement("th", { style: headS }, label);
-  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), ), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12, background: "#fdf2f3", border: "1px solid #f0c4c9", borderRadius: 8, padding: "10px 12px", fontWeight: 600 } }, err) : null, !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "חתימה Submittal" : "Signs Submittal"), th(isRTL ? "חתימה SD" : "Signs SD"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
+  return /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelWide" }, /* @__PURE__ */ React15.createElement("div", { style: { position: "relative", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 6 } }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle", style: { margin: 0, textAlign: "center" } }, isRTL ? "רשימת משתמשים" : "User list"), ), err ? /* @__PURE__ */ React15.createElement("p", { style: { color: "#b02a37", marginTop: 12, background: "#fdf2f3", border: "1px solid #f0c4c9", borderRadius: 8, padding: "10px 12px", fontWeight: 600 } }, err) : null, !users ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "טוען…" : "Loading…") : users.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { marginTop: 12, textAlign: "center" } }, isRTL ? "אין משתמשים." : "No users.") : /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { style: { overflowX: "auto", marginTop: 8 } }, /* @__PURE__ */ React15.createElement("table", { style: { width: "100%", borderCollapse: "collapse", direction: isRTL ? "rtl" : "ltr", whiteSpace: "nowrap" } }, /* @__PURE__ */ React15.createElement("thead", null, /* @__PURE__ */ React15.createElement("tr", null, th(isRTL ? "אימייל" : "Email"), th(isRTL ? "תפקיד" : "Role"), th(isRTL ? "פרויקטים" : "Projects"), th(isRTL ? "נשלחה הזמנה" : "Invitation sent"), th(isRTL ? "גרסה" : "Version"), th(isRTL ? "שפה" : "Lang"), th(isRTL ? "סטטוס" : "Status"), th(isRTL ? "תאריך ושעה" : "Date & time"), th(isRTL ? "חתימה Submittal" : "Signs Submittal"), th(isRTL ? "חתימה SD" : "Signs SD"), th(isRTL ? "Marcella \u{1F451}" : "Marcella \u{1F451}"), th(isRTL ? "מצב" : "Active"), th(""))), /* @__PURE__ */ React15.createElement("tbody", null, users.map((u) => {
     const disc = discMap[(u.email || "").toLowerCase()];
-    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? projOf(u) : React15.createElement(React15.Fragment, null, React15.createElement("button", { type: "button", onClick: () => accessEdit === u.id ? setAccessEdit(null) : openAccess(u), title: isRTL ? "\u05dc\u05d7\u05d9\u05e6\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea" : "Click to edit access", style: { background: "none", border: "none", padding: 0, font: "inherit", color: "var(--steel)", cursor: "pointer", textDecoration: "underline dotted", textAlign: isRTL ? "right" : "left" } }, projOf(u)), accessEdit === u.id && React15.createElement("div", { style: { marginTop: 8, border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px", background: "#fff", minWidth: 200 } }, projects.length === 0 ? React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "\u05d0\u05d9\u05df \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd." : "No projects.") : React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, projects.map((pr) => React15.createElement("label", { key: pr.id, style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600 } }, React15.createElement("input", { type: "checkbox", checked: !!accessPick[pr.id], onChange: (ev) => setAccessPick((prev) => ({ ...prev, [pr.id]: ev.target.checked })) }), React15.createElement("span", null, pr.name)))), React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } }, React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: busy, onClick: () => saveAccess(u) }, isRTL ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "Save"), React15.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setAccessEdit(null) }, isRTL ? "\u05d1\u05d9\u05d8\u05d5\u05dc" : "Cancel"))))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSubmittal")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSd")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
+    return /* @__PURE__ */ React15.createElement("tr", { key: u.id }, /* @__PURE__ */ React15.createElement("td", { style: cellS, dir: "ltr" }, u.email), /* @__PURE__ */ React15.createElement("td", { style: cellS }, roleLabel(u.role)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? projOf(u) : React15.createElement(React15.Fragment, null, React15.createElement("button", { type: "button", onClick: () => accessEdit === u.id ? setAccessEdit(null) : openAccess(u), title: isRTL ? "\u05dc\u05d7\u05d9\u05e6\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05ea \u05d4\u05d4\u05e8\u05e9\u05d0\u05d5\u05ea" : "Click to edit access", style: { background: "none", border: "none", padding: 0, font: "inherit", color: "var(--steel)", cursor: "pointer", textDecoration: "underline dotted", textAlign: isRTL ? "right" : "left" } }, projOf(u)), accessEdit === u.id && React15.createElement("div", { style: { marginTop: 8, border: "1px solid var(--line)", borderRadius: 8, padding: "8px 10px", background: "#fff", minWidth: 200 } }, projects.length === 0 ? React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "\u05d0\u05d9\u05df \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd." : "No projects.") : React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 6 } }, projects.map((pr) => React15.createElement("label", { key: pr.id, style: { display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontWeight: 600 } }, React15.createElement("input", { type: "checkbox", checked: !!accessPick[pr.id], onChange: (ev) => setAccessPick((prev) => ({ ...prev, [pr.id]: ev.target.checked })) }), React15.createElement("span", null, pr.name)))), React15.createElement("div", { style: { display: "flex", gap: 8, marginTop: 10 } }, React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: busy, onClick: () => saveAccess(u) }, isRTL ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "Save"), React15.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setAccessEdit(null) }, isRTL ? "\u05d1\u05d9\u05d8\u05d5\u05dc" : "Cancel"))))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(u.created_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.version || "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, disc && disc.lang ? String(disc.lang).toUpperCase() : "—"), /* @__PURE__ */ React15.createElement("td", { style: cellS }, /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 700, color: u.role === "admin" ? "var(--mist)" : disc ? "#1a7f4b" : "#c0392b" } }, discStatus(u, disc))), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, direction: "ltr" } }, fmtDate(disc && disc.accepted_at)), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSubmittal")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "signSd")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, permTick(u, "marcella")), /* @__PURE__ */ React15.createElement("td", { style: cellS }, u.role === "admin" ? /* @__PURE__ */ React15.createElement("span", { style: { color: "var(--mist)" } }, "—") : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => setEnabled(u, u.banned), style: { border: "none", cursor: "pointer", borderRadius: 999, padding: "5px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: u.banned ? "#9aa3af" : "#1a7f4b" } }, u.banned ? isRTL ? "כבוי" : "Off" : isRTL ? "פעיל" : "On")), /* @__PURE__ */ React15.createElement("td", { style: { ...cellS, textAlign: "center" } }, u.role === "admin" ? null : /* @__PURE__ */ React15.createElement("button", { type: "button", disabled: busy, onClick: () => del(u), title: isRTL ? "מחיקה" : "Delete", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 16, lineHeight: 1 } }, "✕")));
   })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen((o) => !o), style: grayPill }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 15, strokeWidth: 2 }), " ", isRTL ? "עריכת מסמך ה‑PDF" : "Edit PDF document")), pdfOpen && /* @__PURE__ */ React15.createElement("div", { style: { maxWidth: 520, marginInline: "auto", marginTop: 12, border: "1px solid var(--line)", borderRadius: 10, padding: 14, background: "#fbfcfd", textAlign: isRTL ? "right" : "left" } }, /* @__PURE__ */ React15.createElement("label", { style: { display: "block", fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה" : "Footer text"), /* @__PURE__ */ React15.createElement("textarea", { value: pdfFooter, onChange: (e) => setPdfFooter(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text shown at the bottom of the document", style: { width: "100%", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } }), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 12, flexWrap: "wrap" } }, pdfLogo ? /* @__PURE__ */ React15.createElement("img", { src: pdfLogo, alt: "", style: { height: 34, maxWidth: 120, objectFit: "contain" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfLogo }))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } }, pdfFooterImg ? /* @__PURE__ */ React15.createElement("img", { src: pdfFooterImg, alt: "", style: { height: 40, maxWidth: 240, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPdfFooterImg })))), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 6 } }, isRTL ? "גוון המסמך" : "Document color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setPdfAccent(pal.accent), style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: pdfAccent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })))), /* @__PURE__ */ React15.createElement("div", { style: { textAlign: "center", marginTop: 14 } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPdfOpen(false), style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center", marginTop: 14, flexWrap: "wrap" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: exportCsv, style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", "Excel"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setPrintAsk(() => exportPdf), style: grayPill }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", "PDF"), printAsk && /* @__PURE__ */ React15.createElement(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); exportPdf(lg); }, onClose: () => setPrintAsk(null) })))));
 }
 function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms }) {
@@ -19430,9 +20195,10 @@ function ProjectDashboardApp() {
     const flagOverrides = {};
     const rfis = {};
     const cis = {};
+    const mks = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, ...others } = entry;
+      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, marcellaRows, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
@@ -19444,8 +20210,11 @@ function ProjectDashboardApp() {
       // and a row per project is what the database rules key on. (2.9.26)
       if (rfiRows) rfis[pid] = rfiRows;
       if (ciRows) cis[pid] = ciRows;
+      // Marcella is a part of its own so the database rule can treat it
+      // differently from the rest of the project: see marcella_may_read. (5.9.26)
+      if (marcellaRows) mks[pid] = marcellaRows;
     });
-    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis };
+    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks };
   };
   // The seven parts a project is stored in. "project-extras" is the base
   // object; the rest are single fields hung off it. Each part is one row per
@@ -19459,7 +20228,8 @@ function ProjectDashboardApp() {
     ["project-rooms", "roomsData"],
     ["project-boq-flags", "boqFlagOverrides"],
     ["project-rfi", "rfiRows"],
-    ["project-ci", "ciRows"]
+    ["project-ci", "ciRows"],
+    ["project-marcella", "marcellaRows"]
   ];
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -19526,7 +20296,7 @@ function ProjectDashboardApp() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
     (async () => {
-      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks } = splitExtras(projectExtras);
       const byPart = {
         "project-extras": rest,
         "project-schedules": schedules,
@@ -19536,7 +20306,8 @@ function ProjectDashboardApp() {
         "project-rooms": rms,
         "project-boq-flags": flagOverrides,
         "project-rfi": rfis,
-        "project-ci": cis
+        "project-ci": cis,
+        "project-marcella": mks
       };
       let failed = null;
       // One row per project. saveAppState skips a row whose content has not
@@ -19671,8 +20442,17 @@ function ProjectDashboardApp() {
   // does not see the folder at all — not an empty one, not a locked one. The
   // main contractor sees it and cannot change it; the system administrator is
   // the only one who edits. (2.9.26)
+  // Marcella is her own working board, not a project folder. The system
+  // administrator has it; everybody else has to be switched on by name in user
+  // settings, and until then the card does not exist for them — not greyed out,
+  // not locked, absent. The same rule is enforced in the database by
+  // marcella_may_read(), so a hidden card is not the only thing standing
+  // between another account and the contents. (5.9.26)
+  const canSeeMarcella = appRole === "admin"
+    || !!((userPerms || {})[String(loggedInEmail || "").trim().toLowerCase()] || {}).marcella;
   const canSeeCard = (key) => {
     if (key === "changeInstructions" && appRole !== "admin" && authRole !== "contractor") return false;
+    if (key === "marcella" && !canSeeMarcella) return false;
     return !visibleCardKeys || visibleCardKeys.includes(key);
   };
   // Named, and switched on — unless you are the system administrator, who has
@@ -20794,6 +21574,8 @@ function ProjectDashboardApp() {
         onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
         rfiRows: activeExtras.rfiRows || {},
         onChangeRfiRows: (next) => updateProjectExtras(activeProject.id, { rfiRows: next }),
+        marcellaRows: activeExtras.marcellaRows || {},
+        onChangeMarcellaRows: (next) => updateProjectExtras(activeProject.id, { marcellaRows: next }),
         ciRows: activeExtras.ciRows || {},
         onChangeCiRows: (next) => updateProjectExtras(activeProject.id, { ciRows: next }),
         ciQueue: activeExtras.ciQueue || [],
