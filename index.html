@@ -237,6 +237,7 @@ var COPY = {
     contractorNamePlaceholder: "\u05D0. \u05D5\u05D9\u05D9\u05E1 \u05D4\u05E0\u05D3\u05E1\u05D4",
     dashTitle: "\u05DC\u05D5\u05D7 \u05D1\u05E7\u05E8\u05EA \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8",
     landingNoProjects: "\u05D0\u05D9\u05DF \u05E2\u05D3\u05D9\u05D9\u05DF \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8\u05D9\u05DD \u05E4\u05E2\u05D9\u05DC\u05D9\u05DD. \u05D4\u05D3\u05DC\u05D9\u05E7\u05D5 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8 \u05D3\u05E8\u05DA \u05DE\u05E0\u05D4\u05DC \u05D4\u05DE\u05E2\u05E8\u05DB\u05EA.",
+    landingNoAccess: "לא שויכתם עדיין לאף פרויקט. יש לפנות למנהל המערכת.",
     menu: "\u05EA\u05E4\u05E8\u05D9\u05D8",
     close: "\u05E1\u05D2\u05D9\u05E8\u05D4",
     functionView: {
@@ -360,6 +361,7 @@ var COPY = {
     contractorNamePlaceholder: "A. Weiss Engineering",
     dashTitle: "Project Dashboard",
     landingNoProjects: "No active projects yet. Turn one on from System Admin.",
+    landingNoAccess: "You have not been given access to a project yet. Please contact the system administrator.",
     menu: "Menu",
     close: "Close",
     functionView: {
@@ -492,7 +494,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 69";
+var APP_BUILD = "7.9.2026 · build 71";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -3773,17 +3775,22 @@ var sdSign = `
           display: flex; align-items: center; justify-content: center; padding: 20px;
         }
         .sdcAskBox {
-          background: #fff; border-radius: 14px; padding: 20px 22px; width: 100%; max-width: 380px;
-          box-shadow: 0 20px 60px rgba(0,0,0,.3);
+          background: #fff; border-radius: 14px; padding: 22px 26px; width: 100%; max-width: 480px;
+          box-shadow: 0 20px 60px rgba(0,0,0,.3); text-align: center;
         }
-        .sdcAskTitle { margin: 0 0 4px; font-size: 16px; font-weight: 800; color: #103460; }
-        .sdcAskName { margin: 0 0 16px; font-size: 12px; color: var(--steel); font-weight: 600; word-break: break-all; }
+        .sdcAskTitle { margin: 0 0 6px; font-size: 16px; font-weight: 800; color: #103460; text-align: center; }
+        /* A file name breaks anywhere; a sentence must not. The old rule broke
+           "מכאן" across two lines and left a full stop stranded. (7.9.26) */
+        .sdcAskName {
+          margin: 0 0 16px; font-size: 12.5px; color: var(--steel); font-weight: 600;
+          text-align: center; line-height: 1.55; overflow-wrap: anywhere;
+        }
         .sdcAskRow { display: flex; flex-direction: column; gap: 8px; }
         .sdcAskBtn {
-          display: flex; align-items: center; gap: 9px; width: 100%;
+          display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
           border: 1px solid var(--line); background: #fff; border-radius: 10px;
           padding: 11px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
-          font-family: inherit; color: #16324f; text-align: start;
+          font-family: inherit; color: #16324f; text-align: center;
         }
         .sdcAskBtn:hover { border-color: var(--accent); color: var(--accent); }
         .sdcAskBtn.primary { background: #14181f; color: #fff; border-color: #14181f; }
@@ -3828,9 +3835,10 @@ var sdSign = `
         .sdNote textarea {
           width: 100%; border: none; outline: none; resize: none; background: transparent;
           font-family: inherit; color: #10275a; padding: 0; display: block; overflow: hidden;
+          text-align: center;
         }
-        .sdNoteText { color: #10275a; white-space: pre-wrap; word-break: break-word; }
-        .sdNoteStamp { color: #4a5a72; border-top: 1px solid #c8d0dc; margin-top: 3px; padding-top: 2px; }
+        .sdNoteText { color: #10275a; white-space: pre-wrap; word-break: break-word; text-align: center; }
+        .sdNoteStamp { color: #4a5a72; border-top: 1px solid #c8d0dc; margin-top: 3px; padding-top: 2px; text-align: center; }
         .sdNoteGrip { position: absolute; inset-inline-start: -9px; top: -9px; cursor: move; }
         .sdMark { position: absolute; box-sizing: border-box; }
         /* Room for the handles to sit outside the mark without being clipped by
@@ -3863,6 +3871,14 @@ var sdSign = `
         }
         .sdStampPad.on { border-color: var(--accent); }
         .sdStampPad img { max-width: 100%; max-height: 180px; }
+        /* Signing over the stamp: the picture underneath, a drawing surface on
+           top, one flattened image out. */
+        .sdDrawWrap {
+          position: relative; display: inline-block; border: 1px solid var(--line);
+          border-radius: 10px; overflow: hidden; background: #fff; touch-action: none;
+        }
+        .sdDrawWrap img { display: block; max-width: 100%; }
+        .sdDrawWrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
         .sdSignBusy {
           position: absolute; inset: 0; background: rgba(255,255,255,.82); z-index: 5;
           display: flex; align-items: center; justify-content: center;
@@ -5437,7 +5453,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
 @page { size: A4 landscape; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body { width: 297mm; min-height: 210mm; padding: 20mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0 auto; width: 297mm; min-height: 210mm; padding: 20mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .frame { min-height: calc(210mm - 40mm); border: 1.5px solid ${accent}; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; }
 .hdr { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 10px; margin-bottom: 16px; }
 .hdr img { max-height: 52px; max-width: 200px; object-fit: contain; }
@@ -5480,7 +5496,7 @@ tr { page-break-inside: avoid; }
 .spacer { flex: 1; }
 .ftr { margin-top: 10px; font-size: 10px; color: #6b7280; text-align: center; white-space: pre-line; }
 .footImg { margin-top: 14px; text-align: center; }
-.footImg img { max-width: 100%; max-height: 90px; object-fit: contain; }
+.footImg img { width: 100%; height: auto; display: block; }
 ${printedStampCss(4)}
 </style></head><body><div class="frame">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || title)}</div><div class="sub">${esc(title)} &nbsp;|&nbsp; <span class="rng">${esc(range)}</span></div><div class="mkdate">${markerLine}</div></div></div>
@@ -6794,7 +6810,7 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
 @page { size: A4 portrait; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body { width: 210mm; min-height: 297mm; padding: 18mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0 auto; width: 210mm; min-height: 297mm; padding: 18mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .frame { min-height: calc(297mm - 36mm); border: 1.5px solid ${accent}; border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; }
 /* Three tracks with equal outer columns, so the title lands on the PAGE centre
    and not in the middle of whatever space the logo happens to leave over. */
@@ -6812,7 +6828,7 @@ a { color: #17181c; text-decoration: none; }
 tr { page-break-inside: avoid; }
 .spacer { flex: 1; }
 .footImg { margin-top: 14px; text-align: center; }
-.footImg img { max-width: 100%; max-height: 90px; object-fit: contain; }
+.footImg img { width: 100%; height: auto; display: block; }
 ${printedStampCss(7)}
 </style></head><body><div class="frame">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(c.title)}</div></div><span></span></div>
@@ -8384,7 +8400,7 @@ html, body { margin: 0; padding: 0; }
 body { width: auto; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
   direction: ${dir}; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 /* On screen the document still needs a page to sit on. */
-@media screen { body { width: 297mm; padding: ${PRINT_MARGIN_MM}mm; background: #eef1f5; } }
+@media screen { body { margin: 0 auto; width: 297mm; padding: ${PRINT_MARGIN_MM}mm; background: #eef1f5; } }
 /* One printed page: its own frame, its own heading, its own rows. Nothing
    flows across the border because nothing flows at all — the script below
    deals the rows into pages before printing.
@@ -8439,7 +8455,7 @@ ${printedStampCss(4)}
   color: #9aa3af; padding-top: 2mm; letter-spacing: .02em; }
 /* Without a closing image the stamp is what holds the foot of the frame. */
 .page > .pageStamp:nth-child(2) { margin-top: auto; }
-.footImg img { max-height: 15mm; }
+.footImg img { width: 100%; height: auto; display: block; }
 </style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
@@ -13037,11 +13053,22 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
         })
       : null,
 
+    // Through a portal, onto the body.
+    //
+    // The whole app is drawn at 1350px and scaled down with transform: scale().
+    // A transform makes the element a containing block for position: fixed, so
+    // an overlay rendered inside the card is fixed to the CARD, not the screen
+    // — on a long list it opens somewhere down the middle of the page and has
+    // to be scrolled to. Every other modal on the site goes to document.body
+    // for exactly this reason. (7.9.26)
     shot
-      ? sbH(
-          "div",
-          { className: "sdcAsk", onClick: () => setShot(null) },
-          sbH("img", { src: shot, alt: "", style: { maxWidth: "92vw", maxHeight: "88vh", borderRadius: 10, background: "#fff" } })
+      ? createPortal(
+          sbH(
+            "div",
+            { className: "sdcAsk", onClick: () => setShot(null) },
+            sbH("img", { src: shot, alt: "", style: { maxWidth: "92vw", maxHeight: "88vh", borderRadius: 10, background: "#fff" } })
+          ),
+          document.body
         )
       : null
   );
@@ -13141,6 +13168,13 @@ var SDC_L = {
     he: "לחיצה לבחירת קובץ, או Ctrl+V להדבקת תמונה."
   },
   next: { en: "Next", he: "הבא" },
+  drawHead: { en: "Sign over the stamp", he: "חתימה על גבי החותמת" },
+  drawHint: {
+    en: "Draw your signature over the stamp with the mouse or your finger.",
+    he: "מציירים את החתימה על גבי החותמת עם העכבר או האצבע."
+  },
+  clearDraw: { en: "Clear", he: "ניקוי" },
+  doneDraw: { en: "Finish", he: "סיום" },
   size: { en: "Size", he: "גודל" },
   remove: { en: "Remove", he: "הסרה" },
   loading: { en: "Loading the drawing…", he: "טוען את התוכנית…" },
@@ -13244,8 +13278,10 @@ function sdNoteToPng(mark, stampLine, scale) {
   ctx.lineWidth = 1.4;
   ctx.strokeRect(0.7, 0.7, wPt - 1.4, hPt - 1.4);
   ctx.direction = /[֐-׿]/.test(String(mark.text || "") + String(stampLine || "")) ? "rtl" : "ltr";
-  const startX = ctx.direction === "rtl" ? wPt - SD_NOTE_PAD : SD_NOTE_PAD;
-  ctx.textAlign = ctx.direction === "rtl" ? "right" : "left";
+  // Centred, because that is how the box reads on screen. The two must agree:
+  // the burned page is meant to be a picture of exactly what she saw. (7.9.26)
+  const startX = wPt / 2;
+  ctx.textAlign = "center";
   ctx.textBaseline = "top";
   ctx.fillStyle = "#10275a";
   ctx.font = `${SD_NOTE_FONT}px Assistant, Arial, sans-serif`;
@@ -13304,7 +13340,7 @@ async function sdBurnMarks(pdfBytes, marks, stampLine) {
 // -----------------------------------------------------------------------------
 // The signing screen.
 // -----------------------------------------------------------------------------
-function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
+function SdSignScreen({ lang, isRTL, L, file, title, who, projectName, docLabel, onCancel, onDone }) {
   const [doc, setDoc] = useState6(null);
   const [pages, setPages] = useState6([]);       // { num, wPt, hPt }
   const [bytes, setBytes] = useState6(null);
@@ -13313,6 +13349,8 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
   const [noteMode, setNoteMode] = useState6(false);
   const [stampStep, setStampStep] = useState6(null);   // null | "pick"
   const [stampImg, setStampImg] = useState6(null);
+  const drawRef = useRef6(null);
+  const inkRef = useRef6(false);
   const [sel, setSel] = useState6(null);
   const [busy, setBusy] = useState6(null);
   const [err, setErr] = useState6(null);
@@ -13464,8 +13502,63 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
     });
     return best;
   };
-  const placeStamp = () => {
+  // A scanned stamp and a signature drawn over it are one image by the time
+  // they reach the drawing: flattened here, so what is placed, what is dragged
+  // and what is burned are all the same picture. (7.9.26)
+  const flattenStamp = () => new Promise((resolve) => {
+    const canvas = drawRef.current;
+    const img = new Image();
+    img.onload = () => {
+      if (!canvas) { resolve(stampImg); return; }
+      const out = document.createElement("canvas");
+      out.width = img.width;
+      out.height = img.height;
+      const ctx = out.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(canvas, 0, 0, out.width, out.height);
+      resolve(out.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(stampImg);
+    img.src = stampImg;
+  });
+  const startInk = (e) => {
+    const canvas = drawRef.current;
+    if (!canvas) return;
+    e.preventDefault();
+    inkRef.current = true;
+    const ctx = canvas.getContext("2d");
+    ctx.strokeStyle = "#10275a";
+    ctx.lineWidth = Math.max(2, canvas.width / 220);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    const at = (ev) => {
+      const b = canvas.getBoundingClientRect();
+      return [(ev.clientX - b.left) * canvas.width / b.width, (ev.clientY - b.top) * canvas.height / b.height];
+    };
+    ctx.moveTo(...at(e));
+    const move = (ev) => { if (!inkRef.current) return; ctx.lineTo(...at(ev)); ctx.stroke(); };
+    const up = () => {
+      inkRef.current = false;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const clearInk = () => {
+    const c = drawRef.current;
+    if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height);
+  };
+  const fitInk = (imgEl) => {
+    const c = drawRef.current;
+    if (!c || !imgEl) return;
+    c.width = imgEl.naturalWidth || imgEl.clientWidth;
+    c.height = imgEl.naturalHeight || imgEl.clientHeight;
+  };
+  const placeStamp = async () => {
     if (!stampImg) return;
+    const flat = await flattenStamp();
     const img = new Image();
     img.onload = () => {
       const num = pageInView();
@@ -13474,14 +13567,14 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
       const h = w * (img.height / img.width || 0.6);
       const m = {
         ...sdMarkBlank("stamp", num, pg.wPt - w - 40, pg.hPt - h - 40),
-        w, h, dataUrl: stampImg, locked: true
+        w, h, dataUrl: flat, locked: true
       };
       setMarks((prev) => prev.concat(m));
       setSel(m.id);
       setStampStep(null);
       setStampImg(null);
     };
-    img.src = stampImg;
+    img.src = flat;
   };
   const resizeStamp = (id, w) => {
     const m = marks.find((x) => x.id === id);
@@ -13498,8 +13591,11 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
     setErr(null);
     try {
       const out = await sdBurnMarks(bytes, usable, stampLine);
-      const base = String((file && file.name) || title || "drawing").replace(/\.pdf$/i, "");
-      const signed = new File([out], `${base} - signed.pdf`, { type: "application/pdf" });
+      // The same shape as every other document the site produces:
+      // <project> - <what it is> - <date>. boardFileName owns that rule, so a
+      // signed drawing is named the way an exported board is. (7.9.26)
+      const name = boardFileName(projectName, docLabel || title || "Signed", "pdf");
+      const signed = new File([out], name, { type: "application/pdf" });
       await onDone(signed, usable.length);
     } catch (e) {
       console.error("[awdash] sd sign: burning failed", e);
@@ -13565,7 +13661,8 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
 
   const selMark = marks.find((m) => m.id === sel && m.kind === "stamp");
 
-  return sbH(
+  return createPortal(
+    sbH(
     "div",
     { className: "sdSign", dir: isRTL ? "rtl" : "ltr" },
     sbH(
@@ -13648,9 +13745,36 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
             sbH(
               "div",
               { style: { display: "flex", gap: 8, marginTop: 14 } },
-              sbH("button", { type: "button", className: "sdcAskBtn primary", disabled: !stampImg, onClick: placeStamp },
+              sbH("button", { type: "button", className: "sdcAskBtn primary", disabled: !stampImg, onClick: () => setStampStep("draw") },
                 L("next"), " ", sbH(isRTL ? ArrowLeftSd : ArrowRightSd, { size: 14, strokeWidth: 2.2 })),
               sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { setStampStep(null); setStampImg(null); } }, L("cancel"))
+            )
+          )
+        )
+      : null,
+
+    stampStep === "draw"
+      ? sbH(
+          "div",
+          { className: "sdcAsk" },
+          sbH(
+            "div",
+            { className: "sdcAskBox", onClick: (e) => e.stopPropagation(), style: { maxWidth: 560 } },
+            sbH("h3", { className: "sdcAskTitle" }, L("drawHead")),
+            sbH("p", { className: "sdcAskName" }, L("drawHint")),
+            sbH(
+              "div",
+              { className: "sdDrawWrap" },
+              sbH("img", { src: stampImg, alt: "", onLoad: (e) => fitInk(e.currentTarget) }),
+              sbH("canvas", { ref: drawRef, onPointerDown: startInk })
+            ),
+            sbH(
+              "div",
+              { style: { display: "flex", gap: 8, marginTop: 14 } },
+              sbH("button", { type: "button", className: "sdcAskBtn primary", onClick: placeStamp },
+                sbH(CheckSd, { size: 15, strokeWidth: 2.4 }), " ", L("doneDraw")),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: clearInk }, L("clearDraw")),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { setStampStep("pick"); } }, L("cancel"))
             )
           )
         )
@@ -13675,6 +13799,8 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
           )
         )
       : null
+    ),
+    document.body
   );
 }
 
@@ -13820,7 +13946,8 @@ function SdClientBoard({
           const shown = ap && ap.file ? ap.file : v.file;
           const isPdf = /\.pdf$/i.test(String((v.file && v.file.name) || "")) ||
             /application\/pdf/.test(String((v.file && v.file.type) || ""));
-          return sbH(
+          return createPortal(
+            sbH(
             "div",
             { className: "sdcAsk", onClick: () => setAsk(null) },
             sbH(
@@ -13847,6 +13974,8 @@ function SdClientBoard({
               ),
               sbH("button", { type: "button", className: "sdcAskBtn sdcAskCancel", onClick: () => setAsk(null) }, L("cancel"))
             )
+            ),
+            document.body
           );
         })()
       : null,
@@ -13857,6 +13986,11 @@ function SdClientBoard({
           file: signing.file,
           title: signing.row.title || (signing.file && signing.file.name) || "",
           who: currentEmail,
+          projectName,
+          // What the drawing is called on paper: its drawing number when it has
+          // one, its BOQ item otherwise. Never the uploaded file's name.
+          docLabel: (sdRowOf(rows, signing.row.code).dwgNo || "").trim()
+            || (signing.row.source === "boq" ? signing.row.code : signing.row.title) || "SD",
           onCancel: () => setSigning(null),
           onDone: (signedFile, markCount) => saveApproval(signing.row, signedFile, markCount)
         })
@@ -15240,6 +15374,7 @@ var SB_L = {
   projectInfo: { en: "PROJECT INFORMATION", he: "פרטי הפרויקט" },
   projectName: { en: "Project Name", he: "שם הפרויקט" },
   date: { en: "Date", he: "תאריך" },
+  dateCol: { en: "Submitted", he: "תאריך להגשה" },
   contractor: { en: "Contractor", he: "קבלן" },
   requiredApprovalDate: { en: "Required Approval Date", he: "תאריך נדרש לאישור" },
   // The submittal list's own column headings (29.8.26).
@@ -16186,7 +16321,7 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
 @page { size: A4 portrait; margin: 0; }
 * { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
-body { width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; --val: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { margin: 0 auto; width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; --val: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 .frame { border: 1.5px solid ${accent}; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; min-height: calc(297mm - 18mm); }
 .hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding: 10px 0 14px; margin-bottom: 4px; min-height: 82px; }
 /* Both sides are the same fixed width, so the title sits on the centre line of
@@ -16233,7 +16368,7 @@ ${printedStampCss(3)}
 .revBlock { page-break-inside: avoid; }
 .footTxt { margin-top: 8px; font-size: 9px; color: #6b7280; text-align: center; white-space: pre-line; }
 .footImg { margin-top: 8px; text-align: center; }
-.footImg img { max-width: 100%; max-height: 78px; object-fit: contain; }
+.footImg img { width: 100%; height: auto; display: block; }
 .ftr { margin-top: 5px; font-size: 8px; color: #9aa3af; text-align: center; }
 /* The attached specifications, appended after the form. One source page per
    printed page, so the whole thing prints as a single document. */
@@ -18738,7 +18873,7 @@ function SubmittalFolder({
                 sbH("th", null, L("catCol")),
                 sbH("th", null, L("itemCol")),
                 sbH("th", null, L("supplierCol")),
-                sbH("th", null, L("date")),
+                sbH("th", null, L("dateCol")),
                 sbH("th", null, L("dueCol")),
                 sbH("th", null, L("status")),
                 sbH("th", null, L("signDate")),
@@ -20092,7 +20227,7 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
       '@page { size: A4 landscape; margin: 0; }' +
       '* { box-sizing: border-box; }' +
       'html, body { margin: 0; padding: 0; }' +
-      'body { width: 297mm; min-height: 210mm; padding: 20mm; font-family: Arial, "Helvetica Neue", sans-serif; color: #1f2a37; direction: ' + dir + '; }' +
+      'body { margin: 0 auto; width: 297mm; min-height: 210mm; padding: 20mm; font-family: Arial, "Helvetica Neue", sans-serif; color: #1f2a37; direction: ' + dir + '; }' +
       '.frame { min-height: calc(210mm - 40mm); border: 1.5px solid ' + accent + '; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; }' +
       '.hdr { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid ' + accent + '; padding-bottom: 10px; margin-bottom: 16px; }' +
       '.hdr img { max-height: 52px; max-width: 200px; object-fit: contain; }' +
@@ -20104,7 +20239,7 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
       '.spacer { flex: 1; }' +
       '.ftr { margin-top: 10px; font-size: 10px; color:#6b7280; text-align:center; white-space: pre-line; }' +
       '.footImg { margin-top: 14px; text-align: center; }' +
-      '.footImg img { max-width: 100%; max-height: 90px; object-fit: contain; }' + printedStampCss(7) +
+      '.footImg img { width: 100%; height: auto; display: block; }' + printedStampCss(7) +
       '</style></head><body><div class="frame"><div class="hdr">' + logo + '<div class="ttl">' + title + '</div></div>' + table + '<div class="spacer"></div>' + footTxt + footImg + '</div>' + printedStampHtml(he ? "he" : "en") + '</body></html>';
     const w = window.open("", "_blank");
     if (!w) return;
@@ -21227,6 +21362,9 @@ function ProjectDashboardApp() {
   const [sessionGrants, setSessionGrants] = useState6([]);
   const [loggedInEmail, setLoggedInEmail] = useState6(null);
   const [editableProjectIds, setEditableProjectIds] = useState6([]);
+  // Which projects this account was actually given. null = the administrator,
+  // who is not gated; [] = signed in and granted nothing.
+  const [allowedProjectIds, setAllowedProjectIds] = useState6(null);
   // Set when a sign-in found no project list yet, cleared the moment one arrives.
   const wantAutoProject = useRef5(false);
   const [openCardKey, setOpenCardKey] = useState6(null);
@@ -21692,7 +21830,10 @@ function ProjectDashboardApp() {
   // Named, and switched on — unless you are the system administrator, who has
   // to be able to see a project in order to switch it back on.
   const visibleProjects = (activeContractor.projects || []).filter(
-    (p) => p.name && p.name.trim() && (appRole === "admin" || p.published)
+    (p) => p.name && p.name.trim() && (
+      appRole === "admin" ||
+      (p.published && (allowedProjectIds || []).indexOf(String(p.id)) >= 0)
+    )
   );
   // The screen follows the data, not the other way round. Two things make this
   // necessary: on a page refresh the session comes back before the project list
@@ -21799,10 +21940,36 @@ function ProjectDashboardApp() {
         }
         console.log("[awdash] detected role:", role);
         const projs = activeContractor.projects || [];
+        // Which projects this account was given.
+        //
+        // This used to not be asked at all: everybody who signed in was handed
+        // every published project on the contractor, and the "Projects" column
+        // in user settings wrote rows into project_access that nothing ever
+        // read back. Changing somebody's projects therefore changed nothing
+        // they could see. The row-level rules still kept the DATA out, so a
+        // project they were not given opened empty — but its name, and the
+        // fact that it exists, were on their screen. (7.9.26)
+        let granted = null;
+        if (role !== "admin") {
+          try {
+            const { data: rows, error: accErr } = await supabase
+              .from("project_access").select("project_id, role");
+            if (accErr) throw accErr;
+            granted = (rows || []).map((r) => String(r.project_id));
+            console.log("[awdash] project_access for this user:", granted.length);
+          } catch (eAcc) {
+            // Never fall back to "everything". A read that failed is not a
+            // grant, and guessing wide here is exactly the bug being fixed.
+            console.error("[awdash] could not read project_access", eAcc);
+            granted = [];
+          }
+        }
+        setAllowedProjectIds(granted);
         // The ON/OFF switch in project settings is now the real gate: a project
         // that is off does not reach anyone except the system administrator,
         // whatever rights they were given. Switching it back on restores it.
-        const configured = projs.filter((p) => p.name && (role === "admin" || p.published));
+        const configured = projs.filter((p) =>
+          p.name && (role === "admin" || (p.published && granted.indexOf(String(p.id)) >= 0)));
         setLoginError(null);
         setForm({ email: "", password: "" });
         setIsAuthenticated(true);
@@ -21825,9 +21992,14 @@ function ProjectDashboardApp() {
           setShowDisclaimer(true);
         }
         if (role === "admin" || role === "contractor") {
-          setSessionGrants(projs.map((p) => ({ projectId: p.id, role: "contractor", allowedCards: [] })));
+          const mine = role === "admin" ? projs.map((p) => p.id) : configured.map((p) => p.id);
+          setSessionGrants(mine.map((id) => ({ projectId: id, role: "contractor", allowedCards: [] })));
           setAuthRole("contractor");
-          setEditableProjectIds(role === "admin" ? projs.map((p) => p.id) : []);
+          // A main contractor edits the projects they were given — that is what
+          // lets them enter progress percentages and add site photos. The cards
+          // that are theirs to read only are read-only by their own rule, not
+          // by withholding this. (7.9.26)
+          setEditableProjectIds(mine);
           if (role === "admin") {
             setView("projectPicker");
           } else {
@@ -21839,7 +22011,7 @@ function ProjectDashboardApp() {
         } else {
           const target = configured[0] || null;
             if (!target) wantAutoProject.current = true;
-          setSessionGrants(target ? [{ projectId: target.id, role: "client", allowedCards: [] }] : []);
+          setSessionGrants(configured.map((p) => ({ projectId: p.id, role: "client", allowedCards: [] })));
           setAuthRole("client");
           setEditableProjectIds([]);
           if (target) setSelectedProjectId(target.id);
@@ -22028,6 +22200,7 @@ function ProjectDashboardApp() {
     setAppRole(null);
     setLoggedInEmail(null);
     setEditableProjectIds([]);
+    setAllowedProjectIds(null);
     setSessionGrants([]);
     setSystemAdminSection(null);
     setOpenCardKey(null);
