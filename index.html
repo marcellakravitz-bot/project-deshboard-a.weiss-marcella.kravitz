@@ -494,7 +494,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 81";
+var APP_BUILD = "7.9.2026 · build 83";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1922,7 +1922,6 @@ var pdfViewer = `
         .lliTable .cQty { width: 75px; }
         .lliTable .cUnit { width: 55px; color: var(--steel); font-weight: 700; }
         .lliTable .cOrd { width: 90px; }
-        .lliTable .cPoF { width: 92px; }
         .lliTable .cPo { width: 100px; }
         .lliTable .cPoD { width: 112px; }
         .lliTable .cEta { width: 112px; }
@@ -3828,6 +3827,19 @@ var marcella = `
           gap: 12px; flex-wrap: wrap;
         }
         .mkTitle { margin: 0; font-size: 19px; font-weight: 800; color: #103460; }
+        /* The foot of the task: when it was opened, and the two things she can
+           do about it — the same size, the same frame, an icon each (7.9.26). */
+        .mkCreated { text-align: center; }
+        .mkFootRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 14px 0 6px; flex-wrap: wrap; }
+        .mkFootBtn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+          min-width: 132px; height: 38px; padding: 0 18px;
+          border: none; border-radius: 10px; background: var(--accent, #0F3460); color: #fff;
+          font-family: inherit; font-size: 13.5px; font-weight: 700; line-height: 1; cursor: pointer;
+        }
+        .mkFootBtn.danger { background: #c0392b; }
+        .mkFootBtn:hover { filter: brightness(1.08); }
+        .mkDelAsk { display: flex; align-items: center; gap: 8px; font-size: 12.5px; font-weight: 700; }
         .mkSub { margin: 2px 0 0; font-size: 12px; color: var(--steel); font-weight: 600; }
 
         /* ---- the seven tiles ---- */
@@ -8937,7 +8949,10 @@ function lliBlankRow() {
     // The purchase order as a document, beside the number and the date it
     // carries. The two text fields can be filled from the file, but only with
     // what is plainly written in it.
-    poFile: null, poDate: "", poText: "", category: null
+    // 7.9.26 — no order file. A purchase order carries prices and there are no
+    // prices on this site; the number, the two dates and the supplier are
+    // typed. The two keys are kept off new rows and read off old ones nowhere.
+    poDate: "", category: null
   };
 }
 // -----------------------------------------------------------------------------
@@ -9088,14 +9103,13 @@ var LLI_L = {
   // Was "כמות שמאי". It is the number of units the order actually places, and
   // it is read off the purchase order along with its number and dates (29.8.26).
   qtySurveyor: { en: "Order qty", he: "כמות הזמנה" },
-  poFile: { en: "PO file", he: "קובץ הזמנה" },
+
   poNo: { en: "PO number", he: "מספר הזמנה" },
   poDate: { en: "PO date", he: "תאריך הזמנה" },
   upload: { en: "Upload", he: "העלאה" },
   open: { en: "Open", he: "פתיחה" },
   remove: { en: "Remove the file", he: "הסרת הקובץ" },
-  readPo: { en: "Read the order", he: "קריאת ההזמנה" },
-  reading: { en: "Reading…", he: "קורא…" },
+  // 7.9.26 — "read the order" went with the order file it read.
   review: { en: "Check", he: "לבדיקה" },
   reviewTitle: {
     en: "The classification of this item was not certain — worth a look in the routing table.",
@@ -9256,7 +9270,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       r.unit ? boqUnit(r.unit, lang) : "",
       v.qtyActual, v.po,
       v.poDate ? sbFmtDate(v.poDate) : "",
-      v.poFile ? v.poFile.name || "" : "",
       v.eta ? sbFmtDate(v.eta) : "",
       v.ordered ? lliStatusLabel(v.status, lang) : "",
       r.longLead ? L("longLead") : ""
@@ -9369,28 +9382,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       setBusyRow(null);
     }
   };
-  // The purchase order. Uploaded like every other attachment — the storage
-  // bucket first, an inline copy only when the bucket is out — and its text is
-  // pulled out here in the browser at the same moment, exactly as the submittal
-  // specs are, so the file itself never has to leave the system later.
-  const onPoFile = async (code, e) => {
-    const f = e.target.files && e.target.files[0];
-    e.target.value = "";
-    if (!f) return;
-    setBusyRow(`po-${code}`);
-    setPoNote(null);
-    try {
-      const stored = await sbUploadFile(projectId, `po-${code}`, f);
-      const text = /\.pdf$/i.test(f.name) ? await sbExtractPdfText(f) : "";
-      patch(code, { poFile: { ...stored, name: f.name, size: f.size }, poText: text, ordered: true });
-    } catch (ex) {
-      console.warn("[awdash] po upload failed", ex);
-      const raw = String((ex && ex.message) || ex);
-      setPoNote(fnErrorAdvice(raw, isRTL) || raw);
-    } finally {
-      setBusyRow(null);
-    }
-  };
   const openFile = async (att) => {
     // The tab is opened INSIDE the click, before anything is awaited. Reading
     // the file's bytes takes a moment, and a window opened after that moment is
@@ -9401,52 +9392,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     if (!url) { if (w) w.close(); return; }
     if (w) w.location.href = url;
     else window.open(url, "_blank", "noopener");
-  };
-  // Read the order. Only what is plainly in the document is written into the
-  // row — a field the model did not find stays exactly as it was, because an
-  // invented order number is worse than an empty one.
-  const readPo = async (code, v) => {
-    setBusyRow(`po-${code}`);
-    setPoNote(null);
-    try {
-      // An order that is a scan has no text layer. Rather than stop there, its
-      // pages go to the model as pictures — that file is the commonest kind of
-      // purchase order there is (29.8.26).
-      const poText = String(v.poText || "").trim();
-      let shots = [];
-      if (poText.length < 40) {
-        shots = await sbRenderSpecImages({ attachments: [v.poFile].filter(Boolean) }, 4)
-          .then((list) => list.map((sh) => sh.data))
-          .catch(() => []);
-      }
-      if (poText.length < 40 && !shots.length) {
-        throw new Error(t2("לא נשלף טקסט מקובץ ההזמנה", "No text could be read out of the order file"));
-      }
-      const { data: res, error } = await supabase.functions.invoke("submittal-ai", {
-        body: { mode: "po", text: poText.slice(0, 2e4), images: shots }
-      });
-      if (error) throw new Error(await fnFail(error, res, isRTL));
-      const got = (res && res.po) || null;
-      if (!got) throw new Error((res && res.error) || "no_po");
-      const next = {};
-      if (got.number && !v.po) next.po = String(got.number).trim();
-      if (got.date && !v.poDate) next.poDate = String(got.date).slice(0, 10);
-      if (got.supplier && !v.supplier) next.supplier = String(got.supplier).trim();
-      if (got.delivery && !v.eta) next.eta = String(got.delivery).slice(0, 10);
-      // The number of units the order actually places — not a price, and not
-      // the BOQ quantity: what was ordered against this mark (29.8.26).
-      if (got.qty && !v.qtyActual) next.qtyActual = String(got.qty).trim();
-      if (!Object.keys(next).length) {
-        setPoNote(t2("לא נמצא בהזמנה מידע חדש למלא.", "Nothing new to fill in was found in the order."));
-      } else {
-        patch(code, next);
-      }
-    } catch (ex) {
-      const raw = String((ex && ex.message) || ex);
-      setPoNote(fnErrorAdvice(raw, isRTL) || raw);
-    } finally {
-      setBusyRow(null);
-    }
   };
   // What leaves the board. The rows are the ones on screen — the category chips
   // and "only long lead" have already done their work above — and the columns
@@ -9460,7 +9405,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const head = [
       L("section"), L("category"), L("typeMark"), L("desc"), L("supplier"),
       L("qtyBoq"), L("unit"), L("qtySurveyor"), L("ordered"), L("poNo"),
-      L("poDate"), L("poFile"), L("eta"), L("etaActual"), L("status"), L("longLead")
+      L("poDate"), L("eta"), L("etaActual"), L("status"), L("longLead")
     ];
     const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 12, 9];
     // What each column IS, so the workbook stores it as that. The item number
@@ -9496,7 +9441,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
           yn(v.ordered),
           v.ordered ? v.po : "",
           v.ordered && v.poDate ? sbFmtDate(v.poDate) : "",
-          v.ordered && v.poFile ? v.poFile.name || "" : "",
           v.ordered && v.eta ? sbFmtDate(v.eta) : "",
           v.ordered && v.etaActual ? sbFmtDate(v.etaActual) : "",
           v.ordered ? lliStatusLabel(v.status, lang) : "",
@@ -9828,7 +9772,6 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 sbH("th", { className: "cQty" }, L("qtySurveyor")),
                 sbH("th", { className: "cImg" }, L("image")),
                 sbH("th", { className: "cOrd" }, L("ordered")),
-                sbH("th", { className: "cPoF" }, L("poFile")),
                 sbH("th", { className: "cPo" }, L("poNo")),
                 sbH("th", { className: "cPoD" }, L("poDate")),
                 sbH("th", { className: "cEta" }, L("eta")),
@@ -9842,7 +9785,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 19 : 16 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 18 : 15 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -10080,41 +10023,11 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                         v.ordered ? L("ordered") : L("notOrdered")
                       )
                     ),
-                    sbH(
-                      "td",
-                      { className: "cPoF" },
-                      // The purchase order itself. Uploading it is what lets the
-                      // number, the date and the supplier be read out of it — and
-                      // only what is plainly written there is ever filled in.
-                      !v.ordered
-                        ? sbH("span", { className: "lliDash" }, "—")
-                        : v.poFile
-                          ? sbH(
-                              "div",
-                              { className: "lliFileCell" },
-                              sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => openFile(v.poFile) }, L("open")),
-                              canEdit
-                                ? sbH(
-                                    "button",
-                                    { type: "button", className: "sbLinkBtn", disabled: busyRow === `po-${r.code}`, onClick: () => readPo(r.code, v) },
-                                    busyRow === `po-${r.code}` ? L("reading") : L("readPo")
-                                  )
-                                : null,
-                              canEdit
-                                ? sbH("button", { type: "button", className: "lliImgClear lliFileClear", title: L("remove"), onClick: () => patch(r.code, { poFile: null, poText: "" }) }, "×")
-                                : null
-                            )
-                          : canEdit
-                            ? sbH(
-                                "label",
-                                { className: "lliUpload" },
-                                busyRow === `po-${r.code}`
-                                  ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
-                                  : L("upload"),
-                                sbH("input", { type: "file", accept: ".pdf,application/pdf,image/*", style: { display: "none" }, onChange: (e) => onPoFile(r.code, e) })
-                              )
-                            : sbH("span", { className: "lliDash" }, "—")
-                    ),
+                    // 7.9.26 — the purchase order used to be uploaded here, and
+                    // the number, the date, the supplier and the delivery date
+                    // read out of it. It has gone, at her instruction: a
+                    // purchase order carries prices, and there are no prices on
+                    // this site. The four facts that matter are typed.
                     sbH(
                       "td",
                       { className: "cPo" },
@@ -10243,7 +10156,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       { className: "lliClashRow" },
                       sbH(
                         "td",
-                        { colSpan: canEdit ? 19 : 16 },
+                        { colSpan: canEdit ? 18 : 15 },
                         sbH(
                           "div",
                           { className: "lliClashNote" },
@@ -10273,7 +10186,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       className: `lliDropTail ${drag.over === null ? "lliDropHere" : ""}`.trim(),
                       onDragOver: (e) => { e.preventDefault(); if (drag.over !== null) setDrag({ ...drag, over: null }); },
                       onDrop: (e) => { e.preventDefault(); dropRow(g, drag.code, null); setDrag(null); }
-                    }, sbH("td", { colSpan: canEdit ? 18 : 15 }))
+                    }, sbH("td", { colSpan: canEdit ? 17 : 14 }))
                   : null
               )
             )
@@ -14586,7 +14499,9 @@ var MK_MODULES = [
 ];
 
 var MK_L = {
-  title: { en: "Marcella \u{1F451}", he: "Marcella \u{1F451}" },
+  // 7.9.26 — the crown beside the name has gone. It is her own board; it does
+  // not need to say so twice.
+  title: { en: "Marcella", he: "Marcella" },
   lead: {
     en: "What needs dealing with now, who I am waiting for, and what becomes a problem if it is left.",
     he: "מה צריך טיפול עכשיו, למי אני ממתינה, ומה יהפוך לבעיה אם לא אטפל בו."
@@ -14663,6 +14578,7 @@ var MK_L = {
   decision: { en: "Decision", he: "החלטה" },
   owner: { en: "Owner", he: "אחראי ההחלטה" },
   del: { en: "Delete", he: "מחיקה" },
+  save: { en: "Save", he: "שמירה" },
   delAsk: { en: "Delete this task?", he: "למחוק את המשימה?" },
   markDone: { en: "Mark completed", he: "סימון כהושלמה" },
   readOnly: {
@@ -14690,6 +14606,26 @@ function mkPrioColor(key) {
 function mkIsClosed(t) {
   return !!t && (t.status === "completed" || t.status === "na");
 }
+// What the task form asks for, in the order it asks. One list, so what the
+// form shows and what a test can check are the same thing.
+//
+// 7.9.26, at her instruction: the type, the responsible party, who she is
+// waiting for, the two linked-record fields, the source and the attachment all
+// came off. This is her own board — every box she has to fill in herself is a
+// box she will not fill in — and "type" only ever decided which extra fields
+// appeared. The discipline stands where it was: what the task is ABOUT is the
+// thing worth choosing.
+var MK_FORM_FIELDS = [
+  { key: "item", wide: true, ph: "itemPh" },
+  { key: "description", wide: true, textarea: true },
+  { key: "discipline", options: "disciplines", blank: true },
+  { key: "category", options: "categories" },
+  { key: "status", options: "statuses" },
+  { key: "priority", options: "priorities" },
+  { key: "actionDate", type: "date", dir: "ltr" },
+  { key: "dueDate", type: "date", dir: "ltr" },
+  { key: "followUpDate", type: "date", dir: "ltr" }
+];
 function mkBlank(who) {
   const today = sbToday();
   return {
@@ -14701,7 +14637,10 @@ function mkBlank(who) {
     discipline: "",
     status: "notStarted",
     priority: "normal",
-    actionDate: "",
+    // The day the task was opened. It was blank and waiting to be typed, which
+    // is a date nobody types — and the one date the board already knows for
+    // certain (7.9.26).
+    actionDate: today,
     dueDate: "",
     followUpDate: "",
     responsible: "",
@@ -15061,43 +15000,22 @@ function MarcellaCard({ appIsRTL, rows, onChangeRows, canEdit, projectId, projec
       { className: "mkHead" },
       sbH("button", { type: "button", className: "mkBack", onClick: () => setOpenId(null) },
         sbH(isRTL ? ArrowRightM : ArrowLeftM, { size: 14, strokeWidth: 2.4 }), " ", L("back")),
-      ro ? null : sbH(
-        "div",
-        { style: { display: "flex", gap: 8, alignItems: "center" } },
-        askDel === rec.id
-          ? sbH(
-              "span",
-              { style: { display: "flex", gap: 8, alignItems: "center", fontSize: 12, fontWeight: 700 } },
-              L("delAsk"),
-              sbH("button", { type: "button", className: "mkPill", onClick: () => removeTask(rec.id) },
-                lang === "he" ? "כן" : "Yes"),
-              sbH("button", { type: "button", className: "mkPill", onClick: () => setAskDel(null) },
-                lang === "he" ? "לא" : "No")
-            )
-          : sbH("button", { type: "button", className: "mkIconBtn danger", title: L("del"), onClick: () => setAskDel(rec.id) },
-              sbH(TrashM, { size: 13, strokeWidth: 2 }))
-      )
+      // Deleting lives at the foot with saving now, so the top of the form is
+      // the way back and nothing else.
+      null
     ),
 
     sbH(
       "div",
       { className: "mkGrid" },
-      field("item", { wide: true, ph: "itemPh" }),
-      field("description", { wide: true, textarea: true }),
-      pick("kind", MK_KINDS),
-      pick("category", MK_CATEGORIES),
-      pick("discipline", MK_DISCIPLINES, { blank: true }),
-      pick("status", MK_STATUSES),
-      pick("priority", MK_PRIORITIES),
-      field("actionDate", { type: "date", dir: "ltr" }),
-      field("dueDate", { type: "date", dir: "ltr" }),
-      field("followUpDate", { type: "date", dir: "ltr" }),
-      field("responsible"),
-      field("waitingFor"),
-      pick("relModule", MK_MODULES, { blank: true }),
-      field("relRecord"),
-      field("source"),
-      field("link", { dir: "ltr" })
+      MK_FORM_FIELDS.map((f) => {
+        const list = f.options === "disciplines" ? MK_DISCIPLINES
+          : f.options === "categories" ? MK_CATEGORIES
+          : f.options === "statuses" ? MK_STATUSES
+          : f.options === "priorities" ? MK_PRIORITIES
+          : null;
+        return list ? pick(f.key, list, { blank: f.blank }) : field(f.key, f);
+      })
     ),
 
     ro ? null : remindRow(rec),
@@ -15137,8 +15055,37 @@ function MarcellaCard({ appIsRTL, rows, onChangeRows, canEdit, projectId, projec
     sbH("div", { className: "mkSubHead" }, L("notes")),
     sbH("div", { className: "mkGrid" }, field("notes", { wide: true, textarea: true, rows: 4 })),
 
-    sbH("p", { className: "mkSub", dir: "ltr" },
-      `${L("created")} ${sbFmtDate(rec.createdAt)}${rec.completedAt ? ` · ${L("completedOn")} ${sbFmtDate(rec.completedAt)}` : ""}`)
+    sbH("p", { className: "mkSub mkCreated", dir: "ltr" },
+      `${L("created")} ${sbFmtDate(rec.createdAt)}${rec.completedAt ? ` · ${L("completedOn")} ${sbFmtDate(rec.completedAt)}` : ""}`),
+
+    // Two instructions at the foot, the same size and the same frame, each
+    // with the icon that says which it is. Nothing is lost by pressing Save —
+    // the board writes as she types — but a form with no way to say "done"
+    // reads as a form that has not been filed (7.9.26).
+    ro ? null : sbH(
+      "div",
+      { className: "mkFootRow" },
+      sbH(
+        "button",
+        { type: "button", className: "mkFootBtn", onClick: () => setOpenId(null) },
+        sbH(SaveIcon2, { size: 15, strokeWidth: 2.2 }),
+        sbH("span", null, L("save"))
+      ),
+      askDel === rec.id
+        ? sbH(
+            "span",
+            { className: "mkDelAsk" },
+            L("delAsk"),
+            sbH("button", { type: "button", className: "mkPill", onClick: () => removeTask(rec.id) }, lang === "he" ? "כן" : "Yes"),
+            sbH("button", { type: "button", className: "mkPill", onClick: () => setAskDel(null) }, lang === "he" ? "לא" : "No")
+          )
+        : sbH(
+            "button",
+            { type: "button", className: "mkFootBtn danger", onClick: () => setAskDel(rec.id) },
+            sbH(TrashM, { size: 15, strokeWidth: 2.2 }),
+            sbH("span", null, L("del"))
+          )
+    )
   ) : null;
 
   return sbH("div", { className: "functionPageBody mkBody" }, rec ? form : register);
