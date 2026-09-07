@@ -482,7 +482,12 @@ var DEFAULT_BRAND_NAME = "A. Weiss";
 // architect's presentation, shop drawings, submittals, the ordering board and
 // the site photos. Everything else on the project is internal. (7.9.26)
 var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "photos"];
-var APP_BUILD = "7.9.2026 · build 64";
+// The main contractor gets the client's seven plus the three that are the job
+// rather than the product: the contacts sheet, RFI, and change instructions —
+// which they read and never edit (build 57). LEED is the administrator's.
+// (7.9.26)
+var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
+var APP_BUILD = "7.9.2026 · build 65";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -3812,6 +3817,12 @@ var sdSign = `
           display: flex; align-items: center; justify-content: center;
           font-weight: 800; color: #103460; font-size: 14px;
         }
+        .llicTable td { vertical-align: middle; }
+        .llicThumb {
+          width: 46px; height: 34px; object-fit: cover; border-radius: 6px;
+          border: 1px solid var(--line); cursor: zoom-in; display: block;
+        }
+        .llicFoot { display: flex; justify-content: flex-end; padding-top: 4px; }
         .sdSignErr {
           background: #fdf2f3; border: 1px solid #f0c4c9; color: #b02a37;
           border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 12.5px;
@@ -5838,7 +5849,7 @@ ${printedStampCss(4)}
           "span",
           { className: `ganttCriticalMark noteMark ${a.kind === "change" ? "change" : a.kind === "critical" ? "critical" : a.kind === "late" ? "late" : "overdue"}` },
           a.kind === "change" ? /* @__PURE__ */ React11.createElement(Heart2, { size: 13, strokeWidth: 2.4, fill: "currentColor" }) : a.kind === "critical" ? /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 13, strokeWidth: 2.6 }) : "!"
-        ), /* @__PURE__ */ React11.createElement("span", { className: "noteText" }, a.text), viewerRole === "admin" && /* @__PURE__ */ React11.createElement("span", { className: "noteChecks" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${teamOn ? "checked" : ""}`, onClick: () => onToggleTeamNote && onToggleTeamNote(a.id, !teamOn), title: isRTL ? "הצגה לא.וייס" : "Show to A. Weiss", "aria-label": isRTL ? "הצגה לא.וייס" : "Show to A. Weiss" }, teamOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 })), /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${clientOn ? "checked" : ""}`, onClick: () => onToggleClientNote && onToggleClientNote(a.id, !clientOn), title: isRTL ? "הצגה ללקוח" : "Show to client", "aria-label": isRTL ? "הצגה ללקוח" : "Show to client" }, clientOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 }))));
+        ), /* @__PURE__ */ React11.createElement("span", { className: "noteText" }, a.text), (viewerRole === "admin" || viewerRole === "contractor") && /* @__PURE__ */ React11.createElement("span", { className: "noteChecks" }, viewerRole === "admin" && /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${teamOn ? "checked" : ""}`, onClick: () => onToggleTeamNote && onToggleTeamNote(a.id, !teamOn), title: isRTL ? "הצגה לא.וייס" : "Show to A. Weiss", "aria-label": isRTL ? "הצגה לא.וייס" : "Show to A. Weiss" }, teamOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 })), /* @__PURE__ */ React11.createElement("button", { type: "button", className: `noteClientCheck ${clientOn ? "checked" : ""}`, onClick: () => onToggleClientNote && onToggleClientNote(a.id, !clientOn), title: isRTL ? "הצגה ללקוח" : "Show to client", "aria-label": isRTL ? "הצגה ללקוח" : "Show to client" }, clientOn && /* @__PURE__ */ React11.createElement(Check2, { size: 12, strokeWidth: 3 }))));
       }));
     })()), lastUpdated && /* @__PURE__ */ React11.createElement("p", { className: "ganttLastUpdated numerals" }, isRTL ? "\u05E2\u05D3\u05DB\u05D5\u05DF \u05D0\u05D7\u05E8\u05D5\u05DF: " : "Last updated: ", new Date(lastUpdated.timestamp).toLocaleDateString(isRTL ? "he-IL" : "en-GB"), " ", new Date(lastUpdated.timestamp).toLocaleTimeString(isRTL ? "he-IL" : "en-GB", { hour: "2-digit", minute: "2-digit" }), lastUpdated.email ? ` \u2014 ${lastUpdated.email}` : "")),
     contextMenu && /* @__PURE__ */ React11.createElement(
@@ -6146,7 +6157,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -8738,7 +8749,7 @@ var LLI_L = {
   nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." }
 };
 
-function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData }) {
+function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -9233,6 +9244,39 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       { key, type: "button", className: `lliChip ${cat === key ? "on" : ""}`, onClick: () => setCat(key) },
       label
     );
+
+  // Everyone who is not the system administrator gets the printed sheet on
+  // screen: the same rows, the same nine columns, and the same PDF underneath
+  // the download button. The supplier and the purchase order stay on her board.
+  // (7.9.26)
+  if (viewerRole === "client" || viewerRole === "contractor") {
+    const clientRows = [];
+    groups.forEach((g) => {
+      g.rows.forEach((r) => {
+        if (isHidden(r)) return;
+        const v = lliRowOf(data, r.code);
+        const c = boardCategoryOf(r.category);
+        clientRows.push({
+          code: r.source === "boq" ? r.code : L("manual"),
+          category: c ? sbText(c, lang) : "",
+          typeMark: v.typeMark,
+          desc: v.desc || r.title,
+          image: v.image || null,
+          eta: v.ordered ? v.eta : "",
+          etaActual: v.ordered ? v.etaActual : "",
+          ordered: v.ordered,
+          status: v.status,
+          statusLabel: lliStatusLabel(v.status, lang),
+          statusColor: lliStatusColor(v.status, v.ordered),
+          longLead: r.longLead
+        });
+      });
+    });
+    return sbH(LliClientBoard, {
+      lang, isRTL, rows: clientRows, projectName,
+      onDownload: (lg) => onPdf(lg, "client")
+    });
+  }
 
   return sbH(
     "div",
@@ -10037,13 +10081,20 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // most of them empty. What a client is owed is the drawings that were
   // actually issued to them — which is exactly what the "submitted to client"
   // switch records — and eight columns, in the order she reads them. (5.9.26)
-  if (viewerRole === "client") {
+  if (viewerRole === "client" || viewerRole === "contractor") {
+    // The contractor is not being shown a client's folder — it is their own
+    // checklist. They see every drawing on the project, including the ones that
+    // have not gone out yet, because they are the one preparing them. What they
+    // do not get is the ability to issue anything or to sign: issuing belongs to
+    // the system administrator and signing to the client. (7.9.26)
+    const forClient = viewerRole === "client";
     const clientRows = all
-      .filter((r) => !isRemoved(r) && !isHidden(r) && sdRowOf(data, r.code).toClient)
+      .filter((r) => !isRemoved(r) && !isHidden(r) && (!forClient || sdRowOf(data, r.code).toClient))
       .sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, { numeric: true }));
     return sbH(SdClientBoard, {
       lang, isRTL, rows: data, approvals, onChangeApprovals,
-      projectId, projectName, currentEmail, visibleRows: clientRows
+      projectId, projectName, currentEmail, visibleRows: clientRows,
+      canSign: forClient
     });
   }
 
@@ -12819,6 +12870,139 @@ function roomsFromSheet(aoa) {
   return { rows, marks };
 }
 
+// src/cards/LliClient.jsx
+// -----------------------------------------------------------------------------
+// The ordering board as a client and the main contractor see it.
+//
+// It is the printed sheet, on screen. The administrator's board carries the
+// supplier, the purchase order, the order date and the order file — the half
+// that says who it was bought from and on what terms. That half is hers. What
+// travels outwards is what the item IS and when it LANDS, which is exactly the
+// set of columns the client PDF has carried since 29.8.26; the same list drives
+// both, so the screen and the paper cannot drift apart. (7.9.26)
+// -----------------------------------------------------------------------------
+
+var LLIC_L = {
+  title: { en: "Long lead & order tracking", he: "מעקב הזמנות ואספקה" },
+  lead: {
+    en: "What is on order and when it is due on site.",
+    he: "מה בהזמנה ומתי הוא אמור להגיע לאתר."
+  },
+  section: { en: "BOQ", he: "BOQ" },
+  category: { en: "Category", he: "קטגוריה" },
+  typeMark: { en: "Type mark", he: "איפיון" },
+  desc: { en: "Description", he: "תיאור" },
+  image: { en: "Photo", he: "תמונה" },
+  eta: { en: "Required delivery", he: "מועד אספקה נדרש" },
+  etaActual: { en: "Actual delivery", he: "מועד אספקה בפועל" },
+  status: { en: "Status", he: "סטטוס" },
+  longLead: { en: "Long lead", he: "אספקה ארוכה" },
+  download: { en: "Download as PDF", he: "הורדת PDF" },
+  empty: { en: "Nothing is on the ordering board yet.", he: "עדיין אין פריטים בלוח ההזמנות." },
+  yes: { en: "Yes", he: "כן" }
+};
+
+function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
+  const L = (k) => sbText(LLIC_L[k] || { en: k, he: k }, lang);
+  const [printAsk, setPrintAsk] = useState6(false);
+  const [shot, setShot] = useState6(null);
+
+  const cell = (v) => (v ? sbH("span", { className: "sdcNum" }, sbFmtDate(String(v).slice(0, 10))) : sbH("span", { className: "sdcNone" }, "—"));
+
+  return sbH(
+    "div",
+    { className: "functionPageBody sdcWrap" },
+    sbH(
+      "div",
+      { className: "sdcHead" },
+      sbH(
+        "div",
+        null,
+        sbH("h2", { className: "sdcTitle" }, L("title")),
+        sbH("p", { className: "sdcSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
+      )
+    ),
+
+    rows.length === 0
+      ? sbH("div", { className: "sdcEmpty" }, L("empty"))
+      : sbH(
+          "div",
+          { className: "lliTableWrap" },
+          sbH(
+            "table",
+            { className: "sdcTable llicTable" },
+            sbH("thead", null, sbH(
+              "tr",
+              null,
+              sbH("th", null, L("section")),
+              sbH("th", null, L("category")),
+              sbH("th", null, L("typeMark")),
+              sbH("th", null, L("desc")),
+              sbH("th", null, L("image")),
+              sbH("th", null, L("eta")),
+              sbH("th", null, L("etaActual")),
+              sbH("th", null, L("status")),
+              sbH("th", null, L("longLead"))
+            )),
+            sbH("tbody", null, rows.map((r) => sbH(
+              "tr",
+              { key: r.code, className: r.status === "supplied" ? "approved" : "" },
+              sbH("td", { className: "sdcNum" }, r.code),
+              sbH("td", null, r.category || sbH("span", { className: "sdcNone" }, "—")),
+              sbH("td", { dir: "auto" }, r.typeMark || sbH("span", { className: "sdcNone" }, "—")),
+              sbH("td", { dir: "auto" }, r.desc || ""),
+              sbH(
+                "td",
+                null,
+                r.image
+                  // Small on the row, full size on a click: a thumbnail is
+                  // enough to tell two light fittings apart, and not enough to
+                  // check a finish.
+                  ? sbH("img", {
+                      src: r.image, alt: "", className: "llicThumb",
+                      onClick: () => setShot(r.image)
+                    })
+                  : sbH("span", { className: "sdcNone" }, "—")
+              ),
+              sbH("td", null, cell(r.eta)),
+              sbH("td", null, cell(r.etaActual)),
+              sbH("td", null, r.ordered
+                ? sbH("span", {
+                    className: "sdcChip",
+                    style: { background: `${r.statusColor}1f`, color: r.statusColor }
+                  }, r.statusLabel)
+                : sbH("span", { className: "sdcNone" }, "—")),
+              sbH("td", null, r.longLead ? sbH("span", { className: "sdcChip", style: { background: "#e08a121f", color: "#e08a12" } }, L("longLead")) : sbH("span", { className: "sdcNone" }, "—"))
+            )))
+          )
+        ),
+
+    rows.length
+      ? sbH(
+          "div",
+          { className: "llicFoot" },
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(true) },
+            sbH(Download2, { size: 15, strokeWidth: 2 }), " ", L("download"))
+        )
+      : null,
+
+    printAsk
+      ? sbH(PrintLangAsk, {
+          onPick: (lg) => { setPrintAsk(false); onDownload(lg); },
+          onClose: () => setPrintAsk(false)
+        })
+      : null,
+
+    shot
+      ? sbH(
+          "div",
+          { className: "sdcAsk", onClick: () => setShot(null) },
+          sbH("img", { src: shot, alt: "", style: { maxWidth: "92vw", maxHeight: "88vh", borderRadius: 10, background: "#fff" } })
+        )
+      : null
+  );
+}
+
 // src/cards/SdClient.jsx
 // -----------------------------------------------------------------------------
 // The client's shop-drawing folder, and the screen where a drawing is signed.
@@ -13091,6 +13275,7 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
   const [ask, setAsk] = useState6(false);
   const wrapRef = useRef6(null);
   const dragRef = useRef6(null);
+  const pageRefs = useRef6({});
 
   const stampLine = `${sbFmtDate(sbToday())} · ${who || ""}`.trim();
 
@@ -13160,13 +13345,40 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
     e.stopPropagation();
     const m = marks.find((x) => x.id === id);
     if (!m) return;
-    dragRef.current = { id, sx: e.clientX, sy: e.clientY, ox: m.x, oy: m.y };
+    const host = pageRefs.current[m.page];
+    const box = host ? host.getBoundingClientRect() : { left: 0, top: 0 };
+    dragRef.current = {
+      id, page: m.page,
+      rectX: box.left, rectY: box.top,
+      // Where inside the mark she took hold of it, so it does not jump under
+      // the cursor on the first pixel of movement.
+      grabX: e.clientX - box.left - m.x * scale,
+      grabY: e.clientY - box.top - m.y * scale
+    };
     const move = (ev) => {
       const d = dragRef.current;
       if (!d) return;
+      // A mark dragged over another page belongs to that page. Without this a
+      // stamp can be dropped anywhere on screen and still be burned onto the
+      // page it started on — which is how a signature ends up on the wrong
+      // sheet of a drawing set. (7.9.26)
+      let page = d.page;
+      let originX = d.rectX;
+      let originY = d.rectY;
+      Object.keys(pageRefs.current).forEach((num) => {
+        const el = pageRefs.current[num];
+        if (!el) return;
+        const box = el.getBoundingClientRect();
+        if (ev.clientX >= box.left && ev.clientX <= box.right && ev.clientY >= box.top && ev.clientY <= box.bottom) {
+          page = Number(num);
+          originX = box.left;
+          originY = box.top;
+        }
+      });
       patchMark(d.id, {
-        x: Math.max(0, d.ox + (ev.clientX - d.sx) / scale),
-        y: Math.max(0, d.oy + (ev.clientY - d.sy) / scale)
+        page,
+        x: Math.max(0, (ev.clientX - originX - d.grabX) / scale),
+        y: Math.max(0, (ev.clientY - originY - d.grabY) / scale)
       });
     };
     const up = () => {
@@ -13190,15 +13402,34 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
     if (!f || !/^image\//.test(f.type || "")) return;
     setStampImg(await fileToDataUrl(f));
   };
+  // Which page is she actually looking at. A stamp always dropped on page one
+  // is wrong for anything but a one-page drawing, and a forty-page set is the
+  // normal case here. The page filling the middle of the panel is the page she
+  // means. (7.9.26)
+  const pageInView = () => {
+    const wrap = wrapRef.current;
+    if (!wrap) return 1;
+    const mid = wrap.getBoundingClientRect().top + wrap.clientHeight / 2;
+    let best = 1, bestGap = Infinity;
+    Object.keys(pageRefs.current).forEach((num) => {
+      const el = pageRefs.current[num];
+      if (!el) return;
+      const box = el.getBoundingClientRect();
+      const gap = mid < box.top ? box.top - mid : mid > box.bottom ? mid - box.bottom : 0;
+      if (gap < bestGap) { bestGap = gap; best = Number(num); }
+    });
+    return best;
+  };
   const placeStamp = () => {
     if (!stampImg) return;
     const img = new Image();
     img.onload = () => {
-      const first = pages[0] || { wPt: 600, hPt: 800 };
-      const w = Math.min(140, first.wPt / 4);
+      const num = pageInView();
+      const pg = pages.find((x) => x.num === num) || pages[0] || { wPt: 600, hPt: 800 };
+      const w = Math.min(140, pg.wPt / 4);
       const h = w * (img.height / img.width || 0.6);
       const m = {
-        ...sdMarkBlank("stamp", 1, first.wPt - w - 40, first.hPt - h - 40),
+        ...sdMarkBlank("stamp", num, pg.wPt - w - 40, pg.hPt - h - 40),
         w, h, dataUrl: stampImg, locked: true
       };
       setMarks((prev) => prev.concat(m));
@@ -13335,6 +13566,8 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
         {
           key: p.num,
           className: `sdSignPage ${noteMode ? "placing" : ""}`.trim(),
+          "data-page": p.num,
+          ref: (el) => { pageRefs.current[p.num] = el; },
           style: { width: p.wPt * scale, height: p.hPt * scale },
           onClick: (e) => pageClick(p.num, e)
         },
@@ -13428,7 +13661,7 @@ function SdPageCanvas({ doc, num, wPt, hPt, scale }) {
 // The client's board.
 // -----------------------------------------------------------------------------
 function SdClientBoard({
-  lang, isRTL, rows, approvals, onChangeApprovals, projectId, projectName, currentEmail, visibleRows
+  lang, isRTL, rows, approvals, onChangeApprovals, projectId, projectName, currentEmail, visibleRows, canSign
 }) {
   const L = (k) => sbText(SDC_L[k] || { en: k, he: k }, lang);
   const [ask, setAsk] = useState6(null);       // the row whose file was clicked
@@ -13563,7 +13796,7 @@ function SdClientBoard({
                 // Once it is signed there is nothing left to sign. The button
                 // is gone rather than disabled: a disabled button on a finished
                 // job reads as something that went wrong.
-                ap
+                ap || !canSign
                   ? null
                   : isPdf
                     ? sbH("button", {
@@ -21391,10 +21624,12 @@ function ProjectDashboardApp() {
   // invisible to the client until somebody decides otherwise, which is the way
   // round that fails safely. (7.9.26)
   const isClientHere = appRole !== "admin" && authRole === "client";
+  const isContractorHere = appRole !== "admin" && authRole === "contractor";
   const canSeeCard = (key) => {
     if (key === "changeInstructions" && appRole !== "admin" && authRole !== "contractor") return false;
     if (key === "marcella" && !canSeeMarcella) return false;
     if (isClientHere && CLIENT_CARDS.indexOf(key) < 0) return false;
+    if (isContractorHere && CONTRACTOR_CARDS.indexOf(key) < 0) return false;
     return !visibleCardKeys || visibleCardKeys.includes(key);
   };
   // Named, and switched on — unless you are the system administrator, who has
