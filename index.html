@@ -494,7 +494,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 77";
+var APP_BUILD = "7.9.2026 · build 78";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1708,9 +1708,16 @@ var pdfViewer = `
           border-radius: 10px; font-family: inherit; font-size: 13px; line-height: 1.6;
           background: #fff; color: var(--ink); resize: vertical; }
         /* One fan across the three boards (29.8.26). */
-        .sbTable tr.sbLate td { background: #fbe3e3; }
-        .sbTable tr.sbWait td { background: #fdeed8; }
-        .sbTable tr.sbOk td { background: #e3f3e6; }
+        /* The tone of the row says where the submittal stands, and it outranks
+           the "new since you last looked" wash — an approved submittal is
+           green, not yellow. Same weight as .sbRowNew and written after it, so
+           it wins (7.9.26). */
+        .sbTable tbody tr.sbLate td { background: #fbe3e3; }
+        .sbTable tbody tr.sbWait td { background: #fdeed8; }
+        .sbTable tbody tr.sbOk td { background: #e3f3e6; }
+        .sbTable tbody tr.sbLate:hover td { background: #f8d5d5; }
+        .sbTable tbody tr.sbWait:hover td { background: #fbe3c4; }
+        .sbTable tbody tr.sbOk:hover td { background: #d3ebd8; }
         .lliTable .cRoom { width: 74px; text-align: center; }
         /* The grip's own column, at the outer edge of the table. */
         .lliTable .cGrip { width: 26px; padding: 0; text-align: center; }
@@ -2161,6 +2168,9 @@ var pdfViewer = `
           font-family: inherit; font-size: 13.5px; font-weight: 700; line-height: 1;
           cursor: pointer;
         }
+        /* The third instruction is a deletion, and it is the same button —
+           same size, same frame — in the colour that says so. */
+        .sbFormBtn.danger { background: #c0392b; }
         .sbFormBtn:hover { filter: brightness(1.08); }
         .sbFormBtn:active { filter: brightness(.94); }
         .sbFormBtn span { line-height: 1; }
@@ -2250,13 +2260,21 @@ var pdfViewer = `
         .sbExportAllLabel {
           font-size: 12px; font-weight: 800; color: var(--steel, #5b6472);
         }
-        .sbChkTable th.cPills, .sbChkTable td.sbChkPills { width: 120px; }
-        /* Wide enough for the two buttons to sit side by side: the one that
-           starts a submittal, and the one that takes the line off the board. */
-        .sbChkTable th.cAct, .sbChkTable td.sbChkAct { width: 132px; }
-        .sbChkTable td.sbChkAct {
-          display: table-cell; white-space: nowrap;
+        /* The status column holds one chip and, sometimes, the revision it was
+           approved on. The versions live in the last column now. */
+        .sbChkTable th.cPills, .sbChkTable td.sbChkPills { width: 112px; }
+        .sbChkStatWrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .sbChkStatRev {
+          font-size: 10px; font-weight: 800; color: var(--steel, #5b6472);
+          letter-spacing: .2px; direction: ltr;
         }
+        /* Wide enough for the versions, the button that raises the next one and
+           the one that takes the line off the board. */
+        .sbChkTable th.cAct, .sbChkTable td.sbChkAct { width: 176px; }
+        .sbChkTable td.sbChkAct {
+          display: table-cell; white-space: normal;
+        }
+        .sbChkTable td.sbChkAct .sbChkPillWrap { margin-bottom: 5px; }
         .sbChkTable td.sbChkAct .sbChkAdd { vertical-align: middle; }
         .sbChkTable .sbChkCode { font-weight: 800; }
         .sbChkTable .sbChkDesc { text-align: start; overflow-wrap: anywhere; }
@@ -2330,6 +2348,59 @@ var pdfViewer = `
         .pickPwErr { margin: 0; font-size: 12.5px; font-weight: 700; color: #b02a37; }
         .pickPw .functionEditBtn { margin-top: 6px; }
         .pickPw .functionEditBtn:disabled { opacity: .45; cursor: default; }
+        /* ---------- the specifications, on screen ---------- */
+        .sbSpecsScrim {
+          position: fixed; inset: 0; z-index: 1180; background: rgba(16,18,22,.6);
+          display: flex; align-items: stretch; justify-content: center; padding: 18px;
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .sbSpecsView {
+          background: #fff; border-radius: 14px; width: min(1040px, 100%);
+          display: flex; flex-direction: column; overflow: hidden;
+          box-shadow: 0 18px 60px rgba(0,0,0,.3);
+        }
+        .sbSpecsBar {
+          display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+          border-bottom: 1px solid var(--line); flex: 0 0 auto;
+        }
+        .sbSpecsBarTitle { font-size: 14.5px; font-weight: 800; color: var(--ink); }
+        .sbSpecsCount {
+          display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px;
+          margin-inline-start: 6px; padding: 0 4px; border-radius: 999px; background: var(--accent);
+          color: #fff; font-size: 10.5px; font-weight: 800;
+        }
+        .sbSpecsBar .ghostBtn.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .sbSpecsHint { margin: 0; padding: 8px 14px; font-size: 12.5px; color: var(--mist); background: #fbfcfd; border-bottom: 1px solid var(--line); }
+        .sbSpecsScroll { flex: 1 1 auto; overflow: auto; padding: 14px; background: #eef1f5; }
+        .sbSpecsMsg { text-align: center; color: var(--mist); font-size: 13px; padding: 40px 0; }
+        .sbSpecsPageWrap { max-width: 820px; margin: 0 auto 18px; }
+        .sbSpecsLbl { font-size: 10.5px; color: var(--mist); text-align: center; margin-bottom: 5px; }
+        .sbSpecsPage { position: relative; background: #fff; box-shadow: 0 2px 12px -6px rgba(0,0,0,.4); }
+        .sbSpecsPage img { display: block; width: 100%; height: auto; }
+        .sbSpecsPage.noting { cursor: crosshair; }
+        /* A note is anchored by its top-inline-start corner, which is the point
+           that was clicked — so it reads from the click outwards in both
+           directions. */
+        .sbSpecsNote {
+          position: absolute; max-width: 34%; min-width: 120px;
+          background: rgba(255,249,219,.97); border: 1.5px solid var(--accent);
+          border-radius: 7px; padding: 6px 8px; font-size: 12px; line-height: 1.35;
+          box-shadow: 0 3px 10px -4px rgba(0,0,0,.35);
+        }
+        .sbSpecsNoteTxt { white-space: pre-wrap; word-break: break-word; }
+        .sbSpecsNoteBy { font-size: 10px; color: var(--mist); font-weight: 700; margin-top: 3px; }
+        .sbSpecsNoteDel {
+          position: absolute; top: -8px; inset-inline-end: -8px; width: 18px; height: 18px;
+          border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #c0392b;
+          cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .sbSpecsNote.editing { min-width: 210px; }
+        .sbSpecsNote.editing textarea {
+          width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 7px;
+          font-family: inherit; font-size: 12.5px; resize: vertical; background: #fff;
+        }
+        .sbSpecsNoteRow { display: flex; align-items: center; gap: 8px; margin-top: 6px; justify-content: space-between; }
+        .sbSpecsNoteRow .functionEditBtn { padding: 5px 12px; font-size: 12px; }
         /* ---------- the pad ---------- */
         .sigPadScrim {
           position: fixed; inset: 0; z-index: 1200; background: rgba(16,18,22,.55);
@@ -2610,6 +2681,22 @@ var pdfViewer = `
           .sbFormHead { grid-template-columns: 1fr; justify-items: center; }
           .sbFormHeadSide.start, .sbFormHeadSide.end { justify-content: center; }
         }
+        /* One strip under the number box: what this screen does to the
+           document as a whole. Every button the same shape (7.9.26). */
+        .sbFormTools {
+          display: flex; align-items: center; justify-content: center; gap: 10px;
+          flex-wrap: wrap; margin: 4px 0 14px;
+        }
+        .sbToolBtn {
+          display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+          min-width: 148px; height: 36px; padding: 0 16px;
+          border: 1px solid var(--line); border-radius: 10px; background: #fff; color: var(--ink);
+          font-family: inherit; font-size: 13px; font-weight: 700; line-height: 1; cursor: pointer;
+        }
+        .sbToolBtn:hover { border-color: var(--accent); color: var(--accent); }
+        .sbToolBtn:disabled { opacity: .55; cursor: default; }
+        .sbToolBtn.busy { color: var(--accent); border-color: var(--accent); }
+        .sbFormHead.noBack { margin-bottom: 6px; }
         .sbNoBox {
           border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; text-align: center; line-height: 1.25;
         }
@@ -15711,6 +15798,24 @@ var SB_L = {
   closed: { en: "Closed", he: "סגור" },
   signColumn: { en: "Sign", he: "חתימה" },
   printPdf: { en: "Print / PDF", he: "הדפסה / PDF" },
+  // 7.9.26 — the approved submittal, as a file to keep: the form, the
+  // signature on it and the specifications behind it, in one PDF.
+  printApproved: { en: "Save the approved submittal", he: "שמירת הסבמיטל המאושר" },
+  printCol: { en: "Print", he: "הדפסה" },
+  specsView: { en: "See the attached specifications", he: "צפייה במפרטים המצורפים" },
+  specsNone: { en: "No specifications are attached to this submittal.", he: "לא צורפו מפרטים לסבמיטל הזה." },
+  specsLoading: { en: "Opening the specifications…", he: "פותח את המפרטים…" },
+  specsNoteHint: {
+    en: "Click anywhere on a page to leave a note there. Notes are printed with the specifications.",
+    he: "לחיצה על עמוד מוסיפה הערה במקום שנלחץ. ההערות מודפסות יחד עם המפרטים."
+  },
+  specsNoteAdd: { en: "Add a note", he: "הוספת הערה" },
+  specsNoteDone: { en: "Save the note", he: "שמירת ההערה" },
+  specsNoteRemove: { en: "Remove", he: "מחיקה" },
+  specsNotesOn: { en: "Notes on", he: "מצב הערות" },
+  specsNotesOff: { en: "Notes off", he: "יציאה ממצב הערות" },
+  specsPage: { en: "Page", he: "עמוד" },
+  remove2: { en: "Delete", he: "מחיקה" },
   signAgain: { en: "Sign again", he: "חתימה מחדש" },
   signNeedBoth: {
     en: "Choose a decision and sign, and the approval is filed onto the document.",
@@ -16744,6 +16849,13 @@ function sbPrint(rec, lang, brand, signatures) {
     } catch (e) {
       console.warn("[awdash] spec rendering failed", e);
     }
+    // Anything written on the specifications is drawn into the pages before
+    // they are placed, so the printed document says what the screen said.
+    try {
+      specPages = await sbBurnSpecNotes(specPages, rec.specNotes);
+    } catch (e) {
+      console.warn("[awdash] could not draw the notes onto the specs", e);
+    }
     if (w.closed) return;
     const html = sbBuildPrintHtml(rec, lang, brand, specPages, signatures);
     w.document.open();
@@ -16760,10 +16872,11 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
+  const [specsOpen, setSpecsOpen] = useState6(false);
   const [imgSel, setImgSel] = useState6(false);
   const [err, setErr] = useState6(null);
   const [aiMsg, setAiMsg] = useState6(null);
@@ -16774,6 +16887,7 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
   const set = (patch) => setD((prev) => ({ ...prev, ...patch }));
   const ro = !canEdit;
   const isHe = lang === "he";
+  const specViewCount = (d.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0).length;
   // The approval block has its own lock: a reviewer who may not touch a single
   // field of the submittal is still the one who signs it.
   const roSign = !(canEdit || canSign);
@@ -17112,20 +17226,16 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
     { className: "sbForm", dir: isRTL ? "rtl" : "ltr" },
     // ------- header. Three columns so the number box lands exactly in the
     //         middle whatever the two sides weigh.
+    // The number box on the centre line, the language switch beside it, and
+    // under them one strip carrying the three things this screen does to the
+    // document as a whole: load the specifications, have them read, print it.
+    // They used to be scattered — the two spec buttons halfway down the form,
+    // the printer up in the corner — and the back arrow took a third of the
+    // header for something the browser's own Back already does (7.9.26).
     sbH(
       "div",
-      { className: "sbFormHead" },
-      sbH(
-        "div",
-        { className: "sbFormHeadSide start" },
-        sbH(
-          "button",
-          { type: "button", className: "loginBack", onClick: onCancel },
-          sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }),
-          " ",
-          L("back")
-        )
-      ),
+      { className: "sbFormHead noBack" },
+      sbH("div", { className: "sbFormHeadSide start" }, ro ? sbH("span", { className: "sbRoTag" }, L("viewOnly")) : null),
       sbH(
         "div",
         { className: "sbNoBox" },
@@ -17133,18 +17243,55 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
         sbH("span", null, sbNumber(d.category, d.seq)),
         sbH("i", null, `Rev.${d.rev || 0}`)
       ),
+      sbH("div", { className: "sbFormHeadSide end" }, langSwitch || null)
+    ),
+    sbH(
+      "div",
+      { className: "sbFormTools" },
+      ro
+        ? null
+        : sbH(
+            "label",
+            { className: "sbToolBtn", title: L("aiHint") },
+            sbH(Upload4, { size: 15, strokeWidth: 2 }),
+            sbH("span", null, busy === "spec" ? "…" : L("uploadSpec")),
+            sbH("input", {
+              type: "file",
+              accept: "application/pdf,.pdf",
+              multiple: true,
+              style: { display: "none" },
+              onChange: onPickSpec
+            })
+          ),
+      ro
+        ? null
+        : sbH(
+            "button",
+            { type: "button", className: `sbToolBtn ${busy === "ai" ? "busy" : ""}`.trim(), onClick: runAi, disabled: busy === "ai" },
+            busy === "ai"
+              ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
+              : sbH(Sparkles, { size: 15, strokeWidth: 2 }),
+            sbH("span", null, busy === "ai" ? (isHe ? "קורא את המפרטים…" : "Reading the specs…") : L("fillWithAi"))
+          ),
+      specViewCount
+        ? sbH(
+            "button",
+            { type: "button", className: "sbToolBtn", onClick: () => setSpecsOpen(true) },
+            sbH(FileTextIcon, { size: 15, strokeWidth: 2 }),
+            sbH("span", null, L("specsView")),
+            sbH("span", { className: "sbSpecsCount" }, specViewCount)
+          )
+        : null,
       sbH(
-        "div",
-        { className: "sbFormHeadSide end" },
-        ro ? sbH("span", { className: "sbRoTag" }, L("viewOnly")) : null,
-        langSwitch || null,
-        sbH(
-          "button",
-          { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures)) },
-          sbH(Printer, { size: 14, strokeWidth: 2 }),
-          " ",
-          L("print")
-        )
+        "button",
+        {
+          type: "button",
+          className: "sbToolBtn",
+          title: L("pdfHint"),
+          onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures))
+        },
+        sbH(Printer, { size: 15, strokeWidth: 2 }),
+        sbH("span", null, L("print"))
       )
     ),
     printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
@@ -17467,39 +17614,9 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
       "div",
       { className: "sbSpecs" },
       sbH("div", { className: "sbSpecsHead" }, sbH(FileTextIcon, { size: 15, strokeWidth: 2 }), " ", L("specs")),
-      sbH(
-        "div",
-        { className: "sbSpecsRow" },
-        ro
-          ? null
-          : sbH(
-              "label",
-              { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
-              sbH(Upload4, { size: 14, strokeWidth: 2 }),
-              " ",
-              busy === "spec" ? "…" : L("uploadSpec"),
-              sbH("input", {
-                type: "file",
-                accept: "application/pdf,.pdf",
-                multiple: true,
-                style: { display: "none" },
-                onChange: onPickSpec
-              })
-            ),
-        ro
-          ? null
-          : sbH(
-              "button",
-              { type: "button", className: `sbAiBtn ${busy === "ai" ? "busy" : ""}`.trim(), onClick: runAi, disabled: busy === "ai" },
-              // A turning ring while it thinks. Without it the screen sits
-              // still and looks like nothing happened (29.8.26).
-              busy === "ai"
-                ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
-                : sbH(Sparkles, { size: 14, strokeWidth: 2 }),
-              " ",
-              busy === "ai" ? (lang === "he" ? "קורא את המפרטים…" : "Reading the specs…") : L("fillWithAi")
-            )
-      ),
+      // Loading them and having them read are on the strip at the top of the
+      // screen now — they are things done to the document as a whole, and they
+      // were hard to find halfway down a form this long (7.9.26).
       sbH("p", { className: "sbAiHint" }, L("aiHint")),
       sbH("p", { className: "sbAiHint" }, L("pdfHint")),
       (d.specText || "").trim()
@@ -17722,11 +17839,10 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
       : sbH(
           "div",
           { className: "sbSaveRow" },
-          // The same button twice — same size, same colour, same type — and it
-          // is the ICON that says which is which: a diskette for saving, a
-          // paper plane for sending. One of them was a pale ghost button and
-          // the other a dark solid one, and they were different sizes with it
-          // (30.8.26).
+          // The same button three times — same size, same frame, same type —
+          // and it is the ICON and the word that say which is which: a diskette
+          // for saving, a paper plane for sending, a bin for deleting. Anything
+          // else and the eye starts ranking them (7.9.26).
           sbH(
             "button",
             { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: false }) },
@@ -17738,8 +17854,27 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
             { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
             sbH(SendIcon2, { size: 15, strokeWidth: 2.2 }),
             sbH("span", null, L("send"))
-          )
-        )
+          ),
+          onDelete
+            ? sbH(
+                "button",
+                { type: "button", className: "sbFormBtn danger", onClick: () => onDelete(d) },
+                sbH(Trash2, { size: 15, strokeWidth: 2.2 }),
+                sbH("span", null, L("remove2"))
+              )
+            : null
+        ),
+    specsOpen
+      ? sbH(SubmittalSpecs, {
+          rec: d, lang, isRTL,
+          notes: d.specNotes || [],
+          // She reads the notes the approver left; the notes themselves belong
+          // to whoever is reviewing the document.
+          canNote: false,
+          currentEmail,
+          onClose: () => setSpecsOpen(false)
+        })
+      : null
   );
 }
 
@@ -18026,6 +18161,246 @@ function PickPasswordModal({ isRTL, email, onDone }) {
   );
 }
 
+// src/cards/SubmittalSpecs.jsx
+// -----------------------------------------------------------------------------
+// The specifications behind a submittal, on screen — and a place to write on
+// them.
+//
+// The approver's question is almost never about the form. It is about page
+// four of the datasheet: this fitting, that finish, the clause somebody has to
+// answer. Until now the only way to say so was the comments box, which points
+// at nothing. So the pages open here as pages, and a click puts a note where
+// the eye already is.
+//
+// A note is stored as a FRACTION of the page, not a pixel: the same note has
+// to land in the same place on a phone, on her screen and on the printed
+// sheet, and those are three different sizes. (7.9.26)
+// -----------------------------------------------------------------------------
+function sbSpecNoteList(notes, page) {
+  return (notes || []).filter((n) => n && n.page === page);
+}
+// The notes, drawn into the page images themselves, so the printed document
+// carries them without the print builder needing to know they exist. Canvas
+// rather than pdf-lib for the same reason the drawing board uses canvas: the
+// browser already shapes and lays out Hebrew, and pdf-lib does not.
+async function sbBurnSpecNotes(pages, notes) {
+  const list = notes || [];
+  if (!list.length) return pages;
+  const out = [];
+  for (let i = 0; i < pages.length; i++) {
+    const mine = sbSpecNoteList(list, i);
+    if (!mine.length) { out.push(pages[i]); continue; }
+    try {
+      const img = await new Promise((res, rej) => {
+        const im = new Image();
+        im.onload = () => res(im);
+        im.onerror = rej;
+        im.src = pages[i].dataUrl;
+      });
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth;
+      c.height = img.naturalHeight;
+      const ctx = c.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      const unit = Math.max(11, Math.round(c.width / 62));
+      ctx.textBaseline = "top";
+      ctx.direction = "rtl";
+      mine.forEach((n) => {
+        const text = String(n.text || "").trim();
+        if (!text) return;
+        ctx.font = `600 ${unit}px Assistant, Arial, sans-serif`;
+        const maxW = Math.round(c.width * 0.34);
+        // Wrap by words, the way the box on screen wraps.
+        const words = text.split(/\s+/);
+        const lines = [];
+        let line = "";
+        words.forEach((w) => {
+          const t = line ? `${line} ${w}` : w;
+          if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; }
+          else line = t;
+        });
+        if (line) lines.push(line);
+        const padX = Math.round(unit * 0.7);
+        const padY = Math.round(unit * 0.5);
+        const lh = Math.round(unit * 1.35);
+        const boxW = Math.min(maxW, Math.max.apply(null, lines.map((l) => ctx.measureText(l).width))) + padX * 2;
+        const boxH = lines.length * lh + padY * 2;
+        let x = Math.round(n.x * c.width);
+        let y = Math.round(n.y * c.height);
+        x = Math.max(4, Math.min(x, c.width - boxW - 4));
+        y = Math.max(4, Math.min(y, c.height - boxH - 4));
+        ctx.fillStyle = "rgba(255, 249, 219, .95)";
+        ctx.strokeStyle = "#14265e";
+        ctx.lineWidth = Math.max(1, Math.round(unit / 9));
+        ctx.beginPath();
+        const r = Math.round(unit * 0.35);
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + boxW, y, x + boxW, y + boxH, r);
+        ctx.arcTo(x + boxW, y + boxH, x, y + boxH, r);
+        ctx.arcTo(x, y + boxH, x, y, r);
+        ctx.arcTo(x, y, x + boxW, y, r);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+        ctx.fillStyle = "#14181f";
+        lines.forEach((l, k) => ctx.fillText(l, x + boxW - padX, y + padY + k * lh));
+        // Who wrote it, small, under the note.
+        if (n.by) {
+          ctx.font = `600 ${Math.round(unit * 0.7)}px Assistant, Arial, sans-serif`;
+          ctx.fillStyle = "#6b7280";
+          ctx.fillText(n.by, x + boxW - padX, y + boxH + Math.round(unit * 0.15));
+        }
+      });
+      out.push({ ...pages[i], dataUrl: c.toDataURL("image/jpeg", 0.82) });
+    } catch (e) {
+      console.warn("[awdash] could not draw a note onto a spec page", e);
+      out.push(pages[i]);
+    }
+  }
+  return out;
+}
+function SubmittalSpecs({ rec, lang, isRTL, notes, canNote, onChangeNotes, currentEmail, onClose }) {
+  const L = (k) => sbText(SB_L[k] || { en: k, he: k }, lang);
+  const [pages, setPages] = useState6(null);
+  const [noteMode, setNoteMode] = useState6(false);
+  const [editing, setEditing] = useState6(null);
+  const [text, setText] = useState6("");
+
+  useEffect5(() => {
+    let alive = true;
+    (async () => {
+      let p = [];
+      try {
+        p = await sbRenderSpecPages(rec, null);
+      } catch (e) {
+        console.warn("[awdash] could not open the specifications", e);
+      }
+      if (alive) setPages(p);
+    })();
+    return () => { alive = false; };
+  }, [rec && rec.id]);
+
+  const put = (next) => { if (onChangeNotes) onChangeNotes(next); };
+  const place = (e, page) => {
+    if (!noteMode || !canNote) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    setEditing({
+      id: `n-${Date.now()}`,
+      page,
+      x: (e.clientX - r.left) / r.width,
+      y: (e.clientY - r.top) / r.height
+    });
+    setText("");
+  };
+  const keep = () => {
+    const t = String(text || "").trim();
+    if (!t || !editing) { setEditing(null); return; }
+    put([...(notes || []), { ...editing, text: t, by: (currentEmail || "").split("@")[0] || "", at: new Date().toISOString() }]);
+    setEditing(null);
+    setText("");
+  };
+  const drop = (id) => put((notes || []).filter((n) => n.id !== id));
+
+  return createPortal(
+    sbH(
+      "div",
+      { className: "sbSpecsScrim", dir: isRTL ? "rtl" : "ltr" },
+      sbH(
+        "div",
+        { className: "sbSpecsView" },
+        sbH(
+          "div",
+          { className: "sbSpecsBar" },
+          sbH("span", { className: "sbSpecsBarTitle" }, L("specsView")),
+          canNote
+            ? sbH(
+                "button",
+                { type: "button", className: `ghostBtn small ${noteMode ? "on" : ""}`.trim(), onClick: () => { setNoteMode(!noteMode); setEditing(null); } },
+                sbH(PenLine, { size: 14, strokeWidth: 2 }),
+                " ",
+                noteMode ? L("specsNotesOff") : L("specsNotesOn")
+              )
+            : null,
+          sbH("span", { style: { flex: 1 } }),
+          sbH(
+            "button",
+            { type: "button", className: "drawerClose", onClick: onClose, "aria-label": L("close") || "X" },
+            sbH(X4, { size: 16, strokeWidth: 2 })
+          )
+        ),
+        canNote && noteMode ? sbH("p", { className: "sbSpecsHint" }, L("specsNoteHint")) : null,
+        sbH(
+          "div",
+          { className: "sbSpecsScroll" },
+          pages === null
+            ? sbH("p", { className: "sbSpecsMsg" }, L("specsLoading"))
+            : pages.length === 0
+              ? sbH("p", { className: "sbSpecsMsg" }, L("specsNone"))
+              : pages.map((p, i) =>
+                  sbH(
+                    "div",
+                    { key: i, className: "sbSpecsPageWrap" },
+                    sbH("div", { className: "sbSpecsLbl", dir: "ltr" }, p.label),
+                    sbH(
+                      "div",
+                      {
+                        className: `sbSpecsPage ${noteMode && canNote ? "noting" : ""}`.trim(),
+                        onClick: (e) => place(e, i)
+                      },
+                      sbH("img", { src: p.dataUrl, alt: "" }),
+                      sbSpecNoteList(notes, i).map((n) =>
+                        sbH(
+                          "div",
+                          {
+                            key: n.id,
+                            className: "sbSpecsNote",
+                            style: { insetInlineStart: `${n.x * 100}%`, top: `${n.y * 100}%` },
+                            onClick: (e) => e.stopPropagation()
+                          },
+                          sbH("div", { className: "sbSpecsNoteTxt", dir: "auto" }, n.text),
+                          n.by ? sbH("div", { className: "sbSpecsNoteBy" }, n.by) : null,
+                          canNote
+                            ? sbH(
+                                "button",
+                                { type: "button", className: "sbSpecsNoteDel", title: L("specsNoteRemove"), onClick: () => drop(n.id) },
+                                sbH(X4, { size: 11, strokeWidth: 2.4 })
+                              )
+                            : null
+                        )
+                      ),
+                      editing && editing.page === i
+                        ? sbH(
+                            "div",
+                            {
+                              className: "sbSpecsNote editing",
+                              style: { insetInlineStart: `${editing.x * 100}%`, top: `${editing.y * 100}%` },
+                              onClick: (e) => e.stopPropagation()
+                            },
+                            sbH("textarea", {
+                              value: text,
+                              rows: 3,
+                              autoFocus: true,
+                              dir: "auto",
+                              onChange: (e) => setText(e.target.value)
+                            }),
+                            sbH(
+                              "div",
+                              { className: "sbSpecsNoteRow" },
+                              sbH("button", { type: "button", className: "sbLinkBtn muted", onClick: () => setEditing(null) }, L("specsNoteRemove")),
+                              sbH("button", { type: "button", className: "functionEditBtn", onClick: keep }, L("specsNoteDone"))
+                            )
+                          )
+                        : null
+                    )
+                  )
+                )
+        )
+      )
+    ),
+    document.body
+  );
+}
+
 // src/components/SignaturePad.jsx
 // -----------------------------------------------------------------------------
 // A box to sign in, with a mouse or a finger. Pointer events cover both, so
@@ -18236,11 +18611,13 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
 // a place to sign. They never see the editing form — there is nothing here for
 // them to change.
 // -----------------------------------------------------------------------------
-function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, userSignatures, currentEmail, onSave, onCancel }) {
+function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, userSignatures, currentEmail, specNotes, onChangeSpecNotes, onSave, onCancel }) {
   const L = (k) => sbText(SB_L[k], lang);
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [padOpen, setPadOpen] = useState6(false);
+  const [specsOpen, setSpecsOpen] = useState6(false);
+  const specCount = (rec && rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0).length;
   useEffect5(() => { setD(rec); }, [rec && rec.id]);
 
   const inS = {
@@ -18317,6 +18694,20 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
       "div",
       { className: "sbFormHeadSide end" },
       langSwitch || null,
+      // The specifications, as pages. The question an approver has is almost
+      // never about the form — it is about page four of the datasheet, and
+      // until now there was no way to look at it here, let alone say anything
+      // about it (7.9.26).
+      specCount
+        ? sbH(
+            "button",
+            { type: "button", className: "ghostBtn small", onClick: () => setSpecsOpen(true) },
+            sbH(FileTextIcon, { size: 14, strokeWidth: 2 }),
+            " ",
+            L("specsView"),
+            sbH("span", { className: "sbSpecsCount" }, specCount)
+          )
+        : null,
       sbH(
         "button",
         { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures)) },
@@ -18445,6 +18836,18 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
         : null,
     padOpen
       ? sbH(SignaturePad, { isRTL, onCancel: () => setPadOpen(false), onDone: applySignature })
+      : null,
+    specsOpen
+      ? sbH(SubmittalSpecs, {
+          rec: d, lang, isRTL,
+          notes: specNotes || [],
+          // Writing on the specifications is part of reviewing them. Once the
+          // decision is filed the document is closed, and so are the notes.
+          canNote: !!canSign && !closed && !!onChangeSpecNotes,
+          onChangeNotes: onChangeSpecNotes,
+          currentEmail,
+          onClose: () => setSpecsOpen(false)
+        })
       : null
   );
 }
@@ -18587,6 +18990,27 @@ function SubmittalFolder({
   const olderCountOf = (s) => {
     const f = families.find((x) => x.seq === s.seq);
     return f && f.latest.id === s.id ? f.older.length : 0;
+  };
+  // Every version of this submittal, oldest first, so the row can offer them
+  // as what they are: Rev.0, Rev.1, Rev.2.
+  const familyOf = (s) => {
+    const f = families.find((x) => x.seq === s.seq);
+    if (!f) return [s];
+    return [f.latest, ...f.older].slice().sort((a, b) => (Number(a.rev) || 0) - (Number(b.rev) || 0));
+  };
+  // A submittal is approved once ANY of its versions has been approved — and
+  // it is normally Rev.0, with a Rev.1 raised afterwards for something else
+  // entirely. Reading only the row in front of you says "open" about a
+  // document that was signed weeks ago (7.9.26).
+  const familyApproval = (s) => {
+    let best = null;
+    familyOf(s).forEach((v) => {
+      const st = sbStatusOf(v);
+      if (st !== "approved" && st !== "approvedNoted") return;
+      const at = sbSignedAt(v);
+      if (!best || (at && at > (best.at || ""))) best = { rec: v, status: st, at };
+    });
+    return best;
   };
   const isOlder = (s) => {
     const f = families.find((x) => x.seq === s.seq);
@@ -18831,7 +19255,17 @@ function SubmittalFolder({
                         ? onLine.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0]
                         : null;
                       const leadDue = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
-                      const leadSigned = lead ? sbSignedAt(lead) : null;
+                      // A submittal is approved once one of its versions has
+                      // been approved, and that is normally Rev.0 with a Rev.1
+                      // raised afterwards for something else. Reading only the
+                      // newest revision says "not submitted yet" about a
+                      // document the client signed last week, and leaves the
+                      // approval-date column empty (7.9.26).
+                      const approvedRec = onLine
+                        .filter((x) => { const st2 = sbStatusOf(x); return st2 === "approved" || st2 === "approvedNoted"; })
+                        .sort((a, b) => String(sbSignedAt(b) || "").localeCompare(String(sbSignedAt(a) || "")))[0] || null;
+                      const leadSigned = approvedRec ? sbSignedAt(approvedRec) : (lead ? sbSignedAt(lead) : null);
+                      const shownStatus = approvedRec ? sbStatusOf(approvedRec) : (lead ? sbStatusOf(lead) : "open");
                       const docCount = onLine.reduce((n2, x) => n2 + ((x.attachments || []).length), 0);
                       const chk = (lead && lead.checks) || null;
                       const warn = chk
@@ -18921,21 +19355,42 @@ function SubmittalFolder({
                         ),
                         sbH("td", { dir: "ltr" }, lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "—"),
                         sbH("td", { dir: "ltr" }, leadDue ? sbFmtDate(leadDue) : "—"),
+                        // The status column says what the submittal IS —
+                        // approved, with the supervision, still a draft. It
+                        // used to carry the list of versions instead, which is
+                        // a different question and belongs beside the button
+                        // that makes the next one (7.9.26).
                         sbH(
                           "td",
                           { className: "sbChkPills" },
-                          sbH(
-                            "div",
-                            { className: "sbChkPillWrap" },
-                            r.count
-                              ? [...r.own, ...r.lines.flatMap((l) => l.hits)].map(pill)
-                              : sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
-                          )
+                          !r.count
+                            ? sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
+                            : sbH(
+                                "div",
+                                { className: "sbChkStatWrap" },
+                                sbH("span", {
+                                  className: "sbStatus",
+                                  style: { background: sbStatusColor(shownStatus) }
+                                }, sbStatusLabel(shownStatus, lang)),
+                                // Which version it was approved on, when that
+                                // is not the one the row is showing.
+                                approvedRec && lead && approvedRec.id !== lead.id
+                                  ? sbH("span", { className: "sbChkStatRev" }, `Rev.${approvedRec.rev || 0}`)
+                                  : null,
+                                lead && !lead.sent && !approvedRec
+                                  ? sbH("span", { className: "sbDraftTag" }, L("draft"))
+                                  : null
+                              )
                         ),
                         sbH("td", { dir: "ltr" }, leadSigned ? sbFmtDate(leadSigned.slice(0, 10)) : "—"),
                         sbH(
                           "td",
                           { className: "sbChkAct" },
+                          // The versions themselves, beside the button that
+                          // raises the next one. Each opens that version.
+                          r.count
+                            ? sbH("div", { className: "sbChkPillWrap" }, onLine.map(pill))
+                            : null,
                           addBtn(r.code, r.node, "", r.own),
                           // Taking the line off this board. The routing table
                           // keeps its tick, in grey (30.8.26).
@@ -19248,6 +19703,20 @@ function SubmittalFolder({
                           L("openDoc")
                         )
                       : null,
+                    // Once it is signed, the submittal is a document somebody
+                    // has to be able to keep: the form, the signature on it and
+                    // the specifications behind it, as one PDF. A client and
+                    // the main contractor get the printer here; before it is
+                    // approved there is nothing to file (7.9.26).
+                    !canEdit && (signedAt || s.closedAt)
+                      ? sbH(
+                          "button",
+                          { type: "button", className: "sbActBtn", title: L("printApproved"), onClick: () => onPrint(s) },
+                          sbH(Printer, { size: 13, strokeWidth: 2 }),
+                          " ",
+                          L("printCol")
+                        )
+                      : null,
 
                     // Editing belongs to a draft. Once it has gone out, the
                     // way to change anything is a new revision.
@@ -19298,12 +19767,31 @@ function SubmittalFolder({
 // row violates row-level security policy": the signature was being written
 // into `project-extras`, which is hers alone, and the server was right to
 // refuse it. The board merges the two on the way in. (7.9.26)
+// Who is shown which submittals.
+//
+// A client sees what was actually sent to them, and only what was left ticked
+// for showing: a draft has not been submitted to anybody and is nobody's
+// business but hers. The main contractor is inside the job — the folder is
+// theirs to read in full, drafts included, the same as the administrator sees
+// it. What they cannot do is change any of it. (7.9.26 — the contractor was
+// being shown the outbox instead of the folder.)
+function sbVisibleFor(list, viewerRole) {
+  if (viewerRole !== "client") return list || [];
+  return (list || []).filter((s) => s.sent && !s.hidden);
+}
 function sbMergeApproval(rec, approvals) {
   const ap = rec && approvals && approvals[rec.id];
   if (!ap) return rec;
   const reviews = (rec.reviews || []).slice();
   reviews[0] = { ...reviews[0] || {}, ...ap.review || {} };
-  return { ...rec, reviews, closedAt: ap.closedAt || rec.closedAt };
+  return {
+    ...rec,
+    reviews,
+    closedAt: ap.closedAt || rec.closedAt,
+    // Notes written on the specifications live with the decision, for the same
+    // reason: they are the approver's, not hers.
+    specNotes: ap.specNotes || rec.specNotes || []
+  };
 }
 function SubmittalCard({
   appIsRTL,
@@ -19483,7 +19971,7 @@ function SubmittalCard({
   // What a client sees: a submittal that has actually gone out, and that was
   // left ticked for showing. Unticking one takes it off their screen and off
   // the paper without deleting anything (29.8.26).
-  const visibleList = canEdit ? list : (list || []).filter((s) => s.sent && !s.hidden);
+  const visibleList = sbVisibleFor(list, viewerRole);
 
   const commit = (next) => {
     if (onChangeSubmittals) onChangeSubmittals(next);
@@ -19561,6 +20049,14 @@ function SubmittalCard({
     setDraft(null);
     setOpenId(null);
   };
+  // A note written on a specification is the approver's too, so it goes to the
+  // same row as their decision — and it can be written before the decision is
+  // filed, which is usually when it is written (7.9.26).
+  const saveSpecNotes = (recId, next) => {
+    if (!onChangeApprovals) return;
+    const cur = (submittalApprovals || {})[recId] || {};
+    onChangeApprovals({ ...submittalApprovals || {}, [recId]: { ...cur, specNotes: next } });
+  };
   // Filing a decision writes the decision, and only the decision. Nobody but
   // the administrator writes the submittal record itself.
   const saveReview = (rec) => {
@@ -19576,10 +20072,11 @@ function SubmittalCard({
     setOpenId(null);
   };
   const deleteOne = (s) => {
-    if (!window.confirm(L("confirmDelete"))) return;
+    if (!window.confirm(L("confirmDelete"))) return false;
     (s.attachments || []).forEach((a) => sbRemoveFile(a));
     if (s.image) sbRemoveFile(s.image);
     commit(list.filter((x) => x.id !== s.id));
+    return true;
   };
 
   // While a submittal is open, the whole card is the form — the tiles would
@@ -19597,6 +20094,8 @@ function SubmittalCard({
         printBrand,
         userSignatures,
         currentEmail,
+        specNotes: draft.specNotes || [],
+        onChangeSpecNotes: (next) => saveSpecNotes(draft.id, next),
         onSave: saveReview,
         onCancel: () => {
           setDraft(null);
@@ -19622,6 +20121,7 @@ function SubmittalCard({
         if (onChangeQueue) onChangeQueue([...others, ...next]);
       },
       onSave: saveDraft,
+      onDelete: (rec) => { if (deleteOne(rec) !== false) { setDraft(null); setOpenId(null); } },
       onCancel: () => {
         setDraft(null);
         setOpenId(null);
