@@ -494,7 +494,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 76";
+var APP_BUILD = "7.9.2026 · build 77";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2047,15 +2047,30 @@ var pdfViewer = `
         .marksTable .cRm { width: 160px; font-size: 11px; color: var(--mist); }
         .marksTable .cAct { width: 42px; }
         /* ---------- SD (shop drawings) ---------- */
-        .sdTable .cSec { width: 96px; text-align: center; }
-        .sdTable .cCat { width: 92px; }
+        /* There is room on the board, so the columns take it: more air between
+           them, and the bin is no longer squeezed into 36px where it read as
+           half a column. (7.9.26) */
+        .functionPage.wide:has(.sdTable) { padding-inline: 12px; }
+        .sdTable th, .sdTable td { padding-inline: 10px; }
+        .sdTable .cSec { width: 108px; text-align: center; }
+        .sdTable .cCat { width: 104px; }
         .sdTable .cDesc { width: auto; text-align: start; }
-        .sdTable .cQty { width: 84px; }
-        .sdTable .cReq { width: 88px; }
-        .sdTable .cStat { width: 132px; }
-        .sdTable .cDate { width: 104px; }
-        .sdTable .cFile { width: 78px; }
-        .sdTable .cAct { width: 36px; }
+        .sdTable .cQty { width: 88px; }
+        .sdTable .cReq { width: 96px; }
+        .sdTable .cStat { width: 140px; }
+        .sdTable .cDate { width: 112px; }
+        .sdTable .cFile { width: 104px; }
+        .sdTable .cAct { width: 56px; }
+        .sdDlBtn {
+          border: none; background: none; color: var(--steel); cursor: pointer;
+          padding: 2px; line-height: 0; border-radius: 5px;
+        }
+        .sdDlBtn:hover { color: var(--accent); background: var(--accent-soft); }
+        /* A description written in full is read in full: the box grows
+           downwards with the text instead of hiding the end of it. */
+        .sdTable .cDesc textarea {
+          field-sizing: content; min-height: 34px; max-height: 240px; overflow-y: auto;
+        }
         .sdDesc { min-height: 58px; }
         /* The quantity, read the way it is spoken: the number, then its unit. */
         .qtyPair { display: inline-flex; align-items: baseline; gap: 4px; }
@@ -2328,11 +2343,23 @@ var pdfViewer = `
         }
         .sigPadTitle { font-size: 15px; font-weight: 800; color: var(--ink); }
         .sigPadHint { margin: 4px 0 12px; font-size: 12.5px; color: var(--mist); }
+        /* The pad is two layers: an uploaded stamp underneath, and the ink on
+           top of it. Signing over a company stamp is how these forms are
+           signed on paper, so it is how they are signed here (7.9.26). */
+        .sigStage { position: relative; }
+        .sigStage img.sigStampImg {
+          position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px);
+          object-fit: contain; pointer-events: none;
+        }
         .sigCanvas {
           display: block; width: 100%; height: 210px; border: 2px dashed var(--line);
-          border-radius: 10px; background: #fff; touch-action: none; cursor: crosshair;
+          border-radius: 10px; background: transparent; touch-action: none; cursor: crosshair;
+          position: relative;
         }
+        .sigStage { background: #fff; border-radius: 10px; }
         .sigPadRow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+        .sigStampRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .sigStampRow .ghostBtn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
         .sigPadRow .functionEditBtn:disabled { opacity: .45; cursor: default; }
         /* The pills sit in a box INSIDE the cell. Putting display:flex on a
            <td> takes that cell out of the table's own layout, and the row's
@@ -4031,7 +4058,10 @@ function fileToDataUrl(file) {
 function printedStampText(lang) {
   const d = new Date();
   const p2 = (n) => String(n).padStart(2, "0");
-  const when = `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  // The date, and not the hour. A sheet needs to say which day it is from;
+  // 22:16 tells a reader nothing and makes two copies of the same day's
+  // report look like two different documents (7.9.26).
+  const when = `${p2(d.getDate())}/${p2(d.getMonth() + 1)}/${d.getFullYear()}`;
   return lang === "he" ? `הודפס בתאריך ${when}` : `Printed on ${when}`;
 }
 // `bottomMm` puts it inside whatever page padding the document already has.
@@ -5472,24 +5502,23 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
     const range = `${shortDate(pMin)} – ${shortDate(maxDate)}`;
     const markerLine = `${he ? "תאריך סימון" : "Marker date"}: <span class="rng">${esc(markerLabel)}</span>`;
     const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "";
-    const footImg = brand.footerImg ? `<div class="footImg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
-    const footTxt = brand.footerText ? `<div class="ftr">${esc(brand.footerText)}</div>` : "";
-    // Same document shell as the user-list PDF: A4 landscape, no page margin,
-    // 20mm of white, then a rounded accent frame holding logo + title + table
-    // + company footer.
+    // The company strip and the line of text under it travel together: one
+    // block, held at the foot of the last sheet by the shell.
+    const footBlock = brand.footerImg || brand.footerText
+      ? `<div class="footImg" id="footimg">${brand.footerText ? `<div class="ftr">${esc(brand.footerText)}</div>` : ""}${brand.footerImg ? `<img src="${brand.footerImg}" alt="footer">` : ""}</div>`
+      : "";
+    // The house document shell — the same paper as every other form she
+    // issues, down to the millimetre (7.9.26).
     const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
-@page { size: A4 landscape; margin: 0; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body { margin: 0 auto; width: 297mm; min-height: 210mm; padding: 20mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.frame { min-height: calc(210mm - 40mm); border: 1.5px solid ${accent}; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; }
-.hdr { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 10px; margin-bottom: 16px; }
-.hdr img { max-height: 52px; max-width: 200px; object-fit: contain; }
+${printSheetCss({ landscape: true, accent })}
+body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; }
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 12px; }
+.hdr img { max-height: 44px; max-width: 170px; object-fit: contain; }
 .ttlWrap { flex: 1; text-align: center; }
-.ttlWrap .ttl { font-size: 22px; font-weight: 800; color: ${accent}; letter-spacing: .5px; }
-.ttlWrap .sub { font-size: 11.5px; font-weight: 600; color: #5b5e66; margin-top: 3px; }
-.ttlWrap .mkdate { font-size: 11px; font-weight: 700; color: ${accent}; margin-top: 2px; }
+.ttlWrap .ttl { font-size: 19px; font-weight: 800; color: ${accent}; letter-spacing: .5px; }
+.ttlWrap .sub { font-size: 11px; font-weight: 600; color: #5b5e66; margin-top: 3px; }
+.ttlWrap .mkdate { font-size: 10.5px; font-weight: 700; color: ${accent}; margin-top: 2px; }
 /* The date range is a run of Latin numerals inside an RTL line — without an
    isolate the two dates swap places and the range reads backwards. */
 .rng { direction: ltr; unicode-bidi: isolate; font-family: 'Inter', Arial, sans-serif; }
@@ -5521,18 +5550,13 @@ th.pc { color: #fff; white-space: nowrap; font-family: 'Assistant', Arial, sans-
 .bar { position: absolute; top: 3px; height: 9px; border-radius: 3px; background: #f2f3f4; border: 1px solid #cdd2d8; overflow: hidden; }
 .bar.crit { border: 1.4px solid #d02f2f; }
 .fl { position: absolute; top: 0; bottom: 0; left: 0; }
-tr { page-break-inside: avoid; }
-.spacer { flex: 1; }
-.ftr { margin-top: 10px; font-size: 10px; color: #6b7280; text-align: center; white-space: pre-line; }
-.footImg { margin-top: 14px; text-align: center; }
-.footImg img { width: 100%; height: auto; display: block; }
-${printedStampCss(4)}
-</style></head><body><div class="frame">
+.ftr { font-size: 10px; color: #6b7280; text-align: center; white-space: pre-line; margin-bottom: 6px; }
+</style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || title)}</div><div class="sub">${esc(title)} &nbsp;|&nbsp; <span class="rng">${esc(range)}</span></div><div class="mkdate">${markerLine}</div></div></div>
 <table><colgroup><col class="c0"><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
 <thead><tr><th></th><th>${esc(sc.taskCol)}</th><th class="pc">% ${esc(sc.expectedWord)}</th><th class="pc">% ${esc(sc.actualWord)}</th><th class="axisHead"><div class="axis">${monthLabels}</div></th></tr></thead>
 <tbody>${rows}</tbody></table>
-<div class="spacer"></div>${footTxt}${footImg}</div>${printedStampHtml(he ? "he" : "en")}</body></html>`;
+${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? "he" : "en"))}</body></html>`;
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.open();
@@ -6197,7 +6221,9 @@ function CardView({
   submittalChkOff,
   onChangeChkOff,
   submittalReview,
-  onChangeReview
+  onChangeReview,
+  submittalApprovals,
+  onChangeApprovals
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -6275,7 +6301,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -6851,14 +6877,12 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
       return head + items;
     }).join("");
     const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "";
-    const footImg = brand.footerImg ? `<div class="footImg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
+    const footBlock = brand.footerImg ? `<div class="footImg" id="footimg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
+    // The house document shell, the same paper as every other form (7.9.26).
     const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || c.title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
-@page { size: A4 portrait; margin: 0; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body { margin: 0 auto; width: 210mm; min-height: 297mm; padding: 18mm; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.frame { min-height: calc(297mm - 36mm); border: 1.5px solid ${accent}; border-radius: 16px; padding: 14px 16px; display: flex; flex-direction: column; }
+${printSheetCss({ landscape: false, accent })}
+body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; }
 /* Three tracks with equal outer columns, so the title lands on the PAGE centre
    and not in the middle of whatever space the logo happens to leave over. */
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 10px; margin-bottom: 14px; }
@@ -6872,15 +6896,10 @@ td { font-size: 8.5px; padding: 4px 4px; border-bottom: 1px solid #f0f0f2; text-
 tr.grp td { background: ${shadeDarker(accent)}; color: #fff; font-weight: 800; font-size: 11px; text-align: center; padding: 6px; }
 tr.hd td { background: ${accent}; color: #fff; font-weight: 800; }
 a { color: #17181c; text-decoration: none; }
-tr { page-break-inside: avoid; }
-.spacer { flex: 1; }
-.footImg { margin-top: 14px; text-align: center; }
-.footImg img { width: 100%; height: auto; display: block; }
-${printedStampCss(7)}
-</style></head><body><div class="frame">
+</style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(c.title)}</div></div><span></span></div>
 <table><colgroup><col style="width:19%"><col style="width:18%"><col style="width:16%"><col style="width:16%"><col style="width:14%"><col style="width:17%"></colgroup><tbody>${body}</tbody></table>
-<div class="spacer"></div>${footImg}</div>${printedStampHtml(he ? "he" : "en")}</body></html>`;
+${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? "he" : "en"))}</body></html>`;
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.open();
@@ -8396,6 +8415,189 @@ var PRINT_MARGIN_MM = 12;
 // A4 landscape is 297mm across. The frame lives inside the margin on all four
 // sides, so its box is the paper less twice the margin.
 var PRINT_WIDE_MM = 297;
+// ---------------------------------------------------------------------------
+//  One shell for every document this app issues (7.9.26)
+//
+//  The drawings register, the ordering board, the schedule, the contacts
+//  sheet, the submittal form and the user list are all the same piece of
+//  paper: an A4 sheet, a rounded frame set in from all four edges, the
+//  company strip at the foot of the sheet and the printed-on line under it.
+//  Each builder used to write its own version of that and they had drifted
+//  apart — different margins, different footers, different behaviour on the
+//  last page. They share this shell now, so a change here is a change to
+//  every document she issues.
+//
+//  Two measurements are worth spelling out, because both were bugs she had
+//  to find on paper:
+//
+//  * The sheet is the WHOLE page and the white edge is this box's padding,
+//    not a @page margin. A @page margin leaves the browser's own margin
+//    setting free to disagree with ours, and when it does a fixed-width
+//    frame has nowhere to put the difference: in an RTL document all of it
+//    lands on one side and the frame sits hard against the other edge of
+//    the paper. Padding cannot drift — the frame is centred by the sheet.
+//
+//  * The frame is the full height of the sheet on EVERY page, the last one
+//    included. A frame that closes under the last row reads as a page that
+//    was cut short rather than a page that ended.
+// ---------------------------------------------------------------------------
+function printSheetCss(o) {
+  const opts = o || {};
+  const wide = !!opts.landscape;
+  const w = wide ? PRINT_WIDE_MM : PRINT_PAGE_MM;
+  const h = wide ? PRINT_PAGE_MM : PRINT_WIDE_MM;
+  const m = opts.marginMm == null ? PRINT_MARGIN_MM : opts.marginMm;
+  const accent = opts.accent || "#14265e";
+  const pad = opts.framePad || "5mm 6mm";
+  return `
+@page { size: A4 ${wide ? "landscape" : "portrait"}; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; }
+body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+/* One printed sheet. A hair under the paper height: asked for the last
+   millimetre some browsers round up and deal out a blank page after every
+   real one. */
+.page { width: ${w}mm; height: ${(h - 0.2).toFixed(1)}mm; padding: ${m}mm; margin: 0 auto;
+  background: #fff; overflow: hidden; page-break-after: always; break-after: page; }
+.page:last-child { page-break-after: auto; break-after: auto; }
+/* Inside the white edge: the frame, and under it the company strip and the
+   printed-on line. They sit BELOW the frame's bottom rule, at the foot of the
+   sheet — not inside the frame with the table (7.9.26). */
+.sheet { height: 100%; display: flex; flex-direction: column; }
+.frame { flex: 1 1 auto; min-height: 0; border: 1.5px solid ${accent}; border-radius: 12px;
+  padding: ${pad}; display: flex; flex-direction: column; overflow: hidden; }
+.pgBody { flex: 1 1 auto; min-height: 0; }
+/* A form, rather than a table of rows: its own boxes share out the height. */
+.pgBody.flow { display: flex; flex-direction: column; }
+/* The same block of space is kept under the frame on every page, so every
+   frame ends on the same line whether or not the strip is printed there. */
+.pgFoot { flex: 0 0 auto; padding-top: 2.5mm; }
+.footImg { text-align: center; }
+.footImg img { width: 50%; height: auto; display: block; margin: 0 auto; }
+.pageStamp { text-align: center; font-size: 7.5px; font-weight: 600; color: #9aa3af;
+  letter-spacing: .2px; direction: ltr; unicode-bidi: plaintext; padding-top: 1.5mm; }
+@media screen {
+  body { background: #eef1f5; padding: 8mm 0; }
+  .page { margin: 0 auto 8mm; box-shadow: 0 2px 14px -6px rgba(0,0,0,.35); }
+}
+/* Where the document is written before it is dealt into pages. */
+#src { position: absolute; left: -9999px; top: 0; width: ${w - 2 * m - 14}mm; }
+`;
+}
+// The whole sheet, for a document that is one page by design — the submittal
+// form, or a page of specifications appended after it.
+function printStaticPage(inner, o) {
+  const opts = o || {};
+  const foot = opts.footHtml || "";
+  const stamp = `<div class="pageStamp">${String(opts.stamp || "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c])}</div>`;
+  return `<div class="page"><div class="sheet"><div class="frame"><div class="pgBody${opts.flow ? " flow" : ""}">${inner}</div></div><div class="pgFoot">${foot}${stamp}</div></div></div>`;
+}
+// ---------------------------------------------------------------------------
+//  The pages are cut here, not left to the browser.
+//
+//  A frame drawn with position:fixed only ever framed the first page: the rows
+//  kept flowing under it and anything painted outside the page's own content
+//  box was clipped away. So the document is written as ONE table and this
+//  script deals the rows into real pages — each a self-contained sheet with
+//  its own frame, its own heading row and nothing crossing the border.
+// ---------------------------------------------------------------------------
+function printPaginateJs(stampText) {
+  return `<script>
+(function () {
+  var STAMP = ${JSON.stringify(String(stampText || ""))};
+  var src = document.getElementById("src");
+  var out = document.getElementById("pages");
+  var hdr = src.querySelector(".hdr");
+  var table = src.querySelector("table");
+  var colg = table ? table.querySelector("colgroup") : null;
+  var thead = table ? table.querySelector("thead") : null;
+  var rows = table ? Array.prototype.slice.call(table.querySelectorAll("tbody tr")) : [];
+  // The closing strip is a template, not a single node. A copy of it is put
+  // under EVERY frame and hidden on all but the last, so the frames all end on
+  // the same line — a strip that only exists on the last page would make that
+  // one frame shorter than the rest.
+  var foot = document.getElementById("footimg");
+  if (foot) foot.remove();
+  var pages = [];
+  function newPage() {
+    var pg = document.createElement("div");
+    pg.className = "page";
+    var sheet = document.createElement("div");
+    sheet.className = "sheet";
+    var fr = document.createElement("div");
+    fr.className = "frame";
+    var body = document.createElement("div");
+    body.className = "pgBody";
+    if (hdr) body.appendChild(hdr.cloneNode(true));
+    var t = document.createElement("table");
+    if (colg) t.appendChild(colg.cloneNode(true));
+    if (thead) t.appendChild(thead.cloneNode(true));
+    var tb = document.createElement("tbody");
+    t.appendChild(tb);
+    body.appendChild(t);
+    fr.appendChild(body);
+    var ft = document.createElement("div");
+    ft.className = "pgFoot";
+    var strip = null;
+    if (foot) {
+      strip = foot.cloneNode(true);
+      strip.removeAttribute("id");
+      strip.style.visibility = "hidden";
+      ft.appendChild(strip);
+    }
+    if (STAMP) {
+      var st = document.createElement("div");
+      st.className = "pageStamp";
+      st.textContent = STAMP;
+      ft.appendChild(st);
+    }
+    sheet.appendChild(fr);
+    sheet.appendChild(ft);
+    pg.appendChild(sheet);
+    out.appendChild(pg);
+    var rec = { pg: pg, tb: tb, body: body, frame: fr, strip: strip };
+    pages.push(rec);
+    return rec;
+  }
+  // Clear paper between the last row and the inside of the frame's bottom
+  // rule. Measured, not inferred: the frame hides its overflow, so nothing
+  // else can see past that line.
+  function room(rec) {
+    var cs = getComputedStyle(rec.frame);
+    var floor = rec.frame.getBoundingClientRect().bottom
+      - parseFloat(cs.paddingBottom || 0) - parseFloat(cs.borderBottomWidth || 0);
+    return floor - rec.tb.getBoundingClientRect().bottom;
+  }
+  var cur = newPage();
+  for (var i = 0; i < rows.length; i++) {
+    cur.tb.appendChild(rows[i]);
+    // A page stops ONE ROW SHORT of full. Filled to the last millimetre the
+    // rows sit on the frame's bottom line and the sheet reads as bottom-heavy;
+    // a row's worth of air is what makes every page look the same.
+    var spare = rows[i].getBoundingClientRect().height;
+    if (cur.tb.children.length > 1 && room(cur) < spare) {
+      var next = newPage();
+      next.tb.appendChild(rows[i]);
+      cur = next;
+    }
+  }
+  if (cur.strip) cur.strip.style.visibility = "";
+  // A nearly full page reads as bottom-heavy, and half the leftover moved
+  // above the heading settles it. A page with a lot of clear paper is not
+  // unbalanced, it is short — lifting its heading into the middle of an empty
+  // frame only makes it look like a fault.
+  var rowH = rows.length ? rows[0].getBoundingClientRect().height : 18;
+  var sheetH = pages.length ? pages[0].pg.clientHeight : 0;
+  var SHORT = sheetH * 0.35;
+  pages.forEach(function (rec) {
+    var gap = room(rec);
+    if (gap <= 2 || gap > SHORT) return;
+    rec.body.style.paddingTop = Math.round(Math.min(gap / 2, rowH * 2.5)) + "px";
+  });
+  src.remove();
+})();
+<\/script>`;
+}
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
           alertRows, toneRows, noStamp, issuedLabel, fileName } = opts;
@@ -8439,35 +8641,8 @@ function boardExportPdf(opts) {
   // ---------------------------------------------------------------------------
   const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(fileName || title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
-/* The margin is the white edge of the paper; the frame is drawn just inside it,
-   by each page for itself (30.8.26). */
-@page { size: A4 landscape; margin: ${PRINT_MARGIN_MM}mm; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body { width: auto; font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink};
-  direction: ${dir}; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-/* On screen the document still needs a page to sit on. */
-@media screen { body { margin: 0 auto; width: 297mm; padding: ${PRINT_MARGIN_MM}mm; background: #eef1f5; } }
-/* One printed page: its own frame, its own heading, its own rows. Nothing
-   flows across the border because nothing flows at all — the script below
-   deals the rows into pages before printing.
-   Every page is a WHOLE page: the box is the full sheet less the margin, so the
-   last page is framed edge to edge even when one row is left on it (30.8.26). */
-.page {
-  border: 1.5px solid ${P.accent}; border-radius: 12px;
-  padding: 5mm 6mm; background: #fff;
-  page-break-after: always; break-after: page;
-  overflow: hidden;
-  height: ${PRINT_PAGE_MM - 2 * PRINT_MARGIN_MM}mm;
-  width: ${PRINT_WIDE_MM - 2 * PRINT_MARGIN_MM}mm;
-  /* A column, so the closing image can be pushed to the foot of the sheet. */
-  display: flex; flex-direction: column;
-}
-.page > .pgBody { flex: 1 1 auto; min-height: 0; }
-.page:last-child { page-break-after: auto; break-after: auto; }
-@media screen { .page { margin: 0 auto 8mm; box-shadow: 0 2px 14px -6px rgba(0,0,0,.35); } }
-#src { position: absolute; left: -9999px; top: 0; width: ${PRINT_WIDE_MM - 2 * PRINT_MARGIN_MM - 12}mm; }
-
+${printSheetCss({ landscape: true, accent: P.accent })}
+body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink}; direction: ${dir}; }
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 10px; }
 .hdr img { max-height: 38px; max-width: 130px; object-fit: contain; justify-self: start; }
@@ -8494,143 +8669,10 @@ tbody tr.wait td, tbody tr.wait:nth-child(even) td { background: #fdeed8; }
 tbody tr.ok td, tbody tr.ok:nth-child(even) td { background: #e3f3e6; }
 td.img { padding: 2px; }
 td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: block; margin: 0 auto; }
-${printedStampCss(4)}
-/* The closing image belongs to the last page — at the FOOT of it, whether that
-   page carries ten rows or one (30.8.26). */
-.footImg { margin-top: auto; padding-top: 4mm; padding-bottom: 3mm; text-align: center; flex: 0 0 auto; }
-.pageStamp { flex: 0 0 auto; text-align: center; font-size: 7.5px; font-weight: 700;
-  color: #9aa3af; padding-top: 2mm; letter-spacing: .02em; }
-/* Without a closing image the stamp is what holds the foot of the frame. */
-.page > .pageStamp:nth-child(2) { margin-top: auto; }
-.footImg img { width: 100%; height: auto; display: block; }
 </style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
-${footImg}</div><div id="pages"></div><div id="mm" style="position:absolute;left:-9999px;top:0;height:100mm"></div>${noStamp ? "" : printedStampHtml(isRTL ? "he" : "en")}
-<script>
-(function () {
-  var probe = document.getElementById("mm");
-  var px = probe.getBoundingClientRect().height / 100;   // pixels per millimetre
-  probe.remove();
-  var src = document.getElementById("src");
-  var out = document.getElementById("pages");
-  var hdr = src.querySelector(".hdr");
-  var table = src.querySelector("table");
-  var colg = table.querySelector("colgroup");
-  var thead = table.querySelector("thead");
-  var rows = Array.prototype.slice.call(table.querySelectorAll("tbody tr"));
-  var foot = document.getElementById("footimg");
-  if (foot) foot.remove();
-  // Every page is the same box — the whole sheet less the margin — so a page
-  // is full when its content no longer fits inside it, not when it happens to
-  // be the last one (30.8.26).
-  var pages = [];
-  function newPage() {
-    var pg = document.createElement("div");
-    pg.className = "page";
-    var body = document.createElement("div");
-    body.className = "pgBody";
-    body.appendChild(hdr.cloneNode(true));
-    var t = document.createElement("table");
-    if (colg) t.appendChild(colg.cloneNode(true));
-    t.appendChild(thead.cloneNode(true));
-    var tb = document.createElement("tbody");
-    t.appendChild(tb);
-    body.appendChild(t);
-    pg.appendChild(body);
-    out.appendChild(pg);
-    var rec = { pg: pg, tb: tb, body: body };
-    pages.push(rec);
-    return rec;
-  }
-  // The page has a fixed height and hides what will not fit, so anything taller
-  // than the box shows up as scrollHeight running past clientHeight.
-  function overflows(pg) { return pg.scrollHeight > pg.clientHeight + 1; }
-  // How much clear paper is left between the last row and the inside of the
-  // frame. Measured, not inferred: the page has a fixed height and hides the
-  // overflow, so scrollHeight alone cannot see past the bottom border.
-  function footRoom(rec) {
-    var cs = getComputedStyle(rec.pg);
-    var floor = rec.pg.getBoundingClientRect().bottom
-      - parseFloat(cs.paddingBottom || 0) - parseFloat(cs.borderBottomWidth || 0);
-    return floor - rec.tb.getBoundingClientRect().bottom;
-  }
-  var cur = newPage();
-  for (var i = 0; i < rows.length; i++) {
-    cur.tb.appendChild(rows[i]);
-    // A page stops ONE ROW SHORT of full. Filled to the last millimetre the
-    // rows sat on the frame's bottom border and the sheet read as bottom-heavy;
-    // a row's worth of air under the table is what makes every page look the
-    // same, and look right (30.8.26).
-    var spare = rows[i].getBoundingClientRect().height;
-    if (cur.tb.children.length > 1 && footRoom(cur) < spare) {
-      var next = newPage();
-      next.tb.appendChild(rows[i]);
-      cur = next;
-    }
-  }
-  // The closing image sits at the foot of the LAST page. If the rows already on
-  // that page leave no room for it, the last rows move down a page and the
-  // image follows them, so it is never squeezed over the border.
-  // Balance every page: the air left under the table is split, half of it
-  // moved above the heading, so the block sits in the middle of the frame
-  // instead of hanging from the top of it. A page that is only half full is
-  // left alone — its heading belongs at the top, not floating in the middle
-  // (30.8.26).
-  var rowH = rows.length ? rows[0].getBoundingClientRect().height : 18;
-  var sheet = pages.length ? pages[0].pg.clientHeight : 0;
-  // How much clear paper counts as "this page is short rather than unbalanced".
-  var SHORT = sheet * 0.35;
-  pages.forEach(function (rec) {
-    var gap = footRoom(rec);
-    if (gap <= 2) return;
-    // A nearly full page reads as bottom-heavy, and half the leftover moved
-    // above the heading settles it. A page with a lot of clear paper is not
-    // unbalanced, it is short — lifting its heading into the middle of an
-    // empty frame only makes it look like a fault (2.9.26).
-    if (gap > SHORT) return;
-    var lift = Math.min(gap / 2, rowH * 2.5);
-    rec.body.style.paddingTop = Math.round(lift) + "px";
-  });
-  if (foot) {
-    cur.pg.appendChild(foot);
-    var guard = 0;
-    while (overflows(cur.pg) && cur.tb.children.length > 0 && guard++ < 200) {
-      var moved = cur.tb.lastElementChild;
-      foot.remove();
-      var page = newPage();
-      if (moved) page.tb.appendChild(moved);
-      page.pg.appendChild(foot);
-      cur = page;
-    }
-  }
-  // The last page closes under its own content. A frame the height of the whole
-  // sheet with three rows at the top of it and fifteen centimetres of nothing
-  // underneath does not read as a page — it reads as something that failed to
-  // finish printing. Full pages keep the full frame, so a long report is still
-  // uniform (2.9.26).
-  var last = pages[pages.length - 1];
-  if (last && sheet && footRoom(last) > SHORT) {
-    last.pg.style.height = "auto";
-    last.pg.style.minHeight = "0";
-  }
-  // The printed-on stamp goes INSIDE each frame. Left as one fixed element on
-  // the sheet it sits at the same height on every page, which is right until a
-  // page closes early — and then it is marooned in the middle of blank paper
-  // with the frame finishing well above it (2.9.26).
-  var stamp = document.querySelector(".printedStamp");
-  if (stamp) {
-    stamp.remove();
-    pages.forEach(function (rec) {
-      var c = stamp.cloneNode(true);
-      c.className = "pageStamp";
-      rec.pg.appendChild(c);
-    });
-  }
-  src.remove();
-})();
-<\/script>
-</body></html>`;
+${footImg}</div><div id="pages"></div>${printPaginateJs(noStamp ? "" : printedStampText(isRTL ? "he" : "en"))}</body></html>`;
 
   // Opened inside the click that asked for it, like every other print here, or
   // the browser treats it as a pop-up and swallows it.
@@ -9292,7 +9334,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // The columns a client's copy carries, by name. Everything that says WHAT the
   // item is and WHEN it lands; nothing about who it was bought from or on what
   // order — that half of the board is hers (29.8.26).
-  const clientKeys = ["section", "category", "typeMark", "desc", "image", "eta", "etaActual", "status", "longLead"];
+// What each audience sees, on the screen and on the paper — one list, so the
+// two cannot drift apart. The client is told WHAT is on order and whether it
+// is a long lead item; the dates the supplier committed to are the main
+// contractor's business, and the client sees them only when the contractor
+// chooses to say something. (7.9.26)
+var LLI_CLIENT_KEYS = ["section", "category", "typeMark", "desc", "image", "status", "longLead"];
+var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "eta", "etaActual", "status", "longLead"];
   const onPdf = (printLang, audience) => {
     const g = exportGrid(audience);
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
@@ -9303,8 +9351,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     let body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
     let imgCol = 4;
     let imgs = g.imgs;
-    if (audience === "client") {
-      const want = clientKeys.map((k) => L(k));
+    if (audience === "client" || audience === "contractor") {
+      const want = (audience === "client" ? LLI_CLIENT_KEYS : LLI_CONTRACTOR_KEYS).map((k) => L(k));
       const keep = want.map((name) => head.indexOf(name)).filter((i) => i >= 0);
       imgCol = keep.indexOf(head.indexOf(L("image")));
       head = keep.map((i) => head[i]);
@@ -9392,7 +9440,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     });
     return sbH(LliClientBoard, {
       lang, isRTL, rows: clientRows, projectName,
-      onDownload: (lg) => onPdf(lg, "client")
+      // The two delivery dates are the contractor's columns. The client's sheet
+      // carries the long-lead flag and nothing else about timing (7.9.26).
+      showEta: viewerRole === "contractor",
+      onDownload: (lg) => onPdf(lg, viewerRole)
     });
   }
 
@@ -10057,6 +10108,7 @@ var SD_L = {
   file: { en: "Drawing", he: "קובץ" },
   upload: { en: "Upload", he: "העלאה" },
   open: { en: "Open", he: "פתיחה" },
+  download: { en: "Download", he: "הורדה" },
   remove: { en: "Remove the file", he: "הסרת הקובץ" },
   hide: { en: "Not a shop drawing", he: "לא נדרשת תוכנית" },
   restore: { en: "Restore", he: "החזרה" },
@@ -10564,6 +10616,15 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                               sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
                               " ",
                               L("open")
+                            ),
+                            sbH(
+                              "button",
+                              {
+                                type: "button", className: "sdDlBtn", title: L("download"),
+                                "aria-label": L("download"),
+                                onClick: () => sbDownloadAs(v.file, projectName, sdFileLabel(v.desc || r.title || ""))
+                              },
+                              sbH(Download2, { size: 13, strokeWidth: 2 })
                             ),
                             canEdit
                               ? sbH("button", { type: "button", className: "lliImgClear", title: L("remove"), onClick: () => patch(r.code, { file: null }) }, "×")
@@ -13042,7 +13103,7 @@ var LLIC_L = {
   yes: { en: "Yes", he: "כן" }
 };
 
-function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
+function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta }) {
   const L = (k) => sbText(LLIC_L[k] || { en: k, he: k }, lang);
   const [printAsk, setPrintAsk] = useState6(false);
   const [shot, setShot] = useState6(null);
@@ -13074,7 +13135,13 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
               sbH("th", null, L("typeMark")),
               sbH("th", { className: "sdcDesc" }, L("desc")),
               sbH("th", null, L("image")),
-              sbH("th", null, L("status"))
+              // The two delivery dates belong to the main contractor's copy of
+              // this board. The client's copy carries the long-lead flag, which
+              // is the one thing about timing that is theirs to know (7.9.26).
+              showEta ? sbH("th", { key: "eta" }, L("eta")) : null,
+              showEta ? sbH("th", { key: "etaActual" }, L("etaActual")) : null,
+              sbH("th", null, L("status")),
+              sbH("th", null, L("longLead"))
             )),
             sbH("tbody", null, rows.map((r) => sbH(
               "tr",
@@ -13096,11 +13163,16 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
                     })
                   : sbH("span", { className: "sdcNone" }, "—")
               ),
+              showEta ? sbH("td", { key: "eta" }, cell(r.eta)) : null,
+              showEta ? sbH("td", { key: "etaActual" }, cell(r.etaActual)) : null,
               sbH("td", null, r.ordered
                 ? sbH("span", {
                     className: "sdcChip",
                     style: { background: `${r.statusColor}1f`, color: r.statusColor }
                   }, r.statusLabel)
+                : sbH("span", { className: "sdcNone" }, "—")),
+              sbH("td", null, r.longLead
+                ? sbH("span", { className: "sdcChip", style: { background: "#e08a121f", color: "#e08a12" } }, L("longLead"))
                 : sbH("span", { className: "sdcNone" }, "—"))
             )))
           )
@@ -14036,8 +14108,13 @@ function SdClientBoard({
               sbH(
                 "div",
                 { className: "sdcAskRow" },
-                sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { openFile(shown); setAsk(null); } },
-                  sbH(DownloadSd, { size: 15, strokeWidth: 2.2 }), " ", ap ? L("viewSigned") : L("download")),
+                sbH("button", {
+                  type: "button", className: "sdcAskBtn",
+                  onClick: () => {
+                    sbDownloadAs(shown, projectName, sdFileLabel(v.desc || ask.title || ""));
+                    setAsk(null);
+                  }
+                }, sbH(DownloadSd, { size: 15, strokeWidth: 2.2 }), " ", ap ? L("viewSigned") : L("download")),
                 // Once it is signed there is nothing left to sign. The button
                 // is gone rather than disabled: a disabled button on a finished
                 // job reads as something that went wrong.
@@ -16066,6 +16143,32 @@ function dataUrlToBlobUrl(dataUrl, name) {
     return null;
   }
 }
+// Saving a file under a name a person can read.
+//
+// Opening the storage URL in a tab hands the browser the object's own key, so
+// what lands in Downloads is 8c9317df-0477-47fa-9c83-2e03ab4186f4.pdf — the
+// internal id, which is exactly what nobody wants in a folder of drawings. The
+// bytes are fetched here instead and saved through a blob, where the download
+// attribute is honoured and the name is ours: <project> - <what it is> - <the
+// day it was saved>. (7.9.26)
+async function sbDownloadAs(att, projectName, label) {
+  const url = await sbFileUrl(att);
+  if (!url) return false;
+  const ext = (String((att && att.name) || "").match(/\.([A-Za-z0-9]{1,5})$/) || [, "pdf"])[1];
+  const name = boardFileName(projectName, label || "file", ext.toLowerCase());
+  try {
+    const blob = await (await fetch(url)).blob();
+    const href = URL.createObjectURL(blob);
+    triggerDownload(href, name);
+    setTimeout(() => URL.revokeObjectURL(href), 4000);
+    return true;
+  } catch (e) {
+    // Better a file with the wrong name than no file at all.
+    console.warn("[awdash] download by name failed, falling back to the raw link", e);
+    triggerDownload(url, name);
+    return true;
+  }
+}
 async function sbFileUrl(att) {
   if (!att) return null;
   if (att.inline && att.dataUrl) return dataUrlToBlobUrl(att.dataUrl, att.name) || att.dataUrl;
@@ -16395,14 +16498,43 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
   const img = rec.image && rec.image.thumb
     ? `<img src="${rec.image.thumb}" alt="">`
     : `<span class="noImg">${L("picture")}</span>`;
-  const html = `<html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbPrintName(rec, lang))}</title><style>
+  const stamp = printedStampText(lang);
+  // The form is one sheet by design and the specifications are a sheet each,
+  // so nothing here is paginated — but the paper is the house paper, the same
+  // shell every other document is printed on (7.9.26).
+  const formBody = `<div class="hdr"><div class="side">${logo}</div><div class="mid"><div class="ttl">${L("formTitle")}</div></div>
+<div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
+
+<div class="secBar">${L("projectInfo")}</div>
+<table class="info">
+${infoRow(L("projectName"), val(rec.projectName), L("date"), sbEsc(sbFmtDate(rec.date)))}
+${infoRow(L("contractor"), val(rec.contractor), L("requiredApprovalDate"), sbEsc(sbFmtDate(rec.requiredApprovalDate)))}
+${infoRow(L("discipline"), sbEsc(cat ? sbText(cat, lang) : rec.discipline), L("submittedBy"), val(rec.submittedBy))}
+${infoRow(L("subCategory"), sbEsc(sbSubcatLabel(rec.subCategory || rec.scope, rec.category, lang)), L("email"), val(rec.email))}
+</table>
+
+<div class="secBar">${L("equipment")}</div>
+<table class="eq">
+<tr><th>${L("typeId")}</th><td class="v">${val(rec.typeId)}</td><td class="pic" rowspan="4">${img}</td></tr>
+<tr><th>${L("itemDescription")}</th><td class="v">${val(rec.itemDescription)}</td></tr>
+<tr><th>${L("modelCode")}</th><td class="v">${val(rec.modelCode)}</td></tr>
+<tr><th>${L("manufacturer")}</th><td class="v">${val(rec.manufacturer)}</td></tr>
+</table>
+
+<div class="secBar">${L("documents")}</div>
+<table>${docRows}</table>
+
+<div class="secBar">${L("additional")}</div>
+<div class="addWrap">
+<div class="txtBox" dir="${dir}">${sbEsc((isHe ? rec.infoHe : rec.infoEn) || "")}</div>
+</div>
+${reviewBlock}
+<div class="ftr">${sbEsc(sbNumber(rec.category, rec.seq))} &nbsp;·&nbsp; Rev.${sbEsc(rec.rev || 0)} &nbsp;·&nbsp; ${sbEsc(sbFmtDate(rec.date))}</div>`;
+  const html = `<!doctype html><html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbPrintName(rec, lang))}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
-@page { size: A4 portrait; margin: 0; }
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; }
-body { margin: 0 auto; width: 210mm; min-height: 297mm; padding: 9mm; font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; --val: 11px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-.frame { border: 1.5px solid ${accent}; border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; min-height: calc(297mm - 18mm); }
-.hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding: 10px 0 14px; margin-bottom: 4px; min-height: 82px; }
+${printSheetCss({ landscape: false, accent })}
+body { font-family: 'Assistant','Inter',Arial,sans-serif; color: #1f2a37; direction: ${dir}; font-size: 9.5px; --val: 11px; }
+.hdr { display: flex; align-items: center; gap: 12px; border-bottom: 2px solid ${accent}; padding: 4px 0 12px; margin-bottom: 4px; min-height: 76px; }
 /* Both sides are the same fixed width, so the title sits on the centre line of
    the page rather than on the centre of whatever the logo left over. */
 .hdr .side { width: 168px; flex: 0 0 168px; display: flex; align-items: center; }
@@ -16434,7 +16566,6 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 .txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; white-space: pre-wrap; font-size: ${infoSize}px; line-height: 1.45; }
 .miniLbl { font-size: 10px; color: #6b7280; font-weight: 700; margin-bottom: 3px; }
 .rev td { vertical-align: top; height: 112px; padding: 7px 9px; font-size: var(--val); }
-${printedStampCss(3)}
 .rev .sig { width: 30%; }
 .rev .cmt { width: 42%; }
 .rev .decs { width: 28%; }
@@ -16444,50 +16575,23 @@ ${printedStampCss(3)}
 .sigStamp { font-size: 8px; font-weight: 600; color: #6b7280; text-align: center; margin-top: 2px; letter-spacing: .2px; }
 .dec { display: flex; align-items: center; gap: 7px; font-size: 11px; padding: 2px 0; }
 .dec .box { font-size: 13px; }
-.revBlock { page-break-inside: avoid; }
-.footTxt { margin-top: 8px; font-size: 9px; color: #6b7280; text-align: center; white-space: pre-line; }
-.footImg { margin-top: 8px; text-align: center; }
-.footImg img { width: 100%; height: auto; display: block; }
-.ftr { margin-top: 5px; font-size: 8px; color: #9aa3af; text-align: center; }
-/* The attached specifications, appended after the form. One source page per
-   printed page, so the whole thing prints as a single document. */
-.specPage { page-break-before: always; text-align: center; }
-.specPage .specLbl { font-size: 8px; color: #6b7280; margin-bottom: 3px; direction: ltr; text-align: center; }
-.specPage img { max-width: 100%; max-height: 268mm; object-fit: contain; border: 1px solid #e5e7eb; }
-</style></head><body><div class="frame">
-<div class="hdr"><div class="side">${logo}</div><div class="mid"><div class="ttl">${L("formTitle")}</div></div>
-<div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
-
-<div class="secBar">${L("projectInfo")}</div>
-<table class="info">
-${infoRow(L("projectName"), val(rec.projectName), L("date"), sbEsc(sbFmtDate(rec.date)))}
-${infoRow(L("contractor"), val(rec.contractor), L("requiredApprovalDate"), sbEsc(sbFmtDate(rec.requiredApprovalDate)))}
-${infoRow(L("discipline"), sbEsc(cat ? sbText(cat, lang) : rec.discipline), L("submittedBy"), val(rec.submittedBy))}
-${infoRow(L("subCategory"), sbEsc(sbSubcatLabel(rec.subCategory || rec.scope, rec.category, lang)), L("email"), val(rec.email))}
-</table>
-
-<div class="secBar">${L("equipment")}</div>
-<table class="eq">
-<tr><th>${L("typeId")}</th><td class="v">${val(rec.typeId)}</td><td class="pic" rowspan="4">${img}</td></tr>
-<tr><th>${L("itemDescription")}</th><td class="v">${val(rec.itemDescription)}</td></tr>
-<tr><th>${L("modelCode")}</th><td class="v">${val(rec.modelCode)}</td></tr>
-<tr><th>${L("manufacturer")}</th><td class="v">${val(rec.manufacturer)}</td></tr>
-</table>
-
-<div class="secBar">${L("documents")}</div>
-<table>${docRows}</table>
-
-<div class="secBar">${L("additional")}</div>
-<div class="addWrap">
-<div class="txtBox" dir="${dir}">${sbEsc((isHe ? rec.infoHe : rec.infoEn) || "")}</div>
-</div>
-${reviewBlock}
-${footTxt}${footImg}
-<div class="ftr">${sbEsc(sbNumber(rec.category, rec.seq))} &nbsp;·&nbsp; Rev.${sbEsc(rec.rev || 0)} &nbsp;·&nbsp; ${sbEsc(sbFmtDate(rec.date))}</div>
-</div>
-${(specPages || []).map((sp) => `<div class="specPage"><div class="specLbl">${sbEsc(sp.label)}</div><img src="${sp.dataUrl}" alt=""></div>`).join("")}
-${printedStampHtml(lang)}
-</body></html>`;
+.revBlock { flex: 0 0 auto; }
+.footTxt { font-size: 9px; color: #6b7280; text-align: center; white-space: pre-line; margin-bottom: 5px; }
+.ftr { margin-top: 5px; font-size: 8px; color: #9aa3af; text-align: center; flex: 0 0 auto; }
+/* The attached specifications, appended after the form — one source page per
+   printed sheet, inside the same frame, so the whole thing reads as a single
+   document. */
+.specWrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.specWrap .specLbl { font-size: 8px; color: #6b7280; margin-bottom: 4px; direction: ltr; text-align: center; }
+.specWrap img { max-width: 100%; max-height: calc(100% - 14px); object-fit: contain; }
+</style></head><body>${printStaticPage(formBody, {
+    flow: true,
+    stamp,
+    footHtml: `${footTxt}${footImg}`
+  })}${(specPages || []).map((sp) => printStaticPage(
+    `<div class="specWrap"><div class="specLbl">${sbEsc(sp.label)}</div><img src="${sp.dataUrl}" alt=""></div>`,
+    { stamp }
+  )).join("")}</body></html>`;
   return html;
 }
 // Render every attached PDF to images, so the printed document is the submittal
@@ -17931,8 +18035,21 @@ function PickPasswordModal({ isRTL, email, onDone }) {
 // -----------------------------------------------------------------------------
 function SignaturePad({ isRTL, onCancel, onDone }) {
   const canvasRef = useRef5(null);
+  const stampRef = useRef5(null);
   const [dirty, setDirty] = useState6(false);
+  // A company stamp, uploaded, sitting under the pen. On paper the stamp goes
+  // down first and the signature is written across it; the pad works the same
+  // way, and what is saved is the two of them as one image (7.9.26).
+  const [stamp, setStamp] = useState6(null);
   const t = (he, en) => (isRTL ? he : en);
+  const onStampFile = (e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    if (!f) return;
+    const rd = new FileReader();
+    rd.onload = () => setStamp(String(rd.result || ""));
+    rd.readAsDataURL(f);
+  };
 
   useEffect5(() => {
     const c = canvasRef.current;
@@ -18001,7 +18118,27 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
   // arrive on the form as a mostly-empty rectangle.
   const done = () => {
     const c = canvasRef.current;
-    const ctx = c.getContext("2d");
+    // Flatten first: the stamp as the eye sees it in the box, then the ink over
+    // it. Everything after this measures the picture that will actually be
+    // filed, so a signature written across a stamp is trimmed as one mark.
+    const flat = document.createElement("canvas");
+    flat.width = c.width;
+    flat.height = c.height;
+    const fx = flat.getContext("2d");
+    const st = stampRef.current;
+    if (st && st.naturalWidth) {
+      const rect = c.getBoundingClientRect();
+      const ratio = c.width / (rect.width || 1);
+      const inset = 6;
+      const boxW = Math.max(1, rect.width - inset * 2);
+      const boxH = Math.max(1, rect.height - inset * 2);
+      const s = Math.min(boxW / st.naturalWidth, boxH / st.naturalHeight);
+      const w = st.naturalWidth * s;
+      const h = st.naturalHeight * s;
+      fx.drawImage(st, (inset + (boxW - w) / 2) * ratio, (inset + (boxH - h) / 2) * ratio, w * ratio, h * ratio);
+    }
+    fx.drawImage(c, 0, 0);
+    const ctx = flat.getContext("2d");
     const img = ctx.getImageData(0, 0, c.width, c.height);
     let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
     for (let y = 0; y < c.height; y++) {
@@ -18023,7 +18160,7 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
     const out = document.createElement("canvas");
     out.width = w;
     out.height = h;
-    out.getContext("2d").drawImage(c, minX, minY, w, h, 0, 0, w, h);
+    out.getContext("2d").drawImage(flat, minX, minY, w, h, 0, 0, w, h);
     // PNG, not JPEG: the background has to stay transparent.
     onDone(out.toDataURL("image/png"));
   };
@@ -18040,16 +18177,40 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
         "div",
         { className: "sigPad", onClick: (e) => e.stopPropagation(), dir: isRTL ? "rtl" : "ltr" },
         sbH("div", { className: "sigPadTitle" }, t("חתימה", "Signature")),
-        sbH("p", { className: "sigPadHint" }, t("חתמי בתוך המסגרת — בעכבר או באצבע.", "Sign inside the frame — with a mouse or a finger.")),
-        sbH("canvas", {
-          ref: canvasRef,
-          className: "sigCanvas",
-          onPointerDown: start,
-          onPointerMove: move,
-          onPointerUp: end,
-          onPointerLeave: end,
-          onPointerCancel: end
-        }),
+        sbH("p", { className: "sigPadHint" },
+          stamp
+            ? t("חתמי על גבי החותמת — בעכבר או באצבע.", "Sign over the stamp — with a mouse or a finger.")
+            : t("חתמי בתוך המסגרת — בעכבר או באצבע. אפשר גם להעלות חותמת ולחתום עליה.",
+                "Sign inside the frame — with a mouse or a finger. You can also upload a stamp and sign over it.")),
+        sbH(
+          "div",
+          { className: "sigStage" },
+          stamp ? sbH("img", { ref: stampRef, className: "sigStampImg", src: stamp, alt: "" }) : null,
+          sbH("canvas", {
+            ref: canvasRef,
+            className: "sigCanvas",
+            onPointerDown: start,
+            onPointerMove: move,
+            onPointerUp: end,
+            onPointerLeave: end,
+            onPointerCancel: end
+          })
+        ),
+        sbH(
+          "div",
+          { className: "sigStampRow" },
+          sbH(
+            "label",
+            { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
+            sbH(Upload3, { size: 14, strokeWidth: 2 }),
+            " ",
+            stamp ? t("החלפת חותמת", "Replace stamp") : t("העלאת חותמת", "Upload a stamp"),
+            sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onStampFile })
+          ),
+          stamp
+            ? sbH("button", { type: "button", className: "sbLinkBtn muted", onClick: () => setStamp(null) }, t("הסרת החותמת", "Remove the stamp"))
+            : null
+        ),
         sbH(
           "div",
           { className: "sigPadRow" },
@@ -18058,7 +18219,7 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
           sbH("button", { type: "button", className: "ghostBtn small", onClick: onCancel }, t("ביטול", "Cancel")),
           sbH(
             "button",
-            { type: "button", className: "functionEditBtn", disabled: !dirty, onClick: done },
+            { type: "button", className: "functionEditBtn", disabled: !dirty && !stamp, onClick: done },
             t("אישור החתימה", "Confirm signature")
           )
         )
@@ -19034,8 +19195,9 @@ function SubmittalFolder({
                       superseded
                         ? sbH("span", { className: "sbStatus", style: { background: "#9aa3af" } }, L("closedNoApproval"))
                         : sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang)),
-                      s.sent || superseded ? null : sbH("span", { className: "sbDraftTag" }, L("draft")),
-                      isNew ? sbH("span", { className: "sbNewTag" }, L("newlyApproved")) : null
+                      s.sent || superseded ? null : sbH("span", { className: "sbDraftTag" }, L("draft"))
+                      // "Newly approved" beside "Approved" said the same thing
+                      // twice. The green chip is the whole answer (7.9.26).
                     )
                   ),
                   // Signed: the date. Not signed, and this person may sign:
@@ -19127,6 +19289,22 @@ function SubmittalFolder({
   );
 }
 // --------------------------------------------------------------- the card
+// The one thing a client or a main contractor writes on a project.
+//
+// The submittal record is hers — the form, the attachments, the revisions —
+// and the database rule keeps it that way. The DECISION on it is theirs, so it
+// is kept in a row of its own, `project-submittal-approvals`, which the rule
+// lets a signer write and nothing else. That is why signing came back as "new
+// row violates row-level security policy": the signature was being written
+// into `project-extras`, which is hers alone, and the server was right to
+// refuse it. The board merges the two on the way in. (7.9.26)
+function sbMergeApproval(rec, approvals) {
+  const ap = rec && approvals && approvals[rec.id];
+  if (!ap) return rec;
+  const reviews = (rec.reviews || []).slice();
+  reviews[0] = { ...reviews[0] || {}, ...ap.review || {} };
+  return { ...rec, reviews, closedAt: ap.closedAt || rec.closedAt };
+}
 function SubmittalCard({
   appIsRTL,
   projectName,
@@ -19149,7 +19327,9 @@ function SubmittalCard({
   submittalChkOff,
   onChangeChkOff,
   submittalReview,
-  onChangeReview
+  onChangeReview,
+  submittalApprovals,
+  onChangeApprovals
 }) {
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
@@ -19161,7 +19341,8 @@ function SubmittalCard({
   const [selected, setSelected] = useState6(null);
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6(null);
-  const list = submittals || [];
+  // The records, with each one's filed decision merged over it.
+  const list = (submittals || []).map((s) => sbMergeApproval(s, submittalApprovals));
   const label = (c) => sbText(c, lang);
   const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
   const L = (k) => sbText(SB_L[k], lang);
@@ -19380,6 +19561,20 @@ function SubmittalCard({
     setDraft(null);
     setOpenId(null);
   };
+  // Filing a decision writes the decision, and only the decision. Nobody but
+  // the administrator writes the submittal record itself.
+  const saveReview = (rec) => {
+    const rv = (rec.reviews || [])[0] || {};
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    if (onChangeApprovals) {
+      onChangeApprovals({
+        ...submittalApprovals || {},
+        [rec.id]: { review: rv, closedAt: rec.closedAt || now, by: (currentEmail || "").toLowerCase(), at: now }
+      });
+    }
+    setDraft(null);
+    setOpenId(null);
+  };
   const deleteOne = (s) => {
     if (!window.confirm(L("confirmDelete"))) return;
     (s.attachments || []).forEach((a) => sbRemoveFile(a));
@@ -19402,7 +19597,7 @@ function SubmittalCard({
         printBrand,
         userSignatures,
         currentEmail,
-        onSave: saveDraft,
+        onSave: saveReview,
         onCancel: () => {
           setDraft(null);
           setOpenId(null);
@@ -20299,27 +20494,25 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
     const head = rows[0], body = rows.slice(1);
     const table = '<table><thead><tr>' + head.map((c) => '<th>' + esc(c) + '</th>').join("") + '</tr></thead><tbody>' + body.map((r) => '<tr>' + r.map((c) => '<td>' + esc(c) + '</td>').join("") + '</tr>').join("") + '</tbody></table>';
     const logo = pdfLogo ? '<img src="' + pdfLogo + '" alt="logo">' : '';
-    const footImg = pdfFooterImg ? '<div class="footImg"><img src="' + pdfFooterImg + '" alt="footer"></div>' : '';
-    const footTxt = pdfFooter ? '<div class="ftr">' + esc(pdfFooter) + '</div>' : '';
+    const footBlock = (pdfFooterImg || pdfFooter)
+      ? '<div class="footImg" id="footimg">' + (pdfFooter ? '<div class="ftr">' + esc(pdfFooter) + '</div>' : '') + (pdfFooterImg ? '<img src="' + pdfFooterImg + '" alt="footer">' : '') + '</div>'
+      : '';
     const title = he ? "רשימת משתמשים" : "User list";
-    const html = '<html dir="' + dir + '"><head><meta charset="utf-8"><title>' + title + '</title><style>' +
-      '@page { size: A4 landscape; margin: 0; }' +
-      '* { box-sizing: border-box; }' +
-      'html, body { margin: 0; padding: 0; }' +
-      'body { margin: 0 auto; width: 297mm; min-height: 210mm; padding: 20mm; font-family: Arial, "Helvetica Neue", sans-serif; color: #1f2a37; direction: ' + dir + '; }' +
-      '.frame { min-height: calc(210mm - 40mm); border: 1.5px solid ' + accent + '; border-radius: 16px; padding: 16px 20px; display: flex; flex-direction: column; }' +
-      '.hdr { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid ' + accent + '; padding-bottom: 10px; margin-bottom: 16px; }' +
-      '.hdr img { max-height: 52px; max-width: 200px; object-fit: contain; }' +
-      '.hdr .ttl { font-size: 22px; font-weight: 800; color: ' + accent + '; letter-spacing: .5px; }' +
-      'table { width:100%; border-collapse: collapse; font-size: 11px; }' +
-      'th { background: ' + accent + '; color:#fff; padding: 8px 9px; text-align: ' + align + '; font-weight: 700; }' +
-      'td { padding: 7px 9px; border-bottom: 1px solid #e5e7eb; text-align: ' + align + '; }' +
+    // The house document shell, the same paper as every other form (7.9.26).
+    const html = '<!doctype html><html dir="' + dir + '"><head><meta charset="utf-8"><title>' + title + '</title><style>' +
+      printSheetCss({ landscape: true, accent }) +
+      'body { font-family: Arial, "Helvetica Neue", sans-serif; color: #1f2a37; direction: ' + dir + '; }' +
+      '.hdr { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid ' + accent + '; padding-bottom: 10px; margin-bottom: 14px; }' +
+      '.hdr img { max-height: 46px; max-width: 180px; object-fit: contain; }' +
+      '.hdr .ttl { font-size: 20px; font-weight: 800; color: ' + accent + '; letter-spacing: .5px; }' +
+      'table { width:100%; border-collapse: collapse; font-size: 11px; table-layout: fixed; }' +
+      'th { background: ' + accent + '; color:#fff; padding: 8px 9px; text-align: ' + align + '; font-weight: 700; word-break: break-word; }' +
+      'td { padding: 7px 9px; border-bottom: 1px solid #e5e7eb; text-align: ' + align + '; word-break: break-word; }' +
       'tbody tr:nth-child(even) td { background: #f5f8fc; }' +
-      '.spacer { flex: 1; }' +
-      '.ftr { margin-top: 10px; font-size: 10px; color:#6b7280; text-align:center; white-space: pre-line; }' +
-      '.footImg { margin-top: 14px; text-align: center; }' +
-      '.footImg img { width: 100%; height: auto; display: block; }' + printedStampCss(7) +
-      '</style></head><body><div class="frame"><div class="hdr">' + logo + '<div class="ttl">' + title + '</div></div>' + table + '<div class="spacer"></div>' + footTxt + footImg + '</div>' + printedStampHtml(he ? "he" : "en") + '</body></html>';
+      '.ftr { font-size: 10px; color:#6b7280; text-align:center; white-space: pre-line; margin-bottom: 6px; }' +
+      '</style></head><body><div id="src">' +
+      '<div class="hdr">' + logo + '<div class="ttl">' + title + '</div></div>' + table + footBlock +
+      '</div><div id="pages"></div>' + printPaginateJs(printedStampText(he ? "he" : "en")) + '</body></html>';
     const w = window.open("", "_blank");
     if (!w) return;
     w.document.write(html);
@@ -21403,7 +21596,12 @@ function ProjectDashboardApp() {
   // On top of that, no row is written unless its contents actually changed.
   // The old code saved on every load, which is both noise and, for a row that
   // did not exist yet, an INSERT that the row-level policy refuses.
-  const VIEWER_WRITABLE = ["project-extras", "project-schedules"];
+  // What a client or a main contractor may write, and nothing else. Each of
+  // these is a row that holds THEIR answer to something of hers: a decision on
+  // a drawing, a decision on a submittal, the percentages on the programme.
+  // (7.9.26 — the submittal approvals row was missing, which is why signing a
+  // submittal came back refused.)
+  const VIEWER_WRITABLE = ["project-extras", "project-schedules", "project-sd-approvals", "project-submittal-approvals"];
   const canWriteServer = appRole === "admin";
   const lastWritten = useRef5({});
   const saveAppState = async (key, value) => {
@@ -21633,9 +21831,10 @@ function ProjectDashboardApp() {
     const cis = {};
     const mks = {};
     const sdaps = {};
+    const sbaps = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, marcellaRows, sdApprovals, ...others } = entry;
+      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, marcellaRows, sdApprovals, submittalApprovals, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
@@ -21654,8 +21853,12 @@ function ProjectDashboardApp() {
       // Their own part, so the database rule can allow exactly that and
       // nothing else — see security-step7-sd-approvals.sql. (5.9.26)
       if (sdApprovals) sdaps[pid] = sdApprovals;
+      // And the same again for the submittal: the decision a client or the
+      // main contractor files on it is the one thing on a submittal they
+      // write, so it lives in a row of its own (7.9.26).
+      if (submittalApprovals) sbaps[pid] = submittalApprovals;
     });
-    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps };
+    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps };
   };
   // The seven parts a project is stored in. "project-extras" is the base
   // object; the rest are single fields hung off it. Each part is one row per
@@ -21671,7 +21874,8 @@ function ProjectDashboardApp() {
     ["project-rfi", "rfiRows"],
     ["project-ci", "ciRows"],
     ["project-marcella", "marcellaRows"],
-    ["project-sd-approvals", "sdApprovals"]
+    ["project-sd-approvals", "sdApprovals"],
+    ["project-submittal-approvals", "submittalApprovals"]
   ];
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -21738,7 +21942,7 @@ function ProjectDashboardApp() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
     (async () => {
-      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps } = splitExtras(projectExtras);
       const byPart = {
         "project-extras": rest,
         "project-schedules": schedules,
@@ -21750,7 +21954,8 @@ function ProjectDashboardApp() {
         "project-rfi": rfis,
         "project-ci": cis,
         "project-marcella": mks,
-        "project-sd-approvals": sdaps
+        "project-sd-approvals": sdaps,
+        "project-submittal-approvals": sbaps
       };
       let failed = null;
       // One row per project. saveAppState skips a row whose content has not
@@ -23073,6 +23278,10 @@ function ProjectDashboardApp() {
         onChangeRfiRows: (next) => updateProjectExtras(activeProject.id, { rfiRows: next }),
         sdApprovals: activeExtras.sdApprovals || {},
         onChangeSdApprovals: (next) => updateProjectExtras(activeProject.id, { sdApprovals: next }),
+        // The decisions filed on submittals, in their own row for the same
+        // reason the drawing approvals are (7.9.26).
+        submittalApprovals: activeExtras.submittalApprovals || {},
+        onChangeApprovals: (next) => updateProjectExtras(activeProject.id, { submittalApprovals: next }),
         marcellaRows: activeExtras.marcellaRows || {},
         onChangeMarcellaRows: (next) => updateProjectExtras(activeProject.id, { marcellaRows: next }),
         ciRows: activeExtras.ciRows || {},
