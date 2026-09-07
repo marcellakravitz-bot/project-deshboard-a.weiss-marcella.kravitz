@@ -210,6 +210,12 @@ function awdashHasProjects(val) {
   }
 }
 
+// The letterhead footer, as supplied. It is artwork, not text: retyping the
+// address and the phone numbers into HTML would put a second copy of them in
+// the system, and the day the office moves only one of the two would be
+// changed. (7.9.26)
+var FOOTER_STRIP = "data:image/png;base64,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";
+
 // src/config/copy.js
 import {
   Palette,
@@ -487,7 +493,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 65";
+var APP_BUILD = "7.9.2026 · build 67";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -636,9 +642,13 @@ var header = `
         .iconBtn:hover { border-color: var(--ink); }
 
         .siteFooter {
-          text-align: center; padding: 9px 24px 9px; font-size: 11.5px;
+          text-align: center; padding: 14px 24px 10px; font-size: 11.5px;
           color: var(--mist); font-weight: 500;
           margin-top: auto; /* always sits on the bottom edge of the page */
+        }
+        .siteFooter img {
+          display: block; width: 100%; max-width: 900px; margin: 0 auto;
+          height: auto;
         }
 `;
 
@@ -1095,7 +1105,13 @@ var pdfViewer = `
         .photoGridScroll::-webkit-scrollbar { width: 9px; }
         .photoGridScroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
         .photoGridScroll::-webkit-scrollbar-thumb:hover { background: var(--mist); }
-        .photoGrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; max-width: 80%; margin: 0 auto; }
+        /* auto-fit rather than five fixed columns: with two photos on the
+           board, five columns put them both against one edge and stretched
+           them to a quarter of the screen. (7.9.26) */
+        .photoGrid {
+          display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 190px));
+          gap: 12px; justify-content: center; max-width: 80%; margin: 0 auto;
+        }
         .photoTile {
           position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden;
           background: #eef0f2; border: 1px solid var(--line-soft);
@@ -3697,17 +3713,25 @@ var sdSign = `
         /* ---- the client's table ---- */
         .sdcWrap { display: flex; flex-direction: column; gap: 12px; }
         .sdcHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .sdcHead.centre { flex-direction: column; align-items: center; text-align: center; }
         .sdcTitle { margin: 0; font-size: 19px; font-weight: 800; color: #103460; }
-        .sdcSub { margin: 2px 0 0; font-size: 12px; color: var(--steel); font-weight: 600; }
+        .sdcSub { margin: 4px 0 0; font-size: 12px; color: var(--steel); font-weight: 600; }
         .sdcTable { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
         .sdcTable th {
           font-size: 11px; font-weight: 800; color: var(--steel);
-          text-align: start; padding: 0 10px 2px; white-space: nowrap;
+          text-align: center; padding: 0 16px 4px; white-space: nowrap;
         }
         .sdcTable td {
           background: #fff; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
-          padding: 9px 10px; font-size: 13px; color: #16324f; vertical-align: middle;
+          padding: 12px 16px; font-size: 13px; color: #16324f; vertical-align: middle;
+          text-align: center;
         }
+        /* The description is the one column that is a sentence. It keeps its
+           own alignment and takes the slack; everything else is a date, a code
+           or a chip and stays on one line. */
+        .sdcTable td.sdcDesc, .sdcTable th.sdcDesc { text-align: start; }
+        .sdcTable td.sdcDesc { min-width: 220px; line-height: 1.45; }
+        .sdcTable th:not(.sdcDesc), .sdcTable td:not(.sdcDesc) { white-space: nowrap; }
         .sdcTable tr td:first-child { border-inline-start: 1px solid var(--line); border-start-start-radius: 9px; border-end-start-radius: 9px; }
         .sdcTable tr td:last-child { border-inline-end: 1px solid var(--line); border-start-end-radius: 9px; border-end-end-radius: 9px; }
         .sdcTable tr.approved td { background: #f1f9f4; border-color: #bfe3cd; }
@@ -3774,9 +3798,13 @@ var sdSign = `
         .sdSignPage.placing { cursor: crosshair; }
 
         /* an annotation, on screen. The burned PDF is drawn to match. */
+        /* overflow must stay visible: the move and remove buttons hang outside
+           the box on purpose, and clipping them left half a circle showing.
+           The height is computed from the text, so nothing overflows anyway.
+           (7.9.26) */
         .sdNote {
           position: absolute; box-sizing: border-box; background: rgba(255,255,255,.92);
-          padding: 4px 6px; overflow: hidden;
+          padding: 4px 6px; overflow: visible;
         }
         .sdNote.locked { border: 2px solid #10275a; }
         .sdNote.draft { border: 1px dashed #7a8698; }
@@ -3788,18 +3816,24 @@ var sdSign = `
         .sdNoteStamp { color: #4a5a72; border-top: 1px solid #c8d0dc; margin-top: 3px; padding-top: 2px; }
         .sdNoteGrip { position: absolute; inset-inline-start: -9px; top: -9px; cursor: move; }
         .sdMark { position: absolute; box-sizing: border-box; }
+        /* Room for the handles to sit outside the mark without being clipped by
+           the scrolling panel, and a stacking order that keeps them above the
+           next mark along. */
+        .sdSignScroll { padding: 26px 26px 40px; }
+        .sdMark:hover, .sdMark.sel { z-index: 3; }
         .sdMark img { width: 100%; height: 100%; display: block; object-fit: contain; }
         .sdMark.sel { outline: 2px dashed #10275a; outline-offset: 2px; }
-        .sdMarkBtn {
-          position: absolute; top: -11px; inset-inline-end: -11px; width: 22px; height: 22px;
-          border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #c0392b;
-          font-weight: 900; line-height: 1; cursor: pointer; padding: 0; font-family: inherit;
+        .sdMarkBtn, .sdMoveBtn {
+          position: absolute; top: -13px; width: 26px; height: 26px; z-index: 4;
+          border-radius: 999px; border: 1px solid var(--line); background: #fff;
+          cursor: pointer; padding: 0; font-family: inherit; line-height: 1;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 2px 6px rgba(16,32,58,.22);
         }
-        .sdMoveBtn {
-          position: absolute; top: -11px; inset-inline-start: -11px; width: 22px; height: 22px;
-          border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--steel);
-          cursor: move; padding: 0; display: flex; align-items: center; justify-content: center;
-        }
+        .sdMarkBtn { inset-inline-end: -13px; color: #c0392b; font-weight: 900; font-size: 15px; }
+        .sdMoveBtn { inset-inline-start: -13px; color: var(--steel); cursor: move; }
+        .sdMarkBtn:hover { border-color: #c0392b; }
+        .sdMoveBtn:hover { border-color: var(--accent); color: var(--accent); }
         .sdSizeRow { display: flex; align-items: center; gap: 8px; }
         .sdSizeRow input[type="range"] { width: 130px; }
 
@@ -12914,13 +12948,9 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
     { className: "functionPageBody sdcWrap" },
     sbH(
       "div",
-      { className: "sdcHead" },
-      sbH(
-        "div",
-        null,
-        sbH("h2", { className: "sdcTitle" }, L("title")),
-        sbH("p", { className: "sdcSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
-      )
+      { className: "sdcHead centre" },
+      sbH("h2", { className: "sdcTitle" }, L("title")),
+      sbH("p", { className: "sdcSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
     ),
 
     rows.length === 0
@@ -12937,7 +12967,7 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
               sbH("th", null, L("section")),
               sbH("th", null, L("category")),
               sbH("th", null, L("typeMark")),
-              sbH("th", null, L("desc")),
+              sbH("th", { className: "sdcDesc" }, L("desc")),
               sbH("th", null, L("image")),
               sbH("th", null, L("eta")),
               sbH("th", null, L("etaActual")),
@@ -12949,8 +12979,8 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload }) {
               { key: r.code, className: r.status === "supplied" ? "approved" : "" },
               sbH("td", { className: "sdcNum" }, r.code),
               sbH("td", null, r.category || sbH("span", { className: "sdcNone" }, "—")),
-              sbH("td", { dir: "auto" }, r.typeMark || sbH("span", { className: "sdcNone" }, "—")),
-              sbH("td", { dir: "auto" }, r.desc || ""),
+              sbH("td", null, r.typeMark || sbH("span", { className: "sdcNone" }, "—")),
+              sbH("td", { className: "sdcDesc", dir: "auto" }, r.desc || ""),
               sbH(
                 "td",
                 null,
@@ -13710,13 +13740,9 @@ function SdClientBoard({
     { className: "functionPageBody sdcWrap" },
     sbH(
       "div",
-      { className: "sdcHead" },
-      sbH(
-        "div",
-        null,
-        sbH("h2", { className: "sdcTitle" }, L("title")),
-        sbH("p", { className: "sdcSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
-      )
+      { className: "sdcHead centre" },
+      sbH("h2", { className: "sdcTitle" }, L("title")),
+      sbH("p", { className: "sdcSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
     ),
     err ? sbH("div", { className: "sdSignErr" }, err) : null,
 
@@ -13733,9 +13759,9 @@ function SdClientBoard({
               null,
               sbH("th", null, L("boq")),
               sbH("th", null, L("category")),
-              sbH("th", null, L("desc")),
-              sbH("th", null, L("dueAt")),
+              sbH("th", { className: "sdcDesc" }, L("desc")),
               sbH("th", null, L("submittedAt")),
+              sbH("th", null, L("dueAt")),
               sbH("th", null, L("file")),
               sbH("th", null, L("status")),
               sbH("th", null, L("approvedAt"))
@@ -13752,9 +13778,9 @@ function SdClientBoard({
                 // A plain word, not a dropdown: the client does not classify
                 // anything, and a combo box invites a click that does nothing.
                 sbH("td", null, cat ? (lang === "he" ? cat.he : cat.en) : sbH("span", { className: "sdcNone" }, "—")),
-                sbH("td", { dir: "auto" }, r.title || v.desc || ""),
-                sbH("td", null, cell(v.dueAt)),
+                sbH("td", { className: "sdcDesc", dir: "auto" }, r.title || v.desc || ""),
                 sbH("td", null, cell(v.submittedAt || v.toClientAt)),
+                sbH("td", null, cell(v.dueAt)),
                 sbH(
                   "td",
                   null,
@@ -14480,8 +14506,14 @@ var ROOMS_L = {
   placeholder: { en: "Room number", he: "מספר חדר" },
   search: { en: "Search", he: "חיפוש" },
   noData: {
-    en: "No drawings have been read for this project yet. Upload them in project settings.",
-    he: "עדיין לא נקראו תוכניות לפרויקט הזה. אפשר להעלות אותן בהגדרות הפרויקט."
+    en: "No drawings have been read for this project yet.",
+    he: "עדיין לא נקראו תוכניות לפרויקט הזה."
+  },
+  // Where to fix it — shown only to the person who can. Telling a client to go
+  // to project settings is telling them about a door they cannot open. (7.9.26)
+  noDataAdmin: {
+    en: "Upload them in project settings.",
+    he: "אפשר להעלות אותן בהגדרות הפרויקט."
   },
   notFound: { en: "No room by that number.", he: "אין חדר במספר הזה." },
   roomsCount: { en: "rooms", he: "חדרים" },
@@ -14792,7 +14824,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
             sbH("span", { className: "boqCountPart" }, `${idx.rooms.length} ${L("roomsCount")}`),
             sbH("span", { className: "roomsDot" }, "\u00b7"),
             sbH("span", { className: "boqCountPart" }, `${roomsAllMarks(d).length} ${L("marksCount")}`))
-        : sbH("p", { className: "roomsMiss" }, L("noData")),
+        : sbH("p", { className: "roomsMiss" }, L("noData"), canEdit ? ` ${L("noDataAdmin")}` : ""),
       // A client types a room number and gets that room. The list of every room
       // in the project, and the list behind it, are hers (29.8.26).
       !room && canEdit && idx.rooms.length
@@ -16286,7 +16318,11 @@ async function sbRenderSpecPages(rec, onProgress) {
         canvas.height = Math.round(viewport.height);
         await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
         out.push({
-          label: `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0} · ${att.name} · p.${i}/${doc.numPages}`,
+          // The file name is ours, not the reader's. "SPEC-REV3-FINAL-v2.pdf"
+          // on a printed page says nothing about the product and everything
+          // about how the folder is kept. The submittal number, the revision
+          // and the page are what identify the sheet. (7.9.26)
+          label: `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0} · p.${i}/${doc.numPages}`,
           dataUrl: canvas.toDataURL("image/jpeg", 0.8)
         });
         if (onProgress) onProgress(out.length);
@@ -22974,7 +23010,7 @@ function ProjectDashboardApp() {
       value: newProjectName,
       onChange: (e) => setNewProjectName(e.target.value)
     }
-  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, "\xA9 ", (/* @__PURE__ */ new Date()).getFullYear(), " Marcella Kravitz", /* @__PURE__ */ React15.createElement("span", { className: "buildStamp", dir: "ltr", title: "build" }, APP_BUILD)), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), document.body), forgotOpen && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 700, padding: 20 }, onClick: closeForgot }, /* @__PURE__ */ React15.createElement("div", { className: "panel forgotPanel", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+  ), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: addProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", t.systemAdmin.addProject), /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn small", onClick: handleExportState, style: { marginInlineStart: 8 } }, isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", marginInlineStart: 8 } }, isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => { const f = e.target.files && e.target.files[0]; if (f) handleImportState(f); e.target.value = ""; } })))))), /* @__PURE__ */ React15.createElement("footer", { className: "siteFooter" }, /* @__PURE__ */ React15.createElement("img", { src: FOOTER_STRIP, alt: "A. Weiss" }), /* @__PURE__ */ React15.createElement("span", { className: "buildStamp", dir: "ltr", title: "build" }, APP_BUILD)), /* @__PURE__ */ React15.createElement(React15.Fragment, null, setPwMode && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 600 } }, /* @__PURE__ */ React15.createElement("div", { className: "panel", style: { maxWidth: 380, width: "90%", background: "#fff" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "בחירת סיסמה" : "Set your password"), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "בחרו סיסמה כדי להשלים את ההצטרפות למערכת." : "Choose a password to finish joining."), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12 } }, /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "סיסמה חדשה" : "New password", value: newPw, onChange: (e) => setNewPw(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), /* @__PURE__ */ React15.createElement("input", { type: "password", placeholder: isRTL ? "אימות סיסמה" : "Confirm password", value: newPw2, onChange: (e) => setNewPw2(e.target.value), dir: "ltr", style: { padding: "9px 11px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14 } }), pwMsg && /* @__PURE__ */ React15.createElement("p", { style: { margin: 0, fontWeight: 700, color: "#b02a37" } }, pwMsg), /* @__PURE__ */ React15.createElement("button", { className: "functionEditBtn", onClick: submitNewPw }, isRTL ? "שמירה" : "Save")))), document.body), forgotOpen && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 700, padding: 20 }, onClick: closeForgot }, /* @__PURE__ */ React15.createElement("div", { className: "panel forgotPanel", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
     /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "איפוס סיסמה" : "Reset password"),
     /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL
       ? "יש להזין את כתובת המייל שאיתה נכנסים למערכת."
