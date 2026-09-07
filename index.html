@@ -494,7 +494,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 78";
+var APP_BUILD = "7.9.2026 · build 81";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -764,7 +764,12 @@ var projectMeta = `
         .metaTitle {
           font-size: 20px; font-weight: 800; color: var(--ink); margin: 0 0 7px;
           letter-spacing: -0.01em;
-          font-family: 'Inter', sans-serif;
+          /* Inter carries no Hebrew glyphs. Every other card is titled in
+             English so nobody noticed, and then "הוראות שינוי" came through in
+             whatever the browser had lying around and looked like a different
+             site. Assistant behind it catches exactly the characters Inter
+             cannot draw, per glyph, so the Latin titles are unchanged. (7.9.26) */
+          font-family: 'Inter', 'Assistant', sans-serif;
         }
         .metaStack {
           display: flex; flex-direction: column; align-items: center; gap: 4px;
@@ -1140,7 +1145,18 @@ var pdfViewer = `
           display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
         }
         .photoMeta .when { direction: ltr; font-variant-numeric: tabular-nums; }
-        .photoShot { position: relative; max-width: 92%; max-height: 92%; }
+        .photoMetaText { unicode-bidi: plaintext; }
+        /* The enlarged picture always fits the screen.
+           There is no scrolling behind a lightbox, so a photograph taller than
+           the window is a photograph with its bottom cut off — and the caption
+           with it. Both caps are written against the viewport rather than as a
+           percentage of a parent, because a percentage max-height inside an
+           auto-height box is ignored, which is how a long picture escaped in
+           the first place. (7.9.26) */
+        .photoShot {
+          position: relative; display: flex;
+          max-width: calc(100vw - 60px); max-height: calc(100vh - 60px);
+        }
         .photoTile:hover img { transform: scale(1.05); }
         .photoDel {
           position: absolute; top: 6px; inset-inline-end: 6px; width: 24px; height: 24px; border-radius: 999px;
@@ -1154,7 +1170,12 @@ var pdfViewer = `
         }
         /* The picture is inside .photoShot now, so it fills its box and the
            box is what the screen limits — nesting two percentages shrank it. */
-        .photoLightbox .photoShot img { display: block; max-width: 100%; max-height: 88vh; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: default; }
+        .photoLightbox .photoShot img {
+          display: block; width: auto; height: auto;
+          max-width: calc(100vw - 60px); max-height: calc(100vh - 60px);
+          object-fit: contain; border-radius: 8px;
+          box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: default;
+        }
         .photoLightboxClose {
           position: absolute; top: 16px; inset-inline-end: 16px; width: 40px; height: 40px; border-radius: 999px;
           border: none; background: rgba(255,255,255,0.15); color: #fff; display: flex; align-items: center;
@@ -1318,12 +1339,24 @@ var pdfViewer = `
         .rfiEmpty { text-align: center; color: var(--mist); font-weight: 600; padding: 26px 0; }
         .rfiTableWrap { overflow-x: auto; }
         .rfiTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+        /* Heading over the middle of its column, and every cell on the same
+           axis under it. A register of short values — a number, a date, a
+           status — reads as a column when it is centred and as a ragged edge
+           when it is not (7.9.26). */
         .rfiTable th {
           background: #f4f5f7; color: var(--steel); font-weight: 800; font-size: 12px;
           padding: 9px 8px; border-bottom: 1px solid var(--line); white-space: nowrap;
-          text-align: inherit;
+          text-align: center;
         }
-        .rfiTable td { padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle; }
+        .rfiTable td {
+          padding: 8px; border-bottom: 1px solid var(--line-soft); vertical-align: middle;
+          text-align: center;
+        }
+        /* Every heading is over the middle of its column, the subject's
+           included. The subject's CELLS stay on the reading edge — a sentence
+           centred is a sentence nobody can scan. */
+        .rfiTable td.cSub { text-align: start; }
+        .rfiTable td .rfiLink { text-align: inherit; }
         .rfiTable tbody tr:hover { background: #fafbfc; }
         .rfiTable .cNo { width: 62px; }
         .rfiTable .cSub { min-width: 200px; }
@@ -1358,10 +1391,16 @@ var pdfViewer = `
         .rfiIconBtn:hover { color: var(--accent-ink); border-color: var(--accent); }
         .rfiIconBtn.danger:hover { color: #b02a37; border-color: #e6b3ba; }
         .rfiIconBtn:disabled { opacity: .35; cursor: default; }
+        /* Two buttons on a line, and anything the export has to say UNDER
+           them, on the centre line — beside them it pushed the pair off centre
+           every time it appeared (7.9.26). */
         .rfiExportRow {
           display: flex; gap: 10px; justify-content: center; align-items: center;
           flex-wrap: wrap; margin-top: 6px;
         }
+        .rfiExportWrap { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 6px; }
+        .rfiExportWrap > .rfiExportRow { margin-top: 0; }
+        .rfiExportWrap > .rfiNote { text-align: center; }
         .rfiGrayPill {
           display: inline-flex; align-items: center; gap: 6px;
           background: #e9ebee; color: #2b3440; border: 1px solid var(--line);
@@ -1532,16 +1571,24 @@ var pdfViewer = `
           flex: 1; min-height: 0; display: flex; flex-direction: column;
         }
         /* The part that scrolls, in each of the four screens. */
-        .rfiWrap > .rfiTableWrap,
-        .ciWrap > .ciChapters {
+        .rfiWrap > .rfiTableWrap {
           flex: 1; min-height: 0; overflow-y: auto; overflow-x: auto;
+          scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+        }
+        /* The register scrolls DOWN, never across. A change instruction's table
+           is wider than the window, and when that scrolling belonged to the
+           list every closed chapter above it slid sideways the moment one was
+           opened. The wide table scrolls inside its own chapter now, and the
+           rows stay exactly where they were. (7.9.26) */
+        .ciWrap > .ciChapters {
+          flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden;
           scrollbar-width: thin; scrollbar-color: var(--line) transparent;
         }
         .rfiFormWrap { overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
         .rfiWrap > .rfiEmpty { flex: 1; display: flex; align-items: center; justify-content: center; }
         /* The tools and the export row are the frame, not the content. */
-        .rfiWrap > .rfiTools, .rfiWrap > .rfiExportRow,
-        .ciWrap > .ciQueue, .ciWrap > .rfiExportRow { flex: 0 0 auto; }
+        .rfiWrap > .rfiTools, .rfiWrap > .rfiExportRow, .rfiWrap > .rfiExportWrap,
+        .ciWrap > .ciQueue, .ciWrap > .rfiExportRow, .ciWrap > .rfiExportWrap { flex: 0 0 auto; }
 
         /* Edge to edge. These two registers are wide tables and every
            millimetre of the window is a column she can read. */
@@ -1569,19 +1616,35 @@ var pdfViewer = `
         }
         .ciChapters { display: flex; flex-direction: column; gap: 8px; }
         .ciChapter { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: #fff; }
+        /* The row is the chapter: the name, how many instructions are on it and
+           what they come to. Three times the side room it had, so the line the
+           eye follows is the same whether the chapter is open or shut. */
+        .ciChapterRow {
+          display: flex; align-items: center; gap: 10px;
+          padding-inline: 42px; background: #f7f8fa;
+        }
+        .ciChapterRow:hover { background: #f1f3f6; }
         .ciChapterHead {
-          width: 100%; display: flex; align-items: center; gap: 10px;
-          padding: 11px 14px; background: #f7f8fa; border: none; cursor: pointer;
+          flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px;
+          padding: 11px 0; background: none; border: none; cursor: pointer;
           font-family: inherit; font-size: 13px; color: var(--steel); text-align: inherit;
         }
-        .ciChapterHead:hover { background: #f1f3f6; }
+        /* Opening a change instruction on this chapter, from the chapter's own
+           row. The number it is given follows the chapter, so the row is the
+           right place to ask for one (7.9.26). */
+        .ciChapterAdd {
+          flex: 0 0 auto; display: inline-flex; align-items: center; justify-content: center;
+          width: 28px; height: 28px; border-radius: 999px;
+          border: 1px solid var(--line); background: #fff; color: var(--steel); cursor: pointer;
+        }
+        .ciChapterAdd:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
         .ciChapterName { font-weight: 800; flex: 1; }
         .ciChapterCount { color: var(--mist); font-size: 12px; font-weight: 700; white-space: nowrap; }
         .ciChapterSum {
           font-weight: 800; color: var(--accent-ink); white-space: nowrap;
           background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px;
         }
-        .ciChapterBody { padding: 10px 14px 14px; border-top: 1px solid var(--line-soft); }
+        .ciChapterBody { padding: 10px 42px 14px; border-top: 1px solid var(--line-soft); }
         .ciNone { color: var(--mist); font-size: 12.5px; font-weight: 600; margin: 6px 0 10px; }
         .ciAddRow {
           display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
@@ -1774,8 +1837,10 @@ var pdfViewer = `
         .lliTable thead th.cCode { text-align: center; }
         /* The chapter band scrolls under the headings, not over them. */
         .lliTable tr.lliChapter td { position: sticky; z-index: 2; }
+        /* A rule between one row and the next. The list is read across
+           fifteen columns and the eye needs a line to travel along (7.9.26). */
         .lliTable td {
-          padding: 5px 6px; border-bottom: 1px solid var(--line-soft);
+          padding: 5px 6px; border-bottom: 1px solid var(--line);
           text-align: center; vertical-align: middle;
         }
         /* The number, the tags and the grip on one middle line — the number used
@@ -1818,8 +1883,14 @@ var pdfViewer = `
            must keep fitting the page. */
         .lliTable.marksTable { min-width: 0; }
         .lliTable .cSec { width: 120px; text-align: start; }
-        .lliTable .cCat { width: 100px; }
-        .lliTable .cMark { width: 80px; }
+        /* The category is a combo, and at 100px the wording it holds was cut
+           off. Wider, and the box inside it sits on the middle of the column
+           rather than against its edge (7.9.26). */
+        .lliTable .cCat { width: 138px; }
+        .lliTable td.cCat { padding-inline: 8px; }
+        .lliTable td.cCat > * { margin-inline: auto; }
+        /* Half again, so a type mark is readable rather than guessable. */
+        .lliTable .cMark { width: 120px; }
         .lliTable .cDesc { width: 210px; text-align: start; }
         .lliTable .cSup { width: 115px; }
         /* A company that came from the contacts rather than from her keyboard:
@@ -2058,6 +2129,9 @@ var pdfViewer = `
            them, and the bin is no longer squeezed into 36px where it read as
            half a column. (7.9.26) */
         .functionPage.wide:has(.sdTable) { padding-inline: 12px; }
+        /* The ordering board is the widest thing on the site. It gets the same
+           narrow gutter the drawings board has (7.9.26). */
+        .functionPage.wide:has(.lliTable) { padding-inline: 12px; }
         .sdTable th, .sdTable td { padding-inline: 10px; }
         .sdTable .cSec { width: 108px; text-align: center; }
         .sdTable .cCat { width: 104px; }
@@ -2071,6 +2145,12 @@ var pdfViewer = `
         .sdDlBtn {
           border: none; background: none; color: var(--steel); cursor: pointer;
           padding: 2px; line-height: 0; border-radius: 5px;
+        }
+        /* A tick beside the file: this is the copy the client signed. */
+        .sdSignedTag {
+          display: inline-flex; align-items: center; justify-content: center;
+          width: 16px; height: 16px; border-radius: 999px;
+          background: rgba(26,127,75,.12); color: #1a7f4b; flex: 0 0 auto;
         }
         .sdDlBtn:hover { color: var(--accent); background: var(--accent-soft); }
         /* A description written in full is read in full: the box grows
@@ -2264,6 +2344,11 @@ var pdfViewer = `
            approved on. The versions live in the last column now. */
         .sbChkTable th.cPills, .sbChkTable td.sbChkPills { width: 112px; }
         .sbChkStatWrap { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+        .sbChkPrint {
+          border: none; background: none; color: var(--steel, #5b6472); cursor: pointer;
+          padding: 2px; line-height: 0; border-radius: 5px;
+        }
+        .sbChkPrint:hover { color: var(--accent); background: var(--accent-soft); }
         .sbChkStatRev {
           font-size: 10px; font-weight: 800; color: var(--steel, #5b6472);
           letter-spacing: .2px; direction: ltr;
@@ -4032,7 +4117,18 @@ var sdSign = `
           width: 46px; height: 34px; object-fit: cover; border-radius: 6px;
           border: 1px solid var(--line); cursor: zoom-in; display: block;
         }
-        .llicFoot { display: flex; justify-content: center; padding-top: 10px; }
+        .llicFoot { display: flex; justify-content: center; gap: 10px; padding-top: 10px; }
+        /* A date the main contractor may correct: it reads as a date, and the
+           pencil beside it says it can be changed. */
+        .llicDateBtn {
+          display: inline-flex; align-items: center; gap: 5px; border: 1px solid transparent;
+          background: none; border-radius: 7px; padding: 3px 7px; cursor: pointer;
+          font: inherit; color: inherit;
+        }
+        .llicDateBtn:hover { border-color: var(--line); background: #fff; color: var(--accent); }
+        .llicDateBtn svg { color: var(--mist); flex: 0 0 auto; }
+        .llicDateBtn:hover svg { color: var(--accent); }
+        .llicDateIn { max-width: 132px; }
         .sdSignErr {
           background: #fdf2f3; border: 1px solid #f0c4c9; color: #b02a37;
           border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 12.5px;
@@ -5589,6 +5685,11 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
     const range = `${shortDate(pMin)} – ${shortDate(maxDate)}`;
     const markerLine = `${he ? "תאריך סימון" : "Marker date"}: <span class="rng">${esc(markerLabel)}</span>`;
     const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "";
+    // The client's own mark, on the far side of the header. Every other
+    // document she issues carries both; the schedule was printing hers alone,
+    // and with nothing on the other side the three-column header collapsed and
+    // pulled the title off the centre line (7.9.26).
+    const clientLogo = brand.clientLogoUrl ? `<img class="clientLogo" src="${brand.clientLogoUrl}" alt="logo">` : "<span></span>";
     // The company strip and the line of text under it travel together: one
     // block, held at the foot of the last sheet by the shell.
     const footBlock = brand.footerImg || brand.footerText
@@ -5600,9 +5701,12 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
 ${printSheetCss({ landscape: true, accent })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; }
-.hdr { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 12px; }
-.hdr img { max-height: 44px; max-width: 170px; object-fit: contain; }
-.ttlWrap { flex: 1; text-align: center; }
+/* Three tracks with equal outer columns, so the title lands on the PAGE centre
+   and not in the middle of whatever space the logos happen to leave over. */
+.hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 12px; }
+.hdr img { max-height: 44px; max-width: 170px; object-fit: contain; justify-self: start; }
+.hdr img.clientLogo { justify-self: end; }
+.ttlWrap { grid-column: 2; text-align: center; }
 .ttlWrap .ttl { font-size: 19px; font-weight: 800; color: ${accent}; letter-spacing: .5px; }
 .ttlWrap .sub { font-size: 11px; font-weight: 600; color: #5b5e66; margin-top: 3px; }
 .ttlWrap .mkdate { font-size: 10.5px; font-weight: 700; color: ${accent}; margin-top: 2px; }
@@ -5639,7 +5743,7 @@ th.pc { color: #fff; white-space: nowrap; font-family: 'Assistant', Arial, sans-
 .fl { position: absolute; top: 0; bottom: 0; left: 0; }
 .ftr { font-size: 10px; color: #6b7280; text-align: center; white-space: pre-line; margin-bottom: 6px; }
 </style></head><body><div id="src">
-<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || title)}</div><div class="sub">${esc(title)} &nbsp;|&nbsp; <span class="rng">${esc(range)}</span></div><div class="mkdate">${markerLine}</div></div></div>
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || title)}</div><div class="sub">${esc(title)} &nbsp;|&nbsp; <span class="rng">${esc(range)}</span></div><div class="mkdate">${markerLine}</div></div>${clientLogo}</div>
 <table><colgroup><col class="c0"><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>
 <thead><tr><th></th><th>${esc(sc.taskCol)}</th><th class="pc">% ${esc(sc.expectedWord)}</th><th class="pc">% ${esc(sc.actualWord)}</th><th class="axisHead"><div class="axis">${monthLabels}</div></th></tr></thead>
 <tbody>${rows}</tbody></table>
@@ -6053,7 +6157,7 @@ ${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? 
       )), /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ganttNavBtn", onClick: () => scrollTimeline(1), "aria-label": "Scroll timeline later" }, isRTL ? /* @__PURE__ */ React11.createElement(ChevronLeft3, { size: 15, strokeWidth: 2.2 }) : /* @__PURE__ */ React11.createElement(ChevronRight3, { size: 15, strokeWidth: 2.2 })));
     })(), /* @__PURE__ */ React11.createElement("div", { className: "scheduleNotesToggleRow" }, /* @__PURE__ */ React11.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setNotesOpen((o) => !o) }, /* @__PURE__ */ React11.createElement(AlertTriangle, { size: 14, strokeWidth: 2.2 }), " ", notesOpen ? sc.hideNotes : sc.showNotes, shownAlerts.length > 0 && /* @__PURE__ */ React11.createElement("span", { className: "scheduleNotesBadge numerals" }, shownAlerts.length))), notesOpen && /* @__PURE__ */ React11.createElement("div", { className: "scheduleAlerts" }, (() => {
       const shown = shownAlerts;
-      return /* @__PURE__ */ React11.createElement(React11.Fragment, null, viewerRole === "admin" && alerts.length > 0 && /* @__PURE__ */ React11.createElement("div", { className: "noteColsHead" }, /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה לא.וייס" : "Show to A. Weiss"), /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה ללקוח" : "Show to client")), shown.length === 0 && /* @__PURE__ */ React11.createElement("p", { className: "dataSourceFileName", style: { margin: 0 } }, readOnly ? isRTL ? "אין הערות להצגה." : "No notes to display." : sc.noAlerts), shown.map((a, i) => {
+      return /* @__PURE__ */ React11.createElement(React11.Fragment, null, (viewerRole === "admin" || viewerRole === "contractor") && alerts.length > 0 && /* @__PURE__ */ React11.createElement("div", { className: "noteColsHead" }, viewerRole === "admin" && /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה לא.וייס" : "Show to A. Weiss"), /* @__PURE__ */ React11.createElement("span", { className: "noteColHead" }, isRTL ? "הצגה ללקוח" : "Show to client")), shown.length === 0 && /* @__PURE__ */ React11.createElement("p", { className: "dataSourceFileName", style: { margin: 0 } }, readOnly ? isRTL ? "אין הערות להצגה." : "No notes to display." : sc.noAlerts), shown.map((a, i) => {
         const clientOn = !!(clientNotes || {})[a.id];
         const teamOn = (teamNotes || {})[a.id] !== false;
         return /* @__PURE__ */ React11.createElement("div", { key: a.id + "|" + i, className: `scheduleAlert ${a.kind === "change" ? "change" : isRedKind(a.kind) ? "overdue" : "upcoming"}` }, /* @__PURE__ */ React11.createElement(
@@ -6179,6 +6283,10 @@ import React16, { useState as useState7, useRef as useRef6 } from "react";
 import { Upload as UploadPh, X as XPh } from "lucide-react";
 function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }) {
   const [zoom, setZoom] = useState7(null);
+  // Under the enlarged picture: when it went up and who put it there, as a
+  // sentence. Two bare values side by side read as a filename; "uploaded on
+  // the 7th by marcella" is what somebody actually wants to know when they are
+  // looking at a photograph of a ceiling. (7.9.26)
   const stampOf = (p) => {
     if (!p || (!p.at && !p.by)) return null;
     const d = p.at ? new Date(p.at) : null;
@@ -6186,7 +6294,11 @@ function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRT
     const when = d && !isNaN(d.getTime())
       ? `${two(d.getDate())}/${two(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${two(d.getHours())}:${two(d.getMinutes())}`
       : "";
-    return { when, by: p.by || "" };
+    const by = p.by || "";
+    const text = isRTL
+      ? [when ? `הועלה בתאריך ${when}` : "הועלה", by ? `ע״י ${by}` : ""].filter(Boolean).join(" ")
+      : [when ? `Uploaded ${when}` : "Uploaded", by ? `by ${by}` : ""].filter(Boolean).join(" ");
+    return { when, by, text };
   };
   const inputRef = useRef6(null);
   const list = photos || [];
@@ -6235,8 +6347,7 @@ function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRT
           const st = stampOf(zoom);
           if (!st) return null;
           return /* @__PURE__ */ React16.createElement("div", { className: "photoMeta", dir: isRTL ? "rtl" : "ltr" },
-            st.when ? /* @__PURE__ */ React16.createElement("span", { className: "when" }, st.when) : null,
-            st.by ? /* @__PURE__ */ React16.createElement("span", null, st.by) : null);
+            /* @__PURE__ */ React16.createElement("span", { className: "photoMetaText" }, st.text));
         })()
       ),
       /* @__PURE__ */ React16.createElement("button", { type: "button", className: "photoLightboxClose", onClick: () => setZoom(null), "aria-label": "Close" }, /* @__PURE__ */ React16.createElement(XPh, { size: 22, strokeWidth: 2.4 }))
@@ -6341,6 +6452,12 @@ function CardView({
   // Same rule for Marcella: being switched on lets you read the board, not
   // rewrite somebody else's follow-ups. The database says the same. (5.9.26)
   const marcellaCanEdit = canEdit && appRole === "admin";
+  // The site photographs are put up by whoever is on site: the administrator
+  // and the main contractor. The client looks. Stated by role rather than
+  // inherited from the project's edit list, because that list is about the
+  // boards and this is about a camera. The server enforces the same thing —
+  // a client's write to the project row is refused. (7.9.26)
+  const photosCanEdit = appRole === "admin" || viewerRole === "contractor";
   const showRooms = cardKey === "rooms";
   const showSchedule = isSchedule && !!scheduleData;
   // Contacts are maintained in System Admin, not through the upload modal.
@@ -6388,7 +6505,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -8599,10 +8716,9 @@ function printPaginateJs(stampText) {
   var colg = table ? table.querySelector("colgroup") : null;
   var thead = table ? table.querySelector("thead") : null;
   var rows = table ? Array.prototype.slice.call(table.querySelectorAll("tbody tr")) : [];
-  // The closing strip is a template, not a single node. A copy of it is put
-  // under EVERY frame and hidden on all but the last, so the frames all end on
-  // the same line — a strip that only exists on the last page would make that
-  // one frame shorter than the rest.
+  // The closing strip is the house footer, and it belongs at the foot of every
+  // sheet — a report handed over page by page has to say whose it is on each
+  // one. It is a template here, copied under every frame (7.9.26).
   var foot = document.getElementById("footimg");
   if (foot) foot.remove();
   var pages = [];
@@ -8629,7 +8745,6 @@ function printPaginateJs(stampText) {
     if (foot) {
       strip = foot.cloneNode(true);
       strip.removeAttribute("id");
-      strip.style.visibility = "hidden";
       ft.appendChild(strip);
     }
     if (STAMP) {
@@ -8668,7 +8783,6 @@ function printPaginateJs(stampText) {
       cur = next;
     }
   }
-  if (cur.strip) cur.strip.style.visibility = "";
   // A nearly full page reads as bottom-heavy, and half the leftover moved
   // above the heading settles it. A page with a lot of clear paper is not
   // unbalanced, it is short — lifting its heading into the middle of an empty
@@ -9396,24 +9510,38 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
-  const onExcel = async () => {
-    const g = exportGrid();
+  const onExcel = async (audience) => {
+    const g = exportGrid(audience);
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
     setPoNote(null);
     // The photo travels into the workbook the same way it travels onto the
     // paper — its own column, in the same place, with the picture in the cell
     // (30.8.26).
-    const head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
-    const widths = g.widths.slice(0, 4).concat([15], g.widths.slice(4));
-    const body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
+    let head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
+    let widths = g.widths.slice(0, 4).concat([15], g.widths.slice(4));
+    let body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
+    let colTypes = g.types.slice(0, 4).concat(["text"], g.types.slice(4));
+    let imgs = g.imgs;
+    let imgCol = 4;
+    // The workbook carries the same columns the person taking it can see —
+    // the supplier and the purchase order stay on her board (7.9.26).
+    if (audience === "client" || audience === "contractor") {
+      const want = (audience === "client" ? LLI_CLIENT_KEYS : LLI_CONTRACTOR_KEYS).map((k) => L(k));
+      const keep = want.map((name) => head.indexOf(name)).filter((i) => i >= 0);
+      imgCol = keep.indexOf(head.indexOf(L("image")));
+      head = keep.map((i) => head[i]);
+      widths = keep.map((i) => widths[i]);
+      colTypes = keep.map((i) => colTypes[i]);
+      body = body.map((row) => keep.map((i) => row[i]));
+    }
     const res = await boardExportXlsx({
       title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
       fileName: boardFileName(projectName, "LLI", "xlsx"),
       head, body, widths, alertRows: g.alerts,
       // The photo column is text; everything else keeps the kind the board
       // gave it.
-      colTypes: g.types.slice(0, 4).concat(["text"], g.types.slice(4)),
-      imgCol: 4, imgs: g.imgs,
+      colTypes,
+      imgCol, imgs,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -9427,7 +9555,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
 // contractor's business, and the client sees them only when the contractor
 // chooses to say something. (7.9.26)
 var LLI_CLIENT_KEYS = ["section", "category", "typeMark", "desc", "image", "status", "longLead"];
-var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "eta", "etaActual", "status", "longLead"];
+var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "supplier", "eta", "etaActual", "status", "longLead"];
   const onPdf = (printLang, audience) => {
     const g = exportGrid(audience);
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
@@ -9510,11 +9638,15 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
         const v = lliRowOf(data, r.code);
         const c = boardCategoryOf(r.category);
         clientRows.push({
+          // The row's real key, for the one thing the main contractor may
+          // change from this board: the two delivery dates.
+          key: r.code,
           code: r.source === "boq" ? r.code : L("manual"),
           category: c ? sbText(c, lang) : "",
           typeMark: v.typeMark,
           desc: v.desc || r.title,
           image: v.image || null,
+          supplier: v.supplier || tradeOf(r.category) || "",
           eta: v.ordered ? v.eta : "",
           etaActual: v.ordered ? v.etaActual : "",
           ordered: v.ordered,
@@ -9525,11 +9657,22 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
         });
       });
     });
+    const isContractor = viewerRole === "contractor";
     return sbH(LliClientBoard, {
       lang, isRTL, rows: clientRows, projectName,
       // The two delivery dates are the contractor's columns. The client's sheet
       // carries the long-lead flag and nothing else about timing (7.9.26).
-      showEta: viewerRole === "contractor",
+      showEta: isContractor,
+      showSupplier: isContractor,
+      // The main contractor is the one who actually knows when a thing lands.
+      // They may set the two dates from here and nothing else on the board;
+      // her copy shows the change because it IS the same row. (7.9.26)
+      canEditEta: isContractor && !!onChangeRows,
+      onPatchEta: (code, next) => patch(code, next),
+      // And they take the board away with them, in both shapes, the same as
+      // she does. The client looks and does not take.
+      canExport: isContractor,
+      onExcel: () => onExcel("contractor"),
       onDownload: (lg) => onPdf(lg, viewerRole)
     });
   }
@@ -10421,7 +10564,12 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       g.rows.forEach((r) => {
         if (isHidden(r)) return;
         const v = sdRowOf(data, r.code);
-        const done = SD_DONE.indexOf(v.status) >= 0;
+        // The client's approval counts on the paper too — the report is what
+        // gets circulated, and a drawing signed this morning must not go out
+        // on it as "with the client" (7.9.26).
+        const ap = sdApprovalOf(approvals, r.code);
+        const done = !!ap || SD_DONE.indexOf(v.status) >= 0;
+        const approvedOn = (ap && ap.approvedAt) || v.approvedAt || "";
         tone.push(
           done ? "ok"
             : v.status === "submitted" ? "wait"
@@ -10438,9 +10586,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
           v.dueAt ? sbFmtDate(v.dueAt) : "",
           v.file ? v.file.name || "" : "",
           yn(v.toClient, v.toClientAt),
-          sbText(sdStatus(v.status), lang),
+          ap ? (lang === "he" ? "אושר" : "Approved") : sbText(sdStatus(v.status), lang),
           v.submittedAt ? sbFmtDate(v.submittedAt) : "",
-          done && v.approvedAt ? sbFmtDate(v.approvedAt) : ""
+          approvedOn ? sbFmtDate(String(approvedOn).slice(0, 10)) : ""
         ]);
       });
     });
@@ -10603,8 +10751,25 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
-                  const st = sdStatus(v.status);
-                  const done = SD_DONE.indexOf(v.status) >= 0;
+                  // The client's own approval, from the row they write to.
+                  //
+                  // Her board used to read only her own columns, so a drawing
+                  // the client had signed that morning still showed as "with
+                  // the client", with no approval date and the unsigned file
+                  // behind the open button. The approval is a fact about the
+                  // drawing, whoever recorded it — so the board reads it, the
+                  // same way the client's and the contractor's screens do
+                  // (7.9.26).
+                  const ap = sdApprovalOf(approvals, r.code);
+                  const st = ap
+                    ? { key: "approved", he: "אושר", en: "Approved", color: "#1a7f4b" }
+                    : sdStatus(v.status);
+                  const done = !!ap || SD_DONE.indexOf(v.status) >= 0;
+                  // The signed copy is the copy: once the client has signed it,
+                  // opening or saving the drawing has to give the sheet with
+                  // their signature on it, not the one that went out.
+                  const shownFile = (ap && ap.file) || v.file;
+                  const approvedOn = (ap && ap.approvedAt) || v.approvedAt || "";
                   // The same fan as the ordering board: red for a drawing that
                   // is long lead or past its date and still not in, orange
                   // while it is with somebody, green once it is signed
@@ -10693,13 +10858,13 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     sbH(
                       "td",
                       { className: "cFile" },
-                      v.file
+                      shownFile
                         ? sbH(
                             "div",
                             { className: "sdFileCell" },
                             sbH(
                               "button",
-                              { type: "button", className: "sbLinkBtn", title: v.file.name || "", onClick: () => openFile(v.file) },
+                              { type: "button", className: "sbLinkBtn", title: shownFile.name || "", onClick: () => openFile(shownFile) },
                               sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
                               " ",
                               L("open")
@@ -10709,12 +10874,23 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                               {
                                 type: "button", className: "sdDlBtn", title: L("download"),
                                 "aria-label": L("download"),
-                                onClick: () => sbDownloadAs(v.file, projectName, sdFileLabel(v.desc || r.title || ""))
+                                // The same name the client and the contractor
+                                // get: project - description - the day it was
+                                // saved. The stored key is a UUID and nobody
+                                // should ever see it (7.9.26).
+                                onClick: () => sbDownloadAs(shownFile, projectName, sdFileLabel(v.desc || r.title || ""))
                               },
                               sbH(Download2, { size: 13, strokeWidth: 2 })
                             ),
-                            canEdit
+                            // A signed drawing is not hers to remove: the bin
+                            // clears the drawing she issued, and after signing
+                            // there is a signed copy behind it.
+                            canEdit && !ap
                               ? sbH("button", { type: "button", className: "lliImgClear", title: L("remove"), onClick: () => patch(r.code, { file: null }) }, "×")
+                              : null,
+                            ap
+                              ? sbH("span", { className: "sdSignedTag", title: `${L("approvedAt")} ${sbFmtDate(String(approvedOn).slice(0, 10))}` },
+                                  sbH(Check3, { size: 11, strokeWidth: 3 }))
                               : null
                           )
                         : canEdit
@@ -10761,7 +10937,12 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     sbH(
                       "td",
                       { className: "cStat" },
-                      sbH(
+                      ap
+                        // Signed by the client. That is not a status somebody
+                        // chooses from a list afterwards — it is what happened.
+                        ? sbH("span", { className: "sdcChip", style: { background: "#1a7f4b1f", color: "#1a7f4b" } },
+                            lang === "he" ? "אושר" : "Approved")
+                        : sbH(
                         "select",
                         {
                           className: "lliIn lliSel sdSel",
@@ -10792,9 +10973,13 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                       { className: "cDate" },
                       // An approval date before there is an approval is a promise,
                       // not a fact, so the box only opens once the status says so.
-                      done
-                        ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.approvedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { approvedAt: e.target.value }) })
-                        : sbH("span", { className: "lliDash" }, "—")
+                      ap
+                        // The client's own date. It is theirs to set, not hers
+                        // to edit.
+                        ? sbH("span", { className: "sdcNum", dir: "ltr" }, sbFmtDate(String(approvedOn).slice(0, 10)))
+                        : done
+                          ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.approvedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { approvedAt: e.target.value }) })
+                          : sbH("span", { className: "lliDash" }, "—")
                     ),
                     // One action, not two.
                     //
@@ -11345,14 +11530,21 @@ function RfiCard({
               }))
             )
           ),
+    // The two buttons on a line, and anything the export has to say UNDER
+    // them, on the centre line. Beside them it pushed the pair off centre
+    // every time it appeared (7.9.26).
     sbH(
       "div",
-      { className: "rfiExportRow" },
-      sbH("button", { type: "button", className: "rfiGrayPill", onClick: onExcel },
-        sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
-      sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => onPdf) },
-        sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF"),
-      note ? sbH("span", { className: "rfiNote" }, note) : null
+      { className: "rfiExportWrap" },
+      sbH(
+        "div",
+        { className: "rfiExportRow" },
+        sbH("button", { type: "button", className: "rfiGrayPill", onClick: onExcel },
+          sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
+        sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => onPdf) },
+          sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF")
+      ),
+      note ? sbH("p", { className: "rfiNote" }, note) : null
     ),
     printAsk
       ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); onPdf(lg); }, onClose: () => setPrintAsk(null) })
@@ -12391,19 +12583,41 @@ function ChangeInstructionsCard({
           return sbH(
             "div",
             { className: "ciChapter", key: c.code },
+            // The chapter's own line: what it is, how many instructions are on
+            // it and what they come to — and at the end of it, the way to open
+            // one more. The plus lives outside the toggle: a button inside a
+            // button is not a thing, and pressing it should open the form, not
+            // the list. (7.9.26)
             sbH(
-              "button",
-              {
-                type: "button", className: "ciChapterHead",
-                onClick: () => setOpenCh((s) => ({ ...s, [c.code]: !isOpen }))
-              },
-              sbH(ChevronDown2, {
-                size: 16, strokeWidth: 2,
-                style: { transform: isOpen ? "none" : "rotate(-90deg)", transition: "transform .15s" }
-              }),
-              sbH("span", { className: "ciChapterName" }, `${c.code} ${c.name}`),
-              sbH("span", { className: "ciChapterCount" }, `${list.length} ${L("count")}`),
-              sbH("span", { className: "ciChapterSum", dir: "ltr" }, ciMoney(chapterTotal(c.code), lang))
+              "div",
+              { className: "ciChapterRow" },
+              sbH(
+                "button",
+                {
+                  type: "button", className: "ciChapterHead",
+                  "aria-expanded": isOpen ? "true" : "false",
+                  onClick: () => setOpenCh((s) => ({ ...s, [c.code]: !isOpen }))
+                },
+                sbH(ChevronDown2, {
+                  size: 16, strokeWidth: 2,
+                  style: { transform: isOpen ? "none" : "rotate(-90deg)", transition: "transform .15s" }
+                }),
+                sbH("span", { className: "ciChapterName" }, `${c.code} ${c.name}`),
+                sbH("span", { className: "ciChapterCount" }, `${list.length} ${L("count")}`),
+                sbH("span", { className: "ciChapterSum", dir: "ltr" }, ciMoney(chapterTotal(c.code), lang))
+              ),
+              canEdit
+                ? sbH(
+                    "button",
+                    {
+                      type: "button", className: "ciChapterAdd",
+                      title: `${L("add")} — ${c.code} ${c.name}`,
+                      "aria-label": `${L("add")} — ${c.code} ${c.name}`,
+                      onClick: () => addManual(c.code)
+                    },
+                    sbH(Plus2, { size: 15, strokeWidth: 2.4 })
+                  )
+                : null
             ),
             isOpen
               ? sbH(
@@ -12501,14 +12715,21 @@ function ChangeInstructionsCard({
               : null
           );
         })),
+    // The two buttons on a line, and anything the export has to say UNDER
+    // them, on the centre line. Beside them it pushed the pair off centre
+    // every time it appeared (7.9.26).
     sbH(
       "div",
-      { className: "rfiExportRow" },
-      sbH("button", { type: "button", className: "rfiGrayPill", onClick: onExcel },
-        sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
-      sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => onPdf) },
-        sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF"),
-      note ? sbH("span", { className: "rfiNote" }, note) : null
+      { className: "rfiExportWrap" },
+      sbH(
+        "div",
+        { className: "rfiExportRow" },
+        sbH("button", { type: "button", className: "rfiGrayPill", onClick: onExcel },
+          sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
+        sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => onPdf) },
+          sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF")
+      ),
+      note ? sbH("p", { className: "rfiNote" }, note) : null
     ),
     printAsk
       ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); onPdf(lg); }, onClose: () => setPrintAsk(null) })
@@ -13185,17 +13406,48 @@ var LLIC_L = {
   etaActual: { en: "Actual delivery", he: "מועד אספקה בפועל" },
   status: { en: "Status", he: "סטטוס" },
   longLead: { en: "Long lead", he: "אספקה ארוכה" },
+  supplier: { en: "Supplier", he: "ספק" },
+  editDate: { en: "Edit the date", he: "עריכת התאריך" },
   download: { en: "Download as PDF", he: "הורדת PDF" },
   empty: { en: "Nothing is on the ordering board yet.", he: "עדיין אין פריטים בלוח ההזמנות." },
   yes: { en: "Yes", he: "כן" }
 };
 
-function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta }) {
+function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta, showSupplier, canEditEta, onPatchEta, canExport, onExcel }) {
   const L = (k) => sbText(LLIC_L[k] || { en: k, he: k }, lang);
   const [printAsk, setPrintAsk] = useState6(false);
   const [shot, setShot] = useState6(null);
+  // Which date is open for editing: `${rowKey}|${field}`. One at a time — this
+  // is a correction, not a spreadsheet.
+  const [editing, setEditing] = useState6(null);
 
   const cell = (v) => (v ? sbH("span", { className: "sdcNum" }, sbFmtDate(String(v).slice(0, 10))) : sbH("span", { className: "sdcNone" }, "—"));
+  // A date the main contractor may correct. It reads as a date until the
+  // pencil is pressed and then it is a date box — the same field she has on
+  // her own board, writing to the same row, so what he sets is what she sees.
+  // (7.9.26)
+  const dateCell = (r, field) => {
+    if (!canEditEta) return cell(r[field]);
+    const key = `${r.key}|${field}`;
+    if (editing === key) {
+      return sbH("input", {
+        type: "date",
+        className: "lliIn llicDateIn",
+        dir: "ltr",
+        autoFocus: true,
+        value: r[field] || "",
+        onChange: (e) => onPatchEta && onPatchEta(r.key, { [field]: e.target.value }),
+        onBlur: () => setEditing(null),
+        onKeyDown: (e) => { if (e.key === "Enter" || e.key === "Escape") setEditing(null); }
+      });
+    }
+    return sbH(
+      "button",
+      { type: "button", className: "llicDateBtn", title: L("editDate"), onClick: () => setEditing(key) },
+      cell(r[field]),
+      sbH(Pencil, { size: 11, strokeWidth: 2 })
+    );
+  };
 
   return sbH(
     "div",
@@ -13225,6 +13477,10 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta })
               // The two delivery dates belong to the main contractor's copy of
               // this board. The client's copy carries the long-lead flag, which
               // is the one thing about timing that is theirs to know (7.9.26).
+              // Who is actually delivering it. The main contractor deals with
+              // the supplier daily; a board that will not say the name sends
+              // him back to her for it (7.9.26).
+              showSupplier ? sbH("th", { key: "supplier" }, L("supplier")) : null,
               showEta ? sbH("th", { key: "eta" }, L("eta")) : null,
               showEta ? sbH("th", { key: "etaActual" }, L("etaActual")) : null,
               sbH("th", null, L("status")),
@@ -13250,8 +13506,9 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta })
                     })
                   : sbH("span", { className: "sdcNone" }, "—")
               ),
-              showEta ? sbH("td", { key: "eta" }, cell(r.eta)) : null,
-              showEta ? sbH("td", { key: "etaActual" }, cell(r.etaActual)) : null,
+              showSupplier ? sbH("td", { key: "supplier", dir: "auto" }, r.supplier || sbH("span", { className: "sdcNone" }, "—")) : null,
+              showEta ? sbH("td", { key: "eta" }, dateCell(r, "eta")) : null,
+              showEta ? sbH("td", { key: "etaActual" }, dateCell(r, "etaActual")) : null,
               sbH("td", null, r.ordered
                 ? sbH("span", {
                     className: "sdcChip",
@@ -13265,12 +13522,18 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta })
           )
         ),
 
+    // The main contractor takes the board away in both shapes, the same as she
+    // does. A client looks at it and does not take it away (7.9.26).
     rows.length
       ? sbH(
           "div",
           { className: "llicFoot" },
+          canExport
+            ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => onExcel && onExcel() },
+                sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel")
+            : null,
           sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(true) },
-            sbH(Download2, { size: 15, strokeWidth: 2 }), " ", L("download"))
+            sbH(Download2, { size: 15, strokeWidth: 2 }), " ", canExport ? "PDF" : L("download"))
         )
       : null,
 
@@ -15705,27 +15968,8 @@ var SB_L = {
   create: { en: "Create submittal", he: "צור סבמיטל" },
   noSubmittals: { en: "No submittals in this folder yet.", he: "עדיין אין סבמיטלים בתיקייה הזו." },
   trackingList: { en: "Tracking list", he: "רשימת מעקב" },
-  bulkCreate: { en: "Load specifications", he: "טעינת מפרטים" },
-  bulkHint: {
-    en: "Pick the specifications for this discipline. Each one is read and filed into its own submittal, already filled in.",
-    he: "בוחרים את המפרטים של הדיסציפלינה. כל מפרט נקרא ונכנס לסבמיטל שלו, כבר מלא."
-  },
-  bulkWorking: { en: "Reading", he: "קורא" },
-  bulkMatching: { en: "Matching to the checklist…", he: "משייך לצ׳ק‑ליסט…" },
-  bulkNoHome: { en: "No place was found for these files", he: "לא נמצא יעד לקבצים הבאים" },
-  bulkOffList: { en: "Filed, but on no checklist line", he: "נפתחו, אך לא שויכו לשורה בצ׳ק‑ליסט" },
-  bulkOffListHint: {
-    en: "They are in the folder's own list above. Nothing on the bill-of-quantities checklist matched them.",
-    he: "הם נמצאים ברשימת הסבמיטלים למעלה. לא נמצאה להם שורה מתאימה בצ׳ק‑ליסט מכתב הכמויות."
-  },
-  bulkNoHomeHint: {
-    en: "They were not filed. Nothing else was affected — the rest went into their submittals.",
-    he: "הם לא שויכו לאף סבמיטל. שאר הקבצים נכנסו לסבמיטלים שלהם כרגיל."
-  },
-  bulkPlain: {
-    en: "The AI service did not answer, so the files were filed as empty submittals with the file attached.",
-    he: "שירות ה‑AI לא נענה, ולכן הקבצים נפתחו כסבמיטלים ריקים עם הקובץ מצורף."
-  },
+  // 7.9.26 — the labels of "Load specifications" went with the button. A
+  // specification is loaded from inside the submittal it belongs to now.
   close: { en: "Close", he: "סגירה" },
   showCol: { en: "Show", he: "הצגה" },
   submittalList: { en: "Submittal list", he: "רשימת סבמיטלים" },
@@ -15802,6 +16046,7 @@ var SB_L = {
   // signature on it and the specifications behind it, in one PDF.
   printApproved: { en: "Save the approved submittal", he: "שמירת הסבמיטל המאושר" },
   printCol: { en: "Print", he: "הדפסה" },
+  versionsCol: { en: "Versions", he: "גרסאות" },
   specsView: { en: "See the attached specifications", he: "צפייה במפרטים המצורפים" },
   specsNone: { en: "No specifications are attached to this submittal.", he: "לא צורפו מפרטים לסבמיטל הזה." },
   specsLoading: { en: "Opening the specifications…", he: "פותח את המפרטים…" },
@@ -18867,7 +19112,6 @@ function SubmittalFolder({
   onPrint,
   onNewRevision,
   onDelete,
-  onBulkCreate,
   onToggleShow,
   onPatch,
   boqData,
@@ -18883,7 +19127,6 @@ function SubmittalFolder({
   onDismissReview
 }) {
   const L = (k) => sbText(SB_L[k], lang);
-  const [bulkBusy, setBulkBusy] = useState6(null);
   // Who the sheet is for, and in which language — the same two questions the
   // ordering board asks before it prints (30.8.26).
   const [exportAsk, setExportAsk] = useState6(null);
@@ -18926,24 +19169,6 @@ function SubmittalFolder({
   };
   // The submittal whose private notes are open.
   const [notesFor, setNotesFor] = useState6(null);
-  // One file, one submittal. The serial runs on as they are made, so the
-  // numbers come out in the order the files were picked.
-  const onBulk = async (e) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
-    if (!files.length || !onBulkCreate) return;
-    setBulkBusy(`${L("bulkWorking")} 0/${files.length}`);
-    try {
-      await onBulkCreate(
-        files,
-        (done) => setBulkBusy(`${L("bulkWorking")} ${done}/${files.length}`),
-        // The long half of the job: the model reading what was just gathered.
-        () => setBulkBusy(L("bulkMatching"))
-      );
-    } finally {
-      setBulkBusy(null);
-    }
-  };
   // Which checklist group is opened out into its BOQ lines.
   const [openChk, setOpenChk] = useState6(null);
   // One line per serial — the latest revision. The earlier ones live behind the
@@ -19035,32 +19260,12 @@ function SubmittalFolder({
             sbH(Plus2, { size: 16, strokeWidth: 2.4 }),
             " ",
             L("create")
-          ),
-          // Several at once: one submittal per file, each with its file already
-          // attached. Beats opening the form eight times to attach eight
-          // specifications and nothing else.
-          sbH(
-            "label",
-            {
-              className: `ghostBtn small sbBulkBtn ${bulkBusy ? "busy" : ""}`.trim(),
-              title: sbText(SB_L.bulkHint, lang)
-            },
-            // While it is reading, the button says so and turns. Without it the
-            // screen sat still for half a minute and looked broken (29.8.26).
-            bulkBusy
-              ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
-              : sbH(Upload4, { size: 14, strokeWidth: 2 }),
-            " ",
-            bulkBusy || L("bulkCreate"),
-            sbH("input", {
-              type: "file",
-              accept: "application/pdf,image/*",
-              multiple: true,
-              disabled: !!bulkBusy,
-              style: { display: "none" },
-              onChange: onBulk
-            })
           )
+          // 7.9.26 — the button that took a pile of specifications and made a
+          // submittal out of each one is gone, at her instruction. Loading them
+          // one submittal at a time is slower to do and exactly right every
+          // time; the pile was fast and had to be checked afterwards. The
+          // specification now goes on from inside the submittal it belongs to.
         )
       : null,
     // What the AI split out of one set of specifications and is still waiting
@@ -19244,7 +19449,7 @@ function SubmittalFolder({
                       sbH("th", { className: "cChkDate" }, L("targetCol")),
                       sbH("th", { className: "cPills" }, L("status")),
                       sbH("th", { className: "cChkDate" }, L("clientOkCol")),
-                      sbH("th", { className: "cAct" }, "")
+                      sbH("th", { className: "cAct" }, L("versionsCol"))
                     )),
                     sbH("tbody", null, rowsChk.flatMap((r) => {
                       const open = openChk === r.code;
@@ -19376,6 +19581,24 @@ function SubmittalFolder({
                                 // is not the one the row is showing.
                                 approvedRec && lead && approvedRec.id !== lead.id
                                   ? sbH("span", { className: "sbChkStatRev" }, `Rev.${approvedRec.rev || 0}`)
+                                  : null,
+                                // The moment the client signs, the approved
+                                // document exists as a thing to keep — the
+                                // form, their signature and the specifications
+                                // behind it. The printer appears here, under
+                                // the word that says it happened (7.9.26).
+                                approvedRec
+                                  ? sbH(
+                                      "button",
+                                      {
+                                        type: "button",
+                                        className: "sbChkPrint",
+                                        title: L("printApproved"),
+                                        "aria-label": L("printApproved"),
+                                        onClick: () => onPrint(approvedRec)
+                                      },
+                                      sbH(Printer, { size: 13, strokeWidth: 2 })
+                                    )
                                   : null,
                                 lead && !lead.sent && !approvedRec
                                   ? sbH("span", { className: "sbDraftTag" }, L("draft"))
@@ -19840,7 +20063,6 @@ function SubmittalCard({
   // the moment of printing instead of sitting on the screen all day.
   const [printAsk, setPrintAsk] = useState6(null);
   // What "load specifications" could not place, reported once at the end.
-  const [bulkReport, setBulkReport] = useState6(null);
   // Opening a submittal for editing is a screen of its own as far as the person
   // is concerned, but it was not a screen as far as the browser was concerned —
   // so Back skipped it and landed two screens out. It gets its own history
@@ -20245,261 +20467,12 @@ function SubmittalCard({
           setOpenId(rec.id);
         },
         onCreate: startCreate,
-        // "Load specifications": she picks the specs for this discipline and
-        // each one is READ, not merely attached. The model says what product
-        // the document describes, and that becomes a submittal already filled
-        // in — so pressing "+ סבמיטל" afterwards opens a finished form rather
-        // than an empty one. A file the model cannot place is never guessed at:
-        // it is left out and named on screen (29.8.26).
-        // "Load specifications": every file she picked is read TOGETHER, in one
-        // pass, and the model says which of them describe the same product. One
-        // product becomes one submittal carrying all its papers — the
-        // datasheet, the standard certificate and the test report are three
-        // documents about one thing, not three things (29.8.26).
-        onBulkCreate: async (files, onProgress, onStage) => {
-          const picked = Array.from(files || []);
-          if (!picked.length) return;
-          const docs = [];
-          const pics = [];
-          for (let i = 0; i < picked.length; i++) {
-            const f = picked[i];
-            if (/^image\//.test(f.type || "")) pics.push(f);
-            else docs.push({ file: f, text: await sbExtractPdfText(f).catch(() => "") });
-            if (onProgress) onProgress(i + 1);
-          }
-
-          // What the model is given: the text of every document, each under its
-          // own file name; pages as pictures for the ones with no text layer.
-          const withText = docs.filter((d) => String(d.text || "").trim().length >= 60);
-          const scans = docs.filter((d) => String(d.text || "").trim().length < 60);
-          const specText = withText
-            .map((d) => `=== ${d.file.name} ===\n${String(d.text).slice(0, 30000)}`)
-            .join("\n\n");
-          let images = [];
-          const manifest = docs.map((d) => ({ name: d.file.name }));
-          for (const d of scans) {
-            if (images.length >= SB_AI_IMAGE_PAGES * 2) break;
-            const stored = await sbUploadFile(projectId, `scan-${Date.now()}`, d.file).catch(() => null);
-            if (!stored) continue;
-            const shots = await sbRenderSpecImages(
-              { attachments: [{ ...stored, name: d.file.name }] },
-              Math.max(2, Math.round(SB_AI_IMAGE_PAGES * 2 / Math.max(1, scans.length)))
-            ).catch(() => []);
-            images = images.concat(shots.map((sh) => sh.data));
-          }
-
-          // The checklist this folder already shows, in the model's terms.
-          const checklist = boqProducts(
-            boqData, (boqData || {}).flags || {}, boqFlags, "submittal", chosen.key
-          ).map((pr) => ({
-            code: pr.code,
-            name: boqText(pr, lang),
-            // Whether anything has been opened on this line yet. A line that is
-            // right but empty is a submittal that is probably MISSING, and that
-            // is a different answer from "no match" (30.8.26).
-            has: (list || []).some((x) => x.category === chosen.key && x.boqCode === pr.code)
-          }));
-          const checklistCodes = new Set(checklist.map((c) => c.code));
-          const checklistName = checklist.reduce((acc, c) => { acc[c.code] = c.name; return acc; }, {});
-
-          let out = null;
-          let aiDown = false;
-          if (onStage) onStage();
-          if (specText.trim() || images.length) {
-            try {
-              const res = await supabase.functions.invoke("submittal-ai", {
-                body: {
-                  specText,
-                  images,
-                  files: manifest,
-                  category: chosen.key,
-                  lang,
-                  // The approvals this discipline is already waiting for. A
-                  // loaded specification belongs on one of THESE lines — a new
-                  // list beside the one she already has helps nobody (29.8.26).
-                  checklist,
-                  // Stage A: sort the documents onto the checklist and nothing
-                  // else. No form is filled here, nothing is looked up, and no
-                  // document is suggested — that is stage B, and it happens
-                  // when she opens a submittal and asks for it (30.8.26).
-                  mode: "assign"
-                }
-              });
-              if (res.error) throw res.error;
-              out = res.data || null;
-            } catch (e) {
-              console.warn("[awdash] load specifications: the AI service did not answer", e);
-              aiDown = true;
-            }
-          }
-
-          const val = (v) => (v && String(v).trim() ? String(v).trim() : "");
-          // Stage A answers with packages — documents grouped by the product
-          // they describe — and a review list for what it could not place.
-          const products = out && Array.isArray(out.packages) ? out.packages : [];
-          const review = out && Array.isArray(out.review) ? out.review : [];
-
-          // Which file belongs to which product. The model names them; a file
-          // it did not place is reported, never filed on a guess.
-          const byName = {};
-          docs.forEach((d) => { byName[d.file.name] = d; });
-          const taken = new Set();
-          const made = [];
-          const offList = [];
-          const newRec = () => sbNewSubmittal({
-            category: chosen.key,
-            seq: sbNextSeq(list.concat(made), chosen.key),
-            projectName: pName,
-            contractor: contractorName,
-            disciplineEn: chosen.en,
-            disciplineHe: chosen.he,
-            email: currentEmail || "",
-            submittedBy: (currentEmail || "").split("@")[0] || ""
-          });
-
-          for (const pr of products) {
-            const names = (Array.isArray(pr.files) ? pr.files : [])
-              .map(String)
-              .filter((n) => byName[n] && !taken.has(n));
-            if (!names.length) continue;
-            const rec = newRec();
-            const atts = [];
-            let text = "";
-            for (const n of names) {
-              taken.add(n);
-              const d = byName[n];
-              const stored = await sbUploadFile(projectId, rec.id, d.file).catch(() => null);
-              if (stored) atts.push({ ...stored, name: d.file.name, size: d.file.size });
-              if (d.text) text += `${text ? "\n\n" : ""}${d.text}`;
-            }
-            rec.attachments = atts;
-            rec.specText = text.slice(0, 60000);
-            // What stage A worked out about the package, kept so stage B does
-            // not have to work it out again — and so the row has something to
-            // show before anybody presses "fill".
-            rec.assigned = {
-              product: val(pr.product),
-              manufacturer: val(pr.manufacturer),
-              model: val(pr.model),
-              confidence: val(pr.confidence),
-              why: val(pr.why),
-              at: new Date().toISOString()
-            };
-            // The checklist line this answers. With it, the submittal shows up
-            // on that line instead of only in the list at the top.
-            // The model's answer is taken when it names a line that exists; when
-            // it does not, the app works the match out for itself, the same way
-            // the bill of quantities grouped the line in the first place — so a
-            // datasheet for "N2XY 5x2.5" still lands on "כבלי N2XY" instead of
-            // opening a submittal of its own (30.8.26).
-            const onLine = sbMatchChecklist(
-              { ...pr, files: names },
-              checklist,
-              String(pr.boq || "").trim()
-            );
-            if (onLine && checklistCodes.has(onLine)) {
-              rec.boqCode = onLine;
-              rec.boqText = checklistName[onLine] || "";
-            }
-            // NOTHING ELSE IS WRITTEN HERE. Sorting the papers and filling in
-            // the form are two different jobs, and the form is filled when she
-            // opens the submittal and asks for it — her instruction of
-            // 30.8.26. What arrives from this step is a submittal that exists,
-            // sits on the right line, and holds the right documents.
-            made.push(rec);
-          }
-
-          // A picture stands on its own; there is nothing to read in it.
-          for (const f of pics) {
-            const rec = newRec();
-            const stored = await sbUploadFile(projectId, rec.id, f).catch(() => null);
-            if (stored) rec.image = { ...stored, name: f.name, thumb: await sbMakeThumb(f) };
-            made.push(rec);
-          }
-
-          // A package that was placed on no line is still a submittal she can
-          // see at the top of the folder — worth naming, so she knows.
-          made.forEach((rec) => {
-            if (!rec.boqCode && (rec.attachments || []).length) {
-              offList.push((rec.assigned && rec.assigned.product) || (rec.attachments[0] || {}).name || "");
-            }
-          });
-
-          // The review list. NOT a bin: a document arrives here only after a
-          // real attempt, and it arrives WITH what the attempt found — the
-          // bill-of-quantities line it belongs to, that line's wording, whether
-          // the trouble is a missing submittal or a genuine no-match, and how
-          // sure the reading was. Her instruction of 30.8.26 (§9).
-          const reviewRows = [];
-          for (const r of review) {
-            const names = (Array.isArray(r.files) ? r.files : [])
-              .map(String)
-              .filter((n) => byName[n] && !taken.has(n));
-            if (!names.length) continue;
-            names.forEach((n) => { taken.add(n); });
-            // The documents themselves are put away now, so that placing the
-            // row later is one press and not another upload.
-            const holdId = `rv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-            const atts = [];
-            let text = "";
-            for (const n of names) {
-              const d = byName[n];
-              const stored = await sbUploadFile(projectId, holdId, d.file).catch(() => null);
-              if (stored) atts.push({ ...stored, name: d.file.name, size: d.file.size });
-              if (d.text) text += `${text ? "\n\n" : ""}${d.text}`;
-            }
-            const code = String(r.boq || "").trim();
-            const cands = (Array.isArray(r.candidates) ? r.candidates : [])
-              .map((c) => String((c && c.code) || c || "").trim())
-              .filter((c) => checklistCodes.has(c));
-            reviewRows.push({
-              id: holdId,
-              attachments: atts,
-              specText: text.slice(0, 60000),
-              files: names,
-              product: val(r.product),
-              // "no_submittal_line" — the line is right, nothing opened on it.
-              // "several" — more than one line fits. "no_match" — none does.
-              reason: ["no_submittal_line", "several", "no_match"].indexOf(String(r.reason)) >= 0
-                ? String(r.reason) : "no_match",
-              boq: checklistCodes.has(code) ? code : "",
-              boqName: checklistCodes.has(code) ? (checklistName[code] || "") : "",
-              candidates: cands.map((c) => ({ code: c, name: checklistName[c] || "" })),
-              confidence: ["high", "medium", "low"].indexOf(String(r.confidence)) >= 0
-                ? String(r.confidence) : "",
-              why: val(r.why)
-            });
-          }
-
-          // Files nobody spoke for at all. When the service did not answer they
-          // are filed one per document, exactly as before, so nothing she
-          // uploaded is lost.
-          const homeless = [];
-          for (const d of docs) {
-            if (taken.has(d.file.name)) continue;
-            if (aiDown) {
-              const rec = newRec();
-              const stored = await sbUploadFile(projectId, rec.id, d.file).catch(() => null);
-              if (stored) rec.attachments = [{ ...stored, name: d.file.name, size: d.file.size }];
-              rec.specText = d.text || "";
-              made.push(rec);
-            } else {
-              homeless.push(d.file.name);
-            }
-          }
-
-          if (made.length) commit((list || []).concat(made));
-          // Whatever is left for her to place is kept on the project, not just
-          // shown once and forgotten.
-          if (reviewRows.length && onChangeReview) {
-            onChangeReview((submittalReview || []).concat(
-              reviewRows.map((r) => ({ ...r, category: chosen.key, at: new Date().toISOString() }))
-            ));
-          }
-          if (homeless.length || offList.length || aiDown || reviewRows.length) {
-            setBulkReport({ homeless, offList: offList.filter(Boolean), aiDown, review: reviewRows });
-          }
-        },
+        // 7.9.26 — "Load specifications" is gone. It took a pile of files,
+        // had the model decide which of them described the same product, and
+        // made a submittal out of each group. It was fast and it always had to
+        // be checked afterwards. Her instruction: the specification goes on
+        // from inside the submittal it belongs to, one at a time, and then it
+        // is right the first time.
         onOpen: openExisting,
         onPrint: (s) => setPrintAsk(() => (lg) => sbPrint(s, lg, printBrand, userSignatures)),
         // The tick that decides whether this submittal is on the client's
@@ -20560,60 +20533,7 @@ function SubmittalCard({
           }
         }
       }),
-    printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
-    bulkReport ? sbH(SbBulkReport, { report: bulkReport, lang, isRTL, onClose: () => setBulkReport(null) }) : null
-  );
-}
-// The files "load specifications" could not place, named. A file is never
-// filed into a discipline it does not belong to just to avoid an empty hand:
-// it is left where it was, and she is told which ones (29.8.26).
-function SbBulkReport({ report, lang, isRTL, onClose }) {
-  const L = (k) => sbText(SB_L[k], lang);
-  const names = (report && report.homeless) || [];
-  const offList = (report && report.offList) || [];
-  return createPortal(
-    sbH(
-      "div",
-      { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: onClose },
-      sbH(
-        "div",
-        { className: "functionEditModal", onClick: (e) => e.stopPropagation() },
-        sbH(
-          "div",
-          { className: "functionEditModalHead" },
-          sbH("span", { className: "functionEditModalSpacer" }),
-          sbH("span", { className: "functionEditModalTitle" }, names.length ? L("bulkNoHome") : L("bulkOffList")),
-          sbH("button", { className: "drawerClose", onClick: onClose, "aria-label": L("close") }, sbH(X3, { size: 16, strokeWidth: 2 }))
-        ),
-        sbH(
-          "div",
-          { className: "functionEditModalBody" },
-          names.length
-            ? sbH("ul", { className: "sbHomelessList" }, names.map((n, i) => sbH("li", { key: `${n}-${i}`, dir: "auto" }, n)))
-            : null,
-          names.length
-            ? sbH("p", { className: "sbHomelessHint" }, report && report.aiDown ? L("bulkPlain") : L("bulkNoHomeHint"))
-            : null,
-          // Filed, but on no line of the checklist: they are in the folder's
-          // own list at the top and nowhere else (29.8.26).
-          offList.length
-            ? sbH(
-                React15.Fragment,
-                null,
-                sbH("h4", { className: "sbOffListTitle" }, L("bulkOffList")),
-                sbH("ul", { className: "sbHomelessList" }, offList.map((n, i) => sbH("li", { key: `off-${i}`, dir: "auto" }, n))),
-                sbH("p", { className: "sbHomelessHint" }, L("bulkOffListHint"))
-              )
-            : null
-        ),
-        sbH(
-          "div",
-          { className: "functionEditModalSaveRow" },
-          sbH("button", { type: "button", className: "functionEditBtn", onClick: onClose }, L("close"))
-        )
-      )
-    ),
-    document.body
+    printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
   );
 }
 // src/App.jsx
