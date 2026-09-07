@@ -494,7 +494,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 71";
+var APP_BUILD = "7.9.2026 · build 74";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1102,7 +1102,9 @@ var pdfViewer = `
         }
         .photoUploadRow { display: flex; justify-content: center; margin-bottom: 4px; }
         .photoGridScroll {
-          width: 100%; height: 390px; overflow-y: auto; overflow-x: hidden;
+          /* Two rows of 172px tiles plus the gap between them, and the rest
+             scrolls. A gallery is not a reason for the page to get longer. */
+          width: 100%; height: 354px; overflow-y: auto; overflow-x: hidden;
           direction: ltr; scrollbar-gutter: stable;
           scrollbar-width: thin; scrollbar-color: var(--line) transparent;
         }
@@ -1113,18 +1115,32 @@ var pdfViewer = `
         .photoGridScroll::-webkit-scrollbar { width: 9px; }
         .photoGridScroll::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
         .photoGridScroll::-webkit-scrollbar-thumb:hover { background: var(--mist); }
-        /* auto-fit rather than five fixed columns: with two photos on the
-           board, five columns put them both against one edge and stretched
-           them to a quarter of the screen. (7.9.26) */
+        /* Five across, whatever the count, so the gallery always reads as a
+           contact sheet rather than a row of blown-up thumbnails. Two rows are
+           shown and the rest scrolls inside the card — the page itself must not
+           grow with the number of photos. (7.9.26)
+           The app is drawn at a fixed design width and scaled, so the tile size
+           is predictable: (900 - 4x10) / 5 = 172px, and two rows plus the gap
+           is 354px. */
         .photoGrid {
-          display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 190px));
-          gap: 12px; justify-content: center; max-width: 80%; margin: 0 auto;
+          display: grid; grid-template-columns: repeat(5, 1fr);
+          gap: 10px; width: min(100%, 900px); margin: 0 auto;
         }
         .photoTile {
           position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden;
           background: #eef0f2; border: 1px solid var(--line-soft);
         }
         .photoTile img { width: 100%; height: 100%; object-fit: cover; cursor: zoom-in; display: block; transition: transform .2s ease; }
+        /* Who put it there and when. Read on the enlarged picture, not on the
+           tile — a caption on a 172px square is noise. */
+        .photoMeta {
+          position: absolute; inset-inline: 0; bottom: 0; padding: 10px 14px;
+          background: linear-gradient(to top, rgba(12,18,32,.82), rgba(12,18,32,0));
+          color: #fff; font-size: 12.5px; font-weight: 600; text-align: center;
+          display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+        }
+        .photoMeta .when { direction: ltr; font-variant-numeric: tabular-nums; }
+        .photoShot { position: relative; max-width: 92%; max-height: 92%; }
         .photoTile:hover img { transform: scale(1.05); }
         .photoDel {
           position: absolute; top: 6px; inset-inline-end: 6px; width: 24px; height: 24px; border-radius: 999px;
@@ -1136,7 +1152,9 @@ var pdfViewer = `
           position: fixed; inset: 0; z-index: 900; background: rgba(15,16,19,0.86);
           display: flex; align-items: center; justify-content: center; padding: 30px;
         }
-        .photoLightbox img { max-width: 92%; max-height: 92%; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: default; }
+        /* The picture is inside .photoShot now, so it fills its box and the
+           box is what the screen limits — nesting two percentages shrank it. */
+        .photoLightbox .photoShot img { display: block; max-width: 100%; max-height: 88vh; object-fit: contain; border-radius: 8px; box-shadow: 0 20px 60px rgba(0,0,0,0.5); cursor: default; }
         .photoLightboxClose {
           position: absolute; top: 16px; inset-inline-end: 16px; width: 40px; height: 40px; border-radius: 999px;
           border: none; background: rgba(255,255,255,0.15); color: #fff; display: flex; align-items: center;
@@ -3884,6 +3902,14 @@ var sdSign = `
           display: flex; align-items: center; justify-content: center;
           font-weight: 800; color: #103460; font-size: 14px;
         }
+        /* "manual" over the box that says which item it belongs to, both on
+           the centre line of the column. */
+        .sdManualRef { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+        .sdManualTag { font-size: 10px; font-weight: 800; color: var(--mist); line-height: 1; }
+        .sdBoqRef {
+          width: 100%; max-width: 96px; text-align: center; padding: 3px 5px;
+          font-size: 11.5px; font-variant-numeric: tabular-nums;
+        }
         .llicTable td { vertical-align: middle; }
         .llicThumb {
           width: 46px; height: 34px; object-fit: cover; border-radius: 6px;
@@ -6039,6 +6065,15 @@ import React16, { useState as useState7, useRef as useRef6 } from "react";
 import { Upload as UploadPh, X as XPh } from "lucide-react";
 function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }) {
   const [zoom, setZoom] = useState7(null);
+  const stampOf = (p) => {
+    if (!p || (!p.at && !p.by)) return null;
+    const d = p.at ? new Date(p.at) : null;
+    const two = (n) => String(n).padStart(2, "0");
+    const when = d && !isNaN(d.getTime())
+      ? `${two(d.getDate())}/${two(d.getMonth() + 1)}/${String(d.getFullYear()).slice(-2)} ${two(d.getHours())}:${two(d.getMinutes())}`
+      : "";
+    return { when, by: p.by || "" };
+  };
   const inputRef = useRef6(null);
   const list = photos || [];
   // A screenshot pasted straight into the gallery, the same way it works on the
@@ -6073,14 +6108,23 @@ function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRT
       list.length === 0 ? /* @__PURE__ */ React16.createElement("div", { className: "photoGridEmpty" }, /* @__PURE__ */ React16.createElement("p", { style: { margin: 0 } }, isRTL ? canEdit ? "עדיין אין תמונות. לחצי 'העלאת תמונות' כדי להוסיף." : "עדיין לא הועלו תמונות." : canEdit ? "No photos yet. Click 'Upload photos' to add." : "No photos yet.")) : /* @__PURE__ */ React16.createElement("div", { className: "photoGrid" }, list.map((p) => /* @__PURE__ */ React16.createElement(
         "div",
         { className: "photoTile", key: p.id },
-        /* @__PURE__ */ React16.createElement("img", { src: p.dataUrl, alt: "", loading: "lazy", onClick: () => setZoom(p.dataUrl) }),
+        /* @__PURE__ */ React16.createElement("img", { src: p.dataUrl, alt: "", loading: "lazy", onClick: () => setZoom(p) }),
         canEdit && /* @__PURE__ */ React16.createElement("button", { type: "button", className: "photoDel", onClick: (e) => { e.stopPropagation(); if (onRemovePhoto) onRemovePhoto(p.id); }, "aria-label": "Remove", title: isRTL ? "מחיקה" : "Remove" }, /* @__PURE__ */ React16.createElement(XPh, { size: 13, strokeWidth: 2.6 }))
       )))
     ),
     zoom && /* @__PURE__ */ React16.createElement(
       "div",
       { className: "photoLightbox", onClick: () => setZoom(null) },
-      /* @__PURE__ */ React16.createElement("img", { src: zoom, alt: "", onClick: (e) => e.stopPropagation() }),
+      /* @__PURE__ */ React16.createElement("div", { className: "photoShot", onClick: (e) => e.stopPropagation() },
+        /* @__PURE__ */ React16.createElement("img", { src: zoom.dataUrl, alt: "" }),
+        (() => {
+          const st = stampOf(zoom);
+          if (!st) return null;
+          return /* @__PURE__ */ React16.createElement("div", { className: "photoMeta", dir: isRTL ? "rtl" : "ltr" },
+            st.when ? /* @__PURE__ */ React16.createElement("span", { className: "when" }, st.when) : null,
+            st.by ? /* @__PURE__ */ React16.createElement("span", null, st.by) : null);
+        })()
+      ),
       /* @__PURE__ */ React16.createElement("button", { type: "button", className: "photoLightboxClose", onClick: () => setZoom(null), "aria-label": "Close" }, /* @__PURE__ */ React16.createElement(XPh, { size: 22, strokeWidth: 2.4 }))
     )
   );
@@ -9985,6 +10029,9 @@ function sdBlankRow() {
     // the stamp is what the small grey line under them shows; a status can be
     // set back, but the date something actually happened is not rewritten.
     requested: false, requestedAt: "",
+    // Which bill-of-quantities item a hand-added row belongs to. Free text on
+    // purpose: it is a reference she writes, not a key anything joins on.
+    boqRef: "",
     dueAt: "",
     toClient: false, toClientAt: "",
     category: null
@@ -10012,12 +10059,18 @@ var SD_L = {
   restore: { en: "Restore", he: "החזרה" },
   showHidden: { en: "Show hidden rows", he: "הצגת שורות מוסתרות" },
   showCol: { en: "Show", he: "הצגה" },
-  removeRow: { en: "Remove from this list", he: "הסרה מהרשימה" },
-  removedSome: { en: "Removed from this list", he: "הוסרו מהרשימה" },
+  removeCol: { en: "Remove", he: "מחיקה" },
+  removeRow: { en: "Remove from this list", he: "מחיקה מהרשימה" },
+  removedSome: { en: "Removed from this list", he: "נמחקו מהרשימה" },
   restoreAll: { en: "Restore all", he: "החזרת הכל" },
   onlyOpen: { en: "Only what is still open", he: "רק מה שעדיין פתוח" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
   manual: { en: "Manual", he: "ידני" },
+  boqRef: { en: "BOQ item", he: "מספר סעיף" },
+  boqRefHint: {
+    en: "One BOQ item can need several drawings — type the item number here to tie this row to it.",
+    he: "מסעיף אחד יכולות לצאת כמה תוכניות — כאן רושמים את מספר הסעיף שאליו השורה שייכת."
+  },
   rowsOf: { en: "drawings", he: "תוכניות" },
   approvedOf: { en: "approved", he: "אושרו" },
   empty: { en: "Nothing in this category needs a shop drawing.", he: "אין בקטגוריה הזו סעיף שדורש תוכנית ייצור." },
@@ -10393,7 +10446,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 sbH("th", { className: "cStat" }, L("status")),
                 sbH("th", { className: "cDate" }, L("submittedAt")),
                 sbH("th", { className: "cDate" }, L("approvedAt")),
-                canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null
+                canEdit ? sbH("th", { className: "cAct" }, L("removeCol")) : null
               )
             ),
             groups.map((g) =>
@@ -10420,10 +10473,24 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     sbH(
                       "td",
                       { className: "cSec" },
-                      // Just the number. How many BOQ lines it covers was grey
-                      // text nobody acted on, and it was taking the width the
-                      // number itself wanted.
-                      sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
+                      // A BOQ row is its own number. A row she added by hand is
+                      // marked "manual" and carries a box underneath for the
+                      // item it belongs to: one item can need four drawings, and
+                      // without somewhere to write the number down there is no
+                      // way to tell which four. (7.9.26)
+                      r.source === "boq"
+                        ? sbH("span", { className: "lliCode", dir: "ltr" }, r.code)
+                        : sbH(
+                            "div",
+                            { className: "sdManualRef" },
+                            sbH("span", { className: "sdManualTag" }, L("manual")),
+                            sbH("input", {
+                              className: "lliIn sdBoqRef", type: "text", dir: "ltr",
+                              value: v.boqRef || "", readOnly: !canEdit,
+                              placeholder: L("boqRef"), title: L("boqRefHint"),
+                              onChange: (e) => patch(r.code, { boqRef: e.target.value })
+                            })
+                          ),
                       r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null
                     ),
                     sbH(
@@ -10574,24 +10641,19 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.approvedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { approvedAt: e.target.value }) })
                         : sbH("span", { className: "lliDash" }, "—")
                     ),
-                    // Ticked means the row is on the board: it is printed, it
-                    // is exported, and it is what a client sees. Unticking is
-                    // how a row is taken off all three at once (29.8.26).
+                    // One action, not two.
+                    //
+                    // There used to be a tick for "on the board" and a bin for
+                    // "off the list", and they said nearly the same thing. What
+                    // actually happens is this: the routing from the bill of
+                    // quantities proposes the rows, and after looking at what
+                    // the AI classified she decides a line needs no shop drawing
+                    // — so she deletes it. It comes back from the bar at the top
+                    // of the board if she was wrong. (7.9.26)
                     canEdit
                       ? sbH(
                           "td",
                           { className: "cAct" },
-                          sbH("input", {
-                            type: "checkbox",
-                            className: "lliShowTick",
-                            checked: !hidden,
-                            title: hidden ? L("restore") : L("hide"),
-                            "aria-label": L("showCol"),
-                            onChange: () => patch(r.code, { hidden: !hidden })
-                          }),
-                          // Off the list altogether — a grey tick in the
-                          // routing table, and it comes back from the bar at
-                          // the top of the board (30.8.26).
                           sbH(
                             "button",
                             {
@@ -13195,6 +13257,14 @@ var SDC_L = {
 
 // An approval, once made, is the whole story of the row as far as the client is
 // concerned: when, by whom, and which file carries the marks.
+// A description is a sentence; a file name is not. Slashes and quotes are
+// taken out, runs of space collapsed, and the whole thing capped — a name that
+// is 200 characters long is unusable in every mail client there is.
+function sdFileLabel(text) {
+  const clean = String(text || "").replace(/[\\/:*?"<>|\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
+  if (!clean) return "SD";
+  return clean.length > 60 ? `${clean.slice(0, 60).trim()}…` : clean;
+}
 function sdApprovalOf(approvals, code) {
   return (approvals || {})[code] || null;
 }
@@ -13914,7 +13984,8 @@ function SdClientBoard({
               return sbH(
                 "tr",
                 { key: r.code, className: ap ? "approved" : "" },
-                sbH("td", null, sbH("span", { className: "sdcNum" }, r.source === "boq" ? r.code : "—")),
+                sbH("td", null, sbH("span", { className: "sdcNum" },
+                  r.source === "boq" ? r.code : (v.boqRef || "").trim() || "—")),
                 // A plain word, not a dropdown: the client does not classify
                 // anything, and a combo box invites a click that does nothing.
                 sbH("td", null, cat ? (lang === "he" ? cat.he : cat.en) : sbH("span", { className: "sdcNone" }, "—")),
@@ -13987,10 +14058,11 @@ function SdClientBoard({
           title: signing.row.title || (signing.file && signing.file.name) || "",
           who: currentEmail,
           projectName,
-          // What the drawing is called on paper: its drawing number when it has
-          // one, its BOQ item otherwise. Never the uploaded file's name.
-          docLabel: (sdRowOf(rows, signing.row.code).dwgNo || "").trim()
-            || (signing.row.source === "boq" ? signing.row.code : signing.row.title) || "SD",
+          // The description, not the drawing number and never the uploaded
+          // file's name: <project> - <description> - <the day it was saved>.
+          // Trimmed to something a folder listing can still show, and stripped
+          // of the characters a file system will not take. (7.9.26)
+          docLabel: sdFileLabel(sdRowOf(rows, signing.row.code).desc || signing.row.title || ""),
           onCancel: () => setSigning(null),
           onDone: (signedFile, markCount) => saveApproval(signing.row, signedFile, markCount)
         })
@@ -22506,7 +22578,14 @@ function ProjectDashboardApp() {
           canvas.getContext("2d").drawImage(img, 0, 0, w, h);
           let out;
           try { out = canvas.toDataURL("image/jpeg", 0.82); } catch (e) { out = reader.result; }
-          added.push({ id: `ph-${Date.now()}-${idx}`, dataUrl: out });
+          // Stamped as it goes in. A photo of a site on a given week is only
+          // evidence if it says which week, and asking anybody to type that in
+          // is asking for it to be wrong. (7.9.26)
+          added.push({
+            id: `ph-${Date.now()}-${idx}`, dataUrl: out,
+            at: (/* @__PURE__ */ new Date()).toISOString(),
+            by: loggedInEmail || ""
+          });
           pending -= 1;
           flush();
         };
