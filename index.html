@@ -478,7 +478,11 @@ var COPY = {
 var DEFAULT_BRAND_NAME = "A. Weiss";
 // Printed at the bottom of the login screen and in the side menu. When a screen
 // looks wrong, this is the first thing to read: it says which file is running.
-var APP_BUILD = "5.9.2026 · build 63";
+// The seven cubes a client's board holds: the programme, the room search, the
+// architect's presentation, shop drawings, submittals, the ordering board and
+// the site photos. Everything else on the project is internal. (7.9.26)
+var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "photos"];
+var APP_BUILD = "7.9.2026 · build 64";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -3682,6 +3686,138 @@ var marcella = `
         }
 `;
 
+// src/styles/sdSign.js
+// The client's view of the shop drawings, and the screen where one is signed.
+var sdSign = `
+        /* ---- the client's table ---- */
+        .sdcWrap { display: flex; flex-direction: column; gap: 12px; }
+        .sdcHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+        .sdcTitle { margin: 0; font-size: 19px; font-weight: 800; color: #103460; }
+        .sdcSub { margin: 2px 0 0; font-size: 12px; color: var(--steel); font-weight: 600; }
+        .sdcTable { width: 100%; border-collapse: separate; border-spacing: 0 6px; }
+        .sdcTable th {
+          font-size: 11px; font-weight: 800; color: var(--steel);
+          text-align: start; padding: 0 10px 2px; white-space: nowrap;
+        }
+        .sdcTable td {
+          background: #fff; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+          padding: 9px 10px; font-size: 13px; color: #16324f; vertical-align: middle;
+        }
+        .sdcTable tr td:first-child { border-inline-start: 1px solid var(--line); border-start-start-radius: 9px; border-end-start-radius: 9px; }
+        .sdcTable tr td:last-child { border-inline-end: 1px solid var(--line); border-start-end-radius: 9px; border-end-end-radius: 9px; }
+        .sdcTable tr.approved td { background: #f1f9f4; border-color: #bfe3cd; }
+        .sdcTable tr.approved td:first-child { border-inline-start-color: #bfe3cd; }
+        .sdcNum { direction: ltr; font-variant-numeric: tabular-nums; white-space: nowrap; }
+        .sdcChip { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 11.5px; font-weight: 800; white-space: nowrap; }
+        .sdcOpen {
+          border: 1px solid var(--line); background: #fff; border-radius: 8px;
+          padding: 5px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+          font-family: inherit; color: #16324f;
+        }
+        .sdcOpen:hover { border-color: var(--accent); color: var(--accent); }
+        .sdcNone { color: var(--mist); }
+        .sdcEmpty {
+          border: 1px dashed var(--line); border-radius: 10px; padding: 24px;
+          text-align: center; color: var(--steel); font-weight: 600; font-size: 13px;
+        }
+
+        /* ---- the little "download or sign" dialog ---- */
+        .sdcAsk {
+          position: fixed; inset: 0; z-index: 900; background: rgba(16,32,58,.42);
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .sdcAskBox {
+          background: #fff; border-radius: 14px; padding: 20px 22px; width: 100%; max-width: 380px;
+          box-shadow: 0 20px 60px rgba(0,0,0,.3);
+        }
+        .sdcAskTitle { margin: 0 0 4px; font-size: 16px; font-weight: 800; color: #103460; }
+        .sdcAskName { margin: 0 0 16px; font-size: 12px; color: var(--steel); font-weight: 600; word-break: break-all; }
+        .sdcAskRow { display: flex; flex-direction: column; gap: 8px; }
+        .sdcAskBtn {
+          display: flex; align-items: center; gap: 9px; width: 100%;
+          border: 1px solid var(--line); background: #fff; border-radius: 10px;
+          padding: 11px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+          font-family: inherit; color: #16324f; text-align: start;
+        }
+        .sdcAskBtn:hover { border-color: var(--accent); color: var(--accent); }
+        .sdcAskBtn.primary { background: #14181f; color: #fff; border-color: #14181f; }
+        .sdcAskBtn.primary:hover { background: #1f2733; color: #fff; }
+        .sdcAskCancel { margin-top: 12px; width: 100%; text-align: center; }
+
+        /* ---- the signing screen ---- */
+        .sdSign { position: fixed; inset: 0; z-index: 950; background: #eceef1; display: flex; flex-direction: column; }
+        .sdSignBar {
+          display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+          padding: 9px 14px; background: #fff; border-bottom: 1px solid var(--line);
+        }
+        .sdSignName { font-size: 13px; font-weight: 800; color: #103460; margin-inline-end: auto; }
+        .sdSignBtn {
+          display: inline-flex; align-items: center; gap: 6px;
+          border: 1px solid var(--line); background: #fff; border-radius: 8px;
+          padding: 6px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+          font-family: inherit; color: #16324f;
+        }
+        .sdSignBtn:hover { border-color: var(--accent); color: var(--accent); }
+        .sdSignBtn.on { background: #10275a; border-color: #10275a; color: #fff; }
+        .sdSignBtn.go { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
+        .sdSignBtn.go:hover { background: #17693f; color: #fff; }
+        .sdSignBtn:disabled { opacity: .45; cursor: default; }
+        .sdSignHint { font-size: 12px; color: var(--steel); font-weight: 600; }
+        .sdSignScroll { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .sdSignPage { position: relative; box-shadow: 0 6px 24px rgba(16,32,58,.16); background: #fff; direction: ltr; }
+        .sdSignPage canvas { display: block; }
+        .sdSignPage.placing { cursor: crosshair; }
+
+        /* an annotation, on screen. The burned PDF is drawn to match. */
+        .sdNote {
+          position: absolute; box-sizing: border-box; background: rgba(255,255,255,.92);
+          padding: 4px 6px; overflow: hidden;
+        }
+        .sdNote.locked { border: 2px solid #10275a; }
+        .sdNote.draft { border: 1px dashed #7a8698; }
+        .sdNote textarea {
+          width: 100%; border: none; outline: none; resize: none; background: transparent;
+          font-family: inherit; color: #10275a; padding: 0; display: block; overflow: hidden;
+        }
+        .sdNoteText { color: #10275a; white-space: pre-wrap; word-break: break-word; }
+        .sdNoteStamp { color: #4a5a72; border-top: 1px solid #c8d0dc; margin-top: 3px; padding-top: 2px; }
+        .sdNoteGrip { position: absolute; inset-inline-start: -9px; top: -9px; cursor: move; }
+        .sdMark { position: absolute; box-sizing: border-box; }
+        .sdMark img { width: 100%; height: 100%; display: block; object-fit: contain; }
+        .sdMark.sel { outline: 2px dashed #10275a; outline-offset: 2px; }
+        .sdMarkBtn {
+          position: absolute; top: -11px; inset-inline-end: -11px; width: 22px; height: 22px;
+          border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #c0392b;
+          font-weight: 900; line-height: 1; cursor: pointer; padding: 0; font-family: inherit;
+        }
+        .sdMoveBtn {
+          position: absolute; top: -11px; inset-inline-start: -11px; width: 22px; height: 22px;
+          border-radius: 999px; border: 1px solid var(--line); background: #fff; color: var(--steel);
+          cursor: move; padding: 0; display: flex; align-items: center; justify-content: center;
+        }
+        .sdSizeRow { display: flex; align-items: center; gap: 8px; }
+        .sdSizeRow input[type="range"] { width: 130px; }
+
+        /* the stamp picker */
+        .sdStampPad {
+          border: 2px dashed var(--line); border-radius: 10px; min-height: 130px;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          background: #fbfcfd; color: var(--steel); font-weight: 600; font-size: 12.5px;
+          text-align: center; padding: 12px;
+        }
+        .sdStampPad.on { border-color: var(--accent); }
+        .sdStampPad img { max-width: 100%; max-height: 180px; }
+        .sdSignBusy {
+          position: absolute; inset: 0; background: rgba(255,255,255,.82); z-index: 5;
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 800; color: #103460; font-size: 14px;
+        }
+        .sdSignErr {
+          background: #fdf2f3; border: 1px solid #f0c4c9; color: #b02a37;
+          border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 12.5px;
+        }
+`;
+
 // src/styles/index.js
 var styles = [
   base,
@@ -3694,7 +3830,8 @@ var styles = [
   gantt,
   drawer,
   admin,
-  marcella
+  marcella,
+  sdSign
 ].join("\n");
 
 // src/lib/format.js
@@ -5911,6 +6048,8 @@ function CardView({
   lliRows,
   rfiRows,
   onChangeRfiRows,
+  sdApprovals,
+  onChangeSdApprovals,
   marcellaRows,
   onChangeMarcellaRows,
   onAddToChangeInstructions,
@@ -6007,7 +6146,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -9792,7 +9931,7 @@ var SD_L = {
   allStatuses: { en: "All statuses", he: "כל הסטטוסים" }
 };
 
-function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog }) {
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -9891,6 +10030,22 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     }
     g.rows.push(r);
   });
+
+  // The client gets a different screen, not a trimmed version of this one.
+  //
+  // This board is the working list: every BOQ line that might need a drawing,
+  // most of them empty. What a client is owed is the drawings that were
+  // actually issued to them — which is exactly what the "submitted to client"
+  // switch records — and eight columns, in the order she reads them. (5.9.26)
+  if (viewerRole === "client") {
+    const clientRows = all
+      .filter((r) => !isRemoved(r) && !isHidden(r) && sdRowOf(data, r.code).toClient)
+      .sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, { numeric: true }));
+    return sbH(SdClientBoard, {
+      lang, isRTL, rows: data, approvals, onChangeApprovals,
+      projectId, projectName, currentEmail, visibleRows: clientRows
+    });
+  }
 
   // A drawing is a file like any other submittal attachment and travels the same
   // road: the storage bucket first, an inline copy only if the bucket is out.
@@ -12662,6 +12817,780 @@ function roomsFromSheet(aoa) {
     if (desc && !marks[key]) marks[key] = { cat, mark, name: "", desc, image: null };
   }
   return { rows, marks };
+}
+
+// src/cards/SdClient.jsx
+// -----------------------------------------------------------------------------
+// The client's shop-drawing folder, and the screen where a drawing is signed.
+//
+// Two rules shape everything here.
+//
+// The first: a client sees only what was actually issued to them. The board the
+// system administrator works on holds every BOQ line that might ever need a
+// drawing — most of them empty, half of them not relevant yet. Showing that to
+// a client is showing them the workings. `toClient` is the switch the
+// administrator already throws when a drawing goes out, so it is the only
+// question this screen asks. (5.9.26)
+//
+// The second: an approval must not be undoable by accident, and must not need
+// the client to be able to write anything else. So the approval lives in a part
+// of its own, `project-sd-approvals:<projectId>` — the client may write there
+// and nowhere else, which means the worst they can do is approve their own
+// drawing. They cannot touch a due date, a description, or the list itself.
+// The database rule is in `security-step7-sd-approvals.sql`.
+// -----------------------------------------------------------------------------
+import { Download as DownloadSd, PenLine as PenLineSd, X as XSd, Move as MoveSd, Check as CheckSd, Stamp as StampSd, ArrowLeft as ArrowLeftSd, ArrowRight as ArrowRightSd } from "lucide-react";
+
+// pdf-lib burns the marks into a new file. Same three sources as pdf.js, same
+// reason: one CDN having a bad afternoon must not stop her signing a drawing.
+var PDFLIB_VERSION = "1.17.1";
+var PDFLIB_SOURCES = [
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/${PDFLIB_VERSION}/pdf-lib.min.js`,
+  `https://cdn.jsdelivr.net/npm/pdf-lib@${PDFLIB_VERSION}/dist/pdf-lib.min.js`,
+  `https://unpkg.com/pdf-lib@${PDFLIB_VERSION}/dist/pdf-lib.min.js`
+];
+var sdPdfLibLoading = null;
+async function loadPdfLib() {
+  if (typeof window !== "undefined" && window.PDFLib) return window.PDFLib;
+  if (sdPdfLibLoading) return sdPdfLibLoading;
+  sdPdfLibLoading = (async () => {
+    let lastErr = null;
+    for (const src of PDFLIB_SOURCES) {
+      try {
+        await loadScriptOnce(src);
+        if (!window.PDFLib) throw new Error("PDFLib not defined after script load");
+        return window.PDFLib;
+      } catch (e) {
+        lastErr = e;
+        console.error("pdf-lib source failed:", src, e);
+      }
+    }
+    sdPdfLibLoading = null;
+    throw lastErr || new Error("pdf-lib failed to load");
+  })();
+  return sdPdfLibLoading;
+}
+
+var SDC_L = {
+  title: { en: "Shop drawings for approval", he: "תוכניות ייצור לאישור" },
+  lead: {
+    en: "Drawings issued to you. Open one to download it or to sign it.",
+    he: "תוכניות שהוגשו לכם. פתיחה מאפשרת הורדה או חתימה."
+  },
+  boq: { en: "BOQ", he: "BOQ" },
+  category: { en: "Category", he: "קטגוריה" },
+  desc: { en: "Description", he: "תיאור" },
+  dueAt: { en: "Approval due", he: "תאריך יעד לאישור" },
+  submittedAt: { en: "Submitted", he: "תאריך הגשה" },
+  file: { en: "File", he: "קובץ" },
+  status: { en: "Status", he: "סטטוס" },
+  approvedAt: { en: "Approved on", he: "תאריך אישור" },
+  open: { en: "Open", he: "פתיחה" },
+  empty: {
+    en: "No drawing has been issued for your approval yet.",
+    he: "עדיין לא הוגשה תוכנית לאישורכם."
+  },
+  // the dialog
+  askTitle: { en: "What would you like to do?", he: "מה תרצו לעשות?" },
+  download: { en: "Download the file", he: "הורדת הקובץ" },
+  sign: { en: "Sign", he: "חתימה" },
+  cancel: { en: "Cancel", he: "ביטול" },
+  approvedAlready: { en: "Signed and approved", he: "נחתם ואושר" },
+  viewSigned: { en: "Open the signed file", he: "פתיחת הקובץ החתום" },
+  // the signing screen
+  noteTool: { en: "Handwritten note", he: "חתימה ידנית" },
+  noteDone: { en: "Finish notes", he: "סיום" },
+  stampTool: { en: "Stamp", he: "חותמת" },
+  finish: { en: "Approve and finish", he: "אישור וסיום" },
+  close: { en: "Close", he: "סגירה" },
+  placeHint: {
+    en: "Click anywhere on the drawing to place a note. Add as many as you need, then press Finish.",
+    he: "לחיצה על התוכנית ממקמת תיבת טקסט. אפשר להוסיף כמה שצריך, ואז ללחוץ סיום."
+  },
+  stampHint: { en: "Drag the stamp into place and set its size.", he: "גוררים את החותמת למקום ומכווננים את הגודל." },
+  stampPick: {
+    en: "Click to choose an image, or press Ctrl+V to paste one.",
+    he: "לחיצה לבחירת קובץ, או Ctrl+V להדבקת תמונה."
+  },
+  next: { en: "Next", he: "הבא" },
+  size: { en: "Size", he: "גודל" },
+  remove: { en: "Remove", he: "הסרה" },
+  loading: { en: "Loading the drawing…", he: "טוען את התוכנית…" },
+  burning: { en: "Writing the signed file…", he: "כותב את הקובץ החתום…" },
+  confirmTitle: { en: "Approve this drawing?", he: "לאשר את התוכנית?" },
+  confirmBody: {
+    en: "A new signed file is created and the drawing is marked approved. This cannot be undone from here.",
+    he: "ייווצר קובץ חתום חדש והתוכנית תסומן כמאושרת. לא ניתן לבטל את זה מכאן."
+  },
+  confirmYes: { en: "Approve", he: "אישור" },
+  nothingToSign: {
+    en: "Add a note or a stamp before approving.",
+    he: "יש להוסיף הערה או חותמת לפני האישור."
+  },
+  failed: { en: "The signed file could not be saved. Nothing was changed.", he: "לא הצלחתי לשמור את הקובץ החתום. שום דבר לא השתנה." },
+  noPdf: { en: "Only a PDF can be signed here. Use Download for this file.", he: "אפשר לחתום כאן על PDF בלבד. עבור הקובץ הזה יש להשתמש בהורדה." }
+};
+
+// An approval, once made, is the whole story of the row as far as the client is
+// concerned: when, by whom, and which file carries the marks.
+function sdApprovalOf(approvals, code) {
+  return (approvals || {})[code] || null;
+}
+// Green, and "approved", is driven by the approval record — not by the status
+// the administrator set. The two can differ for a moment while a save is in
+// flight, and the client should see their own action immediately.
+function sdClientStatus(row, approval, lang) {
+  if (approval) return { key: "approved", label: lang === "he" ? "אושר" : "Approved", color: "#1a7f4b" };
+  const st = sdStatus((row || {}).status);
+  return { key: st.key, label: lang === "he" ? st.he : st.en, color: st.color };
+}
+
+// ---- geometry ---------------------------------------------------------------
+// Every mark is stored in PDF points against the page it sits on, with the
+// origin at the TOP-left — the same way the screen thinks. Storing screen
+// pixels instead would move every mark the first time somebody signs on a
+// different sized window; points are what the printed page is measured in, so
+// what is placed is what is burned.
+function sdMarkBlank(kind, page, xPt, yPt) {
+  return {
+    id: `k-${Date.now()}-${Math.floor(Math.random() * 1e4)}`,
+    kind, page,
+    x: xPt, y: yPt,
+    w: kind === "note" ? 170 : 130,
+    h: kind === "note" ? 44 : 60,
+    text: "",
+    dataUrl: null,
+    locked: false
+  };
+}
+// A note is drawn to a small transparent PNG and that PNG is embedded.
+//
+// The alternative — asking pdf-lib to draw the text — needs a font embedded
+// with Hebrew glyphs and a right-to-left shaper, which is a large dependency to
+// carry for a sentence. The browser already draws Hebrew correctly, so it draws
+// it once into a canvas and the canvas goes into the page. The drawing itself
+// stays vector; only the note is a picture, and it is a picture of exactly what
+// she saw on screen.
+var SD_NOTE_PAD = 4;
+var SD_NOTE_FONT = 11;
+var SD_NOTE_LINE = 1.35;
+var SD_NOTE_STAMP_FONT = 8;
+function sdWrapText(ctx, text, maxW) {
+  const out = [];
+  String(text || "").split("\n").forEach((para) => {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length) { out.push(""); return; }
+    let line = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const next = `${line} ${words[i]}`;
+      if (ctx.measureText(next).width <= maxW) line = next;
+      else { out.push(line); line = words[i]; }
+    }
+    out.push(line);
+  });
+  return out;
+}
+// Height in points, for a note of this width holding this text. The screen and
+// the burned page both ask this, so neither can drift from the other.
+function sdNoteHeight(text, wPt, stampLine) {
+  const c = document.createElement("canvas").getContext("2d");
+  c.font = `${SD_NOTE_FONT}px Assistant, Arial, sans-serif`;
+  const lines = sdWrapText(c, text, Math.max(10, wPt - SD_NOTE_PAD * 2));
+  const body = Math.max(1, lines.length) * SD_NOTE_FONT * SD_NOTE_LINE;
+  const stamp = stampLine ? SD_NOTE_STAMP_FONT * 1.5 + 3 : 0;
+  return Math.ceil(body + stamp + SD_NOTE_PAD * 2);
+}
+function sdNoteToPng(mark, stampLine, scale) {
+  const s = scale || 4;
+  const wPt = mark.w;
+  const hPt = sdNoteHeight(mark.text, wPt, stampLine);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(wPt * s);
+  canvas.height = Math.ceil(hPt * s);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(s, s);
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.fillRect(0, 0, wPt, hPt);
+  // navy, 2pt, drawn inside the box so nothing is clipped
+  ctx.strokeStyle = "#10275a";
+  ctx.lineWidth = 1.4;
+  ctx.strokeRect(0.7, 0.7, wPt - 1.4, hPt - 1.4);
+  ctx.direction = /[֐-׿]/.test(String(mark.text || "") + String(stampLine || "")) ? "rtl" : "ltr";
+  const startX = ctx.direction === "rtl" ? wPt - SD_NOTE_PAD : SD_NOTE_PAD;
+  ctx.textAlign = ctx.direction === "rtl" ? "right" : "left";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#10275a";
+  ctx.font = `${SD_NOTE_FONT}px Assistant, Arial, sans-serif`;
+  const lines = sdWrapText(ctx, mark.text, Math.max(10, wPt - SD_NOTE_PAD * 2));
+  let y = SD_NOTE_PAD;
+  lines.forEach((ln) => {
+    ctx.fillText(ln, startX, y);
+    y += SD_NOTE_FONT * SD_NOTE_LINE;
+  });
+  if (stampLine) {
+    ctx.strokeStyle = "#c8d0dc";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(SD_NOTE_PAD, y + 1.5);
+    ctx.lineTo(wPt - SD_NOTE_PAD, y + 1.5);
+    ctx.stroke();
+    ctx.fillStyle = "#4a5a72";
+    ctx.font = `${SD_NOTE_STAMP_FONT}px Assistant, Arial, sans-serif`;
+    ctx.fillText(stampLine, startX, y + 4);
+  }
+  return { dataUrl: canvas.toDataURL("image/png"), wPt, hPt };
+}
+
+// The one function that turns marks into a file. Kept apart from the screen so
+// it can be run on its own — the screen is hard to test, this is not.
+async function sdBurnMarks(pdfBytes, marks, stampLine) {
+  const { PDFDocument } = await loadPdfLib();
+  const doc = await PDFDocument.load(pdfBytes);
+  const pages = doc.getPages();
+  const embedPng = async (dataUrl) => doc.embedPng(dataUrl);
+  for (const mark of marks) {
+    const page = pages[mark.page - 1];
+    if (!page) continue;
+    const pageH = page.getSize().height;
+    if (mark.kind === "note") {
+      if (!String(mark.text || "").trim()) continue;
+      const shot = sdNoteToPng(mark, stampLine);
+      const img = await embedPng(shot.dataUrl);
+      page.drawImage(img, {
+        x: mark.x,
+        // The page counts from the bottom; the screen counts from the top.
+        y: pageH - mark.y - shot.hPt,
+        width: shot.wPt,
+        height: shot.hPt
+      });
+    } else if (mark.kind === "stamp" && mark.dataUrl) {
+      const img = /^data:image\/png/i.test(mark.dataUrl)
+        ? await doc.embedPng(mark.dataUrl)
+        : await doc.embedJpg(mark.dataUrl);
+      page.drawImage(img, { x: mark.x, y: pageH - mark.y - mark.h, width: mark.w, height: mark.h });
+    }
+  }
+  return doc.save();
+}
+
+// -----------------------------------------------------------------------------
+// The signing screen.
+// -----------------------------------------------------------------------------
+function SdSignScreen({ lang, isRTL, L, file, title, who, onCancel, onDone }) {
+  const [doc, setDoc] = useState6(null);
+  const [pages, setPages] = useState6([]);       // { num, wPt, hPt }
+  const [bytes, setBytes] = useState6(null);
+  const [scale, setScale] = useState6(1);
+  const [marks, setMarks] = useState6([]);
+  const [noteMode, setNoteMode] = useState6(false);
+  const [stampStep, setStampStep] = useState6(null);   // null | "pick"
+  const [stampImg, setStampImg] = useState6(null);
+  const [sel, setSel] = useState6(null);
+  const [busy, setBusy] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [ask, setAsk] = useState6(false);
+  const wrapRef = useRef6(null);
+  const dragRef = useRef6(null);
+
+  const stampLine = `${sbFmtDate(sbToday())} · ${who || ""}`.trim();
+
+  // ---- load ----------------------------------------------------------------
+  useEffect5(() => {
+    let dead = false;
+    (async () => {
+      setBusy(L("loading"));
+      setErr(null);
+      try {
+        const url = await sbFileUrl(file);
+        if (!url) throw new Error("no url");
+        const raw = new Uint8Array(await (await fetch(url)).arrayBuffer());
+        if (dead) return;
+        setBytes(raw);
+        // pdf.js takes ownership of the buffer it is handed, so it gets a copy
+        // and the original stays intact for pdf-lib to burn later.
+        const pdfjsLib = await loadPdfJs();
+        const loaded = await pdfjsLib.getDocument({ data: raw.slice() }).promise;
+        if (dead) return;
+        const list = [];
+        for (let i = 1; i <= loaded.numPages; i++) {
+          const p = await loaded.getPage(i);
+          const vp = p.getViewport({ scale: 1 });
+          list.push({ num: i, wPt: vp.width, hPt: vp.height });
+        }
+        if (dead) return;
+        setDoc(loaded);
+        setPages(list);
+        // Fit the widest page to the panel, and never blow a small page up
+        // past its own size.
+        const avail = (wrapRef.current ? wrapRef.current.clientWidth : 900) - 48;
+        const widest = Math.max(...list.map((p) => p.wPt), 1);
+        setScale(Math.max(0.3, Math.min(1.6, avail / widest)));
+        setBusy(null);
+      } catch (e) {
+        if (dead) return;
+        console.error("[awdash] sd sign: could not open the drawing", e);
+        setErr(String((e && e.message) || e));
+        setBusy(null);
+      }
+    })();
+    return () => { dead = true; };
+  }, [file && (file.path || file.dataUrl)]);
+
+  // ---- placing -------------------------------------------------------------
+  const pageClick = (pageNum, e) => {
+    if (!noteMode) return;
+    if (e.target.closest && e.target.closest(".sdMark")) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const xPt = (e.clientX - box.left) / scale;
+    const yPt = (e.clientY - box.top) / scale;
+    const m = sdMarkBlank("note", pageNum, Math.max(0, xPt), Math.max(0, yPt));
+    setMarks((prev) => prev.concat(m));
+    setSel(m.id);
+  };
+  const patchMark = (id, next) => setMarks((prev) => prev.map((m) => (m.id === id ? { ...m, ...next } : m)));
+  const dropMark = (id) => {
+    setMarks((prev) => prev.filter((m) => m.id !== id));
+    setSel((s) => (s === id ? null : s));
+  };
+  // Dragging is done on the pointer, not on HTML5 drag-and-drop: a drag image
+  // over a canvas is a ghost of the whole page, and the drop coordinates come
+  // back wrong on a scrolled panel.
+  const startDrag = (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const m = marks.find((x) => x.id === id);
+    if (!m) return;
+    dragRef.current = { id, sx: e.clientX, sy: e.clientY, ox: m.x, oy: m.y };
+    const move = (ev) => {
+      const d = dragRef.current;
+      if (!d) return;
+      patchMark(d.id, {
+        x: Math.max(0, d.ox + (ev.clientX - d.sx) / scale),
+        y: Math.max(0, d.oy + (ev.clientY - d.sy) / scale)
+      });
+    };
+    const up = () => {
+      dragRef.current = null;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  const finishNotes = () => {
+    setNoteMode(false);
+    // Empty boxes are not notes; they are clicks in the wrong place.
+    setMarks((prev) => prev
+      .filter((m) => m.kind !== "note" || String(m.text || "").trim())
+      .map((m) => (m.kind === "note" ? { ...m, locked: true } : m)));
+  };
+
+  const takeStampFile = async (f) => {
+    if (!f || !/^image\//.test(f.type || "")) return;
+    setStampImg(await fileToDataUrl(f));
+  };
+  const placeStamp = () => {
+    if (!stampImg) return;
+    const img = new Image();
+    img.onload = () => {
+      const first = pages[0] || { wPt: 600, hPt: 800 };
+      const w = Math.min(140, first.wPt / 4);
+      const h = w * (img.height / img.width || 0.6);
+      const m = {
+        ...sdMarkBlank("stamp", 1, first.wPt - w - 40, first.hPt - h - 40),
+        w, h, dataUrl: stampImg, locked: true
+      };
+      setMarks((prev) => prev.concat(m));
+      setSel(m.id);
+      setStampStep(null);
+      setStampImg(null);
+    };
+    img.src = stampImg;
+  };
+  const resizeStamp = (id, w) => {
+    const m = marks.find((x) => x.id === id);
+    if (!m) return;
+    const ratio = m.h / m.w;
+    patchMark(id, { w, h: w * ratio });
+  };
+
+  // ---- finish --------------------------------------------------------------
+  const usable = marks.filter((m) => (m.kind === "note" ? String(m.text || "").trim() : !!m.dataUrl));
+  const doFinish = async () => {
+    setAsk(false);
+    setBusy(L("burning"));
+    setErr(null);
+    try {
+      const out = await sdBurnMarks(bytes, usable, stampLine);
+      const base = String((file && file.name) || title || "drawing").replace(/\.pdf$/i, "");
+      const signed = new File([out], `${base} - signed.pdf`, { type: "application/pdf" });
+      await onDone(signed, usable.length);
+    } catch (e) {
+      console.error("[awdash] sd sign: burning failed", e);
+      setErr(L("failed"));
+      setBusy(null);
+    }
+  };
+
+  // ---- render --------------------------------------------------------------
+  const markEl = (m) => {
+    const common = {
+      key: m.id,
+      style: {
+        left: m.x * scale,
+        top: m.y * scale,
+        width: m.w * scale
+      }
+    };
+    if (m.kind === "stamp") {
+      return sbH(
+        "div",
+        {
+          ...common,
+          className: `sdMark ${sel === m.id ? "sel" : ""}`.trim(),
+          style: { ...common.style, height: m.h * scale },
+          onPointerDown: () => setSel(m.id)
+        },
+        sbH("img", { src: m.dataUrl, alt: "" }),
+        sbH("button", { type: "button", className: "sdMoveBtn", onPointerDown: (e) => startDrag(m.id, e), title: L("size") },
+          sbH(MoveSd, { size: 12, strokeWidth: 2.2 })),
+        sbH("button", { type: "button", className: "sdMarkBtn", title: L("remove"), onClick: () => dropMark(m.id) }, "×")
+      );
+    }
+    const h = sdNoteHeight(m.text, m.w, m.locked ? stampLine : "") * scale;
+    return sbH(
+      "div",
+      {
+        ...common,
+        className: `sdMark sdNote ${m.locked ? "locked" : "draft"}`,
+        style: { ...common.style, minHeight: h, fontSize: SD_NOTE_FONT * scale },
+        onPointerDown: () => setSel(m.id)
+      },
+      m.locked
+        ? sbH(
+            "div",
+            null,
+            sbH("div", { className: "sdNoteText", style: { lineHeight: SD_NOTE_LINE } }, m.text),
+            sbH("div", { className: "sdNoteStamp", style: { fontSize: SD_NOTE_STAMP_FONT * scale } }, stampLine)
+          )
+        : sbH("textarea", {
+            autoFocus: sel === m.id,
+            rows: 2,
+            value: m.text,
+            style: { fontSize: SD_NOTE_FONT * scale, lineHeight: SD_NOTE_LINE },
+            onChange: (e) => patchMark(m.id, { text: e.target.value }),
+            onPointerDown: (e) => e.stopPropagation()
+          }),
+      sbH("button", { type: "button", className: "sdMoveBtn", onPointerDown: (e) => startDrag(m.id, e) },
+        sbH(MoveSd, { size: 12, strokeWidth: 2.2 })),
+      sbH("button", { type: "button", className: "sdMarkBtn", title: L("remove"), onClick: () => dropMark(m.id) }, "×")
+    );
+  };
+
+  const selMark = marks.find((m) => m.id === sel && m.kind === "stamp");
+
+  return sbH(
+    "div",
+    { className: "sdSign", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "sdSignBar" },
+      sbH("span", { className: "sdSignName" }, title),
+      sbH(
+        "button",
+        {
+          type: "button",
+          className: `sdSignBtn ${noteMode ? "on" : ""}`.trim(),
+          onClick: () => (noteMode ? finishNotes() : setNoteMode(true))
+        },
+        sbH(PenLineSd, { size: 14, strokeWidth: 2.2 }), " ", noteMode ? L("noteDone") : L("noteTool")
+      ),
+      sbH("button", { type: "button", className: "sdSignBtn", onClick: () => { setNoteMode(false); setStampStep("pick"); } },
+        sbH(StampSd, { size: 14, strokeWidth: 2.2 }), " ", L("stampTool")),
+      selMark
+        ? sbH(
+            "span",
+            { className: "sdSizeRow" },
+            sbH("span", { className: "sdSignHint" }, L("size")),
+            sbH("input", {
+              type: "range", min: 40, max: 400, value: Math.round(selMark.w),
+              onChange: (e) => resizeStamp(selMark.id, Number(e.target.value))
+            })
+          )
+        : sbH("span", { className: "sdSignHint" }, noteMode ? L("placeHint") : ""),
+      sbH("button", { type: "button", className: "sdSignBtn go", disabled: !usable.length || !!busy, onClick: () => setAsk(true) },
+        sbH(CheckSd, { size: 14, strokeWidth: 2.4 }), " ", L("finish")),
+      sbH("button", { type: "button", className: "sdSignBtn", onClick: onCancel },
+        sbH(XSd, { size: 14, strokeWidth: 2.2 }), " ", L("close"))
+    ),
+
+    err ? sbH("div", { style: { padding: "10px 14px" } }, sbH("div", { className: "sdSignErr" }, err)) : null,
+
+    sbH(
+      "div",
+      { className: "sdSignScroll", ref: wrapRef },
+      pages.map((p) => sbH(
+        "div",
+        {
+          key: p.num,
+          className: `sdSignPage ${noteMode ? "placing" : ""}`.trim(),
+          style: { width: p.wPt * scale, height: p.hPt * scale },
+          onClick: (e) => pageClick(p.num, e)
+        },
+        sbH(SdPageCanvas, { doc, num: p.num, wPt: p.wPt, hPt: p.hPt, scale }),
+        marks.filter((m) => m.page === p.num).map(markEl)
+      ))
+    ),
+
+    busy ? sbH("div", { className: "sdSignBusy" }, busy) : null,
+
+    stampStep === "pick"
+      ? sbH(
+          "div",
+          { className: "sdcAsk", onClick: () => setStampStep(null) },
+          sbH(
+            "div",
+            { className: "sdcAskBox", onClick: (e) => e.stopPropagation() },
+            sbH("h3", { className: "sdcAskTitle" }, L("stampTool")),
+            sbH("p", { className: "sdcAskName" }, L("stampPick")),
+            sbH(
+              "div",
+              {
+                className: `sdStampPad ${stampImg ? "on" : ""}`.trim(),
+                tabIndex: 0,
+                onPaste: (e) => { const f = sbClipboardImage(e); if (f) { e.preventDefault(); takeStampFile(f); } },
+                onClick: (e) => { const i = e.currentTarget.querySelector("input"); if (i) i.click(); }
+              },
+              stampImg ? sbH("img", { src: stampImg, alt: "" }) : sbH("span", null, L("stampPick")),
+              sbH("input", {
+                type: "file", accept: "image/*", style: { display: "none" },
+                onChange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; takeStampFile(f); }
+              })
+            ),
+            sbH(
+              "div",
+              { style: { display: "flex", gap: 8, marginTop: 14 } },
+              sbH("button", { type: "button", className: "sdcAskBtn primary", disabled: !stampImg, onClick: placeStamp },
+                L("next"), " ", sbH(isRTL ? ArrowLeftSd : ArrowRightSd, { size: 14, strokeWidth: 2.2 })),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { setStampStep(null); setStampImg(null); } }, L("cancel"))
+            )
+          )
+        )
+      : null,
+
+    ask
+      ? sbH(
+          "div",
+          { className: "sdcAsk", onClick: () => setAsk(false) },
+          sbH(
+            "div",
+            { className: "sdcAskBox", onClick: (e) => e.stopPropagation() },
+            sbH("h3", { className: "sdcAskTitle" }, L("confirmTitle")),
+            sbH("p", { className: "sdcAskName" }, L("confirmBody")),
+            sbH(
+              "div",
+              { className: "sdcAskRow" },
+              sbH("button", { type: "button", className: "sdcAskBtn primary", onClick: doFinish },
+                sbH(CheckSd, { size: 15, strokeWidth: 2.4 }), " ", L("confirmYes")),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => setAsk(false) }, L("cancel"))
+            )
+          )
+        )
+      : null
+  );
+}
+
+// One page, drawn once. Its own component so that adding a note does not make
+// pdf.js redraw every page of a forty-page drawing set.
+function SdPageCanvas({ doc, num, wPt, hPt, scale }) {
+  const ref = useRef6(null);
+  useEffect5(() => {
+    if (!doc || !ref.current) return;
+    let dead = false;
+    doc.getPage(num).then((page) => {
+      if (dead || !ref.current) return;
+      const dpr = window.devicePixelRatio || 1;
+      const vp = page.getViewport({ scale: scale * dpr });
+      const canvas = ref.current;
+      canvas.width = vp.width;
+      canvas.height = vp.height;
+      canvas.style.width = `${wPt * scale}px`;
+      canvas.style.height = `${hPt * scale}px`;
+      page.render({ canvasContext: canvas.getContext("2d"), viewport: vp });
+    }).catch((e) => console.error("[awdash] sd page render failed", e));
+    return () => { dead = true; };
+  }, [doc, num, scale]);
+  return sbH("canvas", { ref });
+}
+
+// -----------------------------------------------------------------------------
+// The client's board.
+// -----------------------------------------------------------------------------
+function SdClientBoard({
+  lang, isRTL, rows, approvals, onChangeApprovals, projectId, projectName, currentEmail, visibleRows
+}) {
+  const L = (k) => sbText(SDC_L[k] || { en: k, he: k }, lang);
+  const [ask, setAsk] = useState6(null);       // the row whose file was clicked
+  const [signing, setSigning] = useState6(null);
+  const [busy, setBusy] = useState6(false);
+  const [err, setErr] = useState6(null);
+
+  const data = rows || {};
+
+  const openFile = async (att) => {
+    // Opened inside the click, before anything is awaited — a window opened
+    // after an await is no longer part of the gesture and the browser blocks
+    // it. Same rule as everywhere else on the site.
+    const w = window.open("", "_blank", "noopener");
+    const url = await sbFileUrl(att);
+    if (!url) { if (w) w.close(); return; }
+    if (w) w.location.href = url;
+    else window.open(url, "_blank", "noopener");
+  };
+
+  const saveApproval = async (r, signedFile, markCount) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const stored = await sbUploadFile(projectId, `sd-signed-${r.code}`, signedFile);
+      const rec = {
+        approvedAt: sbToday(),
+        by: currentEmail || "",
+        marks: markCount,
+        file: { ...stored, name: signedFile.name, size: signedFile.size }
+      };
+      await onChangeApprovals({ ...(approvals || {}), [r.code]: rec });
+      setSigning(null);
+    } catch (e) {
+      console.error("[awdash] sd approval failed", e);
+      setErr(L("failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const cell = (v) => (v ? sbH("span", { className: "sdcNum" }, sbFmtDate(String(v).slice(0, 10))) : sbH("span", { className: "sdcNone" }, "—"));
+
+  return sbH(
+    "div",
+    { className: "functionPageBody sdcWrap" },
+    sbH(
+      "div",
+      { className: "sdcHead" },
+      sbH(
+        "div",
+        null,
+        sbH("h2", { className: "sdcTitle" }, L("title")),
+        sbH("p", { className: "sdcSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
+      )
+    ),
+    err ? sbH("div", { className: "sdSignErr" }, err) : null,
+
+    visibleRows.length === 0
+      ? sbH("div", { className: "sdcEmpty" }, L("empty"))
+      : sbH(
+          "div",
+          { className: "lliTableWrap" },
+          sbH(
+            "table",
+            { className: "sdcTable" },
+            sbH("thead", null, sbH(
+              "tr",
+              null,
+              sbH("th", null, L("boq")),
+              sbH("th", null, L("category")),
+              sbH("th", null, L("desc")),
+              sbH("th", null, L("dueAt")),
+              sbH("th", null, L("submittedAt")),
+              sbH("th", null, L("file")),
+              sbH("th", null, L("status")),
+              sbH("th", null, L("approvedAt"))
+            )),
+            sbH("tbody", null, visibleRows.map((r) => {
+              const v = sdRowOf(data, r.code);
+              const ap = sdApprovalOf(approvals, r.code);
+              const st = sdClientStatus(v, ap, lang);
+              const cat = boardCategoryOf(r.category);
+              return sbH(
+                "tr",
+                { key: r.code, className: ap ? "approved" : "" },
+                sbH("td", { className: "sdcNum" }, r.source === "boq" ? r.code : "—"),
+                // A plain word, not a dropdown: the client does not classify
+                // anything, and a combo box invites a click that does nothing.
+                sbH("td", null, cat ? (lang === "he" ? cat.he : cat.en) : sbH("span", { className: "sdcNone" }, "—")),
+                sbH("td", { dir: "auto" }, r.title || v.desc || ""),
+                sbH("td", null, cell(v.dueAt)),
+                sbH("td", null, cell(v.submittedAt || v.toClientAt)),
+                sbH(
+                  "td",
+                  null,
+                  (ap && ap.file) || v.file
+                    ? sbH("button", { type: "button", className: "sdcOpen", onClick: () => setAsk(r) }, L("open"))
+                    : sbH("span", { className: "sdcNone" }, "—")
+                ),
+                sbH("td", null, sbH("span", {
+                  className: "sdcChip",
+                  style: { background: `${st.color}1f`, color: st.color }
+                }, st.label)),
+                sbH("td", null, cell(ap ? ap.approvedAt : v.approvedAt))
+              );
+            }))
+          )
+        ),
+
+    // ---- download or sign ----------------------------------------------------
+    ask
+      ? (() => {
+          const v = sdRowOf(data, ask.code);
+          const ap = sdApprovalOf(approvals, ask.code);
+          const shown = ap && ap.file ? ap.file : v.file;
+          const isPdf = /\.pdf$/i.test(String((v.file && v.file.name) || "")) ||
+            /application\/pdf/.test(String((v.file && v.file.type) || ""));
+          return sbH(
+            "div",
+            { className: "sdcAsk", onClick: () => setAsk(null) },
+            sbH(
+              "div",
+              { className: "sdcAskBox", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+              sbH("h3", { className: "sdcAskTitle" }, ap ? L("approvedAlready") : L("askTitle")),
+              sbH("p", { className: "sdcAskName" }, (shown && shown.name) || ask.title || ""),
+              sbH(
+                "div",
+                { className: "sdcAskRow" },
+                sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { openFile(shown); setAsk(null); } },
+                  sbH(DownloadSd, { size: 15, strokeWidth: 2.2 }), " ", ap ? L("viewSigned") : L("download")),
+                // Once it is signed there is nothing left to sign. The button
+                // is gone rather than disabled: a disabled button on a finished
+                // job reads as something that went wrong.
+                ap
+                  ? null
+                  : isPdf
+                    ? sbH("button", {
+                        type: "button", className: "sdcAskBtn primary",
+                        onClick: () => { setSigning({ row: ask, file: v.file }); setAsk(null); }
+                      }, sbH(PenLineSd, { size: 15, strokeWidth: 2.2 }), " ", L("sign"))
+                    : sbH("p", { className: "sdcAskName", style: { margin: "6px 0 0" } }, L("noPdf"))
+              ),
+              sbH("button", { type: "button", className: "sdcAskBtn sdcAskCancel", onClick: () => setAsk(null) }, L("cancel"))
+            )
+          );
+        })()
+      : null,
+
+    signing
+      ? sbH(SdSignScreen, {
+          lang, isRTL, L,
+          file: signing.file,
+          title: signing.row.title || (signing.file && signing.file.name) || "",
+          who: currentEmail,
+          onCancel: () => setSigning(null),
+          onDone: (signedFile, markCount) => saveApproval(signing.row, signedFile, markCount)
+        })
+      : null,
+
+    busy ? sbH("div", { className: "sdSignBusy", style: { position: "fixed", zIndex: 980 } }, L("burning")) : null
+  );
 }
 
 // src/cards/MarcellaCard.jsx
@@ -20196,9 +21125,10 @@ function ProjectDashboardApp() {
     const rfis = {};
     const cis = {};
     const mks = {};
+    const sdaps = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, marcellaRows, ...others } = entry;
+      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, marcellaRows, sdApprovals, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
@@ -20213,8 +21143,12 @@ function ProjectDashboardApp() {
       // Marcella is a part of its own so the database rule can treat it
       // differently from the rest of the project: see marcella_may_read. (5.9.26)
       if (marcellaRows) mks[pid] = marcellaRows;
+      // The client's approvals are the one thing on a project a client writes.
+      // Their own part, so the database rule can allow exactly that and
+      // nothing else — see security-step7-sd-approvals.sql. (5.9.26)
+      if (sdApprovals) sdaps[pid] = sdApprovals;
     });
-    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks };
+    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps };
   };
   // The seven parts a project is stored in. "project-extras" is the base
   // object; the rest are single fields hung off it. Each part is one row per
@@ -20229,7 +21163,8 @@ function ProjectDashboardApp() {
     ["project-boq-flags", "boqFlagOverrides"],
     ["project-rfi", "rfiRows"],
     ["project-ci", "ciRows"],
-    ["project-marcella", "marcellaRows"]
+    ["project-marcella", "marcellaRows"],
+    ["project-sd-approvals", "sdApprovals"]
   ];
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -20296,7 +21231,7 @@ function ProjectDashboardApp() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
     (async () => {
-      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps } = splitExtras(projectExtras);
       const byPart = {
         "project-extras": rest,
         "project-schedules": schedules,
@@ -20307,7 +21242,8 @@ function ProjectDashboardApp() {
         "project-boq-flags": flagOverrides,
         "project-rfi": rfis,
         "project-ci": cis,
-        "project-marcella": mks
+        "project-marcella": mks,
+        "project-sd-approvals": sdaps
       };
       let failed = null;
       // One row per project. saveAppState skips a row whose content has not
@@ -20450,9 +21386,15 @@ function ProjectDashboardApp() {
   // between another account and the contents. (5.9.26)
   const canSeeMarcella = appRole === "admin"
     || !!((userPerms || {})[String(loggedInEmail || "").trim().toLowerCase()] || {}).marcella;
+  // What a client's board holds, named rather than deduced. A list of what is
+  // shown is safer than a list of what is hidden: a cube added next month is
+  // invisible to the client until somebody decides otherwise, which is the way
+  // round that fails safely. (7.9.26)
+  const isClientHere = appRole !== "admin" && authRole === "client";
   const canSeeCard = (key) => {
     if (key === "changeInstructions" && appRole !== "admin" && authRole !== "contractor") return false;
     if (key === "marcella" && !canSeeMarcella) return false;
+    if (isClientHere && CLIENT_CARDS.indexOf(key) < 0) return false;
     return !visibleCardKeys || visibleCardKeys.includes(key);
   };
   // Named, and switched on — unless you are the system administrator, who has
@@ -21574,6 +22516,8 @@ function ProjectDashboardApp() {
         onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
         rfiRows: activeExtras.rfiRows || {},
         onChangeRfiRows: (next) => updateProjectExtras(activeProject.id, { rfiRows: next }),
+        sdApprovals: activeExtras.sdApprovals || {},
+        onChangeSdApprovals: (next) => updateProjectExtras(activeProject.id, { sdApprovals: next }),
         marcellaRows: activeExtras.marcellaRows || {},
         onChangeMarcellaRows: (next) => updateProjectExtras(activeProject.id, { marcellaRows: next }),
         ciRows: activeExtras.ciRows || {},
