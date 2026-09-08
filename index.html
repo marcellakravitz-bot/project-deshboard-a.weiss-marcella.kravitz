@@ -504,7 +504,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "7.9.2026 · build 83";
+var APP_BUILD = "8.9.2026 · build 85";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5244,28 +5244,32 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
   const countFor = (k) => list.filter((r) => r.trade === k && r.active !== false).length;
   const tradeOf = (k) => SUB_TRADES.find((x) => x.key === k) || {};
 
-  // One history entry per level below the board, so Back steps back.
-  const depth = view === "access" ? (draft ? 2 : 1) : (trade ? (section ? 2 : 1) : 0);
-  const closingRef = React9.useRef(false);
+  // One history entry per level, pushed when a level opens and never taken
+  // off from inside the effect — the earlier version removed and re-pushed on
+  // every change, which raced with the browser and left a single entry for
+  // three levels, so one Back press jumped all the way out. Going deeper
+  // pushes; Back pops exactly one level; leaving a level from inside the app
+  // calls history.back() and lets the same handler do the work.
+  const subsStateRef = React9.useRef(null);
+  subsStateRef.current = { view, trade, section, draft };
   React9.useEffect(() => {
-    if (depth === 0) return;
-    let pushed = true;
-    try { window.history.pushState({ awsubs: Date.now() }, ""); } catch (e) {}
-    const onPop = () => {
-      pushed = false;
-      if (closingRef.current) { closingRef.current = false; return; }
-      if (view === "access") { if (draft) setDraft(null); else setView("board"); return; }
-      if (section) { setSection(null); return; }
-      setTrade(null);
+    const onPop = (e) => {
+      // The app's own navigation entries are marked awnav and are not ours.
+      if (e.state && e.state.awnav) return;
+      const cur = subsStateRef.current || {};
+      if (cur.draft) { setDraft(null); return; }
+      if (cur.view === "access") { setView("board"); return; }
+      if (cur.section) { setSection(null); return; }
+      if (cur.trade) { setTrade(null); return; }
     };
     window.addEventListener("popstate", onPop);
-    return () => {
-      window.removeEventListener("popstate", onPop);
-      // Left from inside the app: take the entry off again, or the next Back
-      // press would do nothing at all.
-      if (pushed) { closingRef.current = true; try { window.history.back(); } catch (e) {} }
-    };
-  }, [depth]);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  const goDeeper = (fn) => {
+    try { window.history.pushState({ awsubs: Date.now() }, ""); } catch (err) {}
+    fn();
+  };
+  const goBack = () => { try { window.history.back(); } catch (err) {} };
 
   const cellS = { padding: "8px 10px", borderBottom: "1px solid var(--line)", fontSize: 13, textAlign: "center", verticalAlign: "middle" };
   const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap" };
@@ -5300,13 +5304,13 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
   if (view === "board" && trade) {
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
       React9.createElement("h3", { style: { margin: 0 } }, "\u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "")),
-      cubeGrid(SUB_SECTIONS, (k) => setSection(k))
+      cubeGrid(SUB_SECTIONS, (k) => goDeeper(() => setSection(k)))
     );
   }
 
   if (view === "access") {
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key }) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
+      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key })) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
       // Nothing is granted until Save is pressed.
       canEdit && draft && React9.createElement("div", { style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 520 } },
         React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
@@ -5322,9 +5326,9 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
         React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: !(draft.name.trim() || draft.company.trim()) || !draft.phone.trim(), onClick: () => {
             write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: draft.trade, active: true }]));
-            setDraft(null);
+            goBack();
           } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
-          React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => setDraft(null) }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
+          React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
       React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", minWidth: 720, margin: "0 auto" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
@@ -5350,7 +5354,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
   }
 
   return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-    React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, minWidth: 260 }, onClick: () => setView("access") },
+    React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, minWidth: 260 }, onClick: () => goDeeper(() => setView("access")) },
       React9.createElement(Users, { size: 14, strokeWidth: 2, style: { marginInlineEnd: 6, verticalAlign: "-2px" } }),
       "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
     cubeGrid(SUB_TRADES.map((tr) => ({
@@ -5359,7 +5363,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
       iconColor: SUB_HELMET,
       title: tr.label,
       sub: countFor(tr.key) + " \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd"
-    })), (k) => { setTrade(k); setSection(null); })
+    })), (k) => goDeeper(() => { setTrade(k); setSection(null); }))
   );
 }
 
