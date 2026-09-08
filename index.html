@@ -253,6 +253,7 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "\u05DE\u05E8\u05DB\u05D6 \u05D4\u05D1\u05E7\u05E8\u05D4 \u05D4\u05D0\u05D9\u05E9\u05D9", locked: true },
+      { key: "subs", icon: Users, title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
@@ -377,6 +378,7 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "Personal Control Center", locked: true },
+      { key: "subs", icon: Users, title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
@@ -5187,6 +5189,125 @@ function Dashboard({
   })), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
 }
 
+
+// src/cards/SubcontractorsCard.jsx
+// Build 8.9.26 — the administrator's "Subcontractors" cube. One cube per
+// trade, not per company: where two firms share a trade on the same project
+// they share the cube, as decided. canSeeCard() keeps this to the system
+// administrator; no client or main contractor sees it.
+var SUB_TRADES = [
+  { key: "hvac", label: "\u05de\u05d9\u05d6\u05d5\u05d2 \u05d0\u05d5\u05d5\u05d9\u05e8" },
+  { key: "electric", label: "\u05d7\u05e9\u05de\u05dc" },
+  { key: "plumbing", label: "\u05d0\u05d9\u05e0\u05e1\u05d8\u05dc\u05e6\u05d9\u05d4" },
+  { key: "drywall", label: "\u05d2\u05d1\u05e1" },
+  { key: "security", label: "\u05d1\u05d9\u05d8\u05d7\u05d5\u05df, \u05de\u05d5\u05dc\u05d8\u05d9\u05de\u05d3\u05d9\u05d4 \u05d5\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea" },
+  { key: "paint", label: "\u05e6\u05d1\u05e2" }
+];
+var SUB_SECTIONS = [
+  { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "\u05de\u05d4\u05e7\u05d5\u05d1\u05d9\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea" },
+  { key: "sd", icon: Ruler, title: "SD", sub: "\u05de\u05d4\u05e7\u05d5\u05d1\u05d9\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea" },
+  { key: "log", icon: Receipt, title: "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd", sub: "\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df" },
+  { key: "schedule", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8", sub: "\u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05dc\u05d1\u05d3" },
+  { key: "weekly", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9", sub: "\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df" },
+  { key: "specs", icon: ClipboardList, title: "\u05de\u05e4\u05e8\u05d8\u05d9\u05dd \u05de\u05d9\u05d5\u05d7\u05d3\u05d9\u05dd", sub: "\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df" }
+];
+// Ambiguous glyphs are left out on purpose: this code is read off a phone
+// screen and typed back in by somebody standing on a site.
+function makeSubCode() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let out = "";
+  for (let i = 0; i < 6; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  return out;
+}
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
+  const list = (subsData && subsData.list) || [];
+  const [trade, setTrade] = React9.useState(null);
+  const [section, setSection] = React9.useState(null);
+  const write = (next) => onChangeSubsData({ ...(subsData || {}), list: next });
+  const addSub = () => write(list.concat([{
+    id: "s-" + Date.now().toString(36),
+    name: "",
+    company: "",
+    phone: "",
+    code: makeSubCode(),
+    trade: trade || SUB_TRADES[0].key,
+    active: true
+  }]));
+  const setField = (id, field, value) => write(list.map((r) => r.id === id ? { ...r, [field]: value } : r));
+  const removeSub = (id) => write(list.filter((r) => r.id !== id));
+  const countFor = (k) => list.filter((r) => r.trade === k && r.active !== false).length;
+  const tradeLabel = (k) => (SUB_TRADES.find((x) => x.key === k) || {}).label || k;
+  const cellS = { padding: "7px 8px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "middle" };
+  const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap" };
+  const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "5px 7px", font: "inherit", fontSize: 13 };
+  const backBtn = (label, onClick) => React9.createElement("button", { type: "button", className: "ghostBtn", onClick, style: { marginBottom: 14, alignSelf: "flex-start" } }, label);
+  const cubeGrid = (items, onPick) => React9.createElement(
+    "div",
+    { className: "cardGrid", style: { padding: 0 } },
+    items.map((c) => React9.createElement(
+      "button",
+      { key: c.key, className: "dashCard", type: "button", onClick: () => onPick(c.key) },
+      React9.createElement("div", { className: "cardIcon" }, React9.createElement(c.icon || Users, { size: 20, strokeWidth: 1.7 })),
+      React9.createElement("div", null,
+        React9.createElement("p", { className: "cardTitle" }, c.title),
+        c.sub && React9.createElement("p", { className: "cardSub" }, c.sub))
+    ))
+  );
+  if (trade && section) {
+    const sec = SUB_SECTIONS.find((x) => x.key === section) || {};
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", padding: 24 } },
+      backBtn("\u2192 " + tradeLabel(trade), () => setSection(null)),
+      React9.createElement("h3", { style: { margin: "0 0 6px" } }, sec.title + " \u2014 " + tradeLabel(trade)),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0, maxWidth: 640, lineHeight: 1.8 } },
+        "\u05d4\u05de\u05e1\u05da \u05d4\u05d6\u05d4 \u05d9\u05d7\u05d5\u05d1\u05e8 \u05d1\u05e9\u05dc\u05d1 \u05d4\u05d1\u05d0. \u05d4\u05e8\u05e9\u05d9\u05de\u05d5\u05ea \u05d9\u05d2\u05d9\u05e2\u05d5 \u05de\u05d4\u05e7\u05d5\u05d1\u05d9\u05d5\u05ea \u05d4\u05e8\u05d0\u05e9\u05d9\u05d5\u05ea \u05d3\u05e8\u05da \u05e1\u05d9\u05de\u05d5\u05df V \u05d1\u05e2\u05de\u05d5\u05d3\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4, \u05d5\u05de\u05d4 \u05e9\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d0\u05e6\u05dc \u05d4\u05e7\u05d1\u05dc\u05df \u05dc\u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05dc\u05d1\u05d3.")
+    );
+  }
+  if (trade) {
+    const mine = list.filter((r) => r.trade === trade);
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", padding: 24 } },
+      backBtn("\u2192 \u05db\u05dc \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd", () => setTrade(null)),
+      React9.createElement("h3", { style: { margin: "0 0 12px" } }, tradeLabel(trade)),
+      cubeGrid(SUB_SECTIONS, (k) => setSection(k)),
+      React9.createElement("p", { className: "panelSub", style: { marginTop: 18 } },
+        mine.length === 0
+          ? "\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05e7\u05d1\u05dc\u05df \u05d1\u05ea\u05d7\u05d5\u05dd \u05d4\u05d6\u05d4."
+          : "\u05de\u05e9\u05d5\u05d9\u05db\u05d9\u05dd \u05dc\u05ea\u05d7\u05d5\u05dd: " + mine.map((r) => r.company || r.name || "\u2014").join(", "))
+    );
+  }
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", padding: 24, gap: 22 } },
+    React9.createElement("div", null,
+      React9.createElement("h3", { style: { margin: "0 0 4px" } }, "\u05e8\u05e9\u05d9\u05de\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
+      React9.createElement("p", { className: "panelSub", style: { margin: "0 0 12px" } },
+        "\u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc\u05d5 \u05d5\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9. \u05db\u05d9\u05d1\u05d5\u05d9 \u05d4\u05de\u05ea\u05d2 \u05de\u05e0\u05ea\u05e7 \u05d0\u05d5\u05ea\u05d5 \u05de\u05d9\u05d3."),
+      React9.createElement("div", { style: { overflowX: "auto" } },
+        React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", minWidth: 780 } },
+          React9.createElement("thead", null, React9.createElement("tr", null,
+            ["\u05e9\u05dd", "\u05d7\u05d1\u05e8\u05d4", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05e4\u05e2\u05d9\u05dc", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
+          React9.createElement("tbody", null,
+            list.length === 0
+              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 7 }, "\u05d8\u05e8\u05dd \u05d4\u05d5\u05d6\u05df \u05e7\u05d1\u05dc\u05df."))
+              : list.map((r) => React9.createElement("tr", { key: r.id },
+                  React9.createElement("td", { style: cellS }, React9.createElement("input", { style: inputS, value: r.name || "", disabled: !canEdit, onChange: (e) => setField(r.id, "name", e.target.value) })),
+                  React9.createElement("td", { style: cellS }, React9.createElement("input", { style: inputS, value: r.company || "", disabled: !canEdit, onChange: (e) => setField(r.id, "company", e.target.value) })),
+                  React9.createElement("td", { style: cellS }, React9.createElement("input", { style: { ...inputS, direction: "ltr" }, value: r.phone || "", disabled: !canEdit, inputMode: "tel", onChange: (e) => setField(r.id, "phone", e.target.value) })),
+                  React9.createElement("td", { style: { ...cellS, direction: "ltr", whiteSpace: "nowrap" } },
+                    React9.createElement("span", { style: { fontWeight: 800, letterSpacing: 1 } }, r.code || "\u2014"),
+                    canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginInlineStart: 8, padding: "2px 8px", fontSize: 11 }, onClick: () => setField(r.id, "code", makeSubCode()) }, "\u05d7\u05d3\u05e9")),
+                  React9.createElement("td", { style: cellS }, React9.createElement("select", { style: inputS, value: r.trade || "", disabled: !canEdit, onChange: (e) => setField(r.id, "trade", e.target.value) },
+                    SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label)))),
+                  React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                    React9.createElement("button", { type: "button", disabled: !canEdit, onClick: () => setField(r.id, "active", r.active === false), style: { border: "none", cursor: canEdit ? "pointer" : "default", borderRadius: 999, padding: "4px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: r.active === false ? "#9aa3af" : "#1a7f4b" } },
+                      r.active === false ? "\u05db\u05d1\u05d5\u05d9" : "\u05e4\u05e2\u05d9\u05dc")),
+                  React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                    canEdit && React9.createElement("button", { type: "button", onClick: () => removeSub(r.id), title: "\u05de\u05d7\u05d9\u05e7\u05d4", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 15 } }, "\u2715"))
+                ))))),
+      canEdit && React9.createElement("button", { type: "button", className: "functionEditBtn", style: { marginTop: 12 }, onClick: addSub }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df")),
+    React9.createElement("div", null,
+      React9.createElement("h3", { style: { margin: "0 0 12px" } }, "\u05e7\u05d5\u05d1\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05ea\u05d7\u05d5\u05dd"),
+      cubeGrid(SUB_TRADES.map((tr) => ({ key: tr.key, icon: Users, title: tr.label, sub: countFor(tr.key) + " \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd" })), (k) => { setTrade(k); setSection(null); }))
+  );
+}
+
 // src/cards/CardView.jsx
 import React14, { useState as useState5, useEffect as useEffect4 } from "react";
 import { X as X3, Upload as Upload3 } from "lucide-react";
@@ -6432,7 +6553,9 @@ function CardView({
   submittalReview,
   onChangeReview,
   submittalApprovals,
-  onChangeApprovals
+  onChangeApprovals,
+  subsData,
+  onChangeSubsData
 }) {
   const [editOpen, setEditOpen] = useState5(false);
   const [xmlHelpOpen, setXmlHelpOpen] = useState5(false);
@@ -6457,6 +6580,7 @@ function CardView({
   const isRfi = cardKey === "rfi";
   const isCi = cardKey === "changeInstructions";
   const isMarcella = cardKey === "marcella";
+  const isSubs = cardKey === "subs";
   // Only the system administrator writes here. A main contractor who is
   // allowed to edit everything else on the project still reads this one.
   const ciCanEdit = canEdit && appRole === "admin";
@@ -6474,8 +6598,8 @@ function CardView({
   // Contacts are maintained in System Admin, not through the upload modal.
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
-  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || showRooms ? "wide" : ""}` }, showRooms && /* @__PURE__ */ React14.createElement(
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin" }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
@@ -6505,7 +6629,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -22473,6 +22597,7 @@ function ProjectDashboardApp() {
   const canSeeCard = (key) => {
     if (key === "changeInstructions" && appRole !== "admin" && authRole !== "contractor") return false;
     if (key === "marcella" && !canSeeMarcella) return false;
+    if (key === "subs" && appRole !== "admin") return false;
     if (isClientHere && CLIENT_CARDS.indexOf(key) < 0) return false;
     if (isContractorHere && CONTRACTOR_CARDS.indexOf(key) < 0) return false;
     return !visibleCardKeys || visibleCardKeys.includes(key);
@@ -23650,6 +23775,8 @@ function ProjectDashboardApp() {
         onChangeApprovals: (next) => updateProjectExtras(activeProject.id, { submittalApprovals: next }),
         marcellaRows: activeExtras.marcellaRows || {},
         onChangeMarcellaRows: (next) => updateProjectExtras(activeProject.id, { marcellaRows: next }),
+        subsData: activeExtras.subsData || {},
+        onChangeSubsData: (next) => updateProjectExtras(activeProject.id, { subsData: next }),
         ciRows: activeExtras.ciRows || {},
         onChangeCiRows: (next) => updateProjectExtras(activeProject.id, { ciRows: next }),
         ciQueue: activeExtras.ciQueue || [],
