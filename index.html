@@ -92,7 +92,7 @@ import {
 import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon } from "lucide-react";
 import {
   PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
-  Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2,
+  Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2, Cctv as Cctv2,
   Hammer as Hammer2, FileUp as FileUp2
 } from "lucide-react";
 
@@ -504,7 +504,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "8.9.2026 · build 86";
+var APP_BUILD = "8.9.2026 · build 90";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5232,7 +5232,171 @@ function makeSubCode() {
   for (let i = 0; i < 6; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
   return out;
 }
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
+
+// A row is routed to a trade, not to a company: the trade's cube is shared by
+// whoever works that trade on the project. Ticking here is what puts the row
+// on their screen, read-only. (8.9.26)
+
+// Photographs from a phone arrive at four to six megabytes. Nothing on a phone
+// screen needs that, and the update log is read on site over cellular — so the
+// picture is redrawn at most 1600px on its long edge and re-encoded as JPEG
+// before it ever leaves the browser. (8.9.26)
+function subsShrinkImage(file) {
+  return new Promise((resolve) => {
+    if (!file || !/^image\//.test(file.type || "")) { resolve(file); return; }
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const max = 1600;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const cv = document.createElement("canvas");
+      cv.width = w; cv.height = h;
+      cv.getContext("2d").drawImage(img, 0, 0, w, h);
+      cv.toBlob((blob) => {
+        URL.revokeObjectURL(url);
+        resolve(blob ? new File([blob], (file.name || "photo").replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" }) : file);
+      }, "image/jpeg", 0.82);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+// Only a pointer is kept in the project row — the file itself lives in the
+// same bucket the submittals use, under the project's own folder so the
+// existing access rules still decide who may read it.
+async function subsUploadFile(projectId, trade, file) {
+  const shrunk = await subsShrinkImage(file);
+  const safe = (shrunk.name || "file").replace(/[^\w.\-]+/g, "_").slice(-60);
+  const path = `${projectId}/subs-log/${trade}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${safe}`;
+  const { error } = await supabase.storage.from(SUBMITTAL_BUCKET).upload(path, shrunk, { contentType: shrunk.type || "application/octet-stream", upsert: false });
+  if (error) throw error;
+  return { path, name: shrunk.name || safe, type: shrunk.type || "" };
+}
+function SubsAttachment({ att, onRemove }) {
+  const [url, setUrl] = React9.useState(null);
+  React9.useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const { data } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(att.path, 3600);
+        if (live && data) setUrl(data.signedUrl);
+      } catch (e) {}
+    })();
+    return () => { live = false; };
+  }, [att.path]);
+  const isImg = /^image\//.test(att.type || "");
+  return React9.createElement("div", { style: { position: "relative", border: "1px solid var(--line)", borderRadius: 10, overflow: "hidden", width: 104, height: 104, background: "#f7f8fa", display: "flex", alignItems: "center", justifyContent: "center" } },
+    isImg && url
+      ? React9.createElement("img", { src: url, alt: att.name, style: { width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }, onClick: () => window.open(url, "_blank", "noopener") })
+      : React9.createElement("button", { type: "button", onClick: () => url && window.open(url, "_blank", "noopener"), style: { border: "none", background: "transparent", cursor: url ? "pointer" : "default", fontSize: 11, padding: 8, textAlign: "center", wordBreak: "break-all" } }, att.name || "PDF"),
+    onRemove && React9.createElement("button", { type: "button", onClick: onRemove, title: "\u05d4\u05e1\u05e8\u05d4", style: { position: "absolute", insetInlineEnd: 4, top: 4, border: "none", borderRadius: 999, width: 20, height: 20, lineHeight: "18px", background: "rgba(0,0,0,0.55)", color: "#fff", cursor: "pointer", fontWeight: 900 } }, "\u2715")
+  );
+}
+
+function SubsTradePicker({ value, disabled, onChange }) {
+  const picked = Array.isArray(value) ? value : [];
+  const [open, setOpen] = React9.useState(false);
+  const boxRef = React9.useRef(null);
+  React9.useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [open]);
+  const toggle = (k) => onChange(picked.indexOf(k) >= 0 ? picked.filter((x) => x !== k) : picked.concat([k]));
+  const label = picked.length === 0
+    ? "\u2014"
+    : picked.map((k) => (SUB_TRADES.find((t) => t.key === k) || {}).label || k).join(", ");
+  return React9.createElement("div", { ref: boxRef, style: { position: "relative" } },
+    React9.createElement("button", {
+      type: "button",
+      disabled,
+      onClick: () => setOpen(!open),
+      title: label,
+      style: { width: "100%", border: "1px solid var(--line)", borderRadius: 7, background: "#fff", padding: "4px 6px", font: "inherit", fontSize: 12, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: picked.length ? "inherit" : "var(--mist)" }
+    }, label),
+    open && !disabled && React9.createElement("div", {
+      style: { position: "absolute", zIndex: 40, insetInlineStart: 0, top: "calc(100% + 4px)", background: "#fff", border: "1px solid var(--line)", borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,0.15)", padding: 8, minWidth: 210, display: "flex", flexDirection: "column", gap: 4 }
+    }, SUB_TRADES.map((t) => React9.createElement("label", {
+      key: t.key,
+      style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }
+    },
+      React9.createElement("input", { type: "checkbox", checked: picked.indexOf(t.key) >= 0, onChange: () => toggle(t.key) }),
+      React9.createElement("span", null, t.label))))
+  );
+}
+
+
+// The update log: the first place in this cube where she writes rather than
+// ticks. Newest first, because on site that is the one anybody opens.
+function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChange }) {
+  const [draft, setDraft] = React9.useState(null);
+  const [busy, setBusy] = React9.useState(false);
+  const [err, setErr] = React9.useState(null);
+  const today = () => new Date().toISOString().slice(0, 10);
+  const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
+  const btnS = { minWidth: 132, justifyContent: "center" };
+  const addFiles = async (files) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    setBusy(true); setErr(null);
+    try {
+      const done = [];
+      for (const f of list) done.push(await subsUploadFile(projectId, trade, f));
+      setDraft((d) => d ? { ...d, atts: (d.atts || []).concat(done) } : d);
+    } catch (e) {
+      console.error("[awdash] subs log upload failed", e);
+      setErr(e && e.message ? e.message : String(e));
+    } finally { setBusy(false); }
+  };
+  const sorted = entries.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 18 } },
+    React9.createElement("h3", { style: { margin: 0 } }, "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+    canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => setDraft({ date: today(), subject: "", body: "", atts: [] }) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e2\u05d3\u05db\u05d5\u05df"),
+    canEdit && draft && React9.createElement("div", {
+      style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 620 },
+      // A screenshot pasted straight in is the fastest way to file one of
+      // these, so the whole box takes a paste, not just a button.
+      onPaste: (e) => { const f = e.clipboardData && e.clipboardData.files; if (f && f.length) { e.preventDefault(); addFiles(f); } }
+    },
+      React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 } },
+        React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d0\u05e8\u05d9\u05da",
+          React9.createElement("input", { type: "date", dir: "ltr", style: inputS, value: draft.date, onChange: (e) => setDraft({ ...draft, date: e.target.value }) })),
+        React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05e0\u05d5\u05e9\u05d0",
+          React9.createElement("input", { style: inputS, value: draft.subject, onChange: (e) => setDraft({ ...draft, subject: e.target.value }) }))),
+      React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d9\u05d0\u05d5\u05e8",
+        React9.createElement("textarea", { style: { ...inputS, minHeight: 90, resize: "vertical" }, value: draft.body, onChange: (e) => setDraft({ ...draft, body: e.target.value }) })),
+      React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10 } },
+        (draft.atts || []).map((a, i) => React9.createElement(SubsAttachment, { key: a.path, att: a, onRemove: () => setDraft({ ...draft, atts: draft.atts.filter((_, j) => j !== i) }) })),
+        React9.createElement("label", { style: { width: 104, height: 104, border: "1px dashed var(--line)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 26, color: "var(--mist)" } },
+          busy ? "\u2026" : "+",
+          React9.createElement("input", { type: "file", accept: "image/*,application/pdf", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } }))),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0 } }, "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d0\u05d5 PDF. \u05d0\u05e4\u05e9\u05e8 \u05d2\u05dd \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05ea\u05de\u05d5\u05e0\u05d4 \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05dc\u05ea\u05d9\u05d1\u05d4."),
+      err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12 } }, err),
+      React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: busy || !draft.subject.trim(), onClick: () => {
+          onChange(entries.concat([{ id: "u-" + Date.now().toString(36), date: draft.date || today(), subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
+          setDraft(null);
+        } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => setDraft(null) }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 760, display: "flex", flexDirection: "column", gap: 12 } },
+      sorted.length === 0
+        ? React9.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, "\u05d8\u05e8\u05dd \u05e0\u05e8\u05e9\u05dd \u05e2\u05d3\u05db\u05d5\u05df.")
+        : sorted.map((u) => React9.createElement("div", { key: u.id, style: { border: "1px solid var(--line)", borderRadius: 12, padding: 14, background: "#fff" } },
+            React9.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 } },
+              React9.createElement("strong", { style: { fontSize: 14 } }, u.subject),
+              React9.createElement("span", { style: { fontSize: 12, color: "var(--mist)", direction: "ltr" } }, u.date)),
+            u.body && React9.createElement("p", { style: { margin: "8px 0 0", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, u.body),
+            (u.atts || []).length > 0 && React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10 } },
+              u.atts.map((a) => React9.createElement(SubsAttachment, { key: a.path, att: a }))),
+            canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginTop: 10 }, onClick: () => onChange(entries.filter((x) => x.id !== u.id)) }, "\u05de\u05d7\u05d9\u05e7\u05ea \u05e2\u05d3\u05db\u05d5\u05df")
+          )))
+  );
+}
+
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
@@ -5296,6 +5460,17 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
       ))
     );
   };
+
+  if (view === "board" && trade && section === "log") {
+    return React9.createElement(SubsUpdateLog, {
+      trade,
+      tradeLabel: tradeOf(trade).label || "",
+      projectId,
+      canEdit,
+      entries: ((subsData || {}).logs || {})[trade] || [],
+      onChange: (next) => onChangeSubsData({ ...(subsData || {}), logs: { ...((subsData || {}).logs || {}), [trade]: next } })
+    });
+  }
 
   if (view === "board" && trade && section) {
     const sec = SUB_SECTIONS.find((x) => x.key === section) || {};
@@ -6662,7 +6837,7 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin" }), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
@@ -10832,7 +11007,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 sbH("th", { className: "cSec" }, L("section")),
                 sbH("th", { className: "cCat" }, L("category")),
                 sbH("th", { className: "cDesc" }, L("desc")),
-                sbH("th", { className: "cQty" }, L("qty")),
+                sbH("th", { className: "cQty" }, isRTL ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4" : "Subcontractors"),
                 sbH("th", { className: "cDate" }, L("dueAt")),
                 sbH("th", { className: "cFile" }, L("file")),
                 sbH("th", { className: "cReq" }, L("toClient")),
@@ -10938,16 +11113,15 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     // direction put them in the order they are spoken.
                     sbH(
                       "td",
-                      { className: "cQty", dir: isRTL ? "rtl" : "ltr" },
-                      r.qty
-                        ? sbH(
-                            "span",
-                            { className: "qtyPair" },
-                            sbH("span", { className: "qtyNum", dir: "ltr" }, String(r.qty)),
-                            r.unit ? sbH("span", { className: "qtyUnit" }, boqUnit(r.unit, lang)) : null
-                          )
-                        : "—",
-                      r.product && r.product.mixedUnits ? sbH("span", { className: "lliMixed", title: "mixed units" }, "*") : null
+                      { className: "cQty" },
+                      // The quantity said nothing a drawing needed. The column
+                      // is the routing instead: tick the trades and the row
+                      // shows on their board, read-only. (8.9.26)
+                      sbH(SubsTradePicker, {
+                        value: v.subs || [],
+                        disabled: !canEdit,
+                        onChange: (next) => patch(r.code, { subs: next })
+                      })
                     ),
                     sbH(
                       "td",
@@ -15728,7 +15902,12 @@ var SUBMITTAL_CATEGORIES = [
   { key: "electrical", en: "Electrical", he: "חשמל", icon: Zap2 },
   { key: "lighting", en: "Lighting", he: "תאורה", icon: Lightbulb2 },
   { key: "hvac", en: "HVAC", he: "מיזוג אוויר", icon: AirVent2 },
-  { key: "plumbing", en: "Plumbing", he: "אינסטלציה", icon: Droplets2 }
+  { key: "plumbing", en: "Plumbing", he: "אינסטלציה", icon: Droplets2 },
+  // Sometimes priced in the bill of quantities, sometimes not priced at all —
+  // so it is an ordinary folder here, and a project where nothing is submitted
+  // simply leaves it empty and puts the information in the electrician's
+  // special-specifications folder instead. (8.9.26)
+  { key: "security", en: "Security, Controls & Communications", he: "ביטחון, בקרה ותקשורת", code: "Security", icon: Cctv2 }
 ];
 // Joinery is a trade on the boards but not a submittal folder: carpentry is
 // approved by a shop drawing and chased as a delivery, and nobody submits a
