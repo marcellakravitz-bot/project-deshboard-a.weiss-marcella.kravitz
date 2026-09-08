@@ -504,7 +504,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "8.9.2026 · build 85";
+var APP_BUILD = "8.9.2026 · build 86";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5253,9 +5253,12 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
   const subsStateRef = React9.useRef(null);
   subsStateRef.current = { view, trade, section, draft };
   React9.useEffect(() => {
-    const onPop = (e) => {
-      // The app's own navigation entries are marked awnav and are not ours.
-      if (e.state && e.state.awnav) return;
+    const onPop = () => {
+      // popstate reports the entry being landed ON, not the one left behind —
+      // so the entry that arrives here is the app's own card entry, and an
+      // earlier version bailed out on it and did nothing. What matters is our
+      // own depth: pop one level, and let the app's handler re-apply the card
+      // screen underneath us. (8.9.26)
       const cur = subsStateRef.current || {};
       if (cur.draft) { setDraft(null); return; }
       if (cur.view === "access") { setView("board"); return; }
