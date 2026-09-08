@@ -228,7 +228,15 @@ import {
   Camera,
   Ruler,
   Receipt,
-  Crown
+  Crown,
+  HardHat,
+  NotebookPen,
+  AirVent,
+  Zap,
+  Droplets,
+  Layers,
+  Cctv,
+  Paintbrush
 } from "lucide-react";
 var COPY = {
   he: {
@@ -253,7 +261,7 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "\u05DE\u05E8\u05DB\u05D6 \u05D4\u05D1\u05E7\u05E8\u05D4 \u05D4\u05D0\u05D9\u05E9\u05D9", locked: true },
-      { key: "subs", icon: Users, title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
+      { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
@@ -378,7 +386,7 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "Personal Control Center", locked: true },
-      { key: "subs", icon: Users, title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
+      { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
@@ -5183,7 +5191,7 @@ function Dashboard({
         onClick: () => isLocked ? onLockedCard() : onOpenCard(c.key)
       },
       isLocked && /* @__PURE__ */ React9.createElement("span", { className: "lockBadge" }, /* @__PURE__ */ React9.createElement(Lock2, { size: 11, strokeWidth: 2.4 })),
-      /* @__PURE__ */ React9.createElement("div", { className: "cardIcon" }, /* @__PURE__ */ React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
+      /* @__PURE__ */ React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, /* @__PURE__ */ React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
       /* @__PURE__ */ React9.createElement("div", null, /* @__PURE__ */ React9.createElement("p", { className: "cardTitle" }, c.title), c.sub && /* @__PURE__ */ React9.createElement("p", { className: "cardSub" }, c.sub))
     );
   })), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
@@ -5195,18 +5203,21 @@ function Dashboard({
 // trade, not per company: where two firms share a trade on the same project
 // they share the cube, as decided. canSeeCard() keeps this to the system
 // administrator; no client or main contractor sees it.
+// The board of trades is what opens; who may sign in sits behind the access
+// button, because adding a subcontractor here is granting an access.
+var SUB_HELMET = "#E8B10A";
 var SUB_TRADES = [
-  { key: "hvac", label: "\u05de\u05d9\u05d6\u05d5\u05d2 \u05d0\u05d5\u05d5\u05d9\u05e8" },
-  { key: "electric", label: "\u05d7\u05e9\u05de\u05dc" },
-  { key: "plumbing", label: "\u05d0\u05d9\u05e0\u05e1\u05d8\u05dc\u05e6\u05d9\u05d4" },
-  { key: "drywall", label: "\u05d2\u05d1\u05e1" },
-  { key: "security", label: "\u05d1\u05d9\u05d8\u05d7\u05d5\u05df, \u05de\u05d5\u05dc\u05d8\u05d9\u05de\u05d3\u05d9\u05d4 \u05d5\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea" },
-  { key: "paint", label: "\u05e6\u05d1\u05e2" }
+  { key: "hvac", icon: AirVent, label: "\u05de\u05d9\u05d6\u05d5\u05d2 \u05d0\u05d5\u05d5\u05d9\u05e8" },
+  { key: "electric", icon: Zap, label: "\u05d7\u05e9\u05de\u05dc" },
+  { key: "plumbing", icon: Droplets, label: "\u05d0\u05d9\u05e0\u05e1\u05d8\u05dc\u05e6\u05d9\u05d4" },
+  { key: "drywall", icon: Layers, label: "\u05d2\u05d1\u05e1" },
+  { key: "security", icon: Cctv, label: "\u05d1\u05d9\u05d8\u05d7\u05d5\u05df, \u05de\u05d5\u05dc\u05d8\u05d9\u05de\u05d3\u05d9\u05d4 \u05d5\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea" },
+  { key: "paint", icon: Paintbrush, label: "\u05e6\u05d1\u05e2" }
 ];
 var SUB_SECTIONS = [
   { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "\u05de\u05d4\u05e7\u05d5\u05d1\u05d9\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea" },
   { key: "sd", icon: Ruler, title: "SD", sub: "\u05de\u05d4\u05e7\u05d5\u05d1\u05d9\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d9\u05ea" },
-  { key: "log", icon: Receipt, title: "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd", sub: "\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df" },
+  { key: "log", icon: NotebookPen, title: "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd", sub: "\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df" },
   { key: "schedule", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8", sub: "\u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05dc\u05d1\u05d3" },
   { key: "weekly", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9", sub: "\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df" },
   { key: "specs", icon: ClipboardList, title: "\u05de\u05e4\u05e8\u05d8\u05d9\u05dd \u05de\u05d9\u05d5\u05d7\u05d3\u05d9\u05dd", sub: "\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df" }
@@ -5221,71 +5232,71 @@ function makeSubCode() {
 }
 function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
   const list = (subsData && subsData.list) || [];
+  const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
   const [section, setSection] = React9.useState(null);
+  const [draft, setDraft] = React9.useState(null);
   const write = (next) => onChangeSubsData({ ...(subsData || {}), list: next });
-  const addSub = () => write(list.concat([{
-    id: "s-" + Date.now().toString(36),
-    name: "",
-    company: "",
-    phone: "",
-    code: makeSubCode(),
-    trade: trade || SUB_TRADES[0].key,
-    active: true
-  }]));
   const setField = (id, field, value) => write(list.map((r) => r.id === id ? { ...r, [field]: value } : r));
   const removeSub = (id) => write(list.filter((r) => r.id !== id));
   const countFor = (k) => list.filter((r) => r.trade === k && r.active !== false).length;
-  const tradeLabel = (k) => (SUB_TRADES.find((x) => x.key === k) || {}).label || k;
+  const tradeOf = (k) => SUB_TRADES.find((x) => x.key === k) || {};
   const cellS = { padding: "7px 8px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "middle" };
   const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap" };
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "5px 7px", font: "inherit", fontSize: 13 };
-  const backBtn = (label, onClick) => React9.createElement("button", { type: "button", className: "ghostBtn", onClick, style: { marginBottom: 14, alignSelf: "flex-start" } }, label);
-  const cubeGrid = (items, onPick) => React9.createElement(
-    "div",
-    { className: "cardGrid", style: { padding: 0 } },
-    items.map((c) => React9.createElement(
-      "button",
-      { key: c.key, className: "dashCard", type: "button", onClick: () => onPick(c.key) },
-      React9.createElement("div", { className: "cardIcon" }, React9.createElement(c.icon || Users, { size: 20, strokeWidth: 1.7 })),
-      React9.createElement("div", null,
-        React9.createElement("p", { className: "cardTitle" }, c.title),
-        c.sub && React9.createElement("p", { className: "cardSub" }, c.sub))
-    ))
-  );
-  if (trade && section) {
+  const wrapS = { flexDirection: "column", alignItems: "center", padding: 24, gap: 18 };
+  const backBtn = (label, onClick) => React9.createElement("button", { type: "button", className: "ghostBtn", onClick }, label);
+  // Same centring rule as the project board: a last row of one sits in the
+  // middle column, a last row of two is centred as a pair.
+  const cubeGrid = (items, onPick) => {
+    const tail = items.length % 3;
+    return React9.createElement(
+      "div",
+      { className: `cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim() },
+      items.map((c) => React9.createElement(
+        "button",
+        { key: c.key, className: "dashCard", type: "button", onClick: () => onPick(c.key) },
+        React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
+        React9.createElement("div", null,
+          React9.createElement("p", { className: "cardTitle" }, c.title),
+          c.sub && React9.createElement("p", { className: "cardSub" }, c.sub))
+      ))
+    );
+  };
+
+  // Third level: a trade's section. The lists themselves are wired next; the
+  // shell is here so the structure can be walked through.
+  if (view === "board" && trade && section) {
     const sec = SUB_SECTIONS.find((x) => x.key === section) || {};
-    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", padding: 24 } },
-      backBtn("\u2192 " + tradeLabel(trade), () => setSection(null)),
-      React9.createElement("h3", { style: { margin: "0 0 6px" } }, sec.title + " \u2014 " + tradeLabel(trade)),
-      React9.createElement("p", { className: "panelSub", style: { margin: 0, maxWidth: 640, lineHeight: 1.8 } },
-        "\u05d4\u05de\u05e1\u05da \u05d4\u05d6\u05d4 \u05d9\u05d7\u05d5\u05d1\u05e8 \u05d1\u05e9\u05dc\u05d1 \u05d4\u05d1\u05d0. \u05d4\u05e8\u05e9\u05d9\u05de\u05d5\u05ea \u05d9\u05d2\u05d9\u05e2\u05d5 \u05de\u05d4\u05e7\u05d5\u05d1\u05d9\u05d5\u05ea \u05d4\u05e8\u05d0\u05e9\u05d9\u05d5\u05ea \u05d3\u05e8\u05da \u05e1\u05d9\u05de\u05d5\u05df V \u05d1\u05e2\u05de\u05d5\u05d3\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4, \u05d5\u05de\u05d4 \u05e9\u05e0\u05db\u05ea\u05d1 \u05db\u05d0\u05df \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d0\u05e6\u05dc \u05d4\u05e7\u05d1\u05dc\u05df \u05dc\u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05dc\u05d1\u05d3.")
+    return React9.createElement("div", { className: "functionPageBody", style: wrapS },
+      backBtn("\u2192 " + (tradeOf(trade).label || ""), () => setSection(null)),
+      React9.createElement("h3", { style: { margin: 0 } }, sec.title + " \u2014 " + (tradeOf(trade).label || "")),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0, maxWidth: 620, textAlign: "center", lineHeight: 1.8 } },
+        "\u05d4\u05de\u05e1\u05da \u05d4\u05d6\u05d4 \u05d9\u05d7\u05d5\u05d1\u05e8 \u05d1\u05e9\u05dc\u05d1 \u05d4\u05d1\u05d0.")
     );
   }
-  if (trade) {
-    const mine = list.filter((r) => r.trade === trade);
-    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", padding: 24 } },
-      backBtn("\u2192 \u05db\u05dc \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd", () => setTrade(null)),
-      React9.createElement("h3", { style: { margin: "0 0 12px" } }, tradeLabel(trade)),
-      cubeGrid(SUB_SECTIONS, (k) => setSection(k)),
-      React9.createElement("p", { className: "panelSub", style: { marginTop: 18 } },
-        mine.length === 0
-          ? "\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05e7\u05d1\u05dc\u05df \u05d1\u05ea\u05d7\u05d5\u05dd \u05d4\u05d6\u05d4."
-          : "\u05de\u05e9\u05d5\u05d9\u05db\u05d9\u05dd \u05dc\u05ea\u05d7\u05d5\u05dd: " + mine.map((r) => r.company || r.name || "\u2014").join(", "))
+
+  // Second level: one trade and its six sections.
+  if (view === "board" && trade) {
+    return React9.createElement("div", { className: "functionPageBody", style: wrapS },
+      backBtn("\u2192 \u05dc\u05d5\u05d7 \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd", () => setTrade(null)),
+      cubeGrid(SUB_SECTIONS, (k) => setSection(k))
     );
   }
-  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", padding: 24, gap: 22 } },
-    React9.createElement("div", null,
-      React9.createElement("h3", { style: { margin: "0 0 4px" } }, "\u05e8\u05e9\u05d9\u05de\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
-      React9.createElement("p", { className: "panelSub", style: { margin: "0 0 12px" } },
-        "\u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05db\u05e0\u05e1 \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05e9\u05dc\u05d5 \u05d5\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9. \u05db\u05d9\u05d1\u05d5\u05d9 \u05d4\u05de\u05ea\u05d2 \u05de\u05e0\u05ea\u05e7 \u05d0\u05d5\u05ea\u05d5 \u05de\u05d9\u05d3."),
+
+  // The access register, behind its own button.
+  if (view === "access") {
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", padding: 24, gap: 16 } },
+      backBtn("\u2192 \u05dc\u05d5\u05d7 \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd", () => { setView("board"); setDraft(null); }),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0 } },
+        "\u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05db\u05e0\u05e1 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9. \u05d4\u05d4\u05e8\u05e9\u05d0\u05d4 \u05dc\u05dc\u05d0 \u05d4\u05d2\u05d1\u05dc\u05ea \u05d6\u05de\u05df \u2014 \u05d4\u05d9\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 \u05dc\u05db\u05d9\u05d1\u05d5\u05d9 \u05d0\u05d5 \u05de\u05d7\u05d9\u05e7\u05d4 \u05e9\u05dc \u05d4\u05e7\u05d1\u05dc\u05df, \u05d5\u05e9\u05e0\u05d9\u05d4\u05dd \u05de\u05e0\u05ea\u05e7\u05d9\u05dd \u05d0\u05d5\u05ea\u05d5 \u05de\u05d9\u05d3."),
       React9.createElement("div", { style: { overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", minWidth: 780 } },
           React9.createElement("thead", null, React9.createElement("tr", null,
             ["\u05e9\u05dd", "\u05d7\u05d1\u05e8\u05d4", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05e4\u05e2\u05d9\u05dc", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
           React9.createElement("tbody", null,
             list.length === 0
-              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 7 }, "\u05d8\u05e8\u05dd \u05d4\u05d5\u05d6\u05df \u05e7\u05d1\u05dc\u05df."))
+              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 7 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e3 \u05e7\u05d1\u05dc\u05df \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05d4\u05d6\u05d4."))
               : list.map((r) => React9.createElement("tr", { key: r.id },
                   React9.createElement("td", { style: cellS }, React9.createElement("input", { style: inputS, value: r.name || "", disabled: !canEdit, onChange: (e) => setField(r.id, "name", e.target.value) })),
                   React9.createElement("td", { style: cellS }, React9.createElement("input", { style: inputS, value: r.company || "", disabled: !canEdit, onChange: (e) => setField(r.id, "company", e.target.value) })),
@@ -5301,12 +5312,46 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit }) {
                   React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
                     canEdit && React9.createElement("button", { type: "button", onClick: () => removeSub(r.id), title: "\u05de\u05d7\u05d9\u05e7\u05d4", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 15 } }, "\u2715"))
                 ))))),
-      canEdit && React9.createElement("button", { type: "button", className: "functionEditBtn", style: { marginTop: 12 }, onClick: addSub }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df")),
-    React9.createElement("div", null,
-      React9.createElement("h3", { style: { margin: "0 0 12px" } }, "\u05e7\u05d5\u05d1\u05d9\u05d5\u05ea \u05dc\u05e4\u05d9 \u05ea\u05d7\u05d5\u05dd"),
-      cubeGrid(SUB_TRADES.map((tr) => ({ key: tr.key, icon: Users, title: tr.label, sub: countFor(tr.key) + " \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd" })), (k) => { setTrade(k); setSection(null); }))
+      // Nothing is granted until Save is pressed: the details are filled in
+      // here and only then does the row join the register.
+      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: { alignSelf: "flex-start" }, onClick: () => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key }) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df"),
+      canEdit && draft && React9.createElement("div", { style: { border: "1px solid var(--line)", borderRadius: 12, padding: 16, background: "#fff", display: "flex", flexDirection: "column", gap: 10, maxWidth: 560 } },
+        React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 } },
+          React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05e9\u05dd",
+            React9.createElement("input", { style: inputS, value: draft.name, onChange: (e) => setDraft({ ...draft, name: e.target.value }) })),
+          React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05d7\u05d1\u05e8\u05d4",
+            React9.createElement("input", { style: inputS, value: draft.company, onChange: (e) => setDraft({ ...draft, company: e.target.value }) })),
+          React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05d8\u05dc\u05e4\u05d5\u05df",
+            React9.createElement("input", { style: { ...inputS, direction: "ltr" }, inputMode: "tel", value: draft.phone, onChange: (e) => setDraft({ ...draft, phone: e.target.value }) })),
+          React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d7\u05d5\u05dd",
+            React9.createElement("select", { style: inputS, value: draft.trade, onChange: (e) => setDraft({ ...draft, trade: e.target.value }) },
+              SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label))))),
+        React9.createElement("div", { style: { display: "flex", gap: 8 } },
+          React9.createElement("button", { type: "button", className: "functionEditBtn", disabled: !(draft.name || draft.company) || !draft.phone.trim(), onClick: () => {
+            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: draft.trade, active: true }]));
+            setDraft(null);
+          } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
+          React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setDraft(null) }, "\u05d1\u05d9\u05d8\u05d5\u05dc")),
+        React9.createElement("p", { className: "panelSub", style: { margin: 0 } }, "\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9 \u05e0\u05d5\u05e6\u05e8 \u05d0\u05d5\u05d8\u05d5\u05de\u05d8\u05d9\u05ea \u05d1\u05e9\u05de\u05d9\u05e8\u05d4."))
+    );
+  }
+
+  // First level: the trades themselves, with the access register alongside.
+  return React9.createElement("div", { className: "functionPageBody", style: wrapS },
+    React9.createElement("div", { style: { width: "100%", display: "flex", justifyContent: "flex-start" } },
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setView("access") },
+        React9.createElement(Users, { size: 14, strokeWidth: 2, style: { marginInlineEnd: 6, verticalAlign: "-2px" } }),
+        "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4")),
+    cubeGrid(SUB_TRADES.map((tr) => ({
+      key: tr.key,
+      icon: tr.icon,
+      iconColor: SUB_HELMET,
+      title: tr.label,
+      sub: countFor(tr.key) + " \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd"
+    })), (k) => { setTrade(k); setSection(null); })
   );
 }
+
 
 // src/cards/CardView.jsx
 import React14, { useState as useState5, useEffect as useEffect4 } from "react";
