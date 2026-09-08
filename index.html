@@ -231,6 +231,7 @@ import {
   Crown,
   HardHat,
   NotebookPen,
+  Eye as EyeIcon2,
   AirVent,
   Zap,
   Droplets,
@@ -504,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "8.9.2026 · build 90";
+var APP_BUILD = "8.9.2026 · build 93";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5335,9 +5336,16 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
   const [draft, setDraft] = React9.useState(null);
   const [busy, setBusy] = React9.useState(false);
   const [err, setErr] = React9.useState(null);
+  // The square takes a paste first and only opens the file dialog on a second
+  // press: pasting a screenshot is the common case here, and a dialog that
+  // jumps up on the first click gets in the way of it. (8.9.26)
+  const [pasteArmed, setPasteArmed] = React9.useState(false);
+  const fileRef = React9.useRef(null);
   const today = () => new Date().toISOString().slice(0, 10);
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
   const btnS = { minWidth: 132, justifyContent: "center" };
+  const cellS = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
+  const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
   const addFiles = async (files) => {
     const list = Array.from(files || []);
     if (!list.length) return;
@@ -5352,13 +5360,16 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
     } finally { setBusy(false); }
   };
   const sorted = entries.slice().sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")));
+  const fmt = (iso) => {
+    if (!iso) return "";
+    const p = String(iso).slice(0, 10).split("-");
+    return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : String(iso);
+  };
   return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 18 } },
     React9.createElement("h3", { style: { margin: 0 } }, "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
     canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => setDraft({ date: today(), subject: "", body: "", atts: [] }) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e2\u05d3\u05db\u05d5\u05df"),
     canEdit && draft && React9.createElement("div", {
-      style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 620 },
-      // A screenshot pasted straight in is the fastest way to file one of
-      // these, so the whole box takes a paste, not just a button.
+      style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 760 },
       onPaste: (e) => { const f = e.clipboardData && e.clipboardData.files; if (f && f.length) { e.preventDefault(); addFiles(f); } }
     },
       React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 2fr", gap: 12 } },
@@ -5368,35 +5379,371 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
           React9.createElement("input", { style: inputS, value: draft.subject, onChange: (e) => setDraft({ ...draft, subject: e.target.value }) }))),
       React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d9\u05d0\u05d5\u05e8",
         React9.createElement("textarea", { style: { ...inputS, minHeight: 90, resize: "vertical" }, value: draft.body, onChange: (e) => setDraft({ ...draft, body: e.target.value }) })),
-      React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10 } },
-        (draft.atts || []).map((a, i) => React9.createElement(SubsAttachment, { key: a.path, att: a, onRemove: () => setDraft({ ...draft, atts: draft.atts.filter((_, j) => j !== i) }) })),
-        React9.createElement("label", { style: { width: 104, height: 104, border: "1px dashed var(--line)", borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 26, color: "var(--mist)" } },
-          busy ? "\u2026" : "+",
-          React9.createElement("input", { type: "file", accept: "image/*,application/pdf", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } }))),
-      React9.createElement("p", { className: "panelSub", style: { margin: 0 } }, "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d0\u05d5 PDF. \u05d0\u05e4\u05e9\u05e8 \u05d2\u05dd \u05dc\u05d4\u05d3\u05d1\u05d9\u05e7 \u05ea\u05de\u05d5\u05e0\u05d4 \u05d9\u05e9\u05d9\u05e8\u05d5\u05ea \u05dc\u05ea\u05d9\u05d1\u05d4."),
-      err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12 } }, err),
+      React9.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8 } },
+        React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" } },
+          (draft.atts || []).map((a, i) => React9.createElement(SubsAttachment, { key: a.path, att: a, onRemove: () => setDraft({ ...draft, atts: draft.atts.filter((_, j) => j !== i) }) })),
+          React9.createElement("div", {
+            tabIndex: 0,
+            onClick: () => { if (!pasteArmed) setPasteArmed(true); else if (fileRef.current) fileRef.current.click(); },
+            style: { width: 104, height: 104, border: pasteArmed ? "2px solid var(--steel)" : "1px dashed var(--line)", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 24, color: "var(--mist)", outline: "none", textAlign: "center", padding: 6 }
+          },
+            busy ? "\u2026" : "+",
+            pasteArmed && React9.createElement("span", { style: { fontSize: 10, lineHeight: 1.4, marginTop: 4 } }, "\u05d4\u05d3\u05d1\u05d9\u05e7\u05d9 \u05d0\u05d5 \u05dc\u05d7\u05e6\u05d9 \u05e9\u05d5\u05d1 \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4")),
+          React9.createElement("input", { ref: fileRef, type: "file", accept: "image/*,application/pdf", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } })),
+        React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d0\u05d5 PDF \u2014 \u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u05de\u05d0\u05e4\u05e9\u05e8\u05ea \u05d4\u05d3\u05d1\u05e7\u05d4, \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea \u05e4\u05d5\u05ea\u05d7\u05ea \u05d4\u05e2\u05dc\u05d0\u05ea \u05e7\u05d5\u05d1\u05e5.")),
+      err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12, textAlign: "center" } }, err),
       React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: busy || !draft.subject.trim(), onClick: () => {
-          onChange(entries.concat([{ id: "u-" + Date.now().toString(36), date: draft.date || today(), subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
-          setDraft(null);
+          onChange(entries.concat([{ id: "u-" + Date.now().toString(36), date: draft.date || today(), createdAt: new Date().toISOString(), subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
+          setDraft(null); setPasteArmed(false);
         } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
-        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => setDraft(null) }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
-    React9.createElement("div", { style: { width: "100%", maxWidth: 760, display: "flex", flexDirection: "column", gap: 12 } },
-      sorted.length === 0
-        ? React9.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, "\u05d8\u05e8\u05dd \u05e0\u05e8\u05e9\u05dd \u05e2\u05d3\u05db\u05d5\u05df.")
-        : sorted.map((u) => React9.createElement("div", { key: u.id, style: { border: "1px solid var(--line)", borderRadius: 12, padding: 14, background: "#fff" } },
-            React9.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 } },
-              React9.createElement("strong", { style: { fontSize: 14 } }, u.subject),
-              React9.createElement("span", { style: { fontSize: 12, color: "var(--mist)", direction: "ltr" } }, u.date)),
-            u.body && React9.createElement("p", { style: { margin: "8px 0 0", fontSize: 13, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, u.body),
-            (u.atts || []).length > 0 && React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, marginTop: 10 } },
-              u.atts.map((a) => React9.createElement(SubsAttachment, { key: a.path, att: a }))),
-            canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginTop: 10 }, onClick: () => onChange(entries.filter((x) => x.id !== u.id)) }, "\u05de\u05d7\u05d9\u05e7\u05ea \u05e2\u05d3\u05db\u05d5\u05df")
-          )))
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
+      React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
+        React9.createElement("thead", null, React9.createElement("tr", null,
+          React9.createElement("th", { style: { ...headS, width: 140 } }, "\u05ea\u05d0\u05e8\u05d9\u05da"),
+          React9.createElement("th", { style: headS }, "\u05e0\u05d5\u05e9\u05d0 \u05d5\u05ea\u05d9\u05d0\u05d5\u05e8"),
+          React9.createElement("th", { style: { ...headS, width: 260 } }, "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea / \u05e7\u05d1\u05e6\u05d9\u05dd"),
+          canEdit ? React9.createElement("th", { style: { ...headS, width: 60 } }, "") : null)),
+        React9.createElement("tbody", null,
+          sorted.length === 0
+            ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, textAlign: "center", color: "var(--mist)" }, colSpan: canEdit ? 4 : 3 }, "\u05d8\u05e8\u05dd \u05e0\u05e8\u05e9\u05dd \u05e2\u05d3\u05db\u05d5\u05df."))
+            : sorted.map((u) => React9.createElement("tr", { key: u.id },
+                React9.createElement("td", { style: { ...cellS, textAlign: "center", whiteSpace: "nowrap" } },
+                  React9.createElement("div", { style: { fontWeight: 800 } }, fmt(u.date)),
+                  u.createdAt && React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", marginTop: 2 } }, "\u05e0\u05e8\u05e9\u05dd " + fmt(u.createdAt))),
+                React9.createElement("td", { style: cellS },
+                  React9.createElement("div", { style: { fontWeight: 800, fontSize: 14 } }, u.subject),
+                  u.body && React9.createElement("div", { style: { marginTop: 6, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, u.body)),
+                React9.createElement("td", { style: cellS },
+                  (u.atts || []).length === 0
+                    ? React9.createElement("span", { style: { color: "var(--mist)" } }, "\u2014")
+                    : React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 8 } },
+                        u.atts.map((a) => React9.createElement(SubsAttachment, { key: a.path, att: a })))),
+                canEdit ? React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                  React9.createElement("button", { type: "button", title: "\u05de\u05d7\u05d9\u05e7\u05d4", onClick: () => onChange(entries.filter((x) => x.id !== u.id)), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", padding: 4 } },
+                    React9.createElement(Trash2, { size: 16, strokeWidth: 2 }))) : null
+              )))))
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId }) {
+
+// Special specifications. Same shape as the update log, minus the date: she
+// files a subject, the text, and whatever document or photograph goes with
+// it. On the contractor's side this is read on screen and never downloaded —
+// which is why the entry keeps its text as well as its file. (8.9.26)
+function SubsSpecsList({ trade, tradeLabel, projectId, canEdit, entries, onChange }) {
+  const [draft, setDraft] = React9.useState(null);
+  const [busy, setBusy] = React9.useState(false);
+  const [err, setErr] = React9.useState(null);
+  const [pasteArmed, setPasteArmed] = React9.useState(false);
+  const [openId, setOpenId] = React9.useState(null);
+  const fileRef = React9.useRef(null);
+  const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
+  const btnS = { minWidth: 132, justifyContent: "center" };
+  const cellS = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
+  const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
+  const addFiles = async (files) => {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    setBusy(true); setErr(null);
+    try {
+      const done = [];
+      for (const f of list) done.push(await subsUploadFile(projectId, trade, f));
+      setDraft((d) => d ? { ...d, atts: (d.atts || []).concat(done) } : d);
+    } catch (e) {
+      console.error("[awdash] subs spec upload failed", e);
+      setErr(e && e.message ? e.message : String(e));
+    } finally { setBusy(false); }
+  };
+  const open = entries.find((x) => x.id === openId) || null;
+  if (open) {
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setOpenId(null) }, "\u2192 \u05d7\u05d6\u05e8\u05d4 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4"),
+      React9.createElement("h3", { style: { margin: 0 } }, open.subject),
+      open.body && React9.createElement("p", { style: { margin: 0, maxWidth: 900, lineHeight: 1.8, whiteSpace: "pre-wrap" } }, open.body),
+      (open.atts || []).length > 0 && React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" } },
+        open.atts.map((a) => React9.createElement(SubsAttachment, { key: a.path, att: a }))));
+  }
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 18 } },
+    React9.createElement("h3", { style: { margin: 0 } }, "\u05de\u05e4\u05e8\u05d8\u05d9\u05dd \u05de\u05d9\u05d5\u05d7\u05d3\u05d9\u05dd \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+    canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => setDraft({ subject: "", body: "", atts: [] }) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e4\u05e8\u05d8"),
+    canEdit && draft && React9.createElement("div", {
+      style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 760 },
+      onPaste: (e) => { const f = e.clipboardData && e.clipboardData.files; if (f && f.length) { e.preventDefault(); addFiles(f); } }
+    },
+      React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05e0\u05d5\u05e9\u05d0",
+        React9.createElement("input", { style: inputS, value: draft.subject, onChange: (e) => setDraft({ ...draft, subject: e.target.value }) })),
+      React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d9\u05d0\u05d5\u05e8",
+        React9.createElement("textarea", { style: { ...inputS, minHeight: 110, resize: "vertical" }, value: draft.body, onChange: (e) => setDraft({ ...draft, body: e.target.value }) })),
+      React9.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 8 } },
+        React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 10, justifyContent: "center" } },
+          (draft.atts || []).map((a, i) => React9.createElement(SubsAttachment, { key: a.path, att: a, onRemove: () => setDraft({ ...draft, atts: draft.atts.filter((_, j) => j !== i) }) })),
+          React9.createElement("div", {
+            tabIndex: 0,
+            onClick: () => { if (!pasteArmed) setPasteArmed(true); else if (fileRef.current) fileRef.current.click(); },
+            style: { width: 104, height: 104, border: pasteArmed ? "2px solid var(--steel)" : "1px dashed var(--line)", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 24, color: "var(--mist)", outline: "none", textAlign: "center", padding: 6 }
+          },
+            busy ? "\u2026" : "+",
+            pasteArmed && React9.createElement("span", { style: { fontSize: 10, lineHeight: 1.4, marginTop: 4 } }, "\u05d4\u05d3\u05d1\u05d9\u05e7\u05d9 \u05d0\u05d5 \u05dc\u05d7\u05e6\u05d9 \u05e9\u05d5\u05d1 \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4")),
+          React9.createElement("input", { ref: fileRef, type: "file", accept: "image/*,application/pdf", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } })),
+        React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05de\u05e1\u05de\u05da \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4 \u2014 \u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u05de\u05d0\u05e4\u05e9\u05e8\u05ea \u05d4\u05d3\u05d1\u05e7\u05d4, \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea \u05e4\u05d5\u05ea\u05d7\u05ea \u05d4\u05e2\u05dc\u05d0\u05ea \u05e7\u05d5\u05d1\u05e5.")),
+      err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12, textAlign: "center" } }, err),
+      React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: busy || !draft.subject.trim(), onClick: () => {
+          onChange(entries.concat([{ id: "sp-" + Date.now().toString(36), createdAt: new Date().toISOString(), subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
+          setDraft(null); setPasteArmed(false);
+        } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
+      React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
+        React9.createElement("thead", null, React9.createElement("tr", null,
+          React9.createElement("th", { style: headS }, "\u05e0\u05d5\u05e9\u05d0"),
+          React9.createElement("th", { style: headS }, "\u05ea\u05d9\u05d0\u05d5\u05e8"),
+          React9.createElement("th", { style: { ...headS, width: 120 } }, "\u05e7\u05d1\u05e6\u05d9\u05dd"),
+          React9.createElement("th", { style: { ...headS, width: 90 } }, "\u05e6\u05e4\u05d9\u05d9\u05d4"),
+          canEdit ? React9.createElement("th", { style: { ...headS, width: 60 } }, "") : null)),
+        React9.createElement("tbody", null,
+          entries.length === 0
+            ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, textAlign: "center", color: "var(--mist)" }, colSpan: canEdit ? 5 : 4 }, "\u05d8\u05e8\u05dd \u05d4\u05d5\u05d6\u05df \u05de\u05e4\u05e8\u05d8."))
+            : entries.map((sp) => React9.createElement("tr", { key: sp.id },
+                React9.createElement("td", { style: { ...cellS, fontWeight: 800 } }, sp.subject),
+                React9.createElement("td", { style: cellS }, sp.body ? String(sp.body).slice(0, 160) + (String(sp.body).length > 160 ? "\u2026" : "") : "\u2014"),
+                React9.createElement("td", { style: { ...cellS, textAlign: "center" } }, (sp.atts || []).length || "\u2014"),
+                React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                  React9.createElement("button", { type: "button", title: "\u05e6\u05e4\u05d9\u05d9\u05d4", onClick: () => setOpenId(sp.id), style: { border: "none", background: "transparent", cursor: "pointer", color: "var(--steel)", padding: 4 } },
+                    React9.createElement(EyeIcon2, { size: 17, strokeWidth: 2 }))),
+                canEdit ? React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                  React9.createElement("button", { type: "button", title: "\u05de\u05d7\u05d9\u05e7\u05d4", onClick: () => onChange(entries.filter((x) => x.id !== sp.id)), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", padding: 4 } },
+                    React9.createElement(Trash2, { size: 16, strokeWidth: 2 }))) : null
+              )))))
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The four read-and-fill sections of a trade cube. (8.9.26)
+// ---------------------------------------------------------------------------
+// Which submittal folders belong to which trade. Lighting is the electrician's
+// as much as electrical is; security/controls/comms goes to its own contractor
+// and to the electrician, because on a project without a comms contractor the
+// electrician is the one who needs it. Drywall and paint file no submittals at
+// all — they are reached through SD.
+var SUBS_TRADE_SUBMITTAL_CATS = {
+  hvac: ["hvac"],
+  electric: ["electrical", "lighting", "security"],
+  plumbing: ["plumbing"],
+  security: ["security"],
+  drywall: [],
+  paint: []
+};
+var SUBS_CELL = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
+var SUBS_HEAD = { ...SUBS_CELL, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
+function subsFmtDate(iso) {
+  if (!iso) return "\u2014";
+  const p = String(iso).slice(0, 10).split("-");
+  return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : String(iso);
+}
+function SubsShell({ title, children }) {
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 18 } },
+    React9.createElement("h3", { style: { margin: 0 } }, title),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } }, children));
+}
+
+// --------------------------------------------------------------- submittals
+function SubsSubmittalList({ trade, tradeLabel, submittals }) {
+  const [openId, setOpenId] = React9.useState(null);
+  const cats = SUBS_TRADE_SUBMITTAL_CATS[trade] || [];
+  const rows = (submittals || []).filter((r) => r && !r.hidden && cats.indexOf(r.category) >= 0);
+  const decisionOf = (r) => ((r.reviews || [])[0] || {}).decision || null;
+  const isApproved = (r) => ["approved", "approvedNoted"].indexOf(decisionOf(r)) >= 0;
+  const open = rows.find((r) => r.id === openId) || null;
+  if (open) {
+    const dec = SB_DECISIONS.find((d) => d.key === decisionOf(open));
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 14 } },
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setOpenId(null) }, "\u2192 \u05d7\u05d6\u05e8\u05d4 \u05dc\u05e8\u05e9\u05d9\u05de\u05d4"),
+      React9.createElement("h3", { style: { margin: 0 } }, sbNumber(open.category, open.seq) + " \u00b7 " + (open.itemDescription || "")),
+      dec && React9.createElement("span", { style: { fontWeight: 800, color: dec.color } }, dec.he),
+      ((open.reviews || [])[0] || {}).comments && React9.createElement("p", { style: { margin: 0, maxWidth: 820, lineHeight: 1.8, whiteSpace: "pre-wrap" } }, open.reviews[0].comments),
+      React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" } },
+        (open.attachments || []).filter((a) => a && a.path).map((a) => React9.createElement(SubsAttachment, { key: a.path, att: a }))));
+  }
+  return React9.createElement(SubsShell, { title: "Submittal \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel },
+    React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
+      React9.createElement("thead", null, React9.createElement("tr", null,
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 150 } }, "\u05de\u05e1' \u05e1\u05d1\u05de\u05d9\u05d8\u05dc"),
+        React9.createElement("th", { style: SUBS_HEAD }, "\u05ea\u05d9\u05d0\u05d5\u05e8"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 190 } }, "\u05e1\u05d8\u05d8\u05d5\u05e1"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 90 } }, "\u05e6\u05e4\u05d9\u05d9\u05d4"))),
+      React9.createElement("tbody", null,
+        rows.length === 0
+          ? React9.createElement("tr", null, React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", color: "var(--mist)" }, colSpan: 4 }, cats.length === 0 ? "\u05dc\u05ea\u05d7\u05d5\u05dd \u05d6\u05d4 \u05d0\u05d9\u05df \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd." : "\u05d8\u05e8\u05dd \u05d4\u05d5\u05d2\u05e9 \u05e1\u05d1\u05de\u05d9\u05d8\u05dc."))
+          : rows.map((r) => {
+              const dec = SB_DECISIONS.find((d) => d.key === decisionOf(r));
+              const ok = isApproved(r);
+              return React9.createElement("tr", { key: r.id },
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", direction: "ltr", fontWeight: 800 } }, sbNumber(r.category, r.seq)),
+                React9.createElement("td", { style: SUBS_CELL }, r.itemDescription || r.scope || "\u2014"),
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 700, color: dec ? dec.color : "var(--mist)" } }, dec ? dec.he : "\u05d8\u05e8\u05dd \u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05ea\u05d9\u05d9\u05d7\u05e1\u05d5\u05ea"),
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center" } },
+                  React9.createElement("button", {
+                    type: "button",
+                    disabled: !ok,
+                    title: ok ? "\u05e6\u05e4\u05d9\u05d9\u05d4" : "\u05d6\u05de\u05d9\u05df \u05e8\u05e7 \u05dc\u05d0\u05d7\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8",
+                    onClick: () => setOpenId(r.id),
+                    style: { border: "none", background: "transparent", cursor: ok ? "pointer" : "default", color: ok ? "var(--steel)" : "#c9ced6", padding: 4 }
+                  }, React9.createElement(EyeIcon2, { size: 17, strokeWidth: 2 }))));
+            }))));
+}
+
+// ---------------------------------------------------------------------- SD
+function SubsSdList({ trade, tradeLabel, sdRows, boqData, boqFlags }) {
+  const data = sdRows || {};
+  const auto = (boqData || {}).flags || {};
+  let derived = [];
+  try {
+    derived = boqProducts(boqData, auto, boqFlags, "sd").map((p) => ({ code: p.code, title: boqText(p, "he") }));
+  } catch (e) { derived = []; }
+  const manual = Object.keys(data).filter((k) => k.indexOf("s-") === 0).map((k) => ({ code: k, title: (data[k] || {}).desc || "" }));
+  const rows = derived.concat(manual).filter((r) => ((data[r.code] || {}).subs || []).indexOf(trade) >= 0);
+  return React9.createElement(SubsShell, { title: "SD \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel },
+    React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
+      React9.createElement("thead", null, React9.createElement("tr", null,
+        React9.createElement("th", { style: SUBS_HEAD }, "\u05ea\u05d9\u05d0\u05d5\u05e8"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 190 } }, "\u05e1\u05d8\u05d8\u05d5\u05e1"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 90 } }, "\u05e6\u05e4\u05d9\u05d9\u05d4"))),
+      React9.createElement("tbody", null,
+        rows.length === 0
+          ? React9.createElement("tr", null, React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", color: "var(--mist)" }, colSpan: 3 }, "\u05d8\u05e8\u05dd \u05e9\u05d5\u05d9\u05db\u05d4 \u05e9\u05d5\u05e8\u05ea SD \u05dc\u05ea\u05d7\u05d5\u05dd \u05d4\u05d6\u05d4."))
+          : rows.map((r) => {
+              const v = sdRowOf(data, r.code);
+              const st = SD_STATUSES.find((x) => x.key === v.status) || SD_STATUSES[0];
+              const ok = SD_DONE.indexOf(v.status) >= 0;
+              const file = v.file && v.file.path ? v.file : null;
+              return React9.createElement("tr", { key: r.code },
+                React9.createElement("td", { style: SUBS_CELL }, v.desc || r.title || r.code),
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 700, color: st.color || "var(--mist)" } }, st.he),
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center" } },
+                  ok && file
+                    ? React9.createElement(SubsFileEye, { att: file })
+                    : React9.createElement("span", { title: ok ? "\u05d0\u05d9\u05df \u05e7\u05d5\u05d1\u05e5" : "\u05d6\u05de\u05d9\u05df \u05e8\u05e7 \u05dc\u05d0\u05d7\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8", style: { color: "#c9ced6" } },
+                        React9.createElement(EyeIcon2, { size: 17, strokeWidth: 2 }))));
+            }))));
+}
+function SubsFileEye({ att }) {
+  const [url, setUrl] = React9.useState(null);
+  React9.useEffect(() => {
+    let live = true;
+    (async () => {
+      try {
+        const { data } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(att.path, 3600);
+        if (live && data) setUrl(data.signedUrl);
+      } catch (e) {}
+    })();
+    return () => { live = false; };
+  }, [att.path]);
+  return React9.createElement("button", {
+    type: "button", disabled: !url, title: "\u05e6\u05e4\u05d9\u05d9\u05d4",
+    onClick: () => url && window.open(url, "_blank", "noopener"),
+    style: { border: "none", background: "transparent", cursor: url ? "pointer" : "default", color: url ? "var(--steel)" : "#c9ced6", padding: 4 }
+  }, React9.createElement(EyeIcon2, { size: 17, strokeWidth: 2 }));
+}
+
+// ------------------------------------------------------------ project schedule
+// The programme only: no critical notes, no milestone board. A milestone has
+// no duration, so it drops out here by its own dates.
+function SubsScheduleView({ tradeLabel, scheduleData }) {
+  const all = (scheduleData && scheduleData.tasks) || [];
+  const rows = all.filter((t) => t && t.name && t.start && t.finish && String(t.start) !== String(t.finish));
+  return React9.createElement(SubsShell, { title: "\u05dc\u05d5\"\u05d6 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel },
+    React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
+      React9.createElement("thead", null, React9.createElement("tr", null,
+        React9.createElement("th", { style: SUBS_HEAD }, "\u05e4\u05e2\u05d9\u05dc\u05d5\u05ea"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 120 } }, "\u05d4\u05ea\u05d7\u05dc\u05d4"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 120 } }, "\u05e1\u05d9\u05d5\u05dd"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 90 } }, "\u05d1\u05d9\u05e6\u05d5\u05e2"))),
+      React9.createElement("tbody", null,
+        rows.length === 0
+          ? React9.createElement("tr", null, React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", color: "var(--mist)" }, colSpan: 4 }, "\u05d8\u05e8\u05dd \u05d4\u05d5\u05e2\u05dc\u05d4 \u05dc\u05d5\"\u05d6."))
+          : rows.map((t, i) => React9.createElement("tr", { key: t.id || i },
+              React9.createElement("td", { style: { ...SUBS_CELL, fontWeight: t.isSummary ? 800 : 500 } }, t.name),
+              React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", whiteSpace: "nowrap" } }, subsFmtDate(t.start)),
+              React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", whiteSpace: "nowrap" } }, subsFmtDate(t.finish)),
+              React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center" } }, t.percent != null ? Math.round(t.percent) + "%" : "\u2014"))))));
+}
+
+// -------------------------------------------------------------- weekly board
+// A month of week rows; picking one opens Sunday to Friday with that week's
+// own dates and a free-text box under each day.
+function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange }) {
+  const now = new Date();
+  const [year, setYear] = React9.useState(now.getFullYear());
+  const [month, setMonth] = React9.useState(now.getMonth());
+  const [weekStart, setWeekStart] = React9.useState(null);
+  const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  const weeks = [];
+  {
+    const first = new Date(year, month, 1);
+    const cursor = new Date(first);
+    cursor.setDate(cursor.getDate() - cursor.getDay());
+    while (cursor <= new Date(year, month + 1, 0)) {
+      weeks.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 7);
+    }
+  }
+  const monthNames = ["\u05d9\u05e0\u05d5\u05d0\u05e8", "\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8", "\u05de\u05e8\u05e5", "\u05d0\u05e4\u05e8\u05d9\u05dc", "\u05de\u05d0\u05d9", "\u05d9\u05d5\u05e0\u05d9", "\u05d9\u05d5\u05dc\u05d9", "\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8", "\u05e1\u05e4\u05d8\u05de\u05d1\u05e8", "\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8", "\u05e0\u05d5\u05d1\u05de\u05d1\u05e8", "\u05d3\u05e6\u05de\u05d1\u05e8"];
+  const dayNames = ["\u05e8\u05d0\u05e9\u05d5\u05df", "\u05e9\u05e0\u05d9", "\u05e9\u05dc\u05d9\u05e9\u05d9", "\u05e8\u05d1\u05d9\u05e2\u05d9", "\u05d7\u05de\u05d9\u05e9\u05d9", "\u05e9\u05d9\u05e9\u05d9"];
+  const cells = (data || {})[weekStart] || [];
+  const setCell = (i, text) => {
+    const next = Array.from({ length: 6 }, (_, j) => j === i ? text : (cells[j] || ""));
+    onChange({ ...(data || {}), [weekStart]: next });
+  };
+  if (weekStart) {
+    const base = new Date(weekStart + "T00:00:00");
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setWeekStart(null) }, "\u2192 \u05d7\u05d6\u05e8\u05d4 \u05dc\u05d7\u05d5\u05d3\u05e9"),
+      React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+      React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
+        React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed" } },
+          React9.createElement("thead", null, React9.createElement("tr", null,
+            dayNames.map((d, i) => {
+              const day = new Date(base); day.setDate(day.getDate() + i);
+              return React9.createElement("th", { key: i, style: SUBS_HEAD },
+                React9.createElement("div", null, d),
+                React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", direction: "ltr" } }, subsFmtDate(iso(day))));
+            }))),
+          React9.createElement("tbody", null, React9.createElement("tr", null,
+            dayNames.map((d, i) => React9.createElement("td", { key: i, style: { ...SUBS_CELL, padding: 6 } },
+              React9.createElement("textarea", {
+                value: cells[i] || "",
+                readOnly: !canEdit,
+                onChange: (e) => setCell(i, e.target.value),
+                placeholder: canEdit ? "\u05e2\u05d1\u05d5\u05d3\u05d5\u05ea \u05e0\u05d3\u05e8\u05e9\u05d5\u05ea" : "",
+                style: { width: "100%", minHeight: 150, border: "1px solid var(--line)", borderRadius: 8, padding: 8, font: "inherit", fontSize: 13, resize: "vertical" }
+              })))))))); 
+  }
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
+    React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+    React9.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => { const m = month - 1; if (m < 0) { setMonth(11); setYear(year - 1); } else setMonth(m); } }, "\u2039"),
+      React9.createElement("strong", { style: { minWidth: 150, textAlign: "center" } }, monthNames[month] + " " + year),
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => { const m = month + 1; if (m > 11) { setMonth(0); setYear(year + 1); } else setMonth(m); } }, "\u203a")),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 760, display: "flex", flexDirection: "column", gap: 8 } },
+      weeks.map((w) => {
+        const key = iso(w);
+        const end = new Date(w); end.setDate(end.getDate() + 5);
+        const filled = ((data || {})[key] || []).filter((x) => (x || "").trim()).length;
+        return React9.createElement("button", {
+          key,
+          type: "button",
+          onClick: () => setWeekStart(key),
+          style: { display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--line)", borderRadius: 10, background: "#fff", padding: "12px 14px", cursor: "pointer", font: "inherit" }
+        },
+          React9.createElement("span", { style: { fontWeight: 700 } }, "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(key) + " \u2013 " + subsFmtDate(iso(end))),
+          React9.createElement("span", { style: { fontSize: 12, color: filled ? "#1a7f4b" : "var(--mist)" } }, filled ? filled + " \u05d9\u05de\u05d9\u05dd \u05de\u05d5\u05dc\u05d0\u05d9\u05dd" : "\u05e8\u05d9\u05e7"));
+      })));
+}
+
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
@@ -5469,6 +5816,39 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId }) 
       canEdit,
       entries: ((subsData || {}).logs || {})[trade] || [],
       onChange: (next) => onChangeSubsData({ ...(subsData || {}), logs: { ...((subsData || {}).logs || {}), [trade]: next } })
+    });
+  }
+
+  if (view === "board" && trade && section === "submittal") {
+    return React9.createElement(SubsSubmittalList, { trade, tradeLabel: tradeOf(trade).label || "", submittals });
+  }
+
+  if (view === "board" && trade && section === "sd") {
+    return React9.createElement(SubsSdList, { trade, tradeLabel: tradeOf(trade).label || "", sdRows, boqData, boqFlags });
+  }
+
+  if (view === "board" && trade && section === "schedule") {
+    return React9.createElement(SubsScheduleView, { tradeLabel: tradeOf(trade).label || "", scheduleData });
+  }
+
+  if (view === "board" && trade && section === "weekly") {
+    return React9.createElement(SubsWeekly, {
+      trade,
+      tradeLabel: tradeOf(trade).label || "",
+      canEdit,
+      data: ((subsData || {}).weekly || {})[trade] || {},
+      onChange: (next) => onChangeSubsData({ ...(subsData || {}), weekly: { ...((subsData || {}).weekly || {}), [trade]: next } })
+    });
+  }
+
+  if (view === "board" && trade && section === "specs") {
+    return React9.createElement(SubsSpecsList, {
+      trade,
+      tradeLabel: tradeOf(trade).label || "",
+      projectId,
+      canEdit,
+      entries: ((subsData || {}).specs || {})[trade] || [],
+      onChange: (next) => onChangeSubsData({ ...(subsData || {}), specs: { ...((subsData || {}).specs || {}), [trade]: next } })
     });
   }
 
@@ -6837,7 +7217,7 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id }), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
