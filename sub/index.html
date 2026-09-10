@@ -74,6 +74,12 @@
   .week th{width:92px;background:#f4f6f9;font-weight:800;text-align:center}
   .week th .num{display:block;font-size:10.5px;color:var(--mist);font-weight:600}
   .week td{text-align:right;white-space:pre-wrap;line-height:1.7}
+  .cats{display:flex;flex-direction:column;gap:10px}
+  .catRow{display:flex;justify-content:space-between;align-items:center;background:var(--surface);
+    border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;font:inherit;
+    font-size:14px;font-weight:800;color:var(--navy);cursor:pointer}
+  .catRow .n{font-size:11.5px;font-weight:600;color:var(--mist)}
+  .allCats{display:block;margin:0 0 12px}
   .checks{display:flex;flex-direction:column;gap:8px}
   .chk{display:flex;align-items:center;gap:10px;background:var(--surface);
     border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;font-size:13.5px}
@@ -115,7 +121,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">10.9.2026 · build 9</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">10.9.2026 · build 12</span></footer>
 
 <script>
 
@@ -148,7 +154,10 @@ var SD_STATUS = {
   revise:{t:"להגשה חוזרת",c:"#e08a12"}, rejected:{t:"לא מאושר",c:"#d02f2f"}
 };
 
-var state = { token:null, projects:[], project:null, board:null, screen:null, item:null };
+var CAT_HE = { electrical:"חשמל", lighting:"תאורה", security:"ביטחון, בקרה ותקשורת",
+  hvac:"מיזוג אוויר", plumbing:"אינסטלציה", ceiling:"תקרה", flooring:"ריצוף",
+  cladding:"גמרים", architecture:"אדריכלות" };
+var state = { token:null, projects:[], project:null, board:null, screen:null, cat:null };
 var app = document.getElementById("app");
 var out = document.getElementById("out");
 document.getElementById("yr").textContent = new Date().getFullYear();
@@ -187,11 +196,11 @@ function login(err){
     '<div class="card">'+
       '<div class="field"><label for="ph">מספר טלפון</label>'+
       '<input id="ph" class="num" type="tel" inputmode="tel" autocomplete="tel" placeholder="050-0000000"></div>'+
-      '<div class="field"><label for="cd">קוד אישי</label>'+
+      '<div class="field"><label for="cd">קוד</label>'+
       '<input id="cd" class="num" type="text" inputmode="text" autocapitalize="characters" maxlength="6" placeholder="XXXXXX"></div>'+
       '<button class="go" id="in">כניסה</button>'+
       '<p class="err" id="e"'+(err?'':' hidden')+'>'+esc(err||"")+'</p>'+
-      '<p class="hint">הקוד נשלח אליכם על ידי מנהלת הפרויקט. הוא נשאר בתוקף עד שהיא מבטלת אותו.</p>'+
+      '<p class="hint">בכניסה הראשונה — הקוד שקיבלתם ממנהלת הפרויקט. לאחר שבחרתם קוד משלכם, הזינו אותו.</p>'+
     '</div>';
   var ph=document.getElementById("ph"), cd=document.getElementById("cd");
   var btn=document.getElementById("in");
@@ -206,17 +215,55 @@ function login(err){
         login(msg); return;
       }
       state.token=r.data.token; state.projects=r.data.projects||[];
+      state.needPin=!r.data.hasPin;
       try{
         localStorage.setItem(TOKEN_KEY, state.token);
         localStorage.setItem(TOKEN_KEY+".projects", JSON.stringify(state.projects));
       }catch(e){}
       state.project = state.projects.length===1 ? state.projects[0].id : null;
+      if(state.needPin){ choosePin(); return; }
       if(state.project) loadBoard(); else render();
     }).catch(function(){ login("אין חיבור לשרת. נסו שוב."); });
   };
 }
 
 // ------------------------------------------------------------------ picker
+// Phones forget. The code she issued is six characters of nothing memorable,
+// so once he is in he picks four digits of his own — and a forgotten session
+// costs him four taps instead of a phone call.
+function choosePin(err){
+  out.hidden=false;
+  document.querySelector(".bar").classList.remove("guest");
+  app.innerHTML=
+    '<div class="card">'+
+      '<p class="hint" style="margin:0 0 14px;text-align:center">בחרו קוד בן 4 ספרות לכניסות הבאות.</p>'+
+      '<div class="field"><label for="p1">קוד</label>'+
+      '<input id="p1" class="num" type="tel" inputmode="numeric" maxlength="4" placeholder="••••"></div>'+
+      '<div class="field"><label for="p2">שוב, לאימות</label>'+
+      '<input id="p2" class="num" type="tel" inputmode="numeric" maxlength="4" placeholder="••••"></div>'+
+      '<button class="go" id="sp">שמירה</button>'+
+      '<p class="err" id="pe"'+(err?'':' hidden')+'>'+esc(err||"")+'</p>'+
+      '<p class="hint" style="text-align:center">אפשר גם לדלג ולהמשיך עם הקוד שקיבלתם.</p>'+
+      '<button class="go" id="sk" style="background:#9aa3af">דילוג</button>'+
+    '</div>';
+  var p1=document.getElementById("p1"), p2=document.getElementById("p2");
+  var btn=document.getElementById("sp");
+  document.getElementById("sk").onclick=function(){
+    state.needPin=false;
+    if(state.project) loadBoard(); else render();
+  };
+  btn.onclick=function(){
+    var a=p1.value.trim(), b=p2.value.trim();
+    if(!/^\d{4}$/.test(a)){ choosePin("צריך בדיוק 4 ספרות."); return; }
+    if(a!==b){ choosePin("שני הקודים אינם זהים."); return; }
+    btn.disabled=true; btn.textContent="שומר…";
+    call({action:"set-pin", token:state.token, pin:a}).then(function(r){
+      if(!r.ok){ choosePin("השמירה נכשלה. נסו שוב."); return; }
+      state.needPin=false;
+      if(state.project) loadBoard(); else render();
+    }).catch(function(){ choosePin("אין חיבור לשרת."); });
+  };
+}
 function picker(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
@@ -259,7 +306,7 @@ function board(){
            '<span class="t">'+c.t+'</span><span class="s">'+c.s+'</span></button>';
   }).join("")+'</div>';
   Array.prototype.forEach.call(app.querySelectorAll(".cube"), function(b){
-    b.onclick=function(){ state.screen=b.getAttribute("data-k"); history.pushState({s:1},""); render(); };
+    b.onclick=function(){ state.screen=b.getAttribute("data-k"); state.cat=null; history.pushState({s:1},""); render(); };
   });
 }
 
@@ -295,12 +342,25 @@ function viewSpecs(b){
   }).join("");
 }
 function viewSubmittal(b){
-  if(!b.submittals.length) return empty("אין סבמיטלים לתחום שלכם.");
-  return '<table class="tbl"><thead><tr><th>מס׳</th><th>תיאור</th><th>סטטוס</th><th></th></tr></thead><tbody>'+
-    b.submittals.map(function(r){
+  var all=b.submittals||[];
+  if(!all.length) return empty("אין סבמיטלים לתחום שלכם.");
+  // More than one folder means a door for each, rather than one long scroll.
+  var cats=[]; all.forEach(function(r){ if(r.category && cats.indexOf(r.category)<0) cats.push(r.category); });
+  if(cats.length>1 && !state.cat){
+    return '<div class="cats">'+cats.map(function(k){
+      var n=all.filter(function(r){return r.category===k}).length;
+      return '<button class="catRow" data-c="'+esc(k)+'"><span>'+esc(CAT_HE[k]||k)+'</span>'+
+        '<span class="n">'+n+' שורות</span></button>';
+    }).join("")+'</div>';
+  }
+  var rows=state.cat?all.filter(function(r){return r.category===state.cat}):all;
+  return (cats.length>1?'<button class="back allCats" id="ac">→ כל הקטגוריות</button>':'')+
+    '<table class="tbl"><thead><tr><th>מס׳</th><th>תיאור</th><th>סטטוס</th><th></th></tr></thead><tbody>'+
+    rows.map(function(r){
       var d=DECISIONS[r.decision];
-      return '<tr><td class="num">'+esc(r.no)+'</td><td>'+esc(r.description)+'</td>'+
-        '<td style="color:'+(d?d.c:"#9a9da5")+';font-weight:700">'+esc(d?d.t:"ממתין להתייחסות")+'</td>'+
+      var label = d ? d.t : (r.submitted ? "הוגש, ממתין להתייחסות" : "טרם הוגש");
+      return '<tr><td class="num">'+esc(r.no||"—")+'</td><td>'+esc(r.description)+'</td>'+
+        '<td style="color:'+(d?d.c:"#9a9da5")+';font-weight:700">'+esc(label)+'</td>'+
         '<td>'+eye(r.files)+'</td></tr>';
     }).join("")+'</tbody></table>';
 }
@@ -355,6 +415,11 @@ function screen(){
                                  viewWeekly(b);
   app.innerHTML='<div class="head"><button class="back" id="b">→ חזרה</button><h2>'+c.t+'</h2></div>'+body;
   document.getElementById("b").onclick=function(){ history.back(); };
+  Array.prototype.forEach.call(app.querySelectorAll(".catRow"), function(el){
+    el.onclick=function(){ state.cat=el.getAttribute("data-c"); history.pushState({s:1},""); render(); };
+  });
+  var ac=document.getElementById("ac");
+  if(ac) ac.onclick=function(){ history.back(); };
 }
 
 function render(){
@@ -371,6 +436,7 @@ function signOut(msg){
 }
 out.onclick=function(){ signOut(); };
 window.addEventListener("popstate", function(){
+  if(state.cat){ state.cat=null; render(); return; }
   if(state.screen){ state.screen=null; render(); return; }
   if(state.project && state.projects.length>1){ state.project=null; state.board=null; render(); }
 });
