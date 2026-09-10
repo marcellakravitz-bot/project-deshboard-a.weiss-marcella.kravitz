@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 121";
+var APP_BUILD = "11.9.2026 · build 122";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -20558,6 +20558,7 @@ function SubmittalFolder({
                       // a row has lines under it (30.8.26).
                       sbH("th", { className: "cChkChev" }, ""),
                       sbH("th", { className: "cCode" }, L("chkItem")),
+                      sbH("th", { className: "cDesc" }, L("typeCol")),
                       sbH("th", { className: "cDesc" }, L("chkDesc")),
                       sbH("th", { className: "cChkDocs" }, L("docsCol")),
                       sbH("th", { className: "cChkSup" }, L("supplierCol")),
@@ -20623,10 +20624,15 @@ function SubmittalFolder({
                         sbH(
                           "td",
                           { className: "sbChkDesc", dir: "auto" },
+                          (lead && lead.typeId) || boqText(r.node, lang)
+                        ),
+                        sbH(
+                          "td",
+                          { className: "sbChkDesc", dir: "auto" },
                           // What the model read off the specification when there
                           // is one; the bill of quantities' own wording when
                           // there is not.
-                          (lead && (lead.itemDescription || lead.typeId)) || boqText(r.node, lang),
+                          (lead && lead.itemDescription) || boqText(r.node, lang),
                           // A line the classification was unsure about.
                           r.product.flags.review
                             ? sbH("span", { className: "lliReviewTag", title: L("chkReviewTitle") }, L("chkReview"))
