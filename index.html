@@ -506,7 +506,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.9.2026 · build 101";
+var APP_BUILD = "10.9.2026 · build 102";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5751,6 +5751,110 @@ function SubsScheduleView({ tradeLabel, scheduleData }) {
               React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center" } }, t.percent != null ? Math.round(t.percent) + "%" : "\u2014"))))));
 }
 
+
+// Printing opens a window of its own rather than fighting the dashboard's own
+// styles: a week on paper goes on a clipboard and gets carried around a site.
+function subsPrint(title, bodyHtml) {
+  const w = window.open("", "_blank", "width=1000,height=700");
+  if (!w) return;
+  w.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
+<title>${title}</title><style>
+  @page { size: A4 landscape; margin: 12mm; }
+  body { font-family: Assistant, Arial, sans-serif; color: #17181c; }
+  h1 { font-size: 17px; margin: 0 0 4px; }
+  .sub { font-size: 12px; color: #666; margin: 0 0 14px; }
+  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+  th, td { border: 1px solid #d7d9dd; padding: 7px 8px; font-size: 11.5px;
+           vertical-align: top; text-align: right; white-space: pre-wrap; }
+  th { background: #f2f4f7; text-align: center; font-size: 11px; }
+  th .d { display: block; font-weight: 400; color: #777; font-size: 10px; }
+  td.trade { background: #fafbfc; font-weight: 800; text-align: center; width: 110px; }
+</style></head><body>${bodyHtml}</body></html>`);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { try { w.print(); } catch (e) {} }, 250);
+}
+function subsWeekDays(weekStart) {
+  const base = new Date(weekStart + "T00:00:00");
+  const names = ["\u05e8\u05d0\u05e9\u05d5\u05df", "\u05e9\u05e0\u05d9", "\u05e9\u05dc\u05d9\u05e9\u05d9", "\u05e8\u05d1\u05d9\u05e2\u05d9", "\u05d7\u05de\u05d9\u05e9\u05d9", "\u05e9\u05d9\u05e9\u05d9"];
+  return names.map((n, i) => {
+    const d = new Date(base);
+    d.setDate(d.getDate() + i);
+    const iso = new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+    return { name: n, iso };
+  });
+}
+// Every trade's week on one sheet — the thing she actually hands out on a
+// Sunday morning, instead of opening six cubes one after another. (10.9.26)
+function SubsWeeklyAll({ data, onBack }) {
+  const now = new Date();
+  const [year, setYear] = React9.useState(now.getFullYear());
+  const [month, setMonth] = React9.useState(now.getMonth());
+  const [weekStart, setWeekStart] = React9.useState(null);
+  const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
+  const monthNames = ["\u05d9\u05e0\u05d5\u05d0\u05e8", "\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8", "\u05de\u05e8\u05e5", "\u05d0\u05e4\u05e8\u05d9\u05dc", "\u05de\u05d0\u05d9", "\u05d9\u05d5\u05e0\u05d9", "\u05d9\u05d5\u05dc\u05d9", "\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8", "\u05e1\u05e4\u05d8\u05de\u05d1\u05e8", "\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8", "\u05e0\u05d5\u05d1\u05de\u05d1\u05e8", "\u05d3\u05e6\u05de\u05d1\u05e8"];
+  const weeks = [];
+  {
+    const cursor = new Date(year, month, 1);
+    cursor.setDate(cursor.getDate() - cursor.getDay());
+    while (cursor <= new Date(year, month + 1, 0)) { weeks.push(new Date(cursor)); cursor.setDate(cursor.getDate() + 7); }
+  }
+  const esc = (x) => String(x == null ? "" : x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  if (weekStart) {
+    const days = subsWeekDays(weekStart);
+    const table = React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed" } },
+      React9.createElement("thead", null, React9.createElement("tr", null,
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 110 } }, "\u05ea\u05d7\u05d5\u05dd"),
+        days.map((d, i) => React9.createElement("th", { key: i, style: SUBS_HEAD },
+          React9.createElement("div", null, d.name),
+          React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", fontWeight: 500, direction: "ltr" } }, subsFmtDate(d.iso)))))),
+      React9.createElement("tbody", null, SUB_TRADES.map((tr) => {
+        const cells = ((data || {})[tr.key] || {})[weekStart] || [];
+        return React9.createElement("tr", { key: tr.key },
+          React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 800, background: "#fafbfc" } }, tr.label),
+          days.map((d, i) => React9.createElement("td", { key: i, style: { ...SUBS_CELL, whiteSpace: "pre-wrap" } }, cells[i] || "")));
+      })));
+    const printIt = () => {
+      const head = days.map((d) => `<th>${d.name}<span class="d">${subsFmtDate(d.iso)}</span></th>`).join("");
+      const body = SUB_TRADES.map((tr) => {
+        const cells = ((data || {})[tr.key] || {})[weekStart] || [];
+        return `<tr><td class="trade">${esc(tr.label)}</td>` +
+          days.map((d, i) => `<td>${esc(cells[i] || "")}</td>`).join("") + "</tr>";
+      }).join("");
+      subsPrint("\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9",
+        `<h1>\u05dc\u05d5"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd</h1>` +
+        `<p class="sub">\u05e9\u05d1\u05d5\u05e2 ${subsFmtDate(weekStart)} \u2013 ${subsFmtDate(days[5].iso)}</p>` +
+        `<table><thead><tr><th>\u05ea\u05d7\u05d5\u05dd</th>${head}</tr></thead><tbody>${body}</tbody></table>`);
+    };
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
+      React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd"),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0 } }, "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(weekStart) + " \u2013 " + subsFmtDate(days[5].iso)),
+      React9.createElement("div", { style: { display: "flex", gap: 10 } },
+        React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setWeekStart(null) }, "\u2192 \u05d1\u05d7\u05d9\u05e8\u05ea \u05e9\u05d1\u05d5\u05e2"),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 120, justifyContent: "center" }, onClick: printIt }, "\u05d4\u05d3\u05e4\u05e1\u05d4")),
+      React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } }, table));
+  }
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
+    React9.createElement("button", { type: "button", className: "ghostBtn", onClick: onBack }, "\u2192 \u05dc\u05d5\u05d7 \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd"),
+    React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u05de\u05e8\u05d5\u05db\u05d6"),
+    React9.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => { const m = month - 1; if (m < 0) { setMonth(11); setYear(year - 1); } else setMonth(m); } }, "\u2039"),
+      React9.createElement("strong", { style: { minWidth: 150, textAlign: "center" } }, monthNames[month] + " " + year),
+      React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => { const m = month + 1; if (m > 11) { setMonth(0); setYear(year + 1); } else setMonth(m); } }, "\u203a")),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 760, display: "flex", flexDirection: "column", gap: 8 } },
+      weeks.map((w) => {
+        const key = iso(w);
+        const end = new Date(w); end.setDate(end.getDate() + 5);
+        const filled = SUB_TRADES.filter((tr) => (((data || {})[tr.key] || {})[key] || []).some((x) => (x || "").trim())).length;
+        return React9.createElement("button", {
+          key, type: "button", onClick: () => setWeekStart(key),
+          style: { display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--line)", borderRadius: 10, background: "#fff", padding: "12px 14px", cursor: "pointer", font: "inherit" }
+        },
+          React9.createElement("span", { style: { fontWeight: 700 } }, "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(key) + " \u2013 " + subsFmtDate(iso(end))),
+          React9.createElement("span", { style: { fontSize: 12, color: filled ? "#1a7f4b" : "var(--mist)" } }, filled ? filled + " \u05ea\u05d7\u05d5\u05de\u05d9\u05dd \u05de\u05d5\u05dc\u05d0\u05d9\u05dd" : "\u05e8\u05d9\u05e7"));
+      })));
+}
+
 // -------------------------------------------------------------- weekly board
 // A month of week rows; picking one opens Sunday to Friday with that week's
 // own dates and a free-text box under each day.
@@ -5772,16 +5876,34 @@ function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange }) {
   }
   const monthNames = ["\u05d9\u05e0\u05d5\u05d0\u05e8", "\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8", "\u05de\u05e8\u05e5", "\u05d0\u05e4\u05e8\u05d9\u05dc", "\u05de\u05d0\u05d9", "\u05d9\u05d5\u05e0\u05d9", "\u05d9\u05d5\u05dc\u05d9", "\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8", "\u05e1\u05e4\u05d8\u05de\u05d1\u05e8", "\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8", "\u05e0\u05d5\u05d1\u05de\u05d1\u05e8", "\u05d3\u05e6\u05de\u05d1\u05e8"];
   const dayNames = ["\u05e8\u05d0\u05e9\u05d5\u05df", "\u05e9\u05e0\u05d9", "\u05e9\u05dc\u05d9\u05e9\u05d9", "\u05e8\u05d1\u05d9\u05e2\u05d9", "\u05d7\u05de\u05d9\u05e9\u05d9", "\u05e9\u05d9\u05e9\u05d9"];
-  const cells = (data || {})[weekStart] || [];
+  // Held locally until Save: a week is filled in six boxes at once, and a
+  // write on every keystroke is both slower and harder to undo.
+  const stored = (data || {})[weekStart] || [];
+  const [buf, setBuf] = React9.useState(null);
+  const cells = buf || stored;
+  React9.useEffect(() => { setBuf(null); }, [weekStart]);
+  const dirty = !!buf && buf.some((x, i) => (x || "") !== (stored[i] || ""));
   const setCell = (i, text) => {
-    const next = Array.from({ length: 6 }, (_, j) => j === i ? text : (cells[j] || ""));
-    onChange({ ...(data || {}), [weekStart]: next });
+    const base = buf || Array.from({ length: 6 }, (_, j) => stored[j] || "");
+    setBuf(base.map((x, j) => j === i ? text : x));
   };
+  const save = () => { onChange({ ...(data || {}), [weekStart]: cells }); setBuf(null); };
   if (weekStart) {
     const base = new Date(weekStart + "T00:00:00");
     return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
       React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setWeekStart(null) }, "\u2192 \u05d7\u05d6\u05e8\u05d4 \u05dc\u05d7\u05d5\u05d3\u05e9"),
       React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+      React9.createElement("div", { style: { display: "flex", gap: 10 } },
+        canEdit && React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 120, justifyContent: "center", opacity: dirty ? 1 : 0.55 }, disabled: !dirty, onClick: save }, dirty ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "\u05e0\u05e9\u05de\u05e8"),
+        React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => {
+          const days = subsWeekDays(weekStart);
+          const esc2 = (x) => String(x == null ? "" : x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+          subsPrint("\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9",
+            `<h1>\u05dc\u05d5"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05df ${esc2(tradeLabel)}</h1>` +
+            `<p class="sub">\u05e9\u05d1\u05d5\u05e2 ${subsFmtDate(weekStart)} \u2013 ${subsFmtDate(days[5].iso)}</p>` +
+            `<table><thead><tr>${days.map((d) => `<th>${d.name}<span class="d">${subsFmtDate(d.iso)}</span></th>`).join("")}</tr></thead>` +
+            `<tbody><tr>${days.map((d, i) => `<td>${esc2(cells[i] || "")}</td>`).join("")}</tr></tbody></table>`);
+        } }, "\u05d4\u05d3\u05e4\u05e1\u05d4")),
       React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
@@ -6014,6 +6136,13 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     );
   }
 
+  if (view === "weekAll") {
+    return React9.createElement(SubsWeeklyAll, {
+      data: (subsData || {}).weekly || {},
+      onBack: () => setView("board"),
+    });
+  }
+
   if (view === "access") {
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
       canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key })) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
@@ -6063,6 +6192,9 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, minWidth: 260 }, onClick: () => goDeeper(() => setView("access")) },
       React9.createElement(Users, { size: 14, strokeWidth: 2, style: { marginInlineEnd: 6, verticalAlign: "-2px" } }),
       "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
+    React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, minWidth: 260 }, onClick: () => goDeeper(() => setView("weekAll")) },
+      React9.createElement(CalendarClock, { size: 14, strokeWidth: 2, style: { marginInlineEnd: 6, verticalAlign: "-2px" } }),
+      "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u05de\u05e8\u05d5\u05db\u05d6 \u05dc\u05db\u05dc \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd"),
     cubeGrid(SUB_TRADES.map((tr) => ({
       key: tr.key,
       icon: tr.icon,
