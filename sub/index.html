@@ -23,6 +23,8 @@
     padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:center;
     justify-content:center;min-height:52px}
   .bar h1{margin:0;font-size:15px;font-weight:800;letter-spacing:.01em;text-align:center}
+  .bar.guest{justify-content:flex-start}
+  .bar.guest h1{margin-inline-start:0}
   .bar .side{position:absolute;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:8px}
   .bar .left{left:16px}
   .bar .right{right:16px}
@@ -72,6 +74,13 @@
   .week th{width:92px;background:#f4f6f9;font-weight:800;text-align:center}
   .week th .num{display:block;font-size:10.5px;color:var(--mist);font-weight:600}
   .week td{text-align:right;white-space:pre-wrap;line-height:1.7}
+  .checks{display:flex;flex-direction:column;gap:8px}
+  .chk{display:flex;align-items:center;gap:10px;background:var(--surface);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;font-size:13.5px}
+  .chk .box{flex:0 0 auto;width:24px;height:24px;border-radius:7px;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900}
+  .chk.done .box{background:var(--ok);border-color:var(--ok)}
+  .chk.done .txt{color:var(--ok);font-weight:700}
   .eye{display:inline-flex;color:var(--steel)}
   .eye.off{color:#c9ced6}
   .cube{display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;
@@ -124,7 +133,7 @@ var CUBES = [
   { key:"weekly",    t:"לו״ז שבועי",      s:"עבודות השבוע",  i:"M3 6h18M3 12h18M3 18h18M8 3v18M16 3v18" },
   { key:"submittal", t:"סבמיטלים",        s:"אישורי חומרים", i:"M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9" },
   { key:"sd",        t:"SD",              s:"תוכניות ייצור", i:"M3 21l6-6M14 4l6 6M4 20l3-9 9-3 1 1-3 9-9 3z" },
-  { key:"schedule",  t:"לוח זמנים",       s:"לו״ז הפרויקט",  i:"M8 3v4M16 3v4M3 9h18M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" },
+  { key:"standards", t:"בדיקות מכון התקנים", s:"מה אושר ומה נותר", i:"M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
   { key:"specs",     t:"מפרטים מיוחדים",  s:"הנחיות לביצוע", i:"M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3v5h5M9 13h7M9 17h4" }
 ];
 var DECISIONS = {
@@ -166,6 +175,7 @@ function busy(text){ app.innerHTML = '<p class="lead">'+esc(text||"טוען…")
 // -------------------------------------------------------------------- login
 function login(err){
   out.hidden = true;
+  document.querySelector(".bar").classList.add("guest");
   app.innerHTML =
     '<div class="card">'+
       '<div class="field"><label for="ph">מספר טלפון</label>'+
@@ -182,7 +192,12 @@ function login(err){
     if(!ph.value.trim()||!cd.value.trim()){ login("צריך מספר טלפון וקוד."); return; }
     btn.disabled=true; btn.textContent="בודק…";
     call({action:"login", phone:ph.value, code:cd.value}).then(function(r){
-      if(!r.ok||!r.data.token){ login("המספר או הקוד לא נמצאו. בדקו מול מנהלת הפרויקט."); return; }
+      if(!r.ok||!r.data.token){
+        var msg = (r.data && r.data.error === "invalid")
+          ? "המספר או הקוד לא נמצאו. בדקו מול מנהלת הפרויקט."
+          : "השרת לא זמין כרגע. נסו שוב בעוד רגע.";
+        login(msg); return;
+      }
       state.token=r.data.token; state.projects=r.data.projects||[];
       try{ localStorage.setItem(TOKEN_KEY, state.token); }catch(e){}
       state.project = state.projects.length===1 ? state.projects[0].id : null;
@@ -194,6 +209,7 @@ function login(err){
 // ------------------------------------------------------------------ picker
 function picker(){
   out.hidden=false;
+  document.querySelector(".bar").classList.remove("guest");
   app.innerHTML = '<p class="lead">בחרו פרויקט</p><div class="grid">'+state.projects.map(function(p){
     return '<button class="pcube" data-p="'+esc(p.id)+'">'+
       (p.logo ? '<img src="'+esc(p.logo)+'" alt="">' : '')+
@@ -216,6 +232,7 @@ function loadBoard(){
 // ------------------------------------------------------------------- board
 function board(){
   out.hidden=false;
+  document.querySelector(".bar").classList.remove("guest");
   var p=(state.board&&state.board.project)||{};
   var head='<div class="proj">'+
     (p.logo ? '<img src="'+esc(p.logo)+'" alt="">' : '')+
@@ -283,14 +300,15 @@ function viewSd(b){
         '<td>'+eye(r.files)+'</td></tr>';
     }).join("")+'</tbody></table>';
 }
-function viewSchedule(b){
-  if(!b.schedule.length) return empty("טרם הועלה לו״ז.");
-  return '<table class="tbl"><thead><tr><th>פעילות</th><th>התחלה</th><th>סיום</th><th>ביצוע</th></tr></thead><tbody>'+
-    b.schedule.map(function(t){
-      return '<tr><td>'+esc(t.name)+'</td><td class="num">'+esc(fmt(t.start))+'</td>'+
-        '<td class="num">'+esc(fmt(t.finish))+'</td>'+
-        '<td class="num">'+(t.percent!=null?Math.round(t.percent)+"%":"—")+'</td></tr>';
-    }).join("")+'</tbody></table>';
+// The tick is read-only here on purpose: it means the project manager
+// confirmed the check, so only she can put it there.
+function viewStandards(b){
+  var list=b.standards||[];
+  if(!list.length) return empty("טרם נוספה בדיקה.");
+  return '<div class="checks">'+list.map(function(it){
+    return '<div class="chk'+(it.done?" done":"")+'"><span class="box">'+(it.done?"✓":"")+'</span>'+
+      '<span class="txt">'+esc(it.text)+'</span></div>';
+  }).join("")+'</div>';
 }
 function viewWeekly(b){
   var days=["ראשון","שני","שלישי","רביעי","חמישי","שישי"];
@@ -319,7 +337,7 @@ function screen(){
     state.screen==="specs"     ? viewSpecs(b) :
     state.screen==="submittal" ? viewSubmittal(b) :
     state.screen==="sd"        ? viewSd(b) :
-    state.screen==="schedule"  ? viewSchedule(b) :
+    state.screen==="standards" ? viewStandards(b) :
                                  viewWeekly(b);
   app.innerHTML='<div class="head"><button class="back" id="b">→ חזרה</button><h2>'+c.t+'</h2></div>'+body;
   document.getElementById("b").onclick=function(){ history.back(); };
