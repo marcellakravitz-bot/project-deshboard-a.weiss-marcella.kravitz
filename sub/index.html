@@ -13,7 +13,7 @@
   :root{
     --ink:#17181c; --steel:#5b5e66; --mist:#9a9da5;
     --line:#e6e6e9; --surface:#ffffff; --bg:#f6f6f7;
-    --panel:#101114; --helmet:#e8b10a; --ok:#1a7f4b; --radius:14px;
+    --panel:#101114; --helmet:#e8b10a; --ok:#1a7f4b; --navy:#103460; --radius:14px;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
@@ -51,8 +51,8 @@
     text-align:center;background:var(--surface);border:1px solid var(--line);
     border-radius:var(--radius);padding:18px 14px;min-height:126px;font:inherit;cursor:pointer}
   .pcube img{max-width:110px;max-height:44px;width:auto;height:auto}
-  .pcube .t{font-weight:800;font-size:14.5px}
-  .pcube .s{font-size:11.5px;color:var(--mist)}
+  .pcube .t{font-weight:800;font-size:14.5px;color:var(--navy)}
+  .pcube .s{font-size:11.5px;color:var(--navy);opacity:.62}
   .lead{margin:2px 2px 14px;text-align:center;font-size:13.5px;color:var(--steel)}
   .rec{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     padding:14px;margin-bottom:12px}
@@ -87,10 +87,10 @@
     text-align:center;background:var(--surface);border:1px solid var(--line);
     border-radius:var(--radius);padding:16px 14px;min-height:112px;font:inherit;cursor:pointer}
   .cube:active{background:#fbfbfc}
-  .cube .ico{width:34px;height:34px;border-radius:10px;background:#f1f2f4;display:flex;
-    align-items:center;justify-content:center;color:var(--panel)}
-  .cube .t{font-weight:800;font-size:14.5px}
-  .cube .s{font-size:11.5px;color:var(--mist);margin-top:-6px}
+  .cube .ico{width:34px;height:34px;border-radius:10px;background:#eef2f7;display:flex;
+    align-items:center;justify-content:center;color:var(--navy)}
+  .cube .t{font-weight:800;font-size:14.5px;color:var(--navy)}
+  .cube .s{font-size:11.5px;color:var(--navy);opacity:.62;margin-top:-6px}
   .cube .dot{position:absolute}
   .head{position:relative;display:flex;align-items:center;justify-content:center;
     min-height:34px;margin:2px 2px 16px}
@@ -115,7 +115,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">8.9.2026 · build 1</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">10.9.2026 · build 9</span></footer>
 
 <script>
 
