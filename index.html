@@ -506,7 +506,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "9.9.2026 · build 94";
+var APP_BUILD = "10.9.2026 · build 95";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5577,7 +5577,18 @@ function SubsSubmittalList({ trade, tradeLabel, submittals }) {
         React9.createElement("th", { style: { ...SUBS_HEAD, width: 90 } }, "\u05e6\u05e4\u05d9\u05d9\u05d4"))),
       React9.createElement("tbody", null,
         rows.length === 0
-          ? React9.createElement("tr", null, React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", color: "var(--mist)" }, colSpan: 4 }, cats.length === 0 ? "\u05dc\u05ea\u05d7\u05d5\u05dd \u05d6\u05d4 \u05d0\u05d9\u05df \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd." : "\u05d8\u05e8\u05dd \u05d4\u05d5\u05d2\u05e9 \u05e1\u05d1\u05de\u05d9\u05d8\u05dc."))
+          ? React9.createElement("tr", null, React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", color: "var(--mist)" }, colSpan: 4 },
+              cats.length === 0
+                ? "\u05dc\u05ea\u05d7\u05d5\u05dd \u05d6\u05d4 \u05d0\u05d9\u05df \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd."
+                : React9.createElement("span", null,
+                    "\u05d0\u05d9\u05df \u05e1\u05d1\u05de\u05d9\u05d8\u05dc \u05d1\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea \u05e9\u05dc \u05d4\u05ea\u05d7\u05d5\u05dd \u05d4\u05d6\u05d4.",
+                    // Which folders the rows are actually filed under. If the
+                    // trade's own folder is missing from this line, that is the
+                    // whole story.
+                    React9.createElement("div", { style: { marginTop: 8, fontSize: 11.5, direction: "ltr" } },
+                      "in project: " + ((submittals || []).length) + " \u00b7 categories: " +
+                      (Array.from(new Set((submittals || []).map((x) => (x && x.category) || "\u2014"))).join(", ") || "none") +
+                      " \u00b7 looking for: " + (cats.join(", ") || "none")))))
           : rows.map((r) => {
               const dec = SB_DECISIONS.find((d) => d.key === decisionOf(r));
               const ok = isApproved(r);
