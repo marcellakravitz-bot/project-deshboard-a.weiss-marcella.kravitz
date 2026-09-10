@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 112";
+var APP_BUILD = "11.9.2026 · build 113";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5347,6 +5347,7 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
   const today = () => new Date().toISOString().slice(0, 10);
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
   const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
+  const formBtnS = { flex: "1 1 0", minWidth: 0, maxWidth: 170, justifyContent: "center", gap: 8 };
   const cellS = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
   const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
   const addFiles = async (files) => {
@@ -5396,11 +5397,11 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
         React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d0\u05d5 PDF \u2014 \u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u05de\u05d0\u05e4\u05e9\u05e8\u05ea \u05d4\u05d3\u05d1\u05e7\u05d4, \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea \u05e4\u05d5\u05ea\u05d7\u05ea \u05d4\u05e2\u05dc\u05d0\u05ea \u05e7\u05d5\u05d1\u05e5.")),
       err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12, textAlign: "center" } }, err),
       React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
-        React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: busy || !draft.subject.trim(), onClick: () => {
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: busy || !draft.subject.trim(), onClick: () => {
           onChange(entries.concat([{ id: "u-" + Date.now().toString(36), date: draft.date || today(), createdAt: new Date().toISOString(), by: writtenBy || "", subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
           setDraft(null); setPasteArmed(false);
         } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
-        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
     React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
       React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
         React9.createElement("thead", null, React9.createElement("tr", null,
@@ -5447,6 +5448,7 @@ function SubsSpecsList({ trade, tradeLabel, projectId, canEdit, entries, onChang
   const fileRef = React9.useRef(null);
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
   const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
+  const formBtnS = { flex: "1 1 0", minWidth: 0, maxWidth: 170, justifyContent: "center", gap: 8 };
   const cellS = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
   const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
   const addFiles = async (files) => {
@@ -5496,11 +5498,11 @@ function SubsSpecsList({ trade, tradeLabel, projectId, canEdit, entries, onChang
         React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05de\u05e1\u05de\u05da \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4 \u2014 \u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u05de\u05d0\u05e4\u05e9\u05e8\u05ea \u05d4\u05d3\u05d1\u05e7\u05d4, \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea \u05e4\u05d5\u05ea\u05d7\u05ea \u05d4\u05e2\u05dc\u05d0\u05ea \u05e7\u05d5\u05d1\u05e5.")),
       err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12, textAlign: "center" } }, err),
       React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
-        React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: busy || !draft.subject.trim(), onClick: () => {
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: busy || !draft.subject.trim(), onClick: () => {
           onChange(entries.concat([{ id: "sp-" + Date.now().toString(36), createdAt: new Date().toISOString(), subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
           setDraft(null); setPasteArmed(false);
         } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
-        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
     React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
       React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
         React9.createElement("thead", null, React9.createElement("tr", null,
@@ -6194,6 +6196,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
   const wrapS = { flexDirection: "column", alignItems: "center", padding: 24, gap: 18 };
   const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
+  const formBtnS = { flex: "1 1 0", minWidth: 0, maxWidth: 170, justifyContent: "center", gap: 8 };
   // Same centring rule as the project board: a last row of one sits in the
   // middle column, a last row of two is centred as a pair.
   const cubeGrid = (items, onPick) => {
@@ -6314,7 +6317,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
           // read-only by design, so it is worth saying so out loud. (11.9.26)
           ? "\u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd, \u05d5\u05e8\u05e9\u05d0\u05d9 \u05dc\u05db\u05ea\u05d5\u05d1 \u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd \u05d5\u05d1\u05dc\u05d5\"\u05d6 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05d1\u05dc\u05d1\u05d3."
           : "\u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05db\u05e0\u05e1 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9, \u05d5\u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05d4\u05ea\u05d7\u05d5\u05dd \u05e9\u05dc\u05d5 \u05d1\u05dc\u05d1\u05d3."),
-      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key, pm: accessKind === "pm" })) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
+      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key, pm: accessKind === "pm" })) }, isPmView ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8" : "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
       // Nothing is granted until Save is pressed.
       canEdit && draft && React9.createElement("div", { style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 520 } },
         React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
@@ -6328,11 +6331,11 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
             React9.createElement("select", { style: inputS, value: draft.trade, onChange: (e) => setDraft({ ...draft, trade: e.target.value }) },
               SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label))))),
         React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
-          React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: !(draft.name.trim() || draft.company.trim()) || !draft.phone.trim(), onClick: () => {
+          React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: !(draft.name.trim() || draft.company.trim()) || !draft.phone.trim(), onClick: () => {
             write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: draft.pm ? "" : draft.trade, pm: !!draft.pm, active: true }]));
             goBack();
           } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
-          React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
+          React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
       React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", minWidth: 720, margin: "0 auto" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
