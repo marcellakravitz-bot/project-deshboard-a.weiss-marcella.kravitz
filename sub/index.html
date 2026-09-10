@@ -134,7 +134,20 @@
   .cube{display:flex;flex-direction:column;gap:10px;align-items:center;justify-content:center;
     text-align:center;background:var(--surface);border:1px solid var(--line);
     border-radius:var(--radius);padding:16px 14px;min-height:112px;font:inherit;cursor:pointer}
+  .cube{position:relative}
   .cube:active{background:#fbfbfc}
+  /* New since this phone last looked. It pulses for a few seconds and then
+     settles: something that blinks for ever stops being read as a signal. */
+  .cube.fresh{border-color:#b9cbe4}
+  .cube .dot{position:absolute;top:10px;inset-inline-end:10px;width:10px;height:10px;
+    border-radius:50%;background:var(--navy);box-shadow:0 0 0 0 rgba(16,52,96,.45);
+    animation:pulse 1.8s ease-out 4}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(16,52,96,.45)}
+    70%{box-shadow:0 0 0 9px rgba(16,52,96,0)}
+    100%{box-shadow:0 0 0 0 rgba(16,52,96,0)}
+  }
+  @media (prefers-reduced-motion: reduce){ .cube .dot{animation:none} }
   .cube .ico{width:34px;height:34px;border-radius:10px;background:#eef2f7;display:flex;
     align-items:center;justify-content:center;color:var(--navy)}
   .cube .t{font-weight:800;font-size:14.5px;color:var(--navy)}
@@ -163,7 +176,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 17</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 18</span></footer>
 
 <script>
 
@@ -175,6 +188,26 @@
 // ---------------------------------------------------------------------------
 var API = "https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/sub-portal";
 var TOKEN_KEY = "awsub.token";
+var SEEN_KEY = "awsub.seen";
+// What this phone has already looked at, per project, per trade, per cube.
+function seenAll(){
+  try { return JSON.parse(localStorage.getItem(SEEN_KEY)||"{}"); } catch(e){ return {}; }
+}
+function seenKey(k){
+  return (state.project||"")+"|"+(state.trade||(state.board&&state.board.trade)||"")+"|"+k;
+}
+function isNew(k){
+  var marks=(state.board&&state.board.marks)||{};
+  if(!marks[k]) return false;
+  return seenAll()[seenKey(k)]!==marks[k];
+}
+function markSeen(k){
+  var marks=(state.board&&state.board.marks)||{};
+  if(!marks[k]) return;
+  var all=seenAll();
+  all[seenKey(k)]=marks[k];
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(all)); } catch(e){}
+}
 
 var CUBES = [
   { key:"log",       t:"יומן עדכונים",    s:"מה חדש באתר",   i:"M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 12h7M8 16h5" },
@@ -383,11 +416,19 @@ function board(){
   document.querySelector(".bar").classList.remove("guest");
   var head=navBar()+projHead(true);
   app.innerHTML = head+'<div class="grid">'+CUBES.map(function(c){
-    return '<button class="cube" data-k="'+c.key+'"><span class="ico">'+icon(c.i)+'</span>'+
+    return '<button class="cube'+(isNew(c.key)?" fresh":"")+'" data-k="'+c.key+'">'+
+           (isNew(c.key)?'<span class="dot" aria-label="עדכון חדש"></span>':'')+
+           '<span class="ico">'+icon(c.i)+'</span>'+
            '<span class="t">'+c.t+'</span><span class="s">'+c.s+'</span></button>';
   }).join("")+'</div>';
   Array.prototype.forEach.call(app.querySelectorAll(".cube"), function(b){
-    b.onclick=function(){ state.screen=b.getAttribute("data-k"); state.cat=null; history.pushState({s:1},""); render(); };
+    b.onclick=function(){
+      state.screen=b.getAttribute("data-k");
+      state.cat=null;
+      markSeen(state.screen);
+      history.pushState({s:1},"");
+      render();
+    };
   });
   wireNav();
 }
