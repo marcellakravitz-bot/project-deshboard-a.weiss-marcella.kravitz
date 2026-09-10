@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 116";
+var APP_BUILD = "11.9.2026 · build 117";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2919,6 +2919,12 @@ var pdfViewer = `
         }
         .sbCharsTag.poor { background: #fdecec; color: #b02a37; }
         .sbSaveRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 22px 0 6px; }
+        .sbLockedBar {
+          display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
+          margin: 22px 0 6px; padding: 12px 16px; border: 1px solid #cfe3d6;
+          border-radius: 10px; background: #f2faf5; color: #14532d;
+          font-size: 13px; font-weight: 800;
+        }
         /* One set of specifications can describe several products, and a
            submittal covers one. This is where that is sorted out. */
         .sbProducts {
@@ -19265,6 +19271,23 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
           "div",
           { className: "sbSaveRow" },
           sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onSave(d) }, L("saveSignature"))
+        )
+      : null,
+    clientApproved
+      ? sbH(
+          "div",
+          { className: "sbLockedBar" },
+          sbH("span", null, isHe
+            ? "\u05d2\u05e8\u05e1\u05d4 \u05de\u05d0\u05d5\u05e9\u05e8\u05ea \u2014 \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05d4."
+            : "Approved revision \u2014 locked."),
+          onDelete
+            ? sbH(
+                "button",
+                { type: "button", className: "sbFormBtn danger", onClick: () => onDelete(d) },
+                sbH(Trash2, { size: 15, strokeWidth: 2.2 }),
+                sbH("span", null, L("remove2"))
+              )
+            : null
         )
       : null,
     ro
