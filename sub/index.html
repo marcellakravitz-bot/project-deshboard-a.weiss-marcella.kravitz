@@ -176,7 +176,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 19</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 21</span></footer>
 
 <script>
 
@@ -316,7 +316,7 @@ function login(err){
       if(!r.ok||!r.data.token){
         var msg = (r.data && r.data.error === "invalid")
           ? "המספר או הקוד לא נמצאו. בדקו מול מנהלת הפרויקט."
-          : "השרת לא זמין כרגע. נסו שוב בעוד רגע.";
+          : ("השרת לא זמין כרגע. " + ((r.data && r.data.detail) || ""));
         login(msg); return;
       }
       state.token=r.data.token; state.projects=r.data.projects||[];
@@ -393,7 +393,7 @@ function loadBoard(){
     // way, and losing the sign-in over it is what made this ask for the code
     // again and again.
     if(r.status===401){ signOut("ההרשאה כבר לא בתוקף. פנו למנהלת הפרויקט."); return; }
-    retry("השרת לא זמין כרגע.");
+    retry("השרת לא זמין כרגע. "+((r.data&&r.data.detail)||""));
   }).catch(function(){ retry("אין חיבור לרשת."); });
 }
 
