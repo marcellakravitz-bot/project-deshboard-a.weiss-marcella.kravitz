@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 119";
+var APP_BUILD = "11.9.2026 · build 120";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2919,6 +2919,10 @@ var pdfViewer = `
         }
         .sbCharsTag.poor { background: #fdecec; color: #b02a37; }
         .sbSaveRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 22px 0 6px; }
+        .sbSecBtn {
+          width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+          border: none; cursor: pointer; font-family: inherit;
+        }
         .sbLockedBar {
           display: flex; align-items: center; justify-content: center; gap: 14px; flex-wrap: wrap;
           margin: 22px 0 6px; padding: 12px 16px; border: 1px solid #cfe3d6;
@@ -18911,145 +18915,24 @@ function SubmittalForm({ onNewRevision, onSignAsClient, rec, lang, isRTL, langSw
       })
     ),
 
-    // ------- REVIEW & APPROVAL — one block, signed by the supervision
-    (d.reviews || []).slice(0, 1).map((rv, i) =>
-      sbH(
-        "div",
-        { key: rv.id || i },
-        secBar("review"),
-        sbH(
-          "div",
-          { className: "sbReview" },
-          sbH(
-            "div",
-            { className: "sbField" },
-            sbH("span", { className: "sbFieldLbl" }, `${L("signature")} — ${L("supervision")}`),
-            // The scanned stamp-and-pen of whoever signed, taken from the
-            // signature saved on their user record. The typed name and date sit
-            // underneath it, small, exactly as they print.
-            sbH(
-              "div",
-              { className: "sbSigBox" },
-              sbSignatureOf(userSignatures, rv.signedByEmail)
-                ? sbH("img", { src: sbSignatureOf(userSignatures, rv.signedByEmail), alt: "" })
-                : sbH("span", { className: "sbSigEmpty" }, rv.signedByEmail ? L("noSignatureOnFile") : "")
-            ),
-            sbH("input", {
-              type: "text",
-              value: rv.signature || "",
-              readOnly: roSign,
-              placeholder: L("signature"),
-              onChange: (e) => {
-                const next = (d.reviews || []).slice();
-                next[i] = { ...rv, signature: e.target.value, signedAt: e.target.value ? new Date().toISOString() : null };
-                set({ reviews: next });
-              },
-              style: inS
-            }),
-            roSign
-              ? null
-              : sbH(
-                  "div",
-                  { className: "sbSigRow" },
-                  sbH(
-                    "button",
-                    {
-                      type: "button",
-                      className: "sbLinkBtn",
-                      onClick: () => {
-                        const next = (d.reviews || []).slice();
-                        const who = (currentEmail || "").split("@")[0] || currentEmail || "";
-                        next[i] = {
-                          ...rv,
-                          signedByEmail: (currentEmail || "").toLowerCase(),
-                          signature: rv.signature || `${who} · ${sbFmtDate(sbToday())}`,
-                          signedAt: new Date().toISOString()
-                        };
-                        set({ reviews: next });
-                      }
-                    },
-                    L("signAsMe")
-                  ),
-                  rv.signedByEmail
-                    ? sbH(
-                        "button",
-                        {
-                          type: "button",
-                          className: "sbLinkBtn muted",
-                          onClick: () => {
-                            const next = (d.reviews || []).slice();
-                            next[i] = { ...rv, signedByEmail: null, signature: "", signedAt: null };
-                            set({ reviews: next });
-                          }
-                        },
-                        L("clearSignature")
-                      )
-                    : null
-                )
-          ),
-          sbH(
-            "label",
-            { className: "sbField" },
-            sbH("span", { className: "sbFieldLbl" }, L("approvalComments")),
-            sbH("textarea", {
-              value: rv.comments || "",
-              readOnly: roSign,
-              rows: 2,
-              onChange: (e) => {
-                const next = (d.reviews || []).slice();
-                next[i] = { ...rv, comments: e.target.value };
-                set({ reviews: next });
-              },
-              style: { ...inS, resize: "vertical" }
-            })
-          ),
-          sbH(
-            "div",
-            { className: "sbDecisions" },
-            SB_DECISIONS.map((dec) =>
-              sbH(
-                "label",
-                { key: dec.key, className: "sbDecRow" },
-                sbH("input", {
-                  type: "radio",
-                  name: `sb-dec-${d.id}-${i}`,
-                  checked: rv.decision === dec.key,
-                  disabled: roSign,
-                  onChange: () => {
-                    const next = (d.reviews || []).slice();
-                    const who = (currentEmail || "").split("@")[0] || currentEmail || "";
-                    next[i] = {
-                      ...rv,
-                      decision: dec.key,
-                      signedAt: new Date().toISOString(),
-                      signedByEmail: rv.signedByEmail || (currentEmail || "").toLowerCase(),
-                      signature: rv.signature || `${who} · ${sbFmtDate(sbToday())}`
-                    };
-                    set({ reviews: next });
-                  }
-                }),
-                sbH("span", { style: { color: dec.color, fontWeight: 700 } }, sbText(dec, lang))
-              )
-            ),
-            ro || !rv.decision
-              ? null
-              : sbH(
-                  "button",
-                  {
-                    type: "button",
-                    className: "sbLinkBtn",
-                    onClick: () => {
-                      const next = (d.reviews || []).slice();
-                      next[i] = { ...rv, decision: null };
-                      set({ reviews: next });
-                    }
-                  },
-                  lang === "he" ? "ניקוי" : "Clear"
-                )
-          )
+    // ------- REVIEW & APPROVAL
+    // Folded away behind its own bar. She does not sign these — the client
+    // does — and it is only here for the day he cannot. Pressing the bar opens
+    // the very screen he sees, so there is one signing experience and not two.
+    // (11.9.26)
+    onSignAsClient
+      ? sbH(
+          "button",
+          {
+            type: "button",
+            className: "sbSecBar sbSecBtn",
+            onClick: onSignAsClient
+          },
+          sbH(PenLine, { size: 14, strokeWidth: 2 }),
+          " ",
+          `${L("review")} \u00b7 ${L("supervision")}`
         )
-      )
-    ),
+      : null,
 
     // ------- specification files + AI
     sbH(
