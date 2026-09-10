@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 115";
+var APP_BUILD = "11.9.2026 · build 116";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2399,7 +2399,11 @@ var pdfViewer = `
         .sbSignPanel .sbField, .sbSignPanel .sbDecisions, .sbSignRow, .sbSignPanel .sbSaveRow { padding: 0 14px; }
         .sbSignPanel .sbDecisions { padding-top: 12px; }
         .sbSignPanel .sbField { margin-top: 10px; }
-        .sbDecRowWide { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; }
+        .sbDecRowWide {
+          display: flex; flex-direction: row; gap: 22px; flex-wrap: wrap;
+          justify-content: center; align-items: center; text-align: center;
+        }
+        .sbDecRowWide .sbDecRow { justify-content: center; }
         .sbSignRow {
           display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
           justify-content: center; margin-top: 14px;
@@ -18312,7 +18316,9 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
   const [sugMsg, setSugMsg] = useState6(null);
   const L = (k) => sbText(SB_L[k], lang);
   const set = (patch) => setD((prev) => ({ ...prev, ...patch }));
-  const ro = !canEdit;
+  const clientApproved = ["approved", "approvedNoted"]
+    .indexOf((((rec.reviews || [])[0] || {}).decision) || "") >= 0;
+  const ro = !canEdit || clientApproved;
   const isHe = lang === "he";
   const specViewCount = (d.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0).length;
   // The approval block has its own lock: a reviewer who may not touch a single
