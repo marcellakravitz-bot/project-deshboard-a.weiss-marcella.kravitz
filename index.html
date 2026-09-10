@@ -230,6 +230,7 @@ import {
   Receipt,
   Crown,
   HardHat,
+  ClipboardCheck,
   NotebookPen,
   Eye as EyeIcon2,
   AirVent,
@@ -505,7 +506,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "8.9.2026 · build 93";
+var APP_BUILD = "9.9.2026 · build 94";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5221,7 +5222,7 @@ var SUB_SECTIONS = [
   { key: "submittal", icon: FileCheck2, title: "Submittal" },
   { key: "sd", icon: Ruler, title: "SD" },
   { key: "log", icon: NotebookPen, title: "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd" },
-  { key: "schedule", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8" },
+  { key: "standards", icon: ClipboardCheck, title: "\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05db\u05d5\u05df \u05d4\u05ea\u05e7\u05e0\u05d9\u05dd" },
   { key: "weekly", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9" },
   { key: "specs", icon: ClipboardList, title: "\u05de\u05e4\u05e8\u05d8\u05d9\u05dd \u05de\u05d9\u05d5\u05d7\u05d3\u05d9\u05dd" }
 ];
@@ -5743,6 +5744,42 @@ function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange }) {
       })));
 }
 
+
+// Standards Institute checks. She writes the list and ticks items off; the
+// contractor sees the same list and a green tick appears against an item only
+// once she has ticked it. He never ticks anything himself — the whole point is
+// that the mark means she confirmed it. (8.9.26)
+function SubsStandards({ tradeLabel, canEdit, items, onChange }) {
+  const [draft, setDraft] = React9.useState("");
+  const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "8px 10px", font: "inherit", fontSize: 13 };
+  const add = () => {
+    const t = draft.trim();
+    if (!t) return;
+    onChange(items.concat([{ id: "st-" + Date.now().toString(36), text: t, done: false }]));
+    setDraft("");
+  };
+  const toggle = (id) => onChange(items.map((x) => x.id === id ? { ...x, done: !x.done, doneAt: !x.done ? new Date().toISOString() : null } : x));
+  const remove = (id) => onChange(items.filter((x) => x.id !== id));
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
+    React9.createElement("h3", { style: { margin: 0 } }, "\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05db\u05d5\u05df \u05d4\u05ea\u05e7\u05e0\u05d9\u05dd \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+    canEdit && React9.createElement("div", { style: { display: "flex", gap: 8, width: "100%", maxWidth: 620 } },
+      React9.createElement("input", { style: inputS, value: draft, placeholder: "\u05e9\u05dd \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4", onChange: (e) => setDraft(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
+      React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 110, justifyContent: "center" }, onClick: add }, "\u05d4\u05d5\u05e1\u05e4\u05d4")),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 760, display: "flex", flexDirection: "column", gap: 8 } },
+      items.length === 0
+        ? React9.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e4\u05d4 \u05d1\u05d3\u05d9\u05e7\u05d4.")
+        : items.map((it) => React9.createElement("div", { key: it.id, style: { display: "flex", alignItems: "center", gap: 10, border: "1px solid var(--line)", borderRadius: 10, background: "#fff", padding: "10px 12px" } },
+            React9.createElement("button", {
+              type: "button", disabled: !canEdit, onClick: () => toggle(it.id),
+              title: canEdit ? "\u05e1\u05d9\u05de\u05d5\u05df \u05db\u05d1\u05d5\u05e6\u05e2" : "",
+              style: { width: 26, height: 26, borderRadius: 7, border: "1px solid " + (it.done ? "#1a7f4b" : "var(--line)"), background: it.done ? "#1a7f4b" : "#fff", color: "#fff", cursor: canEdit ? "pointer" : "default", fontWeight: 900, lineHeight: "24px", padding: 0, flex: "0 0 auto" }
+            }, it.done ? "\u2713" : ""),
+            React9.createElement("span", { style: { flex: 1, fontSize: 13.5, fontWeight: it.done ? 700 : 500, color: it.done ? "#1a7f4b" : "inherit" } }, it.text),
+            canEdit && React9.createElement("button", { type: "button", title: "\u05de\u05d7\u05d9\u05e7\u05d4", onClick: () => remove(it.id), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", padding: 4 } },
+              React9.createElement(Trash2, { size: 15, strokeWidth: 2 })))))
+  );
+}
+
 function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
@@ -5827,8 +5864,13 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     return React9.createElement(SubsSdList, { trade, tradeLabel: tradeOf(trade).label || "", sdRows, boqData, boqFlags });
   }
 
-  if (view === "board" && trade && section === "schedule") {
-    return React9.createElement(SubsScheduleView, { tradeLabel: tradeOf(trade).label || "", scheduleData });
+  if (view === "board" && trade && section === "standards") {
+    return React9.createElement(SubsStandards, {
+      tradeLabel: tradeOf(trade).label || "",
+      canEdit,
+      items: ((subsData || {}).standards || {})[trade] || [],
+      onChange: (next) => onChangeSubsData({ ...(subsData || {}), standards: { ...((subsData || {}).standards || {}), [trade]: next } })
+    });
   }
 
   if (view === "board" && trade && section === "weekly") {
