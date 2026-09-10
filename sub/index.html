@@ -200,7 +200,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 26</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 27</span></footer>
 
 <script>
 
@@ -658,7 +658,7 @@ function viewSubmittal(b){
     '<table class="tbl"><thead><tr><th>מס׳</th><th>תיאור</th><th>סטטוס</th><th></th></tr></thead><tbody>'+
     rows.map(function(r){
       var d=DECISIONS[r.decision];
-      var label = d ? d.t : (r.submitted ? "הוגש, ממתין להתייחסות" : "טרם הוגש");
+      var label = d ? d.t : (r.submitted ? "הוגש" : "טרם הוגש");
       return '<tr><td class="num">'+esc(r.no||"—")+'</td><td>'+esc(r.description)+'</td>'+
         '<td style="color:'+(d?d.c:"#9a9da5")+';font-weight:700">'+esc(label)+'</td>'+
         '<td>'+eye(r.files)+'</td></tr>';
