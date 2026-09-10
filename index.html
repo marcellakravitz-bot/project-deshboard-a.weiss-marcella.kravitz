@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 122";
+var APP_BUILD = "11.9.2026 · build 123";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2196,12 +2196,12 @@ var pdfViewer = `
            the right-hand edge (30.8.26). */
         .sbChkTable th, .sbChkTable td { box-sizing: border-box; }
         .sbChkTable td { text-align: center; }
-        .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 96px; }
-        .sbChkTable th.cChkNo { width: 84px; }
+        .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 86px; }
+        .sbChkTable th.cChkNo { width: 74px; }
         /* The description needs a width of its own: with a fixed layout a
            column that declares none is squeezed to nothing, and "גריל OD1"
            came out one letter per line (30.8.26). */
-        .sbChkTable th.cDesc { width: 240px; }
+        .sbChkTable th.cDesc { width: auto; min-width: 150px; }
         /* Not a column so much as a gutter: it holds the chevron and nothing
            else, and it has no rules of its own, so the BOQ numbers beside it
            read as one straight centred column (30.8.26). */
@@ -2210,12 +2210,16 @@ var pdfViewer = `
         }
         .sbChkTable td.sbChkChev .sbRevToggle { margin: 0; }
         .sbChkTable th.cChkDocs, .sbChkTable td.sbChkDocsCell { width: 56px; }
-        .sbChkTable th.cChkSup { width: 118px; }
+        .sbChkTable th.cChkSup { width: 100px; }
         /* Room for "Approval target date" to wrap onto two lines instead of
            running under its neighbour (30.8.26). */
-        .sbChkTable th.cChkDate { width: 78px; }
-        .sbChkTable thead th { white-space: normal; line-height: 1.2; padding: 6px 4px; font-size: 10.5px; }
-        .sbChkTable tbody td { padding-inline: 5px; }
+        .sbChkTable th.cChkDate { width: 70px; }
+        .sbChkTable thead th { white-space: normal; line-height: 1.2; padding: 6px 3px; font-size: 10.5px; }
+        .sbChkTable tbody td { padding-inline: 3px; }
+        /* Both text columns wrap and share whatever the fixed columns leave. */
+        .sbChkTable td.sbChkDesc { word-break: break-word; }
+        /* This board is the widest thing on the site; it gets the margins. */
+        .functionPage.wide:has(.sbChkTable) { padding-inline: 8px; }
         .sbChkTable td.sbChkNo { font-weight: 800; dir: ltr; }
         /* The description gets the room that is left, and reads whole. */
         .sbChkTable td.sbChkDesc { white-space: normal; overflow: visible; text-overflow: clip; }
