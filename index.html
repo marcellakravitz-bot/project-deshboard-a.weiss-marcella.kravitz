@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 111";
+var APP_BUILD = "11.9.2026 · build 112";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5335,7 +5335,7 @@ function SubsTradePicker({ value, disabled, onChange }) {
 
 // The update log: the first place in this cube where she writes rather than
 // ticks. Newest first, because on site that is the one anybody opens.
-function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChange }) {
+function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChange, writtenBy }) {
   const [draft, setDraft] = React9.useState(null);
   const [busy, setBusy] = React9.useState(false);
   const [err, setErr] = React9.useState(null);
@@ -5397,7 +5397,7 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
       err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12, textAlign: "center" } }, err),
       React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: busy || !draft.subject.trim(), onClick: () => {
-          onChange(entries.concat([{ id: "u-" + Date.now().toString(36), date: draft.date || today(), createdAt: new Date().toISOString(), subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
+          onChange(entries.concat([{ id: "u-" + Date.now().toString(36), date: draft.date || today(), createdAt: new Date().toISOString(), by: writtenBy || "", subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
           setDraft(null); setPasteArmed(false);
         } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
@@ -5414,7 +5414,10 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
             : sorted.map((u) => React9.createElement("tr", { key: u.id },
                 React9.createElement("td", { style: { ...cellS, textAlign: "center", whiteSpace: "nowrap" } },
                   React9.createElement("div", { style: { fontWeight: 800 } }, fmt(u.date)),
-                  u.createdAt && React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", marginTop: 2 } }, "\u05e0\u05e8\u05e9\u05dd " + fmt(u.createdAt))),
+                  u.createdAt && React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", marginTop: 2 } }, "\u05e0\u05e8\u05e9\u05dd " + fmt(u.createdAt)),
+                  // Who wrote it. In two months nobody remembers, and an update
+                  // nobody can trace is worth less than one that can. (11.9.26)
+                  u.by && React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", marginTop: 2, direction: "ltr" } }, u.by)),
                 React9.createElement("td", { style: cellS },
                   React9.createElement("div", { style: { fontWeight: 800, fontSize: 14 } }, u.subject),
                   u.body && React9.createElement("div", { style: { marginTop: 6, lineHeight: 1.7, whiteSpace: "pre-wrap" } }, u.body)),
@@ -6103,13 +6106,14 @@ function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange 
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL }) {
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
   const [section, setSection] = React9.useState(null);
   const [draft, setDraft] = React9.useState(null);
   const [subCat, setSubCat] = React9.useState(null);
+  const [accessKind, setAccessKind] = React9.useState("sub");
   const write = (next) => onChangeSubsData({ ...(subsData || {}), list: next });
   const setField = (id, field, value) => write(list.map((r) => r.id === id ? { ...r, [field]: value } : r));
   const removeSub = (id) => write(list.filter((r) => r.id !== id));
@@ -6214,6 +6218,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       tradeLabel: tradeOf(trade).label || "",
       projectId,
       canEdit,
+      writtenBy: currentEmail,
       entries: ((subsData || {}).logs || {})[trade] || [],
       onChange: (next) => onChangeSubsData({ ...(subsData || {}), logs: { ...((subsData || {}).logs || {}), [trade]: next } })
     });
@@ -6296,8 +6301,20 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   }
 
   if (view === "access") {
+    const isPmView = accessKind === "pm";
+    const rows = list.filter((r) => !!r.pm === isPmView);
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key })) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
+      React9.createElement("h3", { style: { margin: 0, textAlign: "center" } },
+        isPmView
+          ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05de\u05e0\u05d4\u05dc\u05d9 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd"
+          : "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center", maxWidth: 620 } },
+        isPmView
+          // The one account here that writes. Everything else on this cube is
+          // read-only by design, so it is worth saying so out loud. (11.9.26)
+          ? "\u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd, \u05d5\u05e8\u05e9\u05d0\u05d9 \u05dc\u05db\u05ea\u05d5\u05d1 \u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd \u05d5\u05d1\u05dc\u05d5\"\u05d6 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05d1\u05dc\u05d1\u05d3."
+          : "\u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05db\u05e0\u05e1 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9, \u05d5\u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05d4\u05ea\u05d7\u05d5\u05dd \u05e9\u05dc\u05d5 \u05d1\u05dc\u05d1\u05d3."),
+      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key, pm: accessKind === "pm" })) }, "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
       // Nothing is granted until Save is pressed.
       canEdit && draft && React9.createElement("div", { style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 520 } },
         React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
@@ -6307,12 +6324,12 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
             React9.createElement("input", { style: inputS, value: draft.company, onChange: (e) => setDraft({ ...draft, company: e.target.value }) })),
           React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05d8\u05dc\u05e4\u05d5\u05df",
             React9.createElement("input", { style: { ...inputS, direction: "ltr" }, inputMode: "tel", value: draft.phone, onChange: (e) => setDraft({ ...draft, phone: e.target.value }) })),
-          React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d7\u05d5\u05dd",
+          !draft.pm && React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d7\u05d5\u05dd",
             React9.createElement("select", { style: inputS, value: draft.trade, onChange: (e) => setDraft({ ...draft, trade: e.target.value }) },
               SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label))))),
         React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, disabled: !(draft.name.trim() || draft.company.trim()) || !draft.phone.trim(), onClick: () => {
-            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: draft.trade, active: true }]));
+            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: draft.pm ? "" : draft.trade, pm: !!draft.pm, active: true }]));
             goBack();
           } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
@@ -6321,16 +6338,16 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
           React9.createElement("thead", null, React9.createElement("tr", null,
             ["\u05e9\u05dd", "\u05d7\u05d1\u05e8\u05d4", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05e4\u05e2\u05d9\u05dc", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
           React9.createElement("tbody", null,
-            list.length === 0
-              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 7 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e3 \u05e7\u05d1\u05dc\u05df \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05d4\u05d6\u05d4."))
-              : list.map((r) => React9.createElement("tr", { key: r.id },
+            rows.length === 0
+              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 7 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e3 \u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05d4\u05d6\u05d4."))
+              : rows.map((r) => React9.createElement("tr", { key: r.id },
                   React9.createElement("td", { style: cellS }, r.name || "\u2014"),
                   React9.createElement("td", { style: cellS }, r.company || "\u2014"),
                   React9.createElement("td", { style: { ...cellS, direction: "ltr" } }, r.phone || "\u2014"),
                   React9.createElement("td", { style: { ...cellS, direction: "ltr", whiteSpace: "nowrap" } },
                     React9.createElement("span", { style: { fontWeight: 800, letterSpacing: 1 } }, r.code || "\u2014"),
                     canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginInlineStart: 8, padding: "2px 8px", fontSize: 11 }, onClick: () => setField(r.id, "code", makeSubCode()) }, "\u05d7\u05d3\u05e9")),
-                  React9.createElement("td", { style: cellS }, tradeOf(r.trade).label || "\u2014"),
+                  React9.createElement("td", { style: cellS }, r.pm ? "\u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd" : (tradeOf(r.trade).label || "\u2014")),
                   React9.createElement("td", { style: cellS },
                     React9.createElement("button", { type: "button", disabled: !canEdit, onClick: () => setField(r.id, "active", r.active === false), style: { border: "none", cursor: canEdit ? "pointer" : "default", borderRadius: 999, padding: "4px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: r.active === false ? "#9aa3af" : "#1a7f4b" } },
                       r.active === false ? "\u05db\u05d1\u05d5\u05d9" : "\u05e4\u05e2\u05d9\u05dc")),
@@ -6341,9 +6358,12 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   }
 
   return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-    React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setView("access")) },
+    React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => { setAccessKind("sub"); setView("access"); }) },
       React9.createElement(Users, { size: 15, strokeWidth: 2 }),
       "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
+    React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => { setAccessKind("pm"); setView("access"); }) },
+      React9.createElement(HardHat, { size: 15, strokeWidth: 2 }),
+      "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05de\u05e0\u05d4\u05dc\u05d9 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd"),
     React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setView("weekAll")) },
       React9.createElement(CalendarClock, { size: 15, strokeWidth: 2 }),
       "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u05de\u05e8\u05d5\u05db\u05d6 \u05dc\u05db\u05dc \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd"),
@@ -7649,7 +7669,7 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL }), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
