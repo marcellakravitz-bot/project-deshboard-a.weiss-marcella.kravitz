@@ -29,7 +29,7 @@
   .bar .left{left:16px}
   .bar .right{right:16px}
   .bar button{background:none;border:none;color:#b9bcc4;font:inherit;font-size:13px;cursor:pointer;padding:4px}
-  .wrap{padding:16px;max-width:560px;margin:0 auto}
+  .wrap{padding:16px;max-width:560px;margin:0 auto;position:relative}
   .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
   label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}
   input{width:100%;font:inherit;font-size:16px;padding:11px 12px;border:1px solid var(--line);
@@ -47,9 +47,29 @@
   .proj .pf{font-size:13.5px;font-weight:700}
   .proj .pd{font-size:12.5px;color:var(--steel)}
   .proj .ptr{margin-top:6px;font-size:14px;font-weight:800;color:var(--navy)}
-  .navRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
-  .pushRow{display:flex;justify-content:center;margin-bottom:14px}
-  .pushRow .navBtn{border-color:#b9cbe4;color:var(--navy)}
+  .pushSwitch{display:flex;align-items:center;justify-content:space-between;gap:12px;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:16px;font-size:13.5px;font-weight:700;color:var(--navy)}
+  .tgl{width:46px;height:27px;border-radius:999px;border:none;background:#c9ced6;
+    position:relative;cursor:pointer;padding:0;transition:background .18s}
+  .tgl span{position:absolute;top:3px;inset-inline-start:3px;width:21px;height:21px;
+    border-radius:50%;background:#fff;transition:transform .18s}
+  .tgl.on{background:var(--navy)}
+  .tgl.on span{transform:translateX(-19px)}
+  .backArrow{position:absolute;top:calc(env(safe-area-inset-top) + 14px);inset-inline-end:14px;
+    z-index:6;width:38px;height:38px;border:1px solid var(--line);border-radius:12px;
+    background:var(--surface);color:var(--steel);display:flex;align-items:center;
+    justify-content:center;cursor:pointer;padding:0}
+  .backArrow svg{transform:scaleX(-1)}
+  .sheet{position:fixed;inset:0;z-index:20;background:rgba(17,18,20,.45);
+    display:flex;align-items:flex-end;justify-content:center}
+  .sheetCard{background:var(--surface);width:100%;max-width:460px;
+    border-radius:18px 18px 0 0;padding:22px 20px calc(env(safe-area-inset-bottom) + 20px);
+    text-align:center}
+  .sheetCard h3{margin:0 0 8px;font-size:17px}
+  .sheetCard p{margin:0 0 18px;font-size:13.5px;color:var(--steel);line-height:1.7}
+  .sheetCard .go{margin-top:8px}
+  .sheetCard .go.ghost{background:transparent;color:var(--steel);font-weight:600}
   .navBtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;
     padding:7px 14px;font:inherit;font-size:12.5px;font-weight:700;color:var(--steel);cursor:pointer}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -178,7 +198,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 22</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 24</span></footer>
 
 <script>
 
@@ -197,6 +217,28 @@ var SEEN_KEY = "awsub.seen";
 // only works at all once the site has been added to the home screen, so a
 // refusal there is expected and is not treated as an error. (11.9.26)
 var PUSH_KEY="awsub.push";
+var PUSH_ASKED="awsub.pushAsked";
+// Asked once, over the board, and never again — an offer that returns on every
+// visit is an offer nobody reads. Declining leaves the app working exactly as
+// before, with the blue dot doing the telling. (11.9.26)
+function maybeOfferPush(){
+  if(pushReady()) return;
+  try { if(localStorage.getItem(PUSH_ASKED)==="1") return; } catch(e){}
+  var box=document.createElement("div");
+  box.className="sheet";
+  box.innerHTML='<div class="sheetCard">'+
+    '<h3>התראות לטלפון</h3>'+
+    '<p>נודיע לכם כשעולה עדכון חדש בפרויקט, גם כשהאפליקציה סגורה.</p>'+
+    '<button class="go" id="pushYes">הפעלת התראות</button>'+
+    '<button class="go ghost" id="pushNo">לא עכשיו</button></div>';
+  document.body.appendChild(box);
+  var close=function(){
+    try { localStorage.setItem(PUSH_ASKED,"1"); } catch(e){}
+    box.remove();
+  };
+  box.querySelector("#pushNo").onclick=close;
+  box.querySelector("#pushYes").onclick=function(){ close(); askPush(true); };
+}
 function pushReady(){
   try { return localStorage.getItem(PUSH_KEY)==="1"; } catch(e){ return false; }
 }
@@ -350,9 +392,9 @@ function login(err){
         localStorage.setItem(TOKEN_KEY, state.token);
         localStorage.setItem(TOKEN_KEY+".projects", JSON.stringify(state.projects));
       }catch(e){}
-      state.project = state.projects.length===1 ? state.projects[0].id : null;
+      state.project = null;
       if(state.needPin){ choosePin(); return; }
-      if(state.project) loadBoard(); else render();
+      render();
     }).catch(function(){ login("אין חיבור לשרת. נסו שוב."); });
   };
 }
@@ -380,8 +422,7 @@ function choosePin(err){
   var btn=document.getElementById("sp");
   document.getElementById("sk").onclick=function(){
     state.needPin=false;
-    askPush();
-    if(state.project) loadBoard(); else render();
+    render();
   };
   btn.onclick=function(){
     var a=p1.value.trim(), b=p2.value.trim();
@@ -391,15 +432,37 @@ function choosePin(err){
     call({action:"set-pin", token:state.token, pin:a}).then(function(r){
       if(!r.ok){ choosePin("השמירה נכשלה. נסו שוב."); return; }
       state.needPin=false;
-      askPush();
-      if(state.project) loadBoard(); else render();
+      render();
     }).catch(function(){ choosePin("אין חיבור לשרת."); });
   };
+}
+// A switch rather than a one-off question: whoever said no can say yes later,
+// and whoever tires of it can stop it. The one-time card still appears on the
+// first visit. (11.9.26)
+function pushSwitch(){
+  var on=pushReady();
+  return '<div class="pushSwitch"><span>התראות לטלפון</span>'+
+    '<button class="tgl'+(on?" on":"")+'" id="pushTgl" aria-label="התראות"><span></span></button></div>';
+}
+function turnPushOff(){
+  try { localStorage.removeItem(PUSH_KEY); } catch(e){}
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.ready.then(function(reg){
+      return reg.pushManager.getSubscription().then(function(sub){
+        if(!sub) return;
+        var ep=sub.endpoint;
+        return sub.unsubscribe().then(function(){
+          return call({action:"unsubscribe", token:state.token, endpoint:ep});
+        });
+      });
+    }).catch(function(){});
+  }
+  render();
 }
 function picker(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
-  app.innerHTML = '<p class="lead">בחרו פרויקט</p><div class="grid">'+state.projects.map(function(p){
+  app.innerHTML = pushSwitch()+'<p class="lead">בחרו פרויקט</p><div class="grid">'+state.projects.map(function(p){
     return '<button class="pcube" data-p="'+esc(p.id)+'">'+
       (p.logo ? '<img src="'+esc(p.logo)+'" alt="">' : '')+
       '<span class="t">'+esc(p.name||"פרויקט")+'</span>'+
@@ -409,6 +472,9 @@ function picker(){
   Array.prototype.forEach.call(app.querySelectorAll(".pcube"), function(b){
     b.onclick=function(){ state.project=b.getAttribute("data-p"); history.pushState({s:1},""); loadBoard(); };
   });
+  var tg=document.getElementById("pushTgl");
+  if(tg) tg.onclick=function(){ if(pushReady()) turnPushOff(); else askPush(true); };
+  maybeOfferPush();
 }
 function loadBoard(){
   busy("טוען את הפרויקט…");
@@ -437,18 +503,11 @@ function tradePicker(){
   Array.prototype.forEach.call(app.querySelectorAll(".pcube"), function(b){
     b.onclick=function(){ state.trade=b.getAttribute("data-t"); history.pushState({s:1},""); loadBoard(); };
   });
-  var po=document.getElementById("pushOn");
-  if(po) po.onclick=function(){ askPush(true); };
   wireNav();
 }
 function wireNav(){
-  var tt=document.getElementById("toTrades");
-  if(tt) tt.onclick=function(){ history.back(); };
-  var tp=document.getElementById("toProjects");
-  if(tp) tp.onclick=function(){
-    state.trade=null; state.project=null; state.board=null; state.screen=null; state.cat=null;
-    render();
-  };
+  var gb=document.getElementById("goBack");
+  if(gb) gb.onclick=function(){ history.back(); };
 }
 function projHead(withTrade){
   var p=(state.board&&state.board.project)||{};
@@ -464,19 +523,21 @@ function projHead(withTrade){
 // Back to the trades, and back to the projects — for anybody who has more than
 // one of either. Both go through the browser's own history, so the phone's
 // gesture and the button on screen do exactly the same thing.
+function canGoBack(){
+  if(state.screen) return true;
+  if(state.board&&state.board.isPm&&state.trade) return true;
+  return !!state.project;
+}
 function navBar(){
-  var bits=[];
-  if(state.board&&state.board.isPm&&state.trade) bits.push('<button class="navBtn" id="toTrades">→ כל התחומים</button>');
-  if((state.projects||[]).length>1) bits.push('<button class="navBtn" id="toProjects">→ הפרויקטים</button>');
-  return bits.length ? '<div class="navRow">'+bits.join("")+'</div>' : "";
+  if(!canGoBack()) return "";
+  return '<button class="backArrow" id="goBack" aria-label="חזרה">'+
+    icon("M15 6l-6 6 6 6")+'</button>';
 }
 function board(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
   var head=navBar()+projHead(true);
-  var offer = pushReady() ? "" :
-    '<div class="pushRow"><button class="navBtn" id="pushOn">הפעלת התראות לטלפון</button></div>';
-  app.innerHTML = head+offer+'<div class="grid">'+CUBES.map(function(c){
+  app.innerHTML = head+'<div class="grid">'+CUBES.map(function(c){
     return '<button class="cube'+(isNew(c.key)?" fresh":"")+'" data-k="'+c.key+'">'+
            (isNew(c.key)?'<span class="dot" aria-label="עדכון חדש"></span>':'')+
            '<span class="ico">'+icon(c.i)+'</span>'+
@@ -816,13 +877,12 @@ window.addEventListener("popstate", function(){
         : "ההרשאה כבר לא בתוקף. פנו למנהלת הפרויקט."); return;
     }
     if(!state.projects.length){ retry("השרת לא זמין כרגע."); return; }
-    state.project = state.projects.length===1 ? state.projects[0].id : null;
-    if(!pushReady()) askPush(false);
-    if(state.project) loadBoard(); else render();
+    state.project = null;
+    render();
   }).catch(function(){
     if(!state.projects.length){ retry("אין חיבור לרשת."); return; }
-    state.project = state.projects.length===1 ? state.projects[0].id : null;
-    if(state.project) loadBoard(); else render();
+    state.project = null;
+    render();
   });
 })();
 </script>
