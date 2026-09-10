@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 117";
+var APP_BUILD = "11.9.2026 · build 118";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18309,7 +18309,7 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ onNewRevision, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
@@ -18324,7 +18324,10 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
   const set = (patch) => setD((prev) => ({ ...prev, ...patch }));
   const clientApproved = ["approved", "approvedNoted"]
     .indexOf((((rec.reviews || [])[0] || {}).decision) || "") >= 0;
-  const ro = !canEdit || clientApproved;
+  // Anything already sent is a document somebody has in their hands. It is
+  // corrected by issuing a new revision, never by editing it underneath them.
+  const locked = clientApproved || !!rec.sent;
+  const ro = !canEdit || locked;
   const isHe = lang === "he";
   const specViewCount = (d.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0).length;
   // The approval block has its own lock: a reviewer who may not touch a single
@@ -19273,13 +19276,23 @@ function SubmittalForm({ rec, lang, isRTL, langSwitch, canEdit, canSign, project
           sbH("button", { type: "button", className: "functionEditBtn", onClick: () => onSave(d) }, L("saveSignature"))
         )
       : null,
-    clientApproved
+    locked && canEdit
       ? sbH(
           "div",
           { className: "sbLockedBar" },
           sbH("span", null, isHe
-            ? "\u05d2\u05e8\u05e1\u05d4 \u05de\u05d0\u05d5\u05e9\u05e8\u05ea \u2014 \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05d4."
-            : "Approved revision \u2014 locked."),
+            ? (clientApproved
+                ? "\u05d2\u05e8\u05e1\u05d4 \u05de\u05d0\u05d5\u05e9\u05e8\u05ea \u2014 \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05d4."
+                : "\u05d2\u05e8\u05e1\u05d4 \u05e9\u05e0\u05e9\u05dc\u05d7\u05d4 \u2014 \u05e0\u05e2\u05d5\u05dc\u05d4 \u05dc\u05e2\u05e8\u05d9\u05db\u05d4.")
+            : "Locked."),
+          onNewRevision
+            ? sbH(
+                "button",
+                { type: "button", className: "sbFormBtn", onClick: onNewRevision },
+                sbH(Plus2, { size: 15, strokeWidth: 2.2 }),
+                sbH("span", null, isHe ? "\u05d2\u05e8\u05e1\u05d4 \u05d7\u05d3\u05e9\u05d4" : "New revision")
+              )
+            : null,
           onDelete
             ? sbH(
                 "button",
@@ -21461,13 +21474,8 @@ function SubmittalCard({
     setOpenId(rec.id);
   };
   const openExisting = (s) => {
-    // A sent submittal is a document that went out. Correcting it is a new
-    // version, not a rewrite of what the approver already saw. A draft has not
-    // gone anywhere, so it is simply edited.
-    if (s.sent && canEdit) {
-      startRevision(s);
-      return;
-    }
+    // A sent submittal is a document that went out. It opens as it stands —
+    // read it, delete it, or start a new revision from the button on it.
     setDraft(s);
     setOpenId(s.id);
   };
@@ -21538,6 +21546,7 @@ function SubmittalCard({
     }
     return sbH(SubmittalForm, {
       rec: draft,
+      onNewRevision: draft && draft.sent && canEdit ? () => startRevision(draft) : null,
       lang,
       isRTL,
       langSwitch,
