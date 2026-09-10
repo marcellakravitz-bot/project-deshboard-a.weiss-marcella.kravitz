@@ -167,8 +167,15 @@ function fmt(iso){
 function call(body){
   return fetch(API,{ method:"POST", headers:{"content-type":"application/json"},
     body:JSON.stringify(body) }).then(function(r){
-      return r.json().then(function(j){ return { ok:r.ok, data:j }; });
+      return r.json().then(function(j){ return { ok:r.ok, status:r.status, data:j }; },
+                           function(){ return { ok:false, status:r.status, data:{} }; });
     });
+}
+function retry(msg){
+  app.innerHTML='<div class="card" style="text-align:center">'+
+    '<p class="hint" style="margin:0 0 14px">'+esc(msg)+'</p>'+
+    '<button class="go" id="rt">נסו שוב</button></div>';
+  document.getElementById("rt").onclick=function(){ loadBoard(); };
 }
 function busy(text){ app.innerHTML = '<p class="lead">'+esc(text||"טוען…")+'</p>'; }
 
@@ -199,7 +206,10 @@ function login(err){
         login(msg); return;
       }
       state.token=r.data.token; state.projects=r.data.projects||[];
-      try{ localStorage.setItem(TOKEN_KEY, state.token); }catch(e){}
+      try{
+        localStorage.setItem(TOKEN_KEY, state.token);
+        localStorage.setItem(TOKEN_KEY+".projects", JSON.stringify(state.projects));
+      }catch(e){}
       state.project = state.projects.length===1 ? state.projects[0].id : null;
       if(state.project) loadBoard(); else render();
     }).catch(function(){ login("אין חיבור לשרת. נסו שוב."); });
@@ -224,9 +234,13 @@ function picker(){
 function loadBoard(){
   busy("טוען את הפרויקט…");
   call({action:"board", token:state.token, projectId:state.project}).then(function(r){
-    if(!r.ok){ signOut("ההרשאה כבר לא בתוקף. פנו למנהלת הפרויקט."); return; }
-    state.board=r.data; render();
-  }).catch(function(){ busy("אין חיבור לשרת."); });
+    if(r.ok){ state.board=r.data; render(); return; }
+    // 401 is the manager switching them off. Anything else is a fault on the
+    // way, and losing the sign-in over it is what made this ask for the code
+    // again and again.
+    if(r.status===401){ signOut("ההרשאה כבר לא בתוקף. פנו למנהלת הפרויקט."); return; }
+    retry("השרת לא זמין כרגע.");
+  }).catch(function(){ retry("אין חיבור לרשת."); });
 }
 
 // ------------------------------------------------------------------- board
@@ -351,7 +365,7 @@ function render(){
   window.scrollTo(0,0);
 }
 function signOut(msg){
-  try{ localStorage.removeItem(TOKEN_KEY); }catch(e){}
+  try{ localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(TOKEN_KEY+".projects"); }catch(e){}
   state={ token:null, projects:[], project:null, board:null, screen:null, item:null };
   login(msg);
 }
@@ -369,13 +383,25 @@ window.addEventListener("popstate", function(){
   if(!t){ login(); return; }
   state.token=t;
   busy("טוען…");
+  try{ state.projects=JSON.parse(localStorage.getItem(TOKEN_KEY+".projects")||"[]"); }catch(e){ state.projects=[]; }
   call({action:"projects", token:t}).then(function(r){
     if(r.ok && r.data.projects){
       state.projects=r.data.projects;
-      state.project = state.projects.length===1 ? state.projects[0].id : null;
-      if(state.project) loadBoard(); else render();
-    } else { signOut(); }
-  }).catch(function(){ signOut(); });
+      try{ localStorage.setItem(TOKEN_KEY+".projects", JSON.stringify(state.projects)); }catch(e){}
+    } else if(r.status===401){
+      var why=(r.data&&r.data.error)||"";
+      signOut(why==="bad-token"
+        ? "ההתחברות השמורה לא זוהתה על ידי השרת (bad-token). התחברו שוב."
+        : "ההרשאה כבר לא בתוקף. פנו למנהלת הפרויקט."); return;
+    }
+    if(!state.projects.length){ retry("השרת לא זמין כרגע."); return; }
+    state.project = state.projects.length===1 ? state.projects[0].id : null;
+    if(state.project) loadBoard(); else render();
+  }).catch(function(){
+    if(!state.projects.length){ retry("אין חיבור לרשת."); return; }
+    state.project = state.projects.length===1 ? state.projects[0].id : null;
+    if(state.project) loadBoard(); else render();
+  });
 })();
 </script>
 </body>
