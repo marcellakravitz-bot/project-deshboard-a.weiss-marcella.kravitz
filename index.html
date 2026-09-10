@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 120";
+var APP_BUILD = "11.9.2026 · build 121";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -17082,6 +17082,7 @@ var SB_L = {
   // The submittal list's own column headings (29.8.26).
   catCol: { en: "Category", he: "קטגוריה" },
   itemCol: { en: "Item", he: "תיאור פריט" },
+  typeCol: { en: "Type ID", he: "איפיון" },
   supplierCol: { en: "Supplier / Contractor", he: "ספק / קבלן" },
   dueCol: { en: "Approval due", he: "תאריך נדרש לאישור" },
   notesCol: { en: "My notes", he: "הערות שלי" },
@@ -20904,6 +20905,7 @@ function SubmittalFolder({
                 null,
                 sbH("th", null, L("submittalNo")),
                 sbH("th", null, L("catCol")),
+                sbH("th", null, L("typeCol")),
                 sbH("th", null, L("itemCol")),
                 sbH("th", null, L("supplierCol")),
                 sbH("th", null, L("dateCol")),
@@ -20963,7 +20965,8 @@ function SubmittalFolder({
                     )
                   ),
                   sbH("td", null, sbText(boardCategoryOf(s.category) || { en: "", he: "" }, lang) || "—"),
-                  sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || s.typeId || "—"),
+                  sbH("td", { className: "sbItemCell", dir: "auto" }, s.typeId || "—"),
+                  sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || "—"),
                   sbH(
                     "td",
                     null,
