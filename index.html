@@ -231,6 +231,7 @@ import {
   Crown,
   HardHat,
   ClipboardCheck,
+  StickyNote,
   NotebookPen,
   Eye as EyeIcon2,
   AirVent,
@@ -506,7 +507,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.9.2026 · build 102";
+var APP_BUILD = "10.9.2026 · build 106";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -570,6 +571,9 @@ var base = `
            box was the one that forgot. Setting it on the document itself means
            no dialog can be born in the wrong typeface. */
         body { font-family: 'Assistant', 'Inter', sans-serif; }
+        html.subsMode, body.subsMode { background: #fdf8e8; }
+        body.subsMode .appRoot { background: #fdf8e8; }
+        body.subsMode .functionPage { background: #fdf8e8; }
         .appRoot {
           font-family: 'Assistant', 'Inter', sans-serif;
           color: var(--ink);
@@ -5344,7 +5348,7 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
   const fileRef = React9.useRef(null);
   const today = () => new Date().toISOString().slice(0, 10);
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
-  const btnS = { minWidth: 132, justifyContent: "center" };
+  const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
   const cellS = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
   const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
   const addFiles = async (files) => {
@@ -5441,7 +5445,7 @@ function SubsSpecsList({ trade, tradeLabel, projectId, canEdit, entries, onChang
   const [openId, setOpenId] = React9.useState(null);
   const fileRef = React9.useRef(null);
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
-  const btnS = { minWidth: 132, justifyContent: "center" };
+  const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
   const cellS = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
   const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
   const addFiles = async (files) => {
@@ -5752,27 +5756,23 @@ function SubsScheduleView({ tradeLabel, scheduleData }) {
 }
 
 
-// Printing opens a window of its own rather than fighting the dashboard's own
-// styles: a week on paper goes on a clipboard and gets carried around a site.
-function subsPrint(title, bodyHtml) {
-  const w = window.open("", "_blank", "width=1000,height=700");
-  if (!w) return;
-  w.document.write(`<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8">
-<title>${title}</title><style>
-  @page { size: A4 landscape; margin: 12mm; }
-  body { font-family: Assistant, Arial, sans-serif; color: #17181c; }
-  h1 { font-size: 17px; margin: 0 0 4px; }
-  .sub { font-size: 12px; color: #666; margin: 0 0 14px; }
-  table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-  th, td { border: 1px solid #d7d9dd; padding: 7px 8px; font-size: 11.5px;
-           vertical-align: top; text-align: right; white-space: pre-wrap; }
-  th { background: #f2f4f7; text-align: center; font-size: 11px; }
-  th .d { display: block; font-weight: 400; color: #777; font-size: 10px; }
-  td.trade { background: #fafbfc; font-weight: 800; text-align: center; width: 110px; }
-</style></head><body>${bodyHtml}</body></html>`);
-  w.document.close();
-  w.focus();
-  setTimeout(() => { try { w.print(); } catch (e) {} }, 250);
+// The same printed sheet as everything else here — the house frame, the two
+// logos, the footer strip — rather than a page of its own invention. (10.9.26)
+function subsPrintWeek({ printBrand, projectName, isRTL, weekStart, rows }) {
+  const days = subsWeekDays(weekStart);
+  const head = ["\u05ea\u05d7\u05d5\u05dd"].concat(days.map((d) => d.name + "\n" + subsFmtDate(d.iso)));
+  const body = (rows || []).map((r) => [r.label].concat(days.map((_, i) => (r.cells || [])[i] || "")));
+  boardExportPdf({
+    title: "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4",
+    subtitle: (projectName ? projectName + " \u00b7 " : "") +
+      "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(weekStart) + " \u2013 " + subsFmtDate(days[5].iso),
+    head,
+    body,
+    widths: [16, 14, 14, 14, 14, 14, 14],
+    accent: (printBrand || {}).accent,
+    brand: printBrand || {},
+    isRTL: isRTL !== false,
+  });
 }
 function subsWeekDays(weekStart) {
   const base = new Date(weekStart + "T00:00:00");
@@ -5786,57 +5786,108 @@ function subsWeekDays(weekStart) {
 }
 // Every trade's week on one sheet — the thing she actually hands out on a
 // Sunday morning, instead of opening six cubes one after another. (10.9.26)
-function SubsWeeklyAll({ data, onBack }) {
+function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, onChange, onChangeExtra, onBack }) {
   const now = new Date();
   const [year, setYear] = React9.useState(now.getFullYear());
   const [month, setMonth] = React9.useState(now.getMonth());
   const [weekStart, setWeekStart] = React9.useState(null);
+  const [buf, setBuf] = React9.useState(null);
+  const [adding, setAdding] = React9.useState("");
   const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
   const monthNames = ["\u05d9\u05e0\u05d5\u05d0\u05e8", "\u05e4\u05d1\u05e8\u05d5\u05d0\u05e8", "\u05de\u05e8\u05e5", "\u05d0\u05e4\u05e8\u05d9\u05dc", "\u05de\u05d0\u05d9", "\u05d9\u05d5\u05e0\u05d9", "\u05d9\u05d5\u05dc\u05d9", "\u05d0\u05d5\u05d2\u05d5\u05e1\u05d8", "\u05e1\u05e4\u05d8\u05de\u05d1\u05e8", "\u05d0\u05d5\u05e7\u05d8\u05d5\u05d1\u05e8", "\u05e0\u05d5\u05d1\u05de\u05d1\u05e8", "\u05d3\u05e6\u05de\u05d1\u05e8"];
+  const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
+  // Trades have a cube and an app. These do not — a crane crew or a surveyor
+  // who has to be on the week's sheet and has no reason to sign in anywhere.
+  const lines = SUB_TRADES.map((t) => ({ key: t.key, label: t.label }))
+    .concat((extra || []).map((x) => ({ key: x.id, label: x.label, extra: true })));
   const weeks = [];
   {
     const cursor = new Date(year, month, 1);
     cursor.setDate(cursor.getDate() - cursor.getDay());
     while (cursor <= new Date(year, month + 1, 0)) { weeks.push(new Date(cursor)); cursor.setDate(cursor.getDate() + 7); }
   }
-  const esc = (x) => String(x == null ? "" : x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  const cellsOf = (key) => (buf && buf[key]) || ((data || {})[key] || {})[weekStart] || [];
+  const dirty = !!buf;
+  const setCell = (key, i, text) => {
+    const base = buf || {};
+    const cur = base[key] || (((data || {})[key] || {})[weekStart] || []);
+    const next = Array.from({ length: 6 }, (_, j) => j === i ? text : (cur[j] || ""));
+    setBuf({ ...base, [key]: next });
+  };
+  const save = () => {
+    const next = { ...(data || {}) };
+    Object.keys(buf || {}).forEach((key) => {
+      next[key] = { ...(next[key] || {}), [weekStart]: buf[key] };
+    });
+    onChange(next);
+    setBuf(null);
+  };
+  const addLine = () => {
+    const label = adding.trim();
+    if (!label) return;
+    onChangeExtra((extra || []).concat([{ id: "x-" + Date.now().toString(36), label }]));
+    setAdding("");
+  };
+
   if (weekStart) {
     const days = subsWeekDays(weekStart);
-    const table = React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed" } },
-      React9.createElement("thead", null, React9.createElement("tr", null,
-        React9.createElement("th", { style: { ...SUBS_HEAD, width: 110 } }, "\u05ea\u05d7\u05d5\u05dd"),
-        days.map((d, i) => React9.createElement("th", { key: i, style: SUBS_HEAD },
-          React9.createElement("div", null, d.name),
-          React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", fontWeight: 500, direction: "ltr" } }, subsFmtDate(d.iso)))))),
-      React9.createElement("tbody", null, SUB_TRADES.map((tr) => {
-        const cells = ((data || {})[tr.key] || {})[weekStart] || [];
-        return React9.createElement("tr", { key: tr.key },
-          React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 800, background: "#fafbfc" } }, tr.label),
-          days.map((d, i) => React9.createElement("td", { key: i, style: { ...SUBS_CELL, whiteSpace: "pre-wrap" } }, cells[i] || "")));
-      })));
-    const printIt = () => {
-      const head = days.map((d) => `<th>${d.name}<span class="d">${subsFmtDate(d.iso)}</span></th>`).join("");
-      const body = SUB_TRADES.map((tr) => {
-        const cells = ((data || {})[tr.key] || {})[weekStart] || [];
-        return `<tr><td class="trade">${esc(tr.label)}</td>` +
-          days.map((d, i) => `<td>${esc(cells[i] || "")}</td>`).join("") + "</tr>";
-      }).join("");
-      subsPrint("\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9",
-        `<h1>\u05dc\u05d5"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd</h1>` +
-        `<p class="sub">\u05e9\u05d1\u05d5\u05e2 ${subsFmtDate(weekStart)} \u2013 ${subsFmtDate(days[5].iso)}</p>` +
-        `<table><thead><tr><th>\u05ea\u05d7\u05d5\u05dd</th>${head}</tr></thead><tbody>${body}</tbody></table>`);
-    };
     return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
-      React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd"),
-      React9.createElement("p", { className: "panelSub", style: { margin: 0 } }, "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(weekStart) + " \u2013 " + subsFmtDate(days[5].iso)),
-      React9.createElement("div", { style: { display: "flex", gap: 10 } },
-        React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setWeekStart(null) }, "\u2192 \u05d1\u05d7\u05d9\u05e8\u05ea \u05e9\u05d1\u05d5\u05e2"),
-        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 120, justifyContent: "center" }, onClick: printIt }, "\u05d4\u05d3\u05e4\u05e1\u05d4")),
-      React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } }, table));
+      React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } },
+        (projectName ? projectName + " \u00b7 " : "") + "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(weekStart) + " \u2013 " + subsFmtDate(days[5].iso)),
+      React9.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "center" } },
+        React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => { setWeekStart(null); setBuf(null); } }, "\u2192 \u05d1\u05d7\u05d9\u05e8\u05ea \u05e9\u05d1\u05d5\u05e2"),
+        canEdit && React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, opacity: dirty ? 1 : 0.55 }, disabled: !dirty, onClick: save },
+          React9.createElement(Save, { size: 15, strokeWidth: 2 }),
+          dirty ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "\u05e0\u05e9\u05de\u05e8"),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => subsPrintWeek({
+          printBrand, projectName, isRTL, weekStart,
+          rows: lines.map((l) => ({ label: l.label, cells: cellsOf(l.key) })),
+        }) },
+          React9.createElement(Printer, { size: 15, strokeWidth: 2 }),
+          "\u05d4\u05d3\u05e4\u05e1\u05d4")),
+      React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
+        React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed", margin: "0 auto" } },
+          React9.createElement("thead", null, React9.createElement("tr", null,
+            React9.createElement("th", { style: { ...SUBS_HEAD, width: 120 } }, "\u05ea\u05d7\u05d5\u05dd"),
+            days.map((d, i) => React9.createElement("th", { key: i, style: SUBS_HEAD },
+              React9.createElement("div", null, d.name),
+              React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", fontWeight: 500, direction: "ltr" } }, subsFmtDate(d.iso)))))),
+          React9.createElement("tbody", null, lines.map((l) => {
+            const cells = cellsOf(l.key);
+            return React9.createElement("tr", { key: l.key },
+              React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 800, background: "#fafbfc", verticalAlign: "middle" } },
+                l.label,
+                l.extra && canEdit && React9.createElement("button", {
+                  type: "button", title: "\u05d4\u05e1\u05e8\u05d4",
+                  onClick: () => onChangeExtra((extra || []).filter((x) => x.id !== l.key)),
+                  style: { display: "block", margin: "6px auto 0", border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", padding: 0 }
+                }, React9.createElement(Trash2, { size: 13, strokeWidth: 2 }))),
+              days.map((d, i) => React9.createElement("td", { key: i, style: { ...SUBS_CELL, padding: 5 } },
+                React9.createElement("textarea", {
+                  value: cells[i] || "",
+                  readOnly: !canEdit,
+                  onChange: (e) => setCell(l.key, i, e.target.value),
+                  style: { width: "100%", minHeight: 78, border: "1px solid var(--line)", borderRadius: 7, padding: 6, font: "inherit", fontSize: 12.5, resize: "vertical" }
+                }))));
+          })))),
+      canEdit && React9.createElement("div", { style: { display: "flex", gap: 8, width: "100%", maxWidth: 520 } },
+        React9.createElement("input", {
+          value: adding,
+          placeholder: "\u05e9\u05dd \u05e7\u05d1\u05dc\u05df \u05dc\u05dc\u05d5\"\u05d6 \u05d1\u05dc\u05d1\u05d3",
+          onChange: (e) => setAdding(e.target.value),
+          onKeyDown: (e) => { if (e.key === "Enter") addLine(); },
+          style: { flex: 1, border: "1px solid var(--line)", borderRadius: 7, padding: "8px 10px", font: "inherit", fontSize: 13 }
+        }),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 150, justifyContent: "center", gap: 8 }, onClick: addLine },
+          React9.createElement(Users, { size: 15, strokeWidth: 2 }),
+          "\u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df")));
   }
+
   return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
     React9.createElement("button", { type: "button", className: "ghostBtn", onClick: onBack }, "\u2192 \u05dc\u05d5\u05d7 \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd"),
-    React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u05de\u05e8\u05d5\u05db\u05d6"),
+    React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
+    projectName && React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, projectName),
     React9.createElement("div", { style: { display: "flex", gap: 8, alignItems: "center" } },
       React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => { const m = month - 1; if (m < 0) { setMonth(11); setYear(year - 1); } else setMonth(m); } }, "\u2039"),
       React9.createElement("strong", { style: { minWidth: 150, textAlign: "center" } }, monthNames[month] + " " + year),
@@ -5845,20 +5896,20 @@ function SubsWeeklyAll({ data, onBack }) {
       weeks.map((w) => {
         const key = iso(w);
         const end = new Date(w); end.setDate(end.getDate() + 5);
-        const filled = SUB_TRADES.filter((tr) => (((data || {})[tr.key] || {})[key] || []).some((x) => (x || "").trim())).length;
+        const filled = lines.filter((l) => (((data || {})[l.key] || {})[key] || []).some((x) => (x || "").trim())).length;
         return React9.createElement("button", {
           key, type: "button", onClick: () => setWeekStart(key),
           style: { display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--line)", borderRadius: 10, background: "#fff", padding: "12px 14px", cursor: "pointer", font: "inherit" }
         },
           React9.createElement("span", { style: { fontWeight: 700 } }, "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(key) + " \u2013 " + subsFmtDate(iso(end))),
-          React9.createElement("span", { style: { fontSize: 12, color: filled ? "#1a7f4b" : "var(--mist)" } }, filled ? filled + " \u05ea\u05d7\u05d5\u05de\u05d9\u05dd \u05de\u05d5\u05dc\u05d0\u05d9\u05dd" : "\u05e8\u05d9\u05e7"));
+          React9.createElement("span", { style: { fontSize: 12, color: filled ? "#1a7f4b" : "var(--mist)" } }, filled ? filled + " \u05de\u05d5\u05dc\u05d0\u05d5" : "\u05e8\u05d9\u05e7"));
       })));
 }
 
 // -------------------------------------------------------------- weekly board
 // A month of week rows; picking one opens Sunday to Friday with that week's
 // own dates and a free-text box under each day.
-function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange }) {
+function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange, printBrand, projectName, isRTL }) {
   const now = new Date();
   const [year, setYear] = React9.useState(now.getFullYear());
   const [month, setMonth] = React9.useState(now.getMonth());
@@ -5894,16 +5945,19 @@ function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange }) {
       React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setWeekStart(null) }, "\u2192 \u05d7\u05d6\u05e8\u05d4 \u05dc\u05d7\u05d5\u05d3\u05e9"),
       React9.createElement("h3", { style: { margin: 0 } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
       React9.createElement("div", { style: { display: "flex", gap: 10 } },
-        canEdit && React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 120, justifyContent: "center", opacity: dirty ? 1 : 0.55 }, disabled: !dirty, onClick: save }, dirty ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "\u05e0\u05e9\u05de\u05e8"),
-        React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => {
+        canEdit && React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, opacity: dirty ? 1 : 0.55 }, disabled: !dirty, onClick: save },
+          React9.createElement(Save, { size: 15, strokeWidth: 2 }),
+          dirty ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "\u05e0\u05e9\u05de\u05e8"),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => {
           const days = subsWeekDays(weekStart);
-          const esc2 = (x) => String(x == null ? "" : x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
-          subsPrint("\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9",
-            `<h1>\u05dc\u05d5"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05df ${esc2(tradeLabel)}</h1>` +
-            `<p class="sub">\u05e9\u05d1\u05d5\u05e2 ${subsFmtDate(weekStart)} \u2013 ${subsFmtDate(days[5].iso)}</p>` +
-            `<table><thead><tr>${days.map((d) => `<th>${d.name}<span class="d">${subsFmtDate(d.iso)}</span></th>`).join("")}</tr></thead>` +
-            `<tbody><tr>${days.map((d, i) => `<td>${esc2(cells[i] || "")}</td>`).join("")}</tr></tbody></table>`);
-        } }, "\u05d4\u05d3\u05e4\u05e1\u05d4")),
+          subsPrintWeek({
+            printBrand, projectName, isRTL,
+            weekStart,
+            rows: [{ label: tradeLabel, cells }],
+          });
+        } },
+          React9.createElement(Printer, { size: 15, strokeWidth: 2 }),
+          "\u05d4\u05d3\u05e4\u05e1\u05d4")),
       React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
@@ -5950,38 +6004,94 @@ function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange }) {
 // contractor sees the same list and a green tick appears against an item only
 // once she has ticked it. He never ticks anything himself — the whole point is
 // that the mark means she confirmed it. (8.9.26)
-function SubsStandards({ tradeLabel, canEdit, items, onChange }) {
+function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange }) {
   const [draft, setDraft] = React9.useState("");
-  const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "8px 10px", font: "inherit", fontSize: 13 };
+  const [openNote, setOpenNote] = React9.useState(null);
+  const [busy, setBusy] = React9.useState(null);
+  const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "7px 9px", font: "inherit", fontSize: 13 };
+  const cellS = { padding: "8px 10px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "middle" };
+  const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap", textAlign: "center" };
+  const set = (id, patch) => onChange(items.map((x) => x.id === id ? { ...x, ...patch } : x));
   const add = () => {
     const t = draft.trim();
     if (!t) return;
-    onChange(items.concat([{ id: "st-" + Date.now().toString(36), text: t, done: false }]));
+    onChange(items.concat([{ id: "st-" + Date.now().toString(36), text: t, date: "", note: "", cert: null, done: false }]));
     setDraft("");
   };
-  const toggle = (id) => onChange(items.map((x) => x.id === id ? { ...x, done: !x.done, doneAt: !x.done ? new Date().toISOString() : null } : x));
-  const remove = (id) => onChange(items.filter((x) => x.id !== id));
+  const upload = async (id, file) => {
+    if (!file) return;
+    setBusy(id);
+    try {
+      const att = await subsUploadFile(projectId, trade, file);
+      set(id, { cert: att });
+    } catch (e) {
+      console.error("[awdash] standards certificate upload failed", e);
+    } finally { setBusy(null); }
+  };
   return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
-    React9.createElement("h3", { style: { margin: 0 } }, "\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05db\u05d5\u05df \u05d4\u05ea\u05e7\u05e0\u05d9\u05dd \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+    React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05db\u05d5\u05df \u05d4\u05ea\u05e7\u05e0\u05d9\u05dd \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
     canEdit && React9.createElement("div", { style: { display: "flex", gap: 8, width: "100%", maxWidth: 620 } },
       React9.createElement("input", { style: inputS, value: draft, placeholder: "\u05e9\u05dd \u05d4\u05d1\u05d3\u05d9\u05e7\u05d4", onChange: (e) => setDraft(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
-      React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 110, justifyContent: "center" }, onClick: add }, "\u05d4\u05d5\u05e1\u05e4\u05d4")),
-    React9.createElement("div", { style: { width: "100%", maxWidth: 760, display: "flex", flexDirection: "column", gap: 8 } },
-      items.length === 0
-        ? React9.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e4\u05d4 \u05d1\u05d3\u05d9\u05e7\u05d4.")
-        : items.map((it) => React9.createElement("div", { key: it.id, style: { display: "flex", alignItems: "center", gap: 10, border: "1px solid var(--line)", borderRadius: 10, background: "#fff", padding: "10px 12px" } },
-            React9.createElement("button", {
-              type: "button", disabled: !canEdit, onClick: () => toggle(it.id),
-              title: canEdit ? "\u05e1\u05d9\u05de\u05d5\u05df \u05db\u05d1\u05d5\u05e6\u05e2" : "",
-              style: { width: 26, height: 26, borderRadius: 7, border: "1px solid " + (it.done ? "#1a7f4b" : "var(--line)"), background: it.done ? "#1a7f4b" : "#fff", color: "#fff", cursor: canEdit ? "pointer" : "default", fontWeight: 900, lineHeight: "24px", padding: 0, flex: "0 0 auto" }
-            }, it.done ? "\u2713" : ""),
-            React9.createElement("span", { style: { flex: 1, fontSize: 13.5, fontWeight: it.done ? 700 : 500, color: it.done ? "#1a7f4b" : "inherit" } }, it.text),
-            canEdit && React9.createElement("button", { type: "button", title: "\u05de\u05d7\u05d9\u05e7\u05d4", onClick: () => remove(it.id), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", padding: 4 } },
-              React9.createElement(Trash2, { size: 15, strokeWidth: 2 })))))
+      React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 150, justifyContent: "center", gap: 8 }, onClick: add },
+        React9.createElement(ClipboardCheck, { size: 15, strokeWidth: 2 }),
+        "\u05d4\u05d5\u05e1\u05e4\u05d4")),
+    React9.createElement("div", { style: { width: "100%", maxWidth: 1000, overflowX: "auto" } },
+      React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", margin: "0 auto" } },
+        React9.createElement("thead", null, React9.createElement("tr", null,
+          React9.createElement("th", { style: { ...headS, width: 70 } }, "\u05d1\u05d5\u05e6\u05e2"),
+          React9.createElement("th", { style: headS }, "\u05d1\u05d3\u05d9\u05e7\u05d4"),
+          React9.createElement("th", { style: { ...headS, width: 140 } }, "\u05ea\u05d0\u05e8\u05d9\u05da"),
+          React9.createElement("th", { style: { ...headS, width: 80 } }, "\u05d4\u05e2\u05e8\u05d5\u05ea"),
+          React9.createElement("th", { style: { ...headS, width: 110 } }, "\u05ea\u05e2\u05d5\u05d3\u05d4"),
+          canEdit ? React9.createElement("th", { style: { ...headS, width: 60 } }, "") : null)),
+        React9.createElement("tbody", null,
+          items.length === 0
+            ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, textAlign: "center", color: "var(--mist)" }, colSpan: canEdit ? 6 : 5 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e4\u05d4 \u05d1\u05d3\u05d9\u05e7\u05d4."))
+            : items.map((it) => [
+                React9.createElement("tr", { key: it.id },
+                  React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                    React9.createElement("button", {
+                      type: "button", disabled: !canEdit,
+                      onClick: () => set(it.id, { done: !it.done, doneAt: !it.done ? new Date().toISOString() : null }),
+                      title: canEdit ? "\u05e1\u05d9\u05de\u05d5\u05df \u05db\u05d1\u05d5\u05e6\u05e2" : "",
+                      style: { width: 26, height: 26, borderRadius: 7, border: "1px solid " + (it.done ? "#1a7f4b" : "var(--line)"), background: it.done ? "#1a7f4b" : "#fff", color: "#fff", cursor: canEdit ? "pointer" : "default", fontWeight: 900, lineHeight: "24px", padding: 0 }
+                    }, it.done ? "\u2713" : "")),
+                  React9.createElement("td", { style: { ...cellS, fontWeight: it.done ? 700 : 500, color: it.done ? "#1a7f4b" : "inherit" } }, it.text),
+                  React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                    React9.createElement("input", { type: "date", dir: "ltr", style: { ...inputS, padding: "5px 7px", fontSize: 12.5 }, value: it.date || "", readOnly: !canEdit, onChange: (e) => set(it.id, { date: e.target.value }) })),
+                  React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                    React9.createElement("button", {
+                      type: "button", title: "\u05d4\u05e2\u05e8\u05d5\u05ea",
+                      onClick: () => setOpenNote(openNote === it.id ? null : it.id),
+                      style: { border: "none", background: "transparent", cursor: "pointer", color: (it.note || "").trim() ? "var(--steel)" : "#c9ced6", padding: 4 }
+                    }, React9.createElement(StickyNote, { size: 17, strokeWidth: 2 }))),
+                  React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                    it.cert
+                      ? React9.createElement("span", { style: { display: "inline-flex", alignItems: "center", gap: 6 } },
+                          React9.createElement(SubsFileEye, { att: it.cert }),
+                          canEdit && React9.createElement("button", { type: "button", title: "\u05d4\u05e1\u05e8\u05d4", onClick: () => set(it.id, { cert: null }), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", padding: 0 } }, "\u2715"))
+                      : canEdit
+                        ? React9.createElement("label", { style: { fontSize: 11.5, color: "var(--steel)", cursor: "pointer", textDecoration: "underline" } },
+                            busy === it.id ? "\u05de\u05e2\u05dc\u05d4\u2026" : "\u05d4\u05e2\u05dc\u05d0\u05d4",
+                            React9.createElement("input", { type: "file", accept: "image/*,application/pdf", style: { display: "none" }, onChange: (e) => { upload(it.id, e.target.files && e.target.files[0]); e.target.value = ""; } }))
+                        : React9.createElement("span", { style: { color: "#c9ced6" } }, "\u2014")),
+                  canEdit ? React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
+                    React9.createElement("button", { type: "button", title: "\u05de\u05d7\u05d9\u05e7\u05d4", onClick: () => onChange(items.filter((x) => x.id !== it.id)), style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", padding: 4 } },
+                      React9.createElement(Trash2, { size: 15, strokeWidth: 2 }))) : null),
+                openNote === it.id ? React9.createElement("tr", { key: it.id + "-n" },
+                  React9.createElement("td", { style: { ...cellS, background: "#fafbfc" }, colSpan: canEdit ? 6 : 5 },
+                    React9.createElement("textarea", {
+                      value: it.note || "",
+                      readOnly: !canEdit,
+                      placeholder: canEdit ? "\u05d4\u05e2\u05e8\u05d5\u05ea \u05e9\u05d9\u05d5\u05e6\u05d2\u05d5 \u05dc\u05e7\u05d1\u05dc\u05df" : "",
+                      onChange: (e) => set(it.id, { note: e.target.value }),
+                      style: { width: "100%", minHeight: 70, border: "1px solid var(--line)", borderRadius: 8, padding: 8, font: "inherit", fontSize: 13, resize: "vertical" }
+                    }))) : null
+              ]))))
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff }) {
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
@@ -6026,6 +6136,14 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   // three levels, so one Back press jumped all the way out. Going deeper
   // pushes; Back pops exactly one level; leaving a level from inside the app
   // calls history.back() and lets the same handler do the work.
+  React9.useEffect(() => {
+    document.body.classList.add("subsMode");
+    document.documentElement.classList.add("subsMode");
+    return () => {
+      document.body.classList.remove("subsMode");
+      document.documentElement.classList.remove("subsMode");
+    };
+  }, []);
   const subsStateRef = React9.useRef(null);
   subsStateRef.current = { view, trade, section, draft };
   React9.useEffect(() => {
@@ -6054,7 +6172,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   const headS = { ...cellS, fontWeight: 800, background: "#f4f6f9", whiteSpace: "nowrap" };
   const inputS = { width: "100%", border: "1px solid var(--line)", borderRadius: 7, padding: "6px 8px", font: "inherit", fontSize: 13 };
   const wrapS = { flexDirection: "column", alignItems: "center", padding: 24, gap: 18 };
-  const btnS = { minWidth: 132, justifyContent: "center" };
+  const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
   // Same centring rule as the project board: a last row of one sits in the
   // middle column, a last row of two is centred as a pair.
   const cubeGrid = (items, onPick) => {
@@ -6096,6 +6214,8 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     return React9.createElement(SubsStandards, {
       tradeLabel: tradeOf(trade).label || "",
       canEdit,
+      trade,
+      projectId,
       items: ((subsData || {}).standards || {})[trade] || [],
       onChange: (next) => onChangeSubsData({ ...(subsData || {}), standards: { ...((subsData || {}).standards || {}), [trade]: next } })
     });
@@ -6106,6 +6226,9 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       trade,
       tradeLabel: tradeOf(trade).label || "",
       canEdit,
+      printBrand,
+      projectName,
+      isRTL,
       data: ((subsData || {}).weekly || {})[trade] || {},
       onChange: (next) => onChangeSubsData({ ...(subsData || {}), weekly: { ...((subsData || {}).weekly || {}), [trade]: next } })
     });
@@ -6138,7 +6261,14 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
 
   if (view === "weekAll") {
     return React9.createElement(SubsWeeklyAll, {
+      canEdit,
+      printBrand,
+      projectName,
+      isRTL,
       data: (subsData || {}).weekly || {},
+      extra: (subsData || {}).weeklyExtra || [],
+      onChange: (weekly) => onChangeSubsData({ ...(subsData || {}), weekly }),
+      onChangeExtra: (weeklyExtra) => onChangeSubsData({ ...(subsData || {}), weeklyExtra }),
       onBack: () => setView("board"),
     });
   }
@@ -6189,11 +6319,11 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   }
 
   return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-    React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, minWidth: 260 }, onClick: () => goDeeper(() => setView("access")) },
-      React9.createElement(Users, { size: 14, strokeWidth: 2, style: { marginInlineEnd: 6, verticalAlign: "-2px" } }),
+    React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setView("access")) },
+      React9.createElement(Users, { size: 15, strokeWidth: 2 }),
       "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
-    React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, minWidth: 260 }, onClick: () => goDeeper(() => setView("weekAll")) },
-      React9.createElement(CalendarClock, { size: 14, strokeWidth: 2, style: { marginInlineEnd: 6, verticalAlign: "-2px" } }),
+    React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setView("weekAll")) },
+      React9.createElement(CalendarClock, { size: 15, strokeWidth: 2 }),
       "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u05de\u05e8\u05d5\u05db\u05d6 \u05dc\u05db\u05dc \u05d4\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd"),
     cubeGrid(SUB_TRADES.map((tr) => ({
       key: tr.key,
@@ -7497,7 +7627,7 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff }), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
