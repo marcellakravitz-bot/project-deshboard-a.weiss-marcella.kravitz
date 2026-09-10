@@ -50,6 +50,8 @@
   .pushSwitch{display:flex;align-items:center;justify-content:space-between;gap:12px;
     background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
     padding:12px 14px;margin-bottom:16px;font-size:13.5px;font-weight:700;color:var(--navy)}
+  .pushSwitch .tiny{border:1px solid var(--line);background:transparent;border-radius:999px;
+    padding:3px 10px;font:inherit;font-size:11px;font-weight:700;color:var(--steel);cursor:pointer}
   .tgl{width:46px;height:27px;border-radius:999px;border:none;background:#c9ced6;
     position:relative;cursor:pointer;padding:0;transition:background .18s}
   .tgl span{position:absolute;top:3px;inset-inline-start:3px;width:21px;height:21px;
@@ -198,7 +200,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 24</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 25</span></footer>
 
 <script>
 
@@ -441,7 +443,8 @@ function choosePin(err){
 // first visit. (11.9.26)
 function pushSwitch(){
   var on=pushReady();
-  return '<div class="pushSwitch"><span>התראות לטלפון</span>'+
+  return '<div class="pushSwitch"><span>התראות לטלפון'+
+    (on?' <button class="tiny" id="pushTest">בדיקה</button>':'')+'</span>'+
     '<button class="tgl'+(on?" on":"")+'" id="pushTgl" aria-label="התראות"><span></span></button></div>';
 }
 function turnPushOff(){
@@ -474,6 +477,16 @@ function picker(){
   });
   var tg=document.getElementById("pushTgl");
   if(tg) tg.onclick=function(){ if(pushReady()) turnPushOff(); else askPush(true); };
+  var tt=document.getElementById("pushTest");
+  if(tt) tt.onclick=function(){
+    tt.textContent="שולח…";
+    call({action:"test-push", token:state.token, projectId:state.project}).then(function(r){
+      tt.textContent="בדיקה";
+      var rep=(r.data&&r.data.report)||{};
+      alert("מכשירים רשומים: "+(rep.devices||0)+
+        "\n"+((rep.results&&rep.results.join("\n"))||rep.note||"—"));
+    }).catch(function(){ tt.textContent="בדיקה"; alert("אין חיבור לשרת."); });
+  };
   maybeOfferPush();
 }
 function loadBoard(){
