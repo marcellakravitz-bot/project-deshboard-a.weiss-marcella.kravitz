@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 114";
+var APP_BUILD = "11.9.2026 · build 115";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5809,7 +5809,7 @@ function subsWeekDays(weekStart) {
 }
 // Every trade's week on one sheet — the thing she actually hands out on a
 // Sunday morning, instead of opening six cubes one after another. (10.9.26)
-function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, onChange, onChangeExtra, onBack }) {
+function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, onChange, onChangeExtra, onBack, onAnnounce }) {
   const now = new Date();
   const [year, setYear] = React9.useState(now.getFullYear());
   const [month, setMonth] = React9.useState(now.getMonth());
@@ -5839,10 +5839,16 @@ function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, o
   };
   const save = () => {
     const next = { ...(data || {}) };
-    Object.keys(buf || {}).forEach((key) => {
+    const touched = Object.keys(buf || {});
+    touched.forEach((key) => {
       next[key] = { ...(next[key] || {}), [weekStart]: buf[key] };
     });
     onChange(next);
+    // Only the trades whose boxes actually changed, so filling in one trade
+    // does not ring six sets of phones.
+    if (typeof onAnnounce === "function") {
+      touched.filter((k) => SUB_TRADES.some((t) => t.key === k)).forEach((k) => onAnnounce(k));
+    }
     setBuf(null);
   };
   const addLine = () => {
@@ -5932,7 +5938,7 @@ function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, o
 // -------------------------------------------------------------- weekly board
 // A month of week rows; picking one opens Sunday to Friday with that week's
 // own dates and a free-text box under each day.
-function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange, printBrand, projectName, isRTL }) {
+function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange, printBrand, projectName, isRTL, onAnnounce }) {
   const now = new Date();
   const [year, setYear] = React9.useState(now.getFullYear());
   const [month, setMonth] = React9.useState(now.getMonth());
@@ -5962,7 +5968,13 @@ function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange, printBrand, pr
     const base = buf || Array.from({ length: 6 }, (_, j) => stored[j] || "");
     setBuf(base.map((x, j) => j === i ? text : x));
   };
-  const save = () => { onChange({ ...(data || {}), [weekStart]: cells }); setBuf(null); };
+  const save = () => {
+    onChange({ ...(data || {}), [weekStart]: cells });
+    // Same rule as the log: the phones on this trade are told, and a failure
+    // to tell them never stops the saving.
+    if (typeof onAnnounce === "function") onAnnounce(trade);
+    setBuf(null);
+  };
   if (weekStart) {
     const base = new Date(weekStart + "T00:00:00");
     return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
@@ -6280,6 +6292,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       printBrand,
       projectName,
       isRTL,
+      onAnnounce: (tr) => subsAnnounce(projectId, tr),
       data: ((subsData || {}).weekly || {})[trade] || {},
       onChange: (next) => onChangeSubsData({ ...(subsData || {}), weekly: { ...((subsData || {}).weekly || {}), [trade]: next } })
     });
@@ -6318,6 +6331,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       isRTL,
       data: (subsData || {}).weekly || {},
       extra: (subsData || {}).weeklyExtra || [],
+      onAnnounce: (tr) => subsAnnounce(projectId, tr),
       onChange: (weekly) => onChangeSubsData({ ...(subsData || {}), weekly }),
       onChangeExtra: (weeklyExtra) => onChangeSubsData({ ...(subsData || {}), weeklyExtra }),
       onBack: () => setView("board"),
