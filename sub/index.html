@@ -46,6 +46,10 @@
   .proj .pn{font-size:16px;font-weight:800}
   .proj .pf{font-size:13.5px;font-weight:700}
   .proj .pd{font-size:12.5px;color:var(--steel)}
+  .proj .ptr{margin-top:6px;font-size:14px;font-weight:800;color:var(--navy)}
+  .navRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .navBtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;
+    padding:7px 14px;font:inherit;font-size:12.5px;font-weight:700;color:var(--steel);cursor:pointer}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
   .pcube{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
     text-align:center;background:var(--surface);border:1px solid var(--line);
@@ -159,7 +163,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 16</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 17</span></footer>
 
 <script>
 
@@ -336,26 +340,48 @@ var TRADES=[
 function tradePicker(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
-  var p=(state.board&&state.board.project)||{};
-  app.innerHTML='<div class="proj">'+(p.logo?'<img src="'+esc(p.logo)+'" alt="">':'')+
-      '<span class="pn">'+esc(p.name||"")+'</span></div>'+
+  app.innerHTML=navBar()+projHead(false)+
     '<p class="lead">בחרו תחום</p><div class="grid">'+TRADES.map(function(t){
       return '<button class="pcube" data-t="'+t.k+'"><span class="t">'+esc(t.t)+'</span></button>';
     }).join("")+'</div>';
   Array.prototype.forEach.call(app.querySelectorAll(".pcube"), function(b){
     b.onclick=function(){ state.trade=b.getAttribute("data-t"); history.pushState({s:1},""); loadBoard(); };
   });
+  wireNav();
 }
-function board(){
-  out.hidden=false;
-  document.querySelector(".bar").classList.remove("guest");
+function wireNav(){
+  var tt=document.getElementById("toTrades");
+  if(tt) tt.onclick=function(){ history.back(); };
+  var tp=document.getElementById("toProjects");
+  if(tp) tp.onclick=function(){
+    state.trade=null; state.project=null; state.board=null; state.screen=null; state.cat=null;
+    render();
+  };
+}
+function projHead(withTrade){
   var p=(state.board&&state.board.project)||{};
-  var head='<div class="proj">'+
+  var tr=TRADES.filter(function(t){return t.k===(state.trade||(state.board&&state.board.trade))})[0];
+  return '<div class="proj">'+
     (p.logo ? '<img src="'+esc(p.logo)+'" alt="">' : '')+
     '<span class="pn">'+esc(p.name||"")+'</span>'+
     (p.floors ? '<span class="pf">'+esc(p.floors)+'</span>' : '')+
     (p.dates ? '<span class="pd num">'+esc(p.dates)+'</span>' : '')+
+    (withTrade&&tr ? '<span class="ptr">'+esc(tr.t)+'</span>' : '')+
   '</div>';
+}
+// Back to the trades, and back to the projects — for anybody who has more than
+// one of either. Both go through the browser's own history, so the phone's
+// gesture and the button on screen do exactly the same thing.
+function navBar(){
+  var bits=[];
+  if(state.board&&state.board.isPm&&state.trade) bits.push('<button class="navBtn" id="toTrades">→ כל התחומים</button>');
+  if((state.projects||[]).length>1) bits.push('<button class="navBtn" id="toProjects">→ הפרויקטים</button>');
+  return bits.length ? '<div class="navRow">'+bits.join("")+'</div>' : "";
+}
+function board(){
+  out.hidden=false;
+  document.querySelector(".bar").classList.remove("guest");
+  var head=navBar()+projHead(true);
   app.innerHTML = head+'<div class="grid">'+CUBES.map(function(c){
     return '<button class="cube" data-k="'+c.key+'"><span class="ico">'+icon(c.i)+'</span>'+
            '<span class="t">'+c.t+'</span><span class="s">'+c.s+'</span></button>';
@@ -363,6 +389,7 @@ function board(){
   Array.prototype.forEach.call(app.querySelectorAll(".cube"), function(b){
     b.onclick=function(){ state.screen=b.getAttribute("data-k"); state.cat=null; history.pushState({s:1},""); render(); };
   });
+  wireNav();
 }
 
 // ---------------------------------------------------------------- sections
@@ -567,7 +594,7 @@ function screen(){
     state.screen==="sd"        ? viewSd(b) :
     state.screen==="standards" ? viewStandards(b) :
                                  viewWeekly(b);
-  app.innerHTML='<div class="head"><button class="back" id="b">→ חזרה</button><h2>'+c.t+'</h2></div>'+body;
+  app.innerHTML=projHead(true)+'<div class="head"><button class="back" id="b">→ חזרה</button><h2>'+c.t+'</h2></div>'+body;
   document.getElementById("b").onclick=function(){ history.back(); };
   Array.prototype.forEach.call(app.querySelectorAll(".catRow"), function(el){
     el.onclick=function(){ state.cat=el.getAttribute("data-c"); history.pushState({s:1},""); render(); };
