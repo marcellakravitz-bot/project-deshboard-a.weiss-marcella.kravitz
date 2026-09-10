@@ -263,7 +263,6 @@ var COPY = {
     worksStartValue: "01.03.2025",
     handoverValue: "30.11.2027",
     cards: [
-      { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "\u05DE\u05E8\u05DB\u05D6 \u05D4\u05D1\u05E7\u05E8\u05D4 \u05D4\u05D0\u05D9\u05E9\u05D9", locked: true },
       { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
@@ -388,7 +387,6 @@ var COPY = {
     worksStartValue: "01.03.2025",
     handoverValue: "30.11.2027",
     cards: [
-      { key: "marcella", icon: Crown, title: "Marcella \u{1F451}", sub: "Personal Control Center", locked: true },
       { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
       { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
       { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
@@ -507,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.9.2026 · build 108";
+var APP_BUILD = "11.9.2026 · build 111";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5555,11 +5553,11 @@ function SubsShell({ title, children }) {
 }
 
 // --------------------------------------------------------------- submittals
-function SubsSubmittalList({ trade, tradeLabel, submittals, boqData, boqFlags, submittalChkOff }) {
+function SubsSubmittalList({ trade, tradeLabel, submittals, boqData, boqFlags, submittalChkOff, pickedCat, onPickCat, onClearCat }) {
   const [openId, setOpenId] = React9.useState(null);
   // An electrician carries three folders. Thirty lines of three kinds in one
-  // scroll is worse than three doors. (10.9.26)
-  const [pickedCat, setPickedCat] = React9.useState(null);
+  // scroll is worse than three doors. The choice is held by the card so that
+  // the browser's Back steps out of a folder and no further. (10.9.26)
   const allCats = SUBS_TRADE_SUBMITTAL_CATS[trade] || [];
   const cats = allCats.length > 1 && pickedCat ? [pickedCat] : allCats;
   const records = (submittals || []).filter((r) => r && !r.hidden && cats.indexOf(r.category) >= 0);
@@ -5636,7 +5634,7 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, boqData, boqFlags, s
         allCats.map((k) => React9.createElement("button", {
           key: k,
           type: "button",
-          onClick: () => setPickedCat(k),
+          onClick: () => onPickCat(k),
           style: { display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--line)", borderRadius: 12, background: "#fff", padding: "14px 16px", cursor: "pointer", font: "inherit", fontSize: 14, fontWeight: 800 }
         },
           React9.createElement("span", null, catLabel(k)),
@@ -5644,7 +5642,7 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, boqData, boqFlags, s
   }
 
   return React9.createElement(SubsShell, { title: (allCats.length > 1 ? catLabel(pickedCat) + " \u00b7 " : "") + "Submittal \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel },
-    allCats.length > 1 && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginBottom: 12 }, onClick: () => setPickedCat(null) }, "\u2192 \u05db\u05dc \u05d4\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea"),
+    allCats.length > 1 && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginBottom: 12 }, onClick: onClearCat }, "\u2192 \u05db\u05dc \u05d4\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea"),
     React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
       React9.createElement("thead", null, React9.createElement("tr", null,
         React9.createElement("th", { style: { ...SUBS_HEAD, width: 150 } }, "\u05de\u05e1' \u05e1\u05d1\u05de\u05d9\u05d8\u05dc"),
@@ -6111,6 +6109,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   const [trade, setTrade] = React9.useState(null);
   const [section, setSection] = React9.useState(null);
   const [draft, setDraft] = React9.useState(null);
+  const [subCat, setSubCat] = React9.useState(null);
   const write = (next) => onChangeSubsData({ ...(subsData || {}), list: next });
   const setField = (id, field, value) => write(list.map((r) => r.id === id ? { ...r, [field]: value } : r));
   const removeSub = (id) => write(list.filter((r) => r.id !== id));
@@ -6159,7 +6158,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     };
   }, []);
   const subsStateRef = React9.useRef(null);
-  subsStateRef.current = { view, trade, section, draft };
+  subsStateRef.current = { view, trade, section, draft, subCat };
   React9.useEffect(() => {
     const onPop = () => {
       // popstate reports the entry being landed ON, not the one left behind —
@@ -6169,7 +6168,11 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       // screen underneath us. (8.9.26)
       const cur = subsStateRef.current || {};
       if (cur.draft) { setDraft(null); return; }
-      if (cur.view === "access") { setView("board"); return; }
+      if (cur.view === "access" || cur.view === "weekAll") { setView("board"); return; }
+      // The category inside a submittal folder is a level of its own. It was
+      // the one screen not registered here, so Back skipped it and came out
+      // two screens up. (11.9.26)
+      if (cur.subCat) { setSubCat(null); return; }
       if (cur.section) { setSection(null); return; }
       if (cur.trade) { setTrade(null); return; }
     };
@@ -6217,7 +6220,12 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   }
 
   if (view === "board" && trade && section === "submittal") {
-    return React9.createElement(SubsSubmittalList, { trade, tradeLabel: tradeOf(trade).label || "", submittals, boqData, boqFlags, submittalChkOff });
+    return React9.createElement(SubsSubmittalList, {
+      trade, tradeLabel: tradeOf(trade).label || "", submittals, boqData, boqFlags, submittalChkOff,
+      pickedCat: subCat,
+      onPickCat: (k) => goDeeper(() => setSubCat(k)),
+      onClearCat: () => { try { window.history.back(); } catch (e) {} },
+    });
   }
 
   if (view === "board" && trade && section === "sd") {
@@ -6269,7 +6277,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   if (view === "board" && trade) {
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
       React9.createElement("h3", { style: { margin: 0 } }, "\u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "")),
-      cubeGrid(SUB_SECTIONS, (k) => goDeeper(() => setSection(k)))
+      cubeGrid(SUB_SECTIONS, (k) => goDeeper(() => { setSubCat(null); setSection(k); }))
     );
   }
 
@@ -23368,9 +23376,10 @@ function ProjectDashboardApp() {
     const mks = {};
     const sdaps = {};
     const sbaps = {};
+    const subs = {};
     Object.keys(all || {}).forEach((pid) => {
       const entry = all[pid] || {};
-      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, marcellaRows, sdApprovals, submittalApprovals, ...others } = entry;
+      const { scheduleData, boqData, lliRows, sdRows, roomsData, boqFlagOverrides, rfiRows, ciRows, marcellaRows, sdApprovals, submittalApprovals, subsData, ...others } = entry;
       rest[pid] = others;
       if (scheduleData) schedules[pid] = scheduleData;
       if (boqData) boqs[pid] = boqData;
@@ -23393,8 +23402,13 @@ function ProjectDashboardApp() {
       // main contractor files on it is the one thing on a submittal they
       // write, so it lives in a row of its own (7.9.26).
       if (submittalApprovals) sbaps[pid] = submittalApprovals;
+      // The subcontractor cube is the first part of a project that somebody
+      // other than her writes — the weekly board and the update log come in
+      // from a phone. A part of its own means her ordinary saves never carry a
+      // stale copy of it back over what came in from the field. (10.9.26)
+      if (subsData) subs[pid] = subsData;
     });
-    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps };
+    return { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps, subs };
   };
   // The seven parts a project is stored in. "project-extras" is the base
   // object; the rest are single fields hung off it. Each part is one row per
@@ -23411,7 +23425,8 @@ function ProjectDashboardApp() {
     ["project-ci", "ciRows"],
     ["project-marcella", "marcellaRows"],
     ["project-sd-approvals", "sdApprovals"],
-    ["project-submittal-approvals", "submittalApprovals"]
+    ["project-submittal-approvals", "submittalApprovals"],
+    ["project-subs", "subsData"]
   ];
   useEffect5(() => {
     if (!isAuthenticated) return;
@@ -23478,7 +23493,7 @@ function ProjectDashboardApp() {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
     (async () => {
-      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps } = splitExtras(projectExtras);
+      const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps, subs } = splitExtras(projectExtras);
       const byPart = {
         "project-extras": rest,
         "project-schedules": schedules,
@@ -23491,7 +23506,8 @@ function ProjectDashboardApp() {
         "project-ci": cis,
         "project-marcella": mks,
         "project-sd-approvals": sdaps,
-        "project-submittal-approvals": sbaps
+        "project-submittal-approvals": sbaps,
+        "project-subs": subs
       };
       let failed = null;
       // One row per project. saveAppState skips a row whose content has not
