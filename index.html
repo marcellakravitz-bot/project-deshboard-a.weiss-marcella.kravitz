@@ -507,7 +507,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.9.2026 · build 106";
+var APP_BUILD = "10.9.2026 · build 108";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5914,6 +5914,7 @@ function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange, printBrand, pr
   const [year, setYear] = React9.useState(now.getFullYear());
   const [month, setMonth] = React9.useState(now.getMonth());
   const [weekStart, setWeekStart] = React9.useState(null);
+  const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
   const iso = (d) => new Date(d.getTime() - d.getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
   const weeks = [];
   {
@@ -6018,6 +6019,19 @@ function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange 
     onChange(items.concat([{ id: "st-" + Date.now().toString(36), text: t, date: "", note: "", cert: null, done: false }]));
     setDraft("");
   };
+  // Nearest date first, so the top of the list is what happens next. A check
+  // with no date yet has nothing to be near, and waits at the bottom.
+  const today = new Date().toISOString().slice(0, 10);
+  const shown = items.slice().sort((a, b) => {
+    const da = (a.date || "").slice(0, 10), db = (b.date || "").slice(0, 10);
+    if (!da && !db) return 0;
+    if (!da) return 1;
+    if (!db) return -1;
+    return da < db ? -1 : da > db ? 1 : 0;
+  });
+  // Its date has gone and nobody has ticked it. On paper and on a phone this
+  // is the only thing on the list that needs an answer today.
+  const overdue = (it) => !it.done && !!it.date && String(it.date).slice(0, 10) < today;
   const upload = async (id, file) => {
     if (!file) return;
     setBusy(id);
@@ -6047,8 +6061,8 @@ function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange 
         React9.createElement("tbody", null,
           items.length === 0
             ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, textAlign: "center", color: "var(--mist)" }, colSpan: canEdit ? 6 : 5 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e4\u05d4 \u05d1\u05d3\u05d9\u05e7\u05d4."))
-            : items.map((it) => [
-                React9.createElement("tr", { key: it.id },
+            : shown.map((it) => [
+                React9.createElement("tr", { key: it.id, style: overdue(it) ? { background: "#fbe3e3" } : void 0 },
                   React9.createElement("td", { style: { ...cellS, textAlign: "center" } },
                     React9.createElement("button", {
                       type: "button", disabled: !canEdit,
