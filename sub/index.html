@@ -83,9 +83,18 @@
   .checks{display:flex;flex-direction:column;gap:8px}
   .chk{display:flex;align-items:center;gap:10px;background:var(--surface);
     border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;font-size:13.5px}
+  .chk{flex-wrap:wrap}
   .chk .box{flex:0 0 auto;width:24px;height:24px;border-radius:7px;border:1px solid var(--line);
     display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900}
+  .chk .txt{flex:1}
+  .chk .dt{display:block;font-size:11px;color:var(--mist);font-weight:600;margin-top:2px}
+  .chk .ic{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;
+    width:30px;height:30px;border:none;background:transparent;color:var(--steel);cursor:pointer;padding:0}
+  .chk .ic.off{color:#d3d6dc;cursor:default}
+  .chk .noteBox{flex:0 0 100%;margin-top:8px;background:#f7f8fa;border:1px solid var(--line);
+    border-radius:8px;padding:10px;font-size:13px;line-height:1.7;white-space:pre-wrap}
   .chk.done .box{background:var(--ok);border-color:var(--ok)}
+  .chk.late{background:#fbe3e3;border-color:#f0c9c9}
   .chk.done .txt{color:var(--ok);font-weight:700}
   .eye{display:inline-flex;color:var(--steel)}
   .eye.off{color:#c9ced6}
@@ -121,7 +130,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">10.9.2026 · build 12</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">10.9.2026 · build 14</span></footer>
 
 <script>
 
@@ -377,11 +386,34 @@ function viewSd(b){
 // The tick is read-only here on purpose: it means the project manager
 // confirmed the check, so only she can put it there.
 function viewStandards(b){
-  var list=b.standards||[];
+  var list=(b.standards||[]).slice();
   if(!list.length) return empty("טרם נוספה בדיקה.");
-  return '<div class="checks">'+list.map(function(it){
-    return '<div class="chk'+(it.done?" done":"")+'"><span class="box">'+(it.done?"✓":"")+'</span>'+
-      '<span class="txt">'+esc(it.text)+'</span></div>';
+  // Same order as her screen: what happens next is at the top, and a date that
+  // has gone by without a tick is the one line that needs an answer.
+  list.sort(function(a,c){
+    var da=(a.date||"").slice(0,10), dc=(c.date||"").slice(0,10);
+    if(!da&&!dc) return 0;
+    if(!da) return 1;
+    if(!dc) return -1;
+    return da<dc?-1:da>dc?1:0;
+  });
+  var today=new Date().toISOString().slice(0,10);
+  return '<div class="checks">'+list.map(function(it,i){
+    var late=!it.done&&it.date&&String(it.date).slice(0,10)<today;
+    var note=(it.note||"").trim();
+    return '<div class="chk'+(it.done?" done":"")+(late?" late":"")+'">'+
+      '<span class="box">'+(it.done?"✓":"")+'</span>'+
+      '<span class="txt">'+esc(it.text)+
+        (it.date?'<span class="dt num">'+esc(fmt(it.date))+'</span>':'')+'</span>'+
+      (note?'<button class="ic note" data-n="'+i+'" title="הערות">'+
+        icon("M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 12h7M8 16h5")+'</button>'
+       :'<span class="ic off">'+icon("M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 12h7M8 16h5")+'</span>')+
+      (it.cert&&it.cert.url
+        ?'<a class="ic" href="'+esc(it.cert.url)+'" target="_blank" rel="noopener" title="תעודה">'+
+          icon("M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6")+'</a>'
+        :'<span class="ic off">'+icon("M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6")+'</span>')+
+      (note?'<div class="noteBox" id="nb'+i+'" hidden>'+esc(note)+'</div>':'')+
+    '</div>';
   }).join("")+'</div>';
 }
 function viewWeekly(b){
@@ -420,6 +452,12 @@ function screen(){
   });
   var ac=document.getElementById("ac");
   if(ac) ac.onclick=function(){ history.back(); };
+  Array.prototype.forEach.call(app.querySelectorAll(".note"), function(el){
+    el.onclick=function(){
+      var box=document.getElementById("nb"+el.getAttribute("data-n"));
+      if(box) box.hidden=!box.hidden;
+    };
+  });
 }
 
 function render(){
