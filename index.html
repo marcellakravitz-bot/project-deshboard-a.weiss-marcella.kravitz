@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 113";
+var APP_BUILD = "11.9.2026 · build 114";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5335,7 +5335,23 @@ function SubsTradePicker({ value, disabled, onChange }) {
 
 // The update log: the first place in this cube where she writes rather than
 // ticks. Newest first, because on site that is the one anybody opens.
-function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChange, writtenBy }) {
+// One call, one purpose: wake the phones on this trade. The dashboard proves
+// who it is with its own sign-in token, which the server checks. (11.9.26)
+async function subsAnnounce(projectId, trade) {
+  try {
+    const { data } = await supabase.auth.getSession();
+    const accessToken = data?.session?.access_token;
+    if (!accessToken) return;
+    await fetch(`${SUPABASE_URL}/functions/v1/sub-portal`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ action: "announce", accessToken, projectId, trade }),
+    });
+  } catch (e) {
+    console.log("[awdash] announce skipped", e);
+  }
+}
+function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChange, writtenBy, onAnnounce }) {
   const [draft, setDraft] = React9.useState(null);
   const [busy, setBusy] = React9.useState(false);
   const [err, setErr] = React9.useState(null);
@@ -5399,6 +5415,10 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
       React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: busy || !draft.subject.trim(), onClick: () => {
           onChange(entries.concat([{ id: "u-" + Date.now().toString(36), date: draft.date || today(), createdAt: new Date().toISOString(), by: writtenBy || "", subject: draft.subject.trim(), body: draft.body.trim(), atts: draft.atts || [] }]));
+          // Tell the phones on this trade. It is deliberately allowed to fail
+          // quietly: a notification that does not go out must never stop an
+          // update from being saved.
+          if (typeof onAnnounce === "function") onAnnounce();
           setDraft(null); setPasteArmed(false);
         } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
@@ -6222,6 +6242,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       projectId,
       canEdit,
       writtenBy: currentEmail,
+      onAnnounce: () => subsAnnounce(projectId, trade),
       entries: ((subsData || {}).logs || {})[trade] || [],
       onChange: (next) => onChangeSubsData({ ...(subsData || {}), logs: { ...((subsData || {}).logs || {}), [trade]: next } })
     });
