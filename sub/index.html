@@ -48,6 +48,8 @@
   .proj .pd{font-size:12.5px;color:var(--steel)}
   .proj .ptr{margin-top:6px;font-size:14px;font-weight:800;color:var(--navy)}
   .navRow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+  .pushRow{display:flex;justify-content:center;margin-bottom:14px}
+  .pushRow .navBtn{border-color:#b9cbe4;color:var(--navy)}
   .navBtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;
     padding:7px 14px;font:inherit;font-size:12.5px;font-weight:700;color:var(--steel);cursor:pointer}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
@@ -176,7 +178,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 21</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 22</span></footer>
 
 <script>
 
@@ -194,25 +196,48 @@ var SEEN_KEY = "awsub.seen";
 // first screen, where a permission prompt reads as an ambush. On an iPhone this
 // only works at all once the site has been added to the home screen, so a
 // refusal there is expected and is not treated as an error. (11.9.26)
-function askPush(){
-  if(!("serviceWorker" in navigator)||!("PushManager" in window)) return;
-  if(Notification.permission==="denied") return;
+var PUSH_KEY="awsub.push";
+function pushReady(){
+  try { return localStorage.getItem(PUSH_KEY)==="1"; } catch(e){ return false; }
+}
+// Why this can refuse, in the order it usually does: an iPhone in a browser tab
+// has no push at all until the site is on the home screen; permission may have
+// been denied once and is then never asked again; and a device that agreed
+// still has to hand its address to the server. Each of those says so out loud
+// now, because "nothing happened" told us nothing. (11.9.26)
+function askPush(loud){
+  var say=function(m){ if(loud) alert(m); else console.log("[push] "+m); };
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)){
+    say("המכשיר הזה לא תומך בהתראות. באייפון צריך להוסיף את האתר למסך הבית ולפתוח משם.");
+    return;
+  }
+  if(Notification.permission==="denied"){
+    say("ההתראות חסומות בהגדרות הטלפון עבור האתר הזה. צריך לאפשר אותן שם.");
+    return;
+  }
   navigator.serviceWorker.register("sw.js").then(function(reg){
     return call({action:"vapid"}).then(function(r){
       var key=r.data&&r.data.key;
-      if(!key) return;
+      if(!key){ say("השרת לא הגדיר מפתח התראות."); return; }
       return Notification.requestPermission().then(function(perm){
-        if(perm!=="granted") return;
-        return reg.pushManager.subscribe({
-          userVisibleOnly:true,
-          applicationServerKey:urlB64(key)
+        if(perm!=="granted"){ say("לא ניתן אישור להתראות."); return; }
+        return reg.pushManager.getSubscription().then(function(existing){
+          return existing || reg.pushManager.subscribe({
+            userVisibleOnly:true,
+            applicationServerKey:urlB64(key)
+          });
         }).then(function(sub){
           return call({action:"subscribe", token:state.token,
-            projectId:state.project, subscription:sub.toJSON()});
+            projectId:state.project, subscription:sub.toJSON()}).then(function(res){
+            if(!res.ok){ say("הרישום בשרת נכשל. "+((res.data&&res.data.detail)||"")); return; }
+            try { localStorage.setItem(PUSH_KEY,"1"); } catch(e){}
+            say("ההתראות הופעלו.");
+            render();
+          });
         });
       });
     });
-  }).catch(function(e){ console.log("push not available", e); });
+  }).catch(function(e){ say("ההפעלה נכשלה: "+e); });
 }
 function urlB64(s){
   var pad=(s+"=".repeat((4-s.length%4)%4)).replace(/-/g,"+").replace(/_/g,"/");
@@ -412,6 +437,8 @@ function tradePicker(){
   Array.prototype.forEach.call(app.querySelectorAll(".pcube"), function(b){
     b.onclick=function(){ state.trade=b.getAttribute("data-t"); history.pushState({s:1},""); loadBoard(); };
   });
+  var po=document.getElementById("pushOn");
+  if(po) po.onclick=function(){ askPush(true); };
   wireNav();
 }
 function wireNav(){
@@ -447,7 +474,9 @@ function board(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
   var head=navBar()+projHead(true);
-  app.innerHTML = head+'<div class="grid">'+CUBES.map(function(c){
+  var offer = pushReady() ? "" :
+    '<div class="pushRow"><button class="navBtn" id="pushOn">הפעלת התראות לטלפון</button></div>';
+  app.innerHTML = head+offer+'<div class="grid">'+CUBES.map(function(c){
     return '<button class="cube'+(isNew(c.key)?" fresh":"")+'" data-k="'+c.key+'">'+
            (isNew(c.key)?'<span class="dot" aria-label="עדכון חדש"></span>':'')+
            '<span class="ico">'+icon(c.i)+'</span>'+
@@ -788,6 +817,7 @@ window.addEventListener("popstate", function(){
     }
     if(!state.projects.length){ retry("השרת לא זמין כרגע."); return; }
     state.project = state.projects.length===1 ? state.projects[0].id : null;
+    if(!pushReady()) askPush(false);
     if(state.project) loadBoard(); else render();
   }).catch(function(){
     if(!state.projects.length){ retry("אין חיבור לרשת."); return; }
