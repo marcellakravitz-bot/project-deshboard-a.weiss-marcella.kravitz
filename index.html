@@ -506,7 +506,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.9.2026 · build 95";
+var APP_BUILD = "10.9.2026 · build 101";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5551,13 +5551,70 @@ function SubsShell({ title, children }) {
 }
 
 // --------------------------------------------------------------- submittals
-function SubsSubmittalList({ trade, tradeLabel, submittals }) {
+function SubsSubmittalList({ trade, tradeLabel, submittals, boqData, boqFlags, submittalChkOff }) {
   const [openId, setOpenId] = React9.useState(null);
-  const cats = SUBS_TRADE_SUBMITTAL_CATS[trade] || [];
-  const rows = (submittals || []).filter((r) => r && !r.hidden && cats.indexOf(r.category) >= 0);
+  // An electrician carries three folders. Thirty lines of three kinds in one
+  // scroll is worse than three doors. (10.9.26)
+  const [pickedCat, setPickedCat] = React9.useState(null);
+  const allCats = SUBS_TRADE_SUBMITTAL_CATS[trade] || [];
+  const cats = allCats.length > 1 && pickedCat ? [pickedCat] : allCats;
+  const records = (submittals || []).filter((r) => r && !r.hidden && cats.indexOf(r.category) >= 0);
   const decisionOf = (r) => ((r.reviews || [])[0] || {}).decision || null;
   const isApproved = (r) => ["approved", "approvedNoted"].indexOf(decisionOf(r)) >= 0;
-  const open = rows.find((r) => r.id === openId) || null;
+
+  // His list is her checklist, line for line: the bill-of-quantities rows she
+  // marked as needing a submittal in his categories, minus any she took off it.
+  // A line she has not raised yet still belongs there, marked not yet
+  // submitted — that is the line he is being chased about. Drafts stay hers,
+  // by the same rule the client already lives under. (10.9.26)
+  const rows = (() => {
+    const off = submittalChkOff || {};
+    const visible = sbVisibleFor(records, "client");
+    const out = [];
+    const seen = {};
+    const latestFor = (code) => visible.filter((r) => r.boqCode === code)
+      .sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
+    cats.forEach((cat) => {
+      let products = [];
+      try {
+        products = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", cat);
+      } catch (e) { products = []; }
+      products.filter((pr) => !off[pr.code]).forEach((pr) => {
+        const rec = latestFor(pr.code);
+        if (rec) seen[rec.id] = true;
+        out.push({
+          key: "b-" + pr.code,
+          category: cat,
+          no: rec ? sbNumber(rec.category, rec.seq) : "\u2014",
+          description: (rec && rec.itemDescription) || boqText(pr, "he") || pr.code,
+          rec,
+        });
+      });
+    });
+    visible.filter((r) => !seen[r.id]).forEach((r) => out.push({
+      key: "r-" + r.id,
+      category: r.category,
+      no: sbNumber(r.category, r.seq),
+      description: r.itemDescription || r.scope || "\u2014",
+      rec: r,
+    }));
+    return out;
+  })();
+
+  const catLabel = (k) => {
+    const c = SUBMITTAL_CATEGORIES.find((x) => x.key === k);
+    return c ? c.he : k;
+  };
+  const countIn = (k) => {
+    const off = submittalChkOff || {};
+    let n = 0;
+    try {
+      n = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", k).filter((pr) => !off[pr.code]).length;
+    } catch (e) { n = 0; }
+    return n + sbVisibleFor((submittals || []).filter((r) => r && r.category === k && !r.boqCode), "client").length;
+  };
+
+  const open = records.filter((r) => r.id === openId)[0] || null;
   if (open) {
     const dec = SB_DECISIONS.find((d) => d.key === decisionOf(open));
     return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 14 } },
@@ -5568,7 +5625,22 @@ function SubsSubmittalList({ trade, tradeLabel, submittals }) {
       React9.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" } },
         (open.attachments || []).filter((a) => a && a.path).map((a) => React9.createElement(SubsAttachment, { key: a.path, att: a }))));
   }
-  return React9.createElement(SubsShell, { title: "Submittal \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel },
+  if (allCats.length > 1 && !pickedCat) {
+    return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
+      React9.createElement("h3", { style: { margin: 0 } }, "Submittal \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel),
+      React9.createElement("div", { style: { width: "100%", maxWidth: 620, display: "flex", flexDirection: "column", gap: 10 } },
+        allCats.map((k) => React9.createElement("button", {
+          key: k,
+          type: "button",
+          onClick: () => setPickedCat(k),
+          style: { display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--line)", borderRadius: 12, background: "#fff", padding: "14px 16px", cursor: "pointer", font: "inherit", fontSize: 14, fontWeight: 800 }
+        },
+          React9.createElement("span", null, catLabel(k)),
+          React9.createElement("span", { style: { fontSize: 12, fontWeight: 600, color: "var(--mist)" } }, countIn(k) + " \u05e9\u05d5\u05e8\u05d5\u05ea")))));
+  }
+
+  return React9.createElement(SubsShell, { title: (allCats.length > 1 ? catLabel(pickedCat) + " \u00b7 " : "") + "Submittal \u2014 \u05e7\u05d1\u05dc\u05df " + tradeLabel },
+    allCats.length > 1 && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginBottom: 12 }, onClick: () => setPickedCat(null) }, "\u2192 \u05db\u05dc \u05d4\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea"),
     React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
       React9.createElement("thead", null, React9.createElement("tr", null,
         React9.createElement("th", { style: { ...SUBS_HEAD, width: 150 } }, "\u05de\u05e1' \u05e1\u05d1\u05de\u05d9\u05d8\u05dc"),
@@ -5580,28 +5652,24 @@ function SubsSubmittalList({ trade, tradeLabel, submittals }) {
           ? React9.createElement("tr", null, React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", color: "var(--mist)" }, colSpan: 4 },
               cats.length === 0
                 ? "\u05dc\u05ea\u05d7\u05d5\u05dd \u05d6\u05d4 \u05d0\u05d9\u05df \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd."
-                : React9.createElement("span", null,
-                    "\u05d0\u05d9\u05df \u05e1\u05d1\u05de\u05d9\u05d8\u05dc \u05d1\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea \u05e9\u05dc \u05d4\u05ea\u05d7\u05d5\u05dd \u05d4\u05d6\u05d4.",
-                    // Which folders the rows are actually filed under. If the
-                    // trade's own folder is missing from this line, that is the
-                    // whole story.
-                    React9.createElement("div", { style: { marginTop: 8, fontSize: 11.5, direction: "ltr" } },
-                      "in project: " + ((submittals || []).length) + " \u00b7 categories: " +
-                      (Array.from(new Set((submittals || []).map((x) => (x && x.category) || "\u2014"))).join(", ") || "none") +
-                      " \u00b7 looking for: " + (cats.join(", ") || "none")))))
-          : rows.map((r) => {
-              const dec = SB_DECISIONS.find((d) => d.key === decisionOf(r));
-              const ok = isApproved(r);
-              return React9.createElement("tr", { key: r.id },
-                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", direction: "ltr", fontWeight: 800 } }, sbNumber(r.category, r.seq)),
-                React9.createElement("td", { style: SUBS_CELL }, r.itemDescription || r.scope || "\u2014"),
-                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 700, color: dec ? dec.color : "var(--mist)" } }, dec ? dec.he : "\u05d8\u05e8\u05dd \u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05ea\u05d9\u05d9\u05d7\u05e1\u05d5\u05ea"),
+                : "\u05d0\u05d9\u05df \u05e9\u05d5\u05e8\u05d5\u05ea \u05d1\u05ea\u05d7\u05d5\u05dd \u05d4\u05d6\u05d4."))
+          : rows.map((row) => {
+              const rec = row.rec;
+              const dec = rec ? SB_DECISIONS.find((d) => d.key === decisionOf(rec)) : null;
+              const ok = rec ? isApproved(rec) : false;
+              const label = dec ? dec.he
+                : (rec && rec.sent) ? "\u05d4\u05d5\u05d2\u05e9, \u05d8\u05e8\u05dd \u05d4\u05ea\u05e7\u05d1\u05dc\u05d4 \u05d4\u05ea\u05d9\u05d9\u05d7\u05e1\u05d5\u05ea"
+                : "\u05d8\u05e8\u05dd \u05d4\u05d5\u05d2\u05e9";
+              return React9.createElement("tr", { key: row.key },
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", direction: "ltr", fontWeight: 800 } }, row.no),
+                React9.createElement("td", { style: SUBS_CELL }, row.description),
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 700, color: dec ? dec.color : "var(--mist)" } }, label),
                 React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center" } },
                   React9.createElement("button", {
                     type: "button",
                     disabled: !ok,
                     title: ok ? "\u05e6\u05e4\u05d9\u05d9\u05d4" : "\u05d6\u05de\u05d9\u05df \u05e8\u05e7 \u05dc\u05d0\u05d7\u05e8 \u05d0\u05d9\u05e9\u05d5\u05e8",
-                    onClick: () => setOpenId(r.id),
+                    onClick: () => rec && setOpenId(rec.id),
                     style: { border: "none", background: "transparent", cursor: ok ? "pointer" : "default", color: ok ? "var(--steel)" : "#c9ced6", padding: 4 }
                   }, React9.createElement(EyeIcon2, { size: 17, strokeWidth: 2 }))));
             }))));
@@ -5791,7 +5859,7 @@ function SubsStandards({ tradeLabel, canEdit, items, onChange }) {
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags }) {
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
@@ -5802,6 +5870,33 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   const removeSub = (id) => write(list.filter((r) => r.id !== id));
   const countFor = (k) => list.filter((r) => r.trade === k && r.active !== false).length;
   const tradeOf = (k) => SUB_TRADES.find((x) => x.key === k) || {};
+
+  // The bill of quantities is parsed here and nowhere else, so a flattened
+  // copy of the checklist is written with the project for the server to read.
+  // Without it his app could only show what already exists, and the lines that
+  // do not are the point. (10.9.26)
+  React9.useEffect(() => {
+    if (!canEdit || !boqData) return;
+    const off = submittalChkOff || {};
+    const flat = [];
+    const done = {};
+    Object.keys(SUBS_TRADE_SUBMITTAL_CATS).forEach((tr) => {
+      (SUBS_TRADE_SUBMITTAL_CATS[tr] || []).forEach((cat) => {
+        if (done[cat]) return;
+        done[cat] = true;
+        let products = [];
+        try {
+          products = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", cat);
+        } catch (e) { products = []; }
+        products.filter((pr) => !off[pr.code]).forEach((pr) => {
+          flat.push({ code: pr.code, category: cat, title: boqText(pr, "he") || pr.code });
+        });
+      });
+    });
+    const prev = (subsData || {}).checklist || [];
+    const same = prev.length === flat.length && prev.every((x, i) => x.code === flat[i].code && x.category === flat[i].category && x.title === flat[i].title);
+    if (!same) onChangeSubsData({ ...(subsData || {}), checklist: flat });
+  }, [boqData, boqFlags, submittalChkOff]);
 
   // One history entry per level, pushed when a level opens and never taken
   // off from inside the effect — the earlier version removed and re-pushed on
@@ -5868,7 +5963,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   }
 
   if (view === "board" && trade && section === "submittal") {
-    return React9.createElement(SubsSubmittalList, { trade, tradeLabel: tradeOf(trade).label || "", submittals });
+    return React9.createElement(SubsSubmittalList, { trade, tradeLabel: tradeOf(trade).label || "", submittals, boqData, boqFlags, submittalChkOff });
   }
 
   if (view === "board" && trade && section === "sd") {
@@ -7270,7 +7365,7 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags }), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
