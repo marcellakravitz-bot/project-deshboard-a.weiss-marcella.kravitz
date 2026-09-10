@@ -59,6 +59,35 @@
   .recTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:14px}
   .recTop .num{font-size:12px;color:var(--mist)}
   .rec p{margin:8px 0 0;font-size:13.5px;line-height:1.75;white-space:pre-wrap}
+  .rec .stamp{margin-top:10px;font-size:11px;color:var(--mist);font-weight:500}
+  .wkNav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:14px;
+    font-size:14px;font-weight:800;color:var(--navy)}
+  .wkNav button{border:1px solid var(--line);background:var(--surface);border-radius:10px;
+    width:36px;height:36px;font-size:18px;color:var(--steel);cursor:pointer}
+  .wkDay{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:12px 14px;margin-bottom:10px}
+  .wkHead{display:flex;justify-content:space-between;align-items:baseline;font-weight:800;
+    font-size:13.5px;color:var(--navy);margin-bottom:8px}
+  .wkHead .num{font-size:11.5px;color:var(--mist);font-weight:600}
+  .wkDay textarea{width:100%;min-height:72px;font:inherit;font-size:16px;padding:9px;
+    border:1px solid var(--line);border-radius:10px;background:#fff;resize:vertical}
+  .writeBar{display:flex;justify-content:center;margin-bottom:14px}
+  .writeBar button[disabled]{background:#c3c6cc;cursor:default}
+  .writeBar button{border:none;border-radius:999px;background:var(--panel);color:#fff;
+    font:inherit;font-weight:800;font-size:14px;padding:11px 22px;cursor:pointer}
+  .form{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:16px;margin-bottom:14px;display:flex;flex-direction:column;gap:12px}
+  .form textarea,.form input{width:100%;font:inherit;font-size:16px;padding:10px;
+    border:1px solid var(--line);border-radius:10px;background:#fff}
+  .form textarea{min-height:110px;resize:vertical}
+  .form .row{display:flex;gap:10px}
+  .form .row button{flex:1;border:none;border-radius:999px;padding:12px;font:inherit;
+    font-weight:800;font-size:15px;color:#fff;background:var(--panel);cursor:pointer}
+  .form .row button.ghost{background:#9aa3af}
+  .shots{display:flex;flex-wrap:wrap;gap:8px}
+  .shots img{width:74px;height:74px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
+  .shots label{width:74px;height:74px;border:1px dashed var(--line);border-radius:10px;
+    display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--mist);cursor:pointer}
   .files{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .file{display:flex;align-items:center;justify-content:center;width:88px;height:88px;
     border:1px solid var(--line);border-radius:10px;background:#f7f8fa;overflow:hidden;
@@ -130,7 +159,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">10.9.2026 · build 14</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 16</span></footer>
 
 <script>
 
@@ -166,7 +195,7 @@ var SD_STATUS = {
 var CAT_HE = { electrical:"חשמל", lighting:"תאורה", security:"ביטחון, בקרה ותקשורת",
   hvac:"מיזוג אוויר", plumbing:"אינסטלציה", ceiling:"תקרה", flooring:"ריצוף",
   cladding:"גמרים", architecture:"אדריכלות" };
-var state = { token:null, projects:[], project:null, board:null, screen:null, cat:null };
+var state = { token:null, projects:[], project:null, board:null, screen:null, cat:null, trade:null };
 var app = document.getElementById("app");
 var out = document.getElementById("out");
 document.getElementById("yr").textContent = new Date().getFullYear();
@@ -289,7 +318,7 @@ function picker(){
 }
 function loadBoard(){
   busy("טוען את הפרויקט…");
-  call({action:"board", token:state.token, projectId:state.project}).then(function(r){
+  call({action:"board", token:state.token, projectId:state.project, trade:state.trade}).then(function(r){
     if(r.ok){ state.board=r.data; render(); return; }
     // 401 is the manager switching them off. Anything else is a fault on the
     // way, and losing the sign-in over it is what made this ask for the code
@@ -300,6 +329,23 @@ function loadBoard(){
 }
 
 // ------------------------------------------------------------------- board
+var TRADES=[
+  {k:"hvac",t:"מיזוג אוויר"},{k:"electric",t:"חשמל"},{k:"plumbing",t:"אינסטלציה"},
+  {k:"drywall",t:"גבס"},{k:"security",t:"ביטחון, בקרה ותקשורת"},{k:"paint",t:"צבע"}
+];
+function tradePicker(){
+  out.hidden=false;
+  document.querySelector(".bar").classList.remove("guest");
+  var p=(state.board&&state.board.project)||{};
+  app.innerHTML='<div class="proj">'+(p.logo?'<img src="'+esc(p.logo)+'" alt="">':'')+
+      '<span class="pn">'+esc(p.name||"")+'</span></div>'+
+    '<p class="lead">בחרו תחום</p><div class="grid">'+TRADES.map(function(t){
+      return '<button class="pcube" data-t="'+t.k+'"><span class="t">'+esc(t.t)+'</span></button>';
+    }).join("")+'</div>';
+  Array.prototype.forEach.call(app.querySelectorAll(".pcube"), function(b){
+    b.onclick=function(){ state.trade=b.getAttribute("data-t"); history.pushState({s:1},""); loadBoard(); };
+  });
+}
 function board(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
@@ -335,12 +381,65 @@ function eye(list){
 }
 function empty(msg){ return '<div class="empty">'+esc(msg)+'</div>'; }
 
+// Photographs are shrunk here, before they leave the phone: on site the line
+// is thin, and a five-megabyte picture simply never arrives.
+function shrink(file){
+  return new Promise(function(res){
+    if(!file||!/^image\//.test(file.type||"")){ res(null); return; }
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      var max=1600, sc=Math.min(1,max/Math.max(img.width,img.height));
+      var c=document.createElement("canvas");
+      c.width=Math.max(1,Math.round(img.width*sc));
+      c.height=Math.max(1,Math.round(img.height*sc));
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url);
+      res({ name:(file.name||"photo")+".jpg", type:"image/jpeg", data:c.toDataURL("image/jpeg",0.82) });
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); res(null); };
+    img.src=url;
+  });
+}
+var logDraft=null;
+var weekBuf=null;      // the days edited on screen and not yet sent
+var weekShown=null;    // which week is open, as its Sunday
+function sundayOf(d){
+  var x=new Date(d.getTime());
+  x.setHours(0,0,0,0);
+  x.setDate(x.getDate()-x.getDay());
+  return new Date(x.getTime()-x.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+}
+function shiftWeek(isoDay,weeks){
+  var d=new Date(isoDay+"T00:00:00");
+  d.setDate(d.getDate()+weeks*7);
+  return sundayOf(d);
+}
+function weekDays(isoDay){
+  var names=["ראשון","שני","שלישי","רביעי","חמישי","שישי"];
+  var base=new Date(isoDay+"T00:00:00");
+  return names.map(function(n,i){
+    var d=new Date(base); d.setDate(d.getDate()+i);
+    return { name:n, iso:new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10) };
+  });
+}
+function logForm(){
+  if(!logDraft) return '<div class="writeBar"><button id="newLog">+ עדכון חדש</button></div>';
+  return '<div class="form">'+
+    '<input id="lsub" placeholder="נושא" value="'+esc(logDraft.subject)+'">'+
+    '<textarea id="ltxt" placeholder="תיאור">'+esc(logDraft.body)+'</textarea>'+
+    '<div class="shots">'+logDraft.photos.map(function(p){return '<img src="'+p.data+'" alt="">'}).join("")+
+      '<label>+<input id="lcam" type="file" accept="image/*" capture="environment" style="display:none"></label></div>'+
+    '<div class="row"><button id="lsave">שמירה</button>'+
+    '<button id="lcancel" class="ghost">ביטול</button></div></div>';
+}
 function viewLog(b){
-  if(!b.log.length) return empty("טרם נרשם עדכון.");
-  return b.log.map(function(u){
+  var write=b.canWrite?logForm():"";
+  if(!b.log.length) return write+empty("טרם נרשם עדכון.");
+  return write+b.log.map(function(u){
     return '<article class="rec"><div class="recTop"><b>'+esc(u.subject)+'</b>'+
       '<span class="num">'+esc(fmt(u.date))+'</span></div>'+
-      (u.body?'<p>'+esc(u.body)+'</p>':'')+files(u.files)+'</article>';
+      (u.body?'<p>'+esc(u.body)+'</p>':'')+files(u.files)+
+      (u.by?'<div class="stamp">נכתב על ידי '+esc(u.by)+'</div>':'')+'</article>';
   }).join("");
 }
 function viewSpecs(b){
@@ -417,6 +516,7 @@ function viewStandards(b){
   }).join("")+'</div>';
 }
 function viewWeekly(b){
+  if(b.canWrite) return viewWeeklyEdit(b);
   var days=["ראשון","שני","שלישי","רביעי","חמישי","שישי"];
   var keys=Object.keys(b.weekly||{}).filter(function(k){
     return (b.weekly[k]||[]).some(function(x){ return (x||"").trim(); });
@@ -435,6 +535,28 @@ function viewWeekly(b){
   }).join("");
 }
 
+// What a project manager sees: one week at a time, six boxes, and a save that
+// sends only the days he actually changed — so two people filling different
+// days of the same week never write over one another.
+function viewWeeklyEdit(b){
+  if(!weekShown) weekShown=sundayOf(new Date());
+  var stored=(b.weekly||{})[weekShown]||[];
+  var days=weekDays(weekShown);
+  var val=function(i){
+    if(weekBuf&&weekBuf[i]!=null) return weekBuf[i];
+    return stored[i]||"";
+  };
+  var dirty=!!weekBuf&&Object.keys(weekBuf).some(function(i){ return (weekBuf[i]||"")!==(stored[i]||""); });
+  return '<div class="wkNav"><button id="wkPrev">‹</button>'+
+      '<strong>'+esc(fmt(weekShown))+' – '+esc(fmt(days[5].iso))+'</strong>'+
+      '<button id="wkNext">›</button></div>'+
+    days.map(function(d,i){
+      return '<div class="wkDay"><div class="wkHead">'+d.name+
+        '<span class="num">'+esc(fmt(d.iso))+'</span></div>'+
+        '<textarea data-d="'+i+'" placeholder="עבודות נדרשות">'+esc(val(i))+'</textarea></div>';
+    }).join("")+
+    '<div class="writeBar"><button id="wkSave"'+(dirty?"":" disabled")+'>'+(dirty?"שמירה":"נשמר")+'</button></div>';
+}
 function screen(){
   var c=CUBES.filter(function(x){return x.key===state.screen})[0];
   var b=state.board||{};
@@ -452,6 +574,69 @@ function screen(){
   });
   var ac=document.getElementById("ac");
   if(ac) ac.onclick=function(){ history.back(); };
+  Array.prototype.forEach.call(app.querySelectorAll(".wkDay textarea"), function(t){
+    t.oninput=function(){
+      weekBuf=weekBuf||{};
+      weekBuf[t.getAttribute("data-d")]=t.value;
+      var sv=document.getElementById("wkSave");
+      if(sv){ sv.disabled=false; sv.textContent="שמירה"; }
+    };
+  });
+  var wp=document.getElementById("wkPrev");
+  if(wp) wp.onclick=function(){ weekShown=shiftWeek(weekShown,-1); weekBuf=null; render(); };
+  var wn=document.getElementById("wkNext");
+  if(wn) wn.onclick=function(){ weekShown=shiftWeek(weekShown,1); weekBuf=null; render(); };
+  var ws=document.getElementById("wkSave");
+  if(ws) ws.onclick=function(){
+    var b=state.board||{};
+    var stored=(b.weekly||{})[weekShown]||[];
+    var changed=Object.keys(weekBuf||{}).filter(function(i){ return (weekBuf[i]||"")!==(stored[i]||""); });
+    if(!changed.length) return;
+    ws.disabled=true; ws.textContent="שומר…";
+    // One request per day, so a day somebody else touched meanwhile is the
+    // only thing that could ever clash.
+    var chain=Promise.resolve(), failed=false;
+    changed.forEach(function(i){
+      chain=chain.then(function(){
+        return call({action:"set-week", token:state.token, projectId:state.project,
+          trade:state.trade||b.trade, weekStart:weekShown, day:Number(i), text:weekBuf[i]||""})
+          .then(function(r){ if(!r.ok) failed=true; });
+      });
+    });
+    chain.then(function(){
+      if(failed){ ws.disabled=false; ws.textContent="שמירה"; alert("חלק מהשמירה נכשל."); return; }
+      weekBuf=null; loadBoard();
+    }).catch(function(){ ws.disabled=false; ws.textContent="שמירה"; alert("אין חיבור."); });
+  };
+  var nl=document.getElementById("newLog");
+  if(nl) nl.onclick=function(){ logDraft={subject:"",body:"",photos:[]}; render(); };
+  var lc=document.getElementById("lcancel");
+  if(lc) lc.onclick=function(){ logDraft=null; render(); };
+  var cam=document.getElementById("lcam");
+  if(cam) cam.onchange=function(){
+    var f=cam.files&&cam.files[0];
+    if(!f) return;
+    shrink(f).then(function(ph){
+      if(!ph) return;
+      logDraft.subject=(document.getElementById("lsub")||{}).value||logDraft.subject;
+      logDraft.body=(document.getElementById("ltxt")||{}).value||logDraft.body;
+      logDraft.photos.push(ph);
+      render();
+    });
+  };
+  var ls=document.getElementById("lsave");
+  if(ls) ls.onclick=function(){
+    var sub=(document.getElementById("lsub")||{}).value||"";
+    var txt=(document.getElementById("ltxt")||{}).value||"";
+    if(!sub.trim()){ alert("צריך נושא."); return; }
+    ls.disabled=true; ls.textContent="שומר…";
+    call({action:"add-log", token:state.token, projectId:state.project,
+          trade:state.trade||(state.board&&state.board.trade),
+          subject:sub, text:txt, photos:logDraft.photos}).then(function(r){
+      if(!r.ok){ ls.disabled=false; ls.textContent="שמירה"; alert("השמירה נכשלה."); return; }
+      logDraft=null; loadBoard();
+    }).catch(function(){ ls.disabled=false; ls.textContent="שמירה"; alert("אין חיבור."); });
+  };
   Array.prototype.forEach.call(app.querySelectorAll(".note"), function(el){
     el.onclick=function(){
       var box=document.getElementById("nb"+el.getAttribute("data-n"));
@@ -464,6 +649,8 @@ function render(){
   if(!state.token){ login(); return; }
   if(!state.project){ picker(); return; }
   if(!state.board){ busy(); return; }
+  // A project manager sees every trade, so he says which one first.
+  if(state.board.isPm && !state.trade){ tradePicker(); return; }
   if(state.screen) screen(); else board();
   window.scrollTo(0,0);
 }
@@ -476,6 +663,7 @@ out.onclick=function(){ signOut(); };
 window.addEventListener("popstate", function(){
   if(state.cat){ state.cat=null; render(); return; }
   if(state.screen){ state.screen=null; render(); return; }
+  if(state.board&&state.board.isPm&&state.trade){ state.trade=null; state.board.trade=null; render(); return; }
   if(state.project && state.projects.length>1){ state.project=null; state.board=null; render(); }
 });
 
