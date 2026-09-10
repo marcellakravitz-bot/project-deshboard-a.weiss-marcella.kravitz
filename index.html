@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 123";
+var APP_BUILD = "11.9.2026 · build 124";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -20469,7 +20469,13 @@ function SubmittalFolder({
           const n = { he: it.he, en: it.en };
           return { item: it, label: it.code, node: n, hits: attached(it.code, n) };
         });
-        const all = own.concat(perLine.flatMap((l) => l.hits));
+        const all = [];
+        const seenIds = {};
+        own.concat(perLine.flatMap((l) => l.hits)).forEach((s2) => {
+          if (!s2 || seenIds[s2.id]) return;
+          seenIds[s2.id] = true;
+          all.push(s2);
+        });
         // A product that is one line has nothing to open into.
         return { product: p, code: p.code, node, lines: perLine.length > 1 ? perLine : [], own, count: all.length };
       });
@@ -20576,7 +20582,15 @@ function SubmittalFolder({
                       const open = openChk === r.code;
                       // The submittal that answers this line — the newest one,
                       // when there are revisions — and what it says.
-                      const onLine = [...r.own, ...r.lines.flatMap((l) => l.hits)];
+                      const onLine = [];
+                      {
+                        const seenOnLine = {};
+                        [...r.own, ...r.lines.flatMap((l) => l.hits)].forEach((s2) => {
+                          if (!s2 || seenOnLine[s2.id]) return;
+                          seenOnLine[s2.id] = true;
+                          onLine.push(s2);
+                        });
+                      }
                       const lead = onLine.length
                         ? onLine.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0]
                         : null;
