@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 118";
+var APP_BUILD = "11.9.2026 · build 119";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18309,7 +18309,7 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ onNewRevision, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ onNewRevision, onSignAsClient, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
@@ -19291,6 +19291,14 @@ function SubmittalForm({ onNewRevision, rec, lang, isRTL, langSwitch, canEdit, c
                 { type: "button", className: "sbFormBtn", onClick: onNewRevision },
                 sbH(Plus2, { size: 15, strokeWidth: 2.2 }),
                 sbH("span", null, isHe ? "\u05d2\u05e8\u05e1\u05d4 \u05d7\u05d3\u05e9\u05d4" : "New revision")
+              )
+            : null,
+          onSignAsClient && !clientApproved
+            ? sbH(
+                "button",
+                { type: "button", className: "sbFormBtn", onClick: onSignAsClient },
+                sbH(PenLine, { size: 15, strokeWidth: 2.2 }),
+                sbH("span", null, isHe ? "\u05d0\u05d9\u05e9\u05d5\u05e8 \u05d1\u05e9\u05dd \u05d4\u05dc\u05e7\u05d5\u05d7" : "Approve for client")
               )
             : null,
           onDelete
@@ -21276,6 +21284,7 @@ function SubmittalCard({
   const [selected, setSelected] = useState6(null);
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6(null);
+  const [signAsClient, setSignAsClient] = useState6(false);
   // The records, with each one's filed decision merged over it.
   const list = (submittals || []).map((s) => sbMergeApproval(s, submittalApprovals));
   const label = (c) => sbText(c, lang);
@@ -21523,8 +21532,22 @@ function SubmittalCard({
   // While a submittal is open, the whole card is the form — the tiles would
   // only be noise on a page this dense.
   if (openId && draft) {
-    // Anyone who is not the administrator gets the finished document, not the
-    // editing form. There is nothing on this screen for them to change.
+    if (canEdit && signAsClient) {
+      return sbH(SubmittalReview, {
+        rec: draft,
+        lang,
+        isRTL,
+        langSwitch,
+        canSign: true,
+        printBrand,
+        userSignatures,
+        currentEmail,
+        specNotes: draft.specNotes || [],
+        onChangeSpecNotes: (next) => saveSpecNotes(draft.id, next),
+        onSave: (next) => { saveReview(next); setSignAsClient(false); },
+        onCancel: () => setSignAsClient(false)
+      });
+    }
     if (!canEdit) {
       return sbH(SubmittalReview, {
         rec: draft,
@@ -21547,6 +21570,7 @@ function SubmittalCard({
     return sbH(SubmittalForm, {
       rec: draft,
       onNewRevision: draft && draft.sent && canEdit ? () => startRevision(draft) : null,
+      onSignAsClient: draft && draft.sent && canEdit ? () => setSignAsClient(true) : null,
       lang,
       isRTL,
       langSwitch,
