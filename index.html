@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 124";
+var APP_BUILD = "11.9.2026 · build 125";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5249,10 +5249,7 @@ var SUB_SECTIONS = [
 // Ambiguous glyphs are left out on purpose: this code is read off a phone
 // screen and typed back in by somebody standing on a site.
 function makeSubCode() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-  let out = "";
-  for (let i = 0; i < 6; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  return out;
+  return String(Math.floor(1000 + Math.random() * 9000));
 }
 
 // A row is routed to a trade, not to a company: the trade's cube is shared by
