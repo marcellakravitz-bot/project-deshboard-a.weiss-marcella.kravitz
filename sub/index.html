@@ -132,11 +132,12 @@
   .week th .num{display:block;font-size:10.5px;color:var(--mist);font-weight:600}
   .week td{text-align:right;white-space:pre-wrap;line-height:1.7}
   .cats{display:flex;flex-direction:column;gap:10px}
+  .catsBack{display:flex;justify-content:flex-start;margin:0 0 12px}
   .catRow{display:flex;justify-content:space-between;align-items:center;background:var(--surface);
     border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;font:inherit;
     font-size:14px;font-weight:800;color:var(--navy);cursor:pointer}
   .catRow .n{font-size:11.5px;font-weight:600;color:var(--mist)}
-  .allCats{display:block;margin:0 0 12px}
+  .allCats{display:block;width:auto;text-align:start;margin:0;padding:4px 0}
   .checks{display:flex;flex-direction:column;gap:8px}
   .chk{display:flex;align-items:center;gap:10px;background:var(--surface);
     border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;font-size:13.5px}
@@ -200,7 +201,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 27</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 28</span></footer>
 
 <script>
 
@@ -654,12 +655,12 @@ function viewSubmittal(b){
     }).join("")+'</div>';
   }
   var rows=state.cat?all.filter(function(r){return r.category===state.cat}):all;
-  return (cats.length>1?'<button class="back allCats" id="ac">→ כל הקטגוריות</button>':'')+
+  return (cats.length>1?'<div class="catsBack"><button class="back allCats" id="ac">→ כל הקטגוריות</button></div>':'')+
     '<table class="tbl"><thead><tr><th>מס׳</th><th>תיאור</th><th>סטטוס</th><th></th></tr></thead><tbody>'+
     rows.map(function(r){
       var d=DECISIONS[r.decision];
       var label = d ? d.t : (r.submitted ? "הוגש" : "טרם הוגש");
-      return '<tr><td class="num">'+esc(r.no||"—")+'</td><td>'+esc(r.description)+'</td>'+
+      return '<tr><td class="num">'+esc(r.no||"—")+'</td><td>'+esc(r.typeId||r.description)+'</td>'+
         '<td style="color:'+(d?d.c:"#9a9da5")+';font-weight:700">'+esc(label)+'</td>'+
         '<td>'+eye(r.files)+'</td></tr>';
     }).join("")+'</tbody></table>';
