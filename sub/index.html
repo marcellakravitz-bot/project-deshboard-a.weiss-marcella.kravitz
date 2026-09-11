@@ -58,7 +58,7 @@
     border-radius:50%;background:#fff;transition:transform .18s}
   .tgl.on{background:var(--navy)}
   .tgl.on span{transform:translateX(-19px)}
-  .backArrow{position:absolute;top:calc(env(safe-area-inset-top) + 14px);inset-inline-end:14px;
+  .backArrow{position:absolute;top:14px;right:14px;
     z-index:6;width:38px;height:38px;border:1px solid var(--line);border-radius:12px;
     background:var(--surface);color:var(--steel);display:flex;align-items:center;
     justify-content:center;cursor:pointer;padding:0}
@@ -201,7 +201,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 28</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 30</span></footer>
 
 <script>
 
@@ -301,6 +301,12 @@ function isNew(k){
   if(!marks[k]) return false;
   return seenAll()[seenKey(k)]!==marks[k];
 }
+function markAllSeen(){
+  var marks=(state.board&&state.board.marks)||{};
+  var all=seenAll();
+  Object.keys(marks).forEach(function(k){ all[seenKey(k)]=marks[k]; });
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(all)); } catch(e){}
+}
 function markSeen(k){
   var marks=(state.board&&state.board.marks)||{};
   if(!marks[k]) return;
@@ -372,10 +378,10 @@ function login(err){
       '<div class="field"><label for="ph">מספר טלפון</label>'+
       '<input id="ph" class="num" type="tel" inputmode="tel" autocomplete="tel" placeholder="050-0000000"></div>'+
       '<div class="field"><label for="cd">קוד</label>'+
-      '<input id="cd" class="num" type="text" inputmode="text" autocapitalize="characters" maxlength="6" placeholder="XXXXXX"></div>'+
+      '<input id="cd" class="num" type="tel" inputmode="numeric" maxlength="4" placeholder="XXXX"></div>'+
       '<button class="go" id="in">כניסה</button>'+
       '<p class="err" id="e"'+(err?'':' hidden')+'>'+esc(err||"")+'</p>'+
-      '<p class="hint">בכניסה הראשונה — הקוד שקיבלתם ממנהלת הפרויקט. לאחר שבחרתם קוד משלכם, הזינו אותו.</p>'+
+      '<p class="hint">בכניסה הראשונה — הקוד בן 4 הספרות שקיבלתם ממנהלת הפרויקט. אחר כך — הקוד שבחרתם.</p>'+
     '</div>';
   var ph=document.getElementById("ph"), cd=document.getElementById("cd");
   var btn=document.getElementById("in");
@@ -482,7 +488,17 @@ function picker(){
 function loadBoard(){
   busy("טוען את הפרויקט…");
   call({action:"board", token:state.token, projectId:state.project, trade:state.trade}).then(function(r){
-    if(r.ok){ state.board=r.data; render(); return; }
+    if(r.ok){
+      state.board=r.data;
+      // The first time this phone opens this trade there is nothing to call
+      // new. Take it all as read, and let the dots mean something from here.
+      var fk="awsub.first|"+(state.project||"")+"|"+(state.trade||state.board.trade||"");
+      try {
+        if(localStorage.getItem(fk)!=="1"){ markAllSeen(); localStorage.setItem(fk,"1"); }
+      } catch(e){}
+      render();
+      return;
+    }
     // 401 is the manager switching them off. Anything else is a fault on the
     // way, and losing the sign-in over it is what made this ask for the code
     // again and again.
@@ -868,6 +884,8 @@ window.addEventListener("popstate", function(){
   if(!t){ login(); return; }
   state.token=t;
   busy("טוען…");
+  // A list saved by an older build carries no logos. It is only there so the
+  // screen can be drawn at once; what the server sends below replaces it.
   try{ state.projects=JSON.parse(localStorage.getItem(TOKEN_KEY+".projects")||"[]"); }catch(e){ state.projects=[]; }
   call({action:"projects", token:t}).then(function(r){
     if(r.ok && r.data.projects){
