@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 126";
+var APP_BUILD = "12.9.2026 · build 129";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -9731,7 +9731,7 @@ function boardImageKind(dataUrl) {
 }
 
 async function boardXlsxStyled(ExcelJS, opts) {
-  const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows,
+  const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows, toneRows,
           imgCol, imgs, colTypes } = opts;
   const P = boardExportPalette(accent);
   const wb = new ExcelJS.Workbook();
@@ -9796,6 +9796,9 @@ async function boardXlsxStyled(ExcelJS, opts) {
       // sliding into the line above. A row that needs attention — a long lead
       // item nobody has ordered — takes a soft red instead (29.8.26).
       if (alertRows && alertRows[ri]) c.fill = fill("#fbe3e3");
+      // Ordered, and nothing louder to say about it: the same soft green the
+      // board uses. (12.9.26)
+      else if (toneRows && toneRows[ri] === "ok") c.fill = fill("#e3f3e6");
       else if (ri % 2 === 1) c.fill = fill(P.zebra);
     });
     // A photo on the board is a photo in the workbook, INSIDE the cell: both
@@ -10669,6 +10672,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const body = [];
     const imgs = [];
     const alerts = [];
+    const tone = [];
     groups.forEach((g) => {
       g.rows.forEach((r) => {
         // Only what is ticked for showing is printed. An unticked row is off
@@ -10694,9 +10698,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         ]);
         imgs.push(v.image || null);
         alerts.push(needsOrder(r));
+        tone.push(v.ordered ? "ok" : "");
       });
     });
-    return { head, body, widths, types, imgs, alerts };
+    return { head, body, widths, types, imgs, alerts, tone };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -10727,7 +10732,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     const res = await boardExportXlsx({
       title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
       fileName: boardFileName(projectName, "LLI", "xlsx"),
-      head, body, widths, alertRows: g.alerts,
+      head, body, widths, alertRows: g.alerts, toneRows: g.tone,
       // The photo column is text; everything else keeps the kind the board
       // gave it.
       colTypes,
@@ -10776,6 +10781,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       accent: (printBrand || {}).accent, brand: printBrand,
       isRTL: printLang !== "en", imgCol, imgs,
       alertRows: g.alerts,
+      toneRows: g.tone,
       // The date is in the heading of this report, so it is not repeated at the
       // foot of every page.
       noStamp: true
@@ -18042,7 +18048,13 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
   // The free-text box keeps the same size as every other value until there is
   // too much of it to fit, and then steps down inside its own area.
   const infoLen = ((isHe ? rec.infoHe : rec.infoEn) || "").length;
-  const infoSize = infoLen > 1400 ? 8 : infoLen > 900 ? 9 : infoLen > 500 ? 10 : 11;
+  const infoSize = infoLen > 2200 ? 6.5
+    : infoLen > 1800 ? 7
+    : infoLen > 1400 ? 7.5
+    : infoLen > 1100 ? 8
+    : infoLen > 900 ? 9
+    : infoLen > 500 ? 10 : 11;
+  const infoLead = infoLen > 1400 ? 1.25 : infoLen > 900 ? 1.32 : 1.45;
   const img = rec.image && rec.image.thumb
     ? `<img src="${rec.image.thumb}" alt="">`
     : `<span class="noImg">${L("picture")}</span>`;
@@ -18111,7 +18123,8 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 .docName { text-align: ${isHe ? "right" : "left"}; font-size: var(--val); }
 .docBox { width: 34px; text-align: center; font-size: 12px; }
 .addWrap { flex: 1; display: flex; flex-direction: column; min-height: 96px; }
-.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; white-space: pre-wrap; font-size: ${infoSize}px; line-height: 1.45; }
+.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; max-height: 150px; overflow: hidden;
+  white-space: pre-wrap; font-size: ${infoSize}px; line-height: ${infoLead}; }
 .miniLbl { font-size: 10px; color: #6b7280; font-weight: 700; margin-bottom: 3px; }
 .rev td { vertical-align: top; height: 112px; padding: 7px 9px; font-size: var(--val); }
 .rev .sig { width: 30%; }
@@ -18315,7 +18328,7 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ onNewRevision, onSignAsClient, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
@@ -18669,6 +18682,42 @@ function SubmittalForm({ onNewRevision, onSignAsClient, rec, lang, isRTL, langSw
 
   const secBar = (key) => sbH("div", { className: "sbSecBar" }, L(key));
 
+  // Sends what is on the screen, puts back what comes home, and leaves the
+  // language switch to the card. Codes and model numbers survive untouched —
+  // that rule lives with the translator, where it can be judged. (11.9.26)
+  const translateForm = async () => {
+    const to = isHe ? "en" : "he";
+    setBusy("tr");
+    setErr(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("submittal-ai", {
+        body: {
+          mode: "translate",
+          to,
+          category: d.category,
+          fields: {
+            typeId: d.typeId || "",
+            itemDescription: d.itemDescription || "",
+            info: (isHe ? d.infoHe : d.infoEn) || "",
+          },
+        },
+      });
+      if (error) throw error;
+      const f = (data && data.fields) || {};
+      set({
+        typeId: f.typeId || d.typeId,
+        itemDescription: f.itemDescription || d.itemDescription,
+        ...(to === "en" ? { infoEn: f.info || d.infoEn } : { infoHe: f.info || d.infoHe }),
+      });
+      if (typeof onSwitchLang === "function") onSwitchLang(to);
+    } catch (e) {
+      console.error("[awdash] translate failed", e);
+      setErr(isHe ? "\u05d4\u05ea\u05e8\u05d2\u05d5\u05dd \u05e0\u05db\u05e9\u05dc. \u05e0\u05e1\u05d9 \u05e9\u05d5\u05d1." : "Translation failed. Please try again.");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return sbH(
     "div",
     { className: "sbForm", dir: isRTL ? "rtl" : "ltr" },
@@ -18730,19 +18779,34 @@ function SubmittalForm({ onNewRevision, onSignAsClient, rec, lang, isRTL, langSw
             sbH("span", { className: "sbSpecsCount" }, specViewCount)
           )
         : null,
+      ro
+        ? null
+        : sbH(
+            "button",
+            {
+              type: "button",
+              className: `sbToolBtn ${busy === "tr" ? "busy" : ""}`.trim(),
+              disabled: busy === "tr",
+              title: isHe ? "\u05ea\u05e8\u05d2\u05d5\u05dd \u05e9\u05d3\u05d5\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1" : "Translate the form's text",
+              onClick: translateForm
+            },
+            busy === "tr"
+              ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
+              : sbH(Globe2, { size: 15, strokeWidth: 2 }),
+            sbH("span", null, isHe ? "EN" : "HE")
+          ),
       sbH(
         "button",
         {
           type: "button",
           className: "sbToolBtn",
           title: L("pdfHint"),
-          onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures))
+          onClick: () => sbPrint(d, lang, printBrand, userSignatures)
         },
         sbH(Printer, { size: 15, strokeWidth: 2 }),
-        sbH("span", null, L("print"))
+        sbH("span", null, "PDF")
       )
     ),
-    printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null,
     typeof d.fromRev === "number" && !d.sent
       ? sbH("p", { className: "sbRevNote" }, `${L("newVersionNote")} Rev.${d.fromRev} → Rev.${d.rev}`)
       : null,
@@ -21186,7 +21250,8 @@ function SubmittalCard({
   // direction and the wording change.
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
-  const lang = appIsRTL ? "he" : "en";
+  const [langOverride, setLang] = useState6(null);
+  const lang = langOverride || (appIsRTL ? "he" : "en");
   const isRTL = lang === "he";
   const [selected, setSelected] = useState6(null);
   const [openId, setOpenId] = useState6(null);
@@ -21493,6 +21558,7 @@ function SubmittalCard({
     return sbH(SubmittalForm, {
       rec: draft,
       onNewRevision: draft && draft.sent && canEdit ? () => startRevision(draft) : null,
+      onSwitchLang: (lg) => setLang(lg),
       onSignAsClient: draft && draft.sent && canEdit ? () => setSignAsClient(true) : null,
       lang,
       isRTL,
