@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "11.9.2026 · build 125";
+var APP_BUILD = "11.9.2026 · build 126";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -21416,13 +21416,29 @@ function SubmittalCard({
   };
   // Filing a decision writes the decision, and only the decision. Nobody but
   // the administrator writes the submittal record itself.
-  const saveReview = (rec) => {
+  const saveReview = async (rec) => {
     const rv = (rec.reviews || [])[0] || {};
     const now = (/* @__PURE__ */ new Date()).toISOString();
+    let doc = null;
+    try {
+      const html = sbBuildPrintHtml({ ...rec, reviews: [rv] }, lang, printBrand, [], userSignatures);
+      const file = new File([html], `${sbNumber(rec.category, rec.seq)}.html`, { type: "text/html" });
+      doc = await sbUploadFile(projectId, `submittal-signed-${rec.id}`, file);
+    } catch (e) {
+      // A copy that could not be kept must never stop an approval going
+      // through. The decision is the thing; the paper is a convenience.
+      console.warn("[awdash] could not keep a copy of the signed submittal", e);
+    }
     if (onChangeApprovals) {
       onChangeApprovals({
         ...submittalApprovals || {},
-        [rec.id]: { review: rv, closedAt: rec.closedAt || now, by: (currentEmail || "").toLowerCase(), at: now }
+        [rec.id]: {
+          review: rv,
+          closedAt: rec.closedAt || now,
+          by: (currentEmail || "").toLowerCase(),
+          at: now,
+          ...(doc ? { doc: { ...doc, name: `${sbNumber(rec.category, rec.seq)}.html`, type: "text/html" } } : {}),
+        }
       });
     }
     setDraft(null);
