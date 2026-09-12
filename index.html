@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.9.2026 · build 129";
+var APP_BUILD = "12.9.2026 · build 135";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1611,6 +1611,9 @@ var pdfViewer = `
 
         /* ---- Change Instructions ---- */
         .ciWrap { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+        /* This board is one of the widest on the site; it takes the page's own
+           margins rather than scrolling sideways. */
+        .functionPage.wide:has(.ciWrap) { padding-inline: 8px; }
         .ciQueue {
           border: 1px solid #f0d9a8; background: #fffaf0; border-radius: 12px;
           padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;
@@ -1634,7 +1637,7 @@ var pdfViewer = `
            eye follows is the same whether the chapter is open or shut. */
         .ciChapterRow {
           display: flex; align-items: center; gap: 10px;
-          padding-inline: 42px; background: #f7f8fa;
+          padding-inline: 18px; background: #f7f8fa;
         }
         .ciChapterRow:hover { background: #f1f3f6; }
         .ciChapterHead {
@@ -1651,13 +1654,13 @@ var pdfViewer = `
           border: 1px solid var(--line); background: #fff; color: var(--steel); cursor: pointer;
         }
         .ciChapterAdd:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
-        .ciChapterName { font-weight: 800; flex: 1; }
+        .ciChapterName { font-weight: 800; flex: 1; min-width: 0; overflow-wrap: anywhere; }
         .ciChapterCount { color: var(--mist); font-size: 12px; font-weight: 700; white-space: nowrap; }
         .ciChapterSum {
           font-weight: 800; color: var(--accent-ink); white-space: nowrap;
           background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px;
         }
-        .ciChapterBody { padding: 10px 42px 14px; border-top: 1px solid var(--line-soft); }
+        .ciChapterBody { padding: 10px 18px 14px; border-top: 1px solid var(--line-soft); }
         .ciNone { color: var(--mist); font-size: 12.5px; font-weight: 600; margin: 6px 0 10px; }
         .ciAddRow {
           display: inline-flex; align-items: center; gap: 6px; margin-top: 10px;
@@ -1715,6 +1718,7 @@ var pdfViewer = `
         }
         .lliChip:hover { border-color: var(--accent); color: var(--accent-ink); }
         .lliChip.on { background: #14181f; border-color: #14181f; color: #fff; }
+        .lliSaveBar { justify-content: center; margin-top: 14px; }
         .lliBar {
           display: flex; align-items: center; justify-content: center; gap: 16px;
           flex-wrap: wrap; margin-bottom: 8px; font-size: 12px; color: var(--steel);
@@ -2275,7 +2279,7 @@ var pdfViewer = `
            attachments — nothing here is part of the submittal until she
            uploads it (30.8.26). */
         .sbSuggest {
-          margin-top: 18px; border: 1px dashed var(--line, #e3e6ea);
+          margin-top: 28px; border: 1px dashed var(--line, #e3e6ea);
           border-radius: 12px; padding: 12px 14px; background: #fbfcfd;
         }
         .sbSugList { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
@@ -2898,9 +2902,11 @@ var pdfViewer = `
         /* The specification panel is a working area, not a caption — it reads
            from the start of the line like a form, not centred. */
         .sbSpecsHead {
-          display: flex; align-items: center; gap: 7px;
+          display: flex; align-items: center; justify-content: center; gap: 7px;
           font-size: 13px; font-weight: 800; color: var(--accent-ink); margin-bottom: 10px;
+          text-align: center;
         }
+        .sbSpecsRow { justify-content: center; }
         .sbSpecsRow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .sbAiBtn {
           display: inline-flex; align-items: center; gap: 7px;
@@ -8315,6 +8321,7 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
     triggerDownload(url, `${sanitizeFileNamePart(projectName || "Project")} - ${c.title}.xlsx`);
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   };
+  const [savedNote, setSavedNote] = useState6(false);
   const [printAsk, setPrintAsk] = useState6(null);
   // The sheet is for whoever receives it, so the language is the one chosen on
   // the way to the printer — not the one this screen happens to be in.
@@ -11443,7 +11450,32 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
               )
             )
           )
+        ),
+    // Under the board, where a person finishes and looks for it — not up in
+    // the tools beside "add a row". Every cell saves as it is typed; this is
+    // the full stop. (12.9.26)
+    canEdit
+      ? sbH(
+          "div",
+          { className: "lliBar lliSaveBar" },
+          sbH(
+            "button",
+            {
+              type: "button",
+              className: "functionEditBtn",
+              onClick: () => {
+                if (!onChangeRows) return;
+                onChangeRows({ ...data });
+                setSavedNote(true);
+                setTimeout(() => setSavedNote(false), 2200);
+              }
+            },
+            sbH(Save, { size: 15, strokeWidth: 2 }),
+            " ",
+            savedNote ? (lang === "he" ? "\u05e0\u05e9\u05de\u05e8" : "Saved") : (lang === "he" ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "Save")
+          )
         )
+      : null
   );
 }
 
@@ -14259,86 +14291,85 @@ function ciPrint(rec, printLang, brand, projectName, markup, uiLang) {
            `<li><b>${esc(x.title)}</b> — ${esc(x.name)}</li>`).join("")}</ul></div>`
     : "";
 
+  // The house sheet: the same frame, the same two logos, the same company
+  // strip and printed-on line as every other document this site issues. A
+  // change instruction goes to the same client as the schedule and the
+  // contacts sheet, and it looked like it came from somewhere else. (12.9.26)
+  const logo = b.logoUrl ? `<img class="logo" src="${b.logoUrl}" alt="">` : "<span></span>";
+  const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="">` : "<span></span>";
+  const footBlock = b.footerImg
+    ? `<div class="footImg"><img src="${b.footerImg}" alt=""></div>`
+    : (b.footerText ? `<div class="ftr">${esc(b.footerText)}</div>` : "");
+
+  const inner = `
+<div class="hdr">${logo}<div class="ttlWrap">
+  <div class="ttl">${esc(projectName || "")}</div>
+  <div class="sub">${esc(L("title"))}${d.subject ? ` &nbsp;|&nbsp; ${esc(d.subject)}` : ""}</div>
+  <div class="issued">${esc(L("itemNo"))}: ${esc(d.itemNo)}${rev ? ` · Rev.${rev.rev}` : ""} &nbsp;·&nbsp; ${esc(sbFmtDate(d.date))}</div>
+</div>${clientLogo}</div>
+${notesBlock}
+<div class="block">
+  <h3>${esc(L("pricing"))}</h3>
+  <table class="price">
+    <thead><tr>
+      <th>${esc(L("itemDesc"))}</th>
+      <th>${esc(L("unit"))}</th>
+      <th>${esc(L("qty"))}</th>
+      <th>${esc(L("unitPrice"))}</th>
+      <th>${esc(L("lineTotal"))}</th>
+      <th>${esc(L("remarks"))}</th>
+    </tr></thead>
+    <tbody>
+      ${rows}
+      <tr class="total">
+        <td colspan="4">${esc(L("totalExVat"))}</td>
+        <td class="n">${esc(ciMoney(total, lang))}</td>
+        <td></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+${docsBlock}
+${rev ? `<p class="issuedBy">${esc(L("issuedBy"))}: ${esc(rev.by)} · ${esc(sbFmtDate(rev.at))}</p>` : ""}`;
+
   const html = `<!doctype html><html dir="${isRTL ? "rtl" : "ltr"}" lang="${lang}">
 <head><meta charset="utf-8"><title>${esc(d.itemNo)}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  @page { size: A4; margin: 14mm; }
-  * { box-sizing: border-box; }
-  body { font-family: Arial, "Segoe UI", sans-serif; color: #14181f; margin: 0; font-size: 12px; }
-  .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-  .head img { max-height: 44px; max-width: 150px; object-fit: contain; }
-  .head .mid { text-align: center; flex: 1; }
-  .head .proj { font-size: 15px; font-weight: 800; color: ${accent}; }
-  .head .subj { font-size: 12.5px; font-weight: 700; margin-top: 3px; }
-  .head .itemno { font-size: 12px; font-weight: 800; color: #4b5563; margin-top: 2px; letter-spacing: .04em; }
-  .head .date { font-size: 11px; color: #6b7280; white-space: nowrap; }
-  .rule { border: none; border-top: 2.5px solid ${accent}; margin: 10px 0 16px; }
-  h3 { font-size: 12px; font-weight: 800; color: ${accent}; margin: 16px 0 6px;
-       border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
-  ol.notes { margin: 4px 0 0; padding-inline-start: 20px; line-height: 1.6; }
-  table.price { width: 100%; border-collapse: collapse; margin-top: 6px; }
-  table.price th { background: ${accent}; color: #fff; font-size: 11px; font-weight: 800;
-                   padding: 7px 8px; text-align: ${isRTL ? "right" : "left"}; }
-  table.price td { padding: 6px 8px; border-bottom: 1px solid #eef0f3; vertical-align: top; }
-  table.price td.n { text-align: ${isRTL ? "left" : "right"}; direction: ltr; white-space: nowrap; }
-  table.price td.c { text-align: center; }
-  tr.total td { font-weight: 800; font-size: 12.5px; border-top: 2px solid ${accent};
-                border-bottom: none; padding-top: 9px; }
-  ul.files { margin: 4px 0 0; padding-inline-start: 18px; line-height: 1.6; }
-  .foot { margin-top: 20px; border-top: 1px solid #e5e7eb; padding-top: 8px;
-          font-size: 10px; color: #9aa3af; display: flex; justify-content: space-between; }
-  .block { break-inside: avoid; }
-</style></head>
-<body>
-  <div class="head">
-    <div class="date">${esc(sbFmtDate(d.date))}</div>
-    <div class="mid">
-      <div class="proj">${esc(projectName || "")}</div>
-      <div class="subj">${esc(d.subject || "")}</div>
-      <div class="itemno">${esc(L("itemNo"))}: ${esc(d.itemNo)}${rev ? ` · Rev.${rev.rev}` : ""}</div>
-    </div>
-    ${b.logoUrl ? `<img src="${b.logoUrl}" alt="">` : "<span></span>"}
-  </div>
-  <hr class="rule">
-
-  ${notesBlock}
-
-  <div class="block">
-    <h3>${esc(L("pricing"))}</h3>
-    <table class="price">
-      <thead><tr>
-        <th>${esc(L("itemDesc"))}</th>
-        <th>${esc(L("unit"))}</th>
-        <th>${esc(L("qty"))}</th>
-        <th>${esc(L("unitPrice"))}</th>
-        <th>${esc(L("lineTotal"))}</th>
-        <th>${esc(L("remarks"))}</th>
-      </tr></thead>
-      <tbody>
-        ${rows}
-        <tr class="total">
-          <td colspan="4">${esc(L("totalExVat"))}</td>
-          <td class="n">${esc(ciMoney(total, lang))}</td>
-          <td></td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  ${docsBlock}
-
-  <div class="foot">
-    <span>${esc(b.name || "A. Weiss")}</span>
-    <span>${esc(d.itemNo)}${rev ? ` · ${esc(L("issuedBy"))}: ${esc(rev.by)} · ${esc(sbFmtDate(rev.at))}` : ""}</span>
-  </div>
-  <script>window.onload = function () { setTimeout(function () { window.print(); }, 250); };<\/script>
+${printSheetCss({ accent })}
+body { font-family: 'Assistant', Arial, sans-serif; color: #17181c; direction: ${isRTL ? "rtl" : "ltr"}; }
+.hdr { display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  border-bottom: 1.5px solid ${accent}; padding-bottom: 3mm; margin-bottom: 4mm; }
+.hdr .logo, .hdr .clientLogo { max-height: 13mm; max-width: 38mm; object-fit: contain; }
+.ttlWrap { text-align: center; flex: 1; }
+.ttl { font-size: 15px; font-weight: 800; color: ${accent}; }
+.sub { font-size: 12px; font-weight: 700; margin-top: 2px; }
+.issued { font-size: 10.5px; color: #6b7280; margin-top: 3px; direction: ltr; unicode-bidi: isolate; }
+h3 { font-size: 11.5px; font-weight: 800; color: ${accent}; margin: 5mm 0 2mm;
+  border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
+ol.notes { margin: 2mm 0 0; padding-inline-start: 18px; line-height: 1.65; font-size: 11px; }
+ul.files { margin: 2mm 0 0; padding-inline-start: 16px; line-height: 1.6; font-size: 11px; }
+table.price { width: 100%; border-collapse: collapse; }
+table.price th { background: ${accent}; color: #fff; font-size: 10.5px; font-weight: 800;
+  padding: 2mm 2.5mm; text-align: ${isRTL ? "right" : "left"}; }
+table.price td { padding: 1.8mm 2.5mm; border-bottom: 1px solid #eef0f3; font-size: 11px; vertical-align: top; }
+table.price td.n { text-align: ${isRTL ? "left" : "right"}; direction: ltr; white-space: nowrap; }
+table.price td.c { text-align: center; }
+tr.total td { font-weight: 800; font-size: 11.5px; border-top: 2px solid ${accent}; border-bottom: none; padding-top: 2.5mm; }
+.issuedBy { margin: 4mm 0 0; font-size: 10px; color: #6b7280; }
+.block { break-inside: avoid; }
+.ftr { font-size: 9px; color: #6b7280; text-align: center; white-space: pre-line; margin-bottom: 2mm; }
+.footImg img { max-height: 12mm; max-width: 100%; object-fit: contain; }
+</style></head><body>
+${printStaticPage(inner, { stamp: printedStampText(lang), footHtml: footBlock, flow: true })}
+<script>window.onload = function () { setTimeout(function () { window.print(); }, 300); };<\/script>
 </body></html>`;
 
   w.document.open();
   w.document.write(html);
   w.document.close();
 }
-
 
 function lliRoomMarks(boqData, boqFlags, lliRows, lang) {
   const out = {};
@@ -18687,6 +18718,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, rec, lang,
   // that rule lives with the translator, where it can be judged. (11.9.26)
   const translateForm = async () => {
     const to = isHe ? "en" : "he";
+    if (typeof onSwitchLang === "function") onSwitchLang(to);
     setBusy("tr");
     setErr(null);
     try {
@@ -18709,7 +18741,6 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, rec, lang,
         itemDescription: f.itemDescription || d.itemDescription,
         ...(to === "en" ? { infoEn: f.info || d.infoEn } : { infoHe: f.info || d.infoHe }),
       });
-      if (typeof onSwitchLang === "function") onSwitchLang(to);
     } catch (e) {
       console.error("[awdash] translate failed", e);
       setErr(isHe ? "\u05d4\u05ea\u05e8\u05d2\u05d5\u05dd \u05e0\u05db\u05e9\u05dc. \u05e0\u05e1\u05d9 \u05e9\u05d5\u05d1." : "Translation failed. Please try again.");
@@ -19271,15 +19302,15 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, rec, lang,
           // else and the eye starts ranking them (7.9.26).
           sbH(
             "button",
-            { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: false }) },
-            sbH(SaveIcon2, { size: 15, strokeWidth: 2.2 }),
-            sbH("span", null, L("save"))
-          ),
-          sbH(
-            "button",
             { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
             sbH(SendIcon2, { size: 15, strokeWidth: 2.2 }),
             sbH("span", null, L("send"))
+          ),
+          sbH(
+            "button",
+            { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: false }) },
+            sbH(SaveIcon2, { size: 15, strokeWidth: 2.2 }),
+            sbH("span", null, L("save"))
           ),
           onDelete
             ? sbH(
