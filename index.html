@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.9.2026 · build 139";
+var APP_BUILD = "12.9.2026 · build 140";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -14334,8 +14334,10 @@ function ciPrint(rec, printLang, brand, projectName, markup, uiLang) {
   const inner = `
 <div class="hdr">${logo}<div class="ttlWrap">
   <div class="ttl">${esc(projectName || "")}</div>
-  <div class="sub">${esc(L("title"))}${d.subject ? ` &nbsp;|&nbsp; ${esc(d.subject)}` : ""}</div>
-  <div class="issued">${esc(L("itemNo"))}: ${esc(d.itemNo)}${rev ? ` · Rev.${rev.rev}` : ""} &nbsp;·&nbsp; ${esc(sbFmtDate(d.date))}</div>
+  <div class="sub">${esc(L("title"))}</div>
+  ${d.subject ? `<div class="subj">${esc(d.subject)}</div>` : ""}
+  <div class="itemNo">${esc(L("itemNo"))}: ${esc(d.itemNo)}</div>
+  <div class="issued">${esc(sbFmtDate(d.date))}${rev ? ` &nbsp;·&nbsp; Rev.${rev.rev}` : ""}</div>
 </div>${clientLogo}</div>
 ${notesBlock}
 <div class="block">
@@ -14375,19 +14377,26 @@ body { font-family: 'Assistant', Arial, sans-serif; color: #17181c; direction: $
 .ttlWrap { text-align: center; flex: 1; }
 .ttl { font-size: 15px; font-weight: 800; color: ${accent}; }
 .sub { font-size: 12px; font-weight: 700; margin-top: 2px; }
-.issued { font-size: 10.5px; color: #6b7280; margin-top: 3px; direction: ltr; unicode-bidi: isolate; }
+.subj { font-size: 11.5px; font-weight: 700; margin-top: 3px; }
+.itemNo { font-size: 11px; font-weight: 700; margin-top: 3px; }
+.issued { font-size: 10.5px; color: #9aa3af; margin-top: 3px; direction: ltr; unicode-bidi: isolate; }
 h3 { font-size: 11.5px; font-weight: 800; color: ${accent}; margin: 5mm 0 2mm;
   border-bottom: 1px solid #e5e7eb; padding-bottom: 2px; }
 ol.notes { margin: 2mm 0 0; padding-inline-start: 18px; line-height: 1.65; font-size: 11px; }
 ul.files { margin: 2mm 0 0; padding-inline-start: 16px; line-height: 1.6; font-size: 11px; }
 table.price { width: 100%; border-collapse: collapse; }
+table.price { margin: 0 auto; }
 table.price th { background: ${accent}; color: #fff; font-size: 10.5px; font-weight: 800;
-  padding: 2mm 2.5mm; text-align: ${isRTL ? "right" : "left"}; }
-table.price td { padding: 1.8mm 2.5mm; border-bottom: 1px solid #eef0f3; font-size: 11px; vertical-align: top; }
+  padding: 2mm 2.5mm; text-align: center; }
+table.price td { padding: 1.8mm 2.5mm; border-bottom: 1px solid #eef0f3; font-size: 11px;
+  vertical-align: top; text-align: center; }
+table.price td:first-child, table.price td:last-child { text-align: ${isRTL ? "right" : "left"}; }
 table.price td.n { text-align: ${isRTL ? "left" : "right"}; direction: ltr; white-space: nowrap; }
 table.price td.c { text-align: center; }
-tr.total td { font-weight: 800; font-size: 11.5px; border-top: 2px solid ${accent}; border-bottom: none; padding-top: 2.5mm; }
-.issuedBy { margin: 4mm 0 0; font-size: 10px; color: #6b7280; }
+tr.total td { font-weight: 800; font-size: 11.5px; border-top: 2px solid ${accent};
+  border-bottom: none; padding-top: 2.5mm; background: #fdf3d0; }
+tr.total td:first-child { text-align: ${isRTL ? "right" : "left"}; }
+.issuedBy { margin: 6mm 0 0; font-size: 10px; color: #6b7280; text-align: center; }
 .block { break-inside: avoid; }
 .ftr { font-size: 9px; color: #6b7280; text-align: center; white-space: pre-line; margin-bottom: 2mm; }
 .footImg img { max-height: 12mm; max-width: 100%; object-fit: contain; }
