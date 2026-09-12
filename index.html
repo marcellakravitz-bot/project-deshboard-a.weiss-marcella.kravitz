@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.9.2026 · build 135";
+var APP_BUILD = "12.9.2026 · build 136";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18359,7 +18359,7 @@ function sbPrint(rec, lang, brand, signatures) {
 }
 
 // ------------------------------------------------------------------- the form
-function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
+function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
@@ -18775,7 +18775,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, rec, lang,
     ),
     sbH(
       "div",
-      { className: "sbFormTools" },
+      { className: "sbFormTools", dir: siteRTL === false ? "ltr" : "rtl" },
       ro
         ? null
         : sbH(
@@ -21282,6 +21282,7 @@ function SubmittalCard({
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const [langOverride, setLang] = useState6(null);
+  const langForId = useRef5(null);
   const lang = langOverride || (appIsRTL ? "he" : "en");
   const isRTL = lang === "he";
   const [selected, setSelected] = useState6(null);
@@ -21485,6 +21486,11 @@ function SubmittalCard({
     setDraft(rec);
     setOpenId(rec.id);
   };
+  // Leaving one submittal drops the language chosen inside it.
+  if (langForId.current !== openId) {
+    langForId.current = openId;
+    if (langOverride) setLang(null);
+  }
   const openExisting = (s) => {
     // A sent submittal is a document that went out. It opens as it stands —
     // read it, delete it, or start a new revision from the button on it.
@@ -21590,6 +21596,7 @@ function SubmittalCard({
       rec: draft,
       onNewRevision: draft && draft.sent && canEdit ? () => startRevision(draft) : null,
       onSwitchLang: (lg) => setLang(lg),
+      siteRTL: appIsRTL,
       onSignAsClient: draft && draft.sent && canEdit ? () => setSignAsClient(true) : null,
       lang,
       isRTL,
