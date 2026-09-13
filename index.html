@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.9.2026 · build 142";
+var APP_BUILD = "12.9.2026 · build 143";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5325,6 +5325,218 @@ function SubsAttachment({ att, onRemove }) {
       ? React9.createElement("img", { src: url, alt: att.name, style: { width: "100%", height: "100%", objectFit: "cover", cursor: "pointer" }, onClick: () => window.open(url, "_blank", "noopener") })
       : React9.createElement("button", { type: "button", onClick: () => url && window.open(url, "_blank", "noopener"), style: { border: "none", background: "transparent", cursor: url ? "pointer" : "default", fontSize: 11, padding: 8, textAlign: "center", wordBreak: "break-all" } }, att.name || "PDF"),
     onRemove && React9.createElement("button", { type: "button", onClick: onRemove, title: "\u05d4\u05e1\u05e8\u05d4", style: { position: "absolute", insetInlineEnd: 4, top: 4, border: "none", borderRadius: 999, width: 20, height: 20, lineHeight: "18px", background: "rgba(0,0,0,0.55)", color: "#fff", cursor: "pointer", fontWeight: 900 } }, "\u2715")
+  );
+}
+
+
+// ---------------------------------------------------------------------------
+// Sending a document out for approval.
+//
+// The link is the key and it carries nothing else: a random token, one document
+// each. Issuing again for a document that already has a live link returns the
+// SAME link — pressing copy twice must never kill something already sitting in
+// somebody's inbox. Only an explicit re-issue does that. (12.9.26)
+// ---------------------------------------------------------------------------
+const SUPERVISION_API = `${SUPABASE_URL}/functions/v1/supervision`;
+
+async function supCall(body) {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data?.session?.access_token;
+  if (!accessToken) throw new Error("no session");
+  const res = await fetch(SUPERVISION_API, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ accessToken, ...body }),
+  });
+  const out = await res.json();
+  if (!res.ok) throw new Error(out.detail || out.error || "failed");
+  return out;
+}
+function supUrl(token) {
+  const base = location.href.split("?")[0].replace(/[^/]*$/, "");
+  return `${base}Supervision/index-supervisor.html?t=${token}`;
+}
+function supFmt(iso) {
+  if (!iso) return "";
+  const p = String(iso).slice(0, 10).split("-");
+  return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : String(iso);
+}
+// What the board says about a link, in the site's own words. "Sent" already
+// means something here — that the submittal went to the client — so the link
+// gets a vocabulary of its own and the two never collide.
+function supStateLabel(st) {
+  if (!st) return { text: "\u05dc\u05d0 \u05d4\u05d5\u05e0\u05e4\u05e7", tone: "" };
+  if (st.state === "signed") {
+    const d = SB_DECISIONS.find((x) => x.key === st.decision);
+    return { text: "\u05e0\u05d7\u05ea\u05dd" + (d ? " \u00b7 " + d.he : ""), tone: "ok" };
+  }
+  if (st.state === "revoked") return { text: "\u05d1\u05d5\u05d8\u05dc", tone: "off" };
+  if (st.state === "expired") return { text: "\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e3", tone: "off" };
+  if (st.openedAt) return { text: "\u05e0\u05e4\u05ea\u05d7 " + supFmt(st.openedAt), tone: "live" };
+  return { text: "\u05d4\u05d5\u05e0\u05e4\u05e7 " + supFmt(st.issuedAt), tone: "live" };
+}
+async function supCopy(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch (e) {
+    // Some browsers refuse the clipboard outside a trusted gesture; a textarea
+    // and execCommand still work and are better than losing the message.
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.opacity = "0";
+    document.body.appendChild(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand("copy"); } catch (e2) { ok = false; }
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+// The message she pastes into an e-mail. One document or many, same shape.
+function supMessage({ projectName, kind, rows }) {
+  const head = kind === "sd"
+    ? `\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05ea\u05d5\u05db\u05e0\u05d9\u05d5\u05ea SD`
+    : `\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd`;
+  const body = rows.map((r) => {
+    const title = [r.no, r.desc].filter(Boolean).join(" - ");
+    const due = r.due ? `\u05e0\u05d3\u05e8\u05e9 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3: ${supFmt(r.due)}\n` : "";
+    return `${title}\n${due}${r.url}`;
+  }).join("\n\n");
+  return `\u05e9\u05dc\u05d5\u05dd,\n${head}\n\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 ${projectName || ""}\n\n${body}\n\n\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3 \u05dc-30 \u05d9\u05d5\u05dd.`;
+}
+
+// The list itself: filters, ticks, and one button that puts the whole message
+// on the clipboard. Signed documents are shown and cannot be ticked — there is
+// nothing left to approve, and re-opening one is a deliberate act elsewhere.
+function SupervisionList({ kind, projectId, projectName, rows, onBack }) {
+  const [docs, setDocs] = React9.useState(null);
+  const [picked, setPicked] = React9.useState(null);
+  const [cat, setCat] = React9.useState("");
+  const [only, setOnly] = React9.useState("all");
+  const [busy, setBusy] = React9.useState(false);
+  const [note, setNote] = React9.useState(null);
+  const [err, setErr] = React9.useState(null);
+
+  React9.useEffect(() => {
+    let live = true;
+    supCall({ action: "status-batch", projectId, kind })
+      .then((r) => { if (live) setDocs(r.docs || {}); })
+      .catch((e) => { if (live) { setDocs({}); setErr(String(e.message || e)); } });
+    return () => { live = false; };
+  }, [projectId, kind]);
+
+  const cats = Array.from(new Set(rows.map((r) => r.cat).filter(Boolean)));
+  const shown = rows.filter((r) => {
+    if (cat && r.cat !== cat) return false;
+    const st = (docs || {})[r.id];
+    if (only === "new" && st && st.state !== "revoked" && st.state !== "expired") return false;
+    if (only === "signed" && !(st && st.state === "signed")) return false;
+    return true;
+  });
+  const signedOf = (r) => { const st = (docs || {})[r.id]; return !!(st && st.state === "signed"); };
+  // Until she touches a tick, the choice is "everything not yet sent".
+  const isPicked = (r) => {
+    if (signedOf(r)) return false;
+    if (picked) return !!picked[r.id];
+    const st = (docs || {})[r.id];
+    return !st || st.state === "revoked" || st.state === "expired";
+  };
+  const toggle = (r) => {
+    const base = {};
+    shown.forEach((x) => { base[x.id] = isPicked(x); });
+    base[r.id] = !isPicked(r);
+    setPicked(base);
+  };
+  const setAll = (on) => {
+    const base = { ...(picked || {}) };
+    shown.forEach((x) => { if (!signedOf(x)) base[x.id] = on; });
+    setPicked(base);
+  };
+  const chosen = shown.filter(isPicked);
+
+  const copy = async () => {
+    if (!chosen.length) return;
+    setBusy(true); setErr(null); setNote(null);
+    try {
+      const r = await supCall({ action: "issue-batch", projectId, kind, docIds: chosen.map((x) => x.id) });
+      const text = supMessage({
+        projectName,
+        kind,
+        rows: chosen.map((x) => ({ no: x.no, desc: x.desc, due: x.due, url: supUrl(r.tokens[x.id]) })),
+      });
+      const ok = await supCopy(text);
+      setNote(ok ? "\u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d4\u05d5\u05e2\u05ea\u05e7\u05d4" : "\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u2014 \u05e1\u05de\u05e0\u05d5 \u05d5\u05d4\u05e2\u05ea\u05d9\u05e7\u05d5 \u05d9\u05d3\u05e0\u05d9\u05ea");
+      const next = { ...(docs || {}) };
+      chosen.forEach((x) => {
+        if (!next[x.id] || next[x.id].state !== "open") {
+          next[x.id] = { token: r.tokens[x.id], state: "open", issuedAt: new Date().toISOString(), expiresAt: r.expiresAt };
+        }
+      });
+      setDocs(next);
+      setPicked(null);
+    } catch (e) {
+      setErr(String(e.message || e));
+    } finally { setBusy(false); }
+  };
+
+  const selS = { border: "1px solid var(--line)", borderRadius: 8, padding: "6px 10px", font: "inherit", fontSize: 12.5 };
+  return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 14 } },
+    React9.createElement("button", { type: "button", className: "ghostBtn", style: { alignSelf: "flex-start" }, onClick: onBack }, "\u2192 \u05d7\u05d6\u05e8\u05d4"),
+    React9.createElement("h3", { style: { margin: 0 } }, "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7"),
+    React9.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center" } },
+      cats.length > 1 && React9.createElement("select", { style: selS, value: cat, onChange: (e) => setCat(e.target.value) },
+        React9.createElement("option", { value: "" }, "\u05db\u05dc \u05d4\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d5\u05ea"),
+        cats.map((c) => React9.createElement("option", { key: c, value: c }, c))),
+      React9.createElement("select", { style: selS, value: only, onChange: (e) => setOnly(e.target.value) },
+        React9.createElement("option", { value: "all" }, "\u05db\u05dc \u05d4\u05de\u05e6\u05d1\u05d9\u05dd"),
+        React9.createElement("option", { value: "new" }, "\u05d8\u05e8\u05dd \u05d4\u05d5\u05e0\u05e4\u05e7"),
+        React9.createElement("option", { value: "signed" }, "\u05e0\u05d7\u05ea\u05de\u05d5")),
+      React9.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setAll(true) }, "\u05e1\u05de\u05df \u05d4\u05db\u05dc"),
+      React9.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setAll(false) }, "\u05e0\u05e7\u05d4")),
+    docs === null
+      ? React9.createElement("p", { className: "panelSub" }, "\u05d8\u05d5\u05e2\u05df\u2026")
+      : React9.createElement("div", { style: { width: "100%", maxWidth: 900, display: "flex", flexDirection: "column" } },
+          shown.length === 0
+            ? React9.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, "\u05d0\u05d9\u05df \u05de\u05e1\u05de\u05db\u05d9\u05dd \u05dc\u05d4\u05e6\u05d2\u05d4.")
+            : shown.map((r) => {
+                const st = (docs || {})[r.id];
+                const lab = supStateLabel(st);
+                const done = signedOf(r);
+                return React9.createElement("div", {
+                  key: r.id,
+                  style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 6px", borderBottom: "1px solid var(--line)", opacity: done ? 0.55 : 1 }
+                },
+                  React9.createElement("input", {
+                    type: "checkbox",
+                    checked: isPicked(r),
+                    disabled: done,
+                    onChange: () => toggle(r),
+                    style: { width: 18, height: 18 }
+                  }),
+                  React9.createElement("div", { style: { flex: 1, minWidth: 0 } },
+                    React9.createElement("div", { style: { fontSize: 14, fontWeight: 700 } }, [r.no, r.desc].filter(Boolean).join(" - ")),
+                    React9.createElement("div", { style: { fontSize: 12, color: "var(--mist)", marginTop: 2 } },
+                      (r.due ? "\u05e0\u05d3\u05e8\u05e9 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3 " + supFmt(r.due) : "") + (r.cat ? (r.due ? " \u00b7 " : "") + r.cat : ""))),
+                  React9.createElement("span", {
+                    style: {
+                      fontSize: 12, fontWeight: 700, whiteSpace: "nowrap",
+                      color: lab.tone === "ok" ? "#1a7f4b" : lab.tone === "live" ? "var(--steel)" : "var(--mist)"
+                    }
+                  }, lab.text));
+              })),
+    React9.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", justifyContent: "center" } },
+      React9.createElement("span", { className: "panelSub" }, "\u05e0\u05d1\u05d7\u05e8\u05d5 " + chosen.length + " \u05de\u05e1\u05de\u05db\u05d9\u05dd"),
+      React9.createElement("button", {
+        type: "button",
+        className: "functionEditBtn",
+        style: { minWidth: 220, justifyContent: "center", gap: 8, opacity: chosen.length && !busy ? 1 : 0.5 },
+        disabled: !chosen.length || busy,
+        onClick: copy
+      }, busy ? "\u05de\u05db\u05d9\u05df\u2026" : "\u05d4\u05e2\u05ea\u05e7\u05ea \u05d4\u05d5\u05d3\u05e2\u05d4")),
+    note && React9.createElement("p", { className: "panelSub", style: { color: "#1a7f4b" } }, note),
+    err && React9.createElement("p", { style: { color: "#c0392b", fontSize: 12.5 } }, err)
   );
 }
 
@@ -21346,6 +21558,7 @@ function SubmittalCard({
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6(null);
   const [signAsClient, setSignAsClient] = useState6(false);
+  const [supOpen, setSupOpen] = useState6(false);
   // The records, with each one's filed decision merged over it.
   const list = (submittals || []).map((s) => sbMergeApproval(s, submittalApprovals));
   const label = (c) => sbText(c, lang);
@@ -21613,6 +21826,25 @@ function SubmittalCard({
 
   // While a submittal is open, the whole card is the form — the tiles would
   // only be noise on a page this dense.
+  // Sending out for approval is a screen of its own, reached from the board:
+  // it crosses every category, which is how the covering e-mail is written.
+  if (supOpen && canEdit) {
+    const rows = sbVisibleFor(list, "client").map((r) => ({
+      id: r.id,
+      no: sbNumber(r.category, r.seq),
+      desc: r.typeId || r.itemDescription || "",
+      due: r.requiredApprovalDate || "",
+      cat: sbText(boardCategoryOf(r.category) || { en: "", he: "" }, lang) || "",
+    }));
+    return sbH(SupervisionList, {
+      kind: "submittal",
+      projectId,
+      projectName,
+      rows,
+      onBack: () => setSupOpen(false),
+    });
+  }
+
   if (openId && draft) {
     if (canEdit && signAsClient) {
       return sbH(SubmittalReview, {
@@ -21699,6 +21931,23 @@ function SubmittalCard({
       )
     ),
     langSwitch,
+    canEdit
+      ? sbH(
+          "div",
+          { style: { display: "flex", justifyContent: "center", margin: "0 0 14px" } },
+          sbH(
+            "button",
+            {
+              type: "button",
+              className: "functionEditBtn",
+              style: { minWidth: 240, justifyContent: "center", gap: 8 },
+              onClick: () => setSupOpen(true)
+            },
+            sbH(SendIcon2, { size: 15, strokeWidth: 2 }),
+            sbH("span", null, "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7")
+          )
+        )
+      : null,
     sbH(
       "div",
       // The grid keeps a fixed direction so the tiles never jump to the other
