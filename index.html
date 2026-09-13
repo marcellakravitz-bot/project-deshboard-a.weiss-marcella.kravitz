@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.9.2026 · build 140";
+var APP_BUILD = "12.9.2026 · build 142";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5364,6 +5364,24 @@ function SubsTradePicker({ value, disabled, onChange }) {
 
 // The update log: the first place in this cube where she writes rather than
 // ticks. Newest first, because on site that is the one anybody opens.
+// Ask the server for an approval link and put it on the clipboard. Issuing a
+// new one withdraws whatever went out before, so a link sent to the wrong
+// address stops working the moment it is replaced. (12.9.26)
+async function supervisionLink({ projectId, kind, docId, rev }) {
+  const { data } = await supabase.auth.getSession();
+  const accessToken = data?.session?.access_token;
+  if (!accessToken) throw new Error("no session");
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/supervision`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ action: "issue", accessToken, projectId, kind, docId, rev }),
+  });
+  const out = await res.json();
+  if (!res.ok || !out.token) throw new Error(out.detail || out.error || "failed");
+  const base = location.href.split("?")[0].replace(/[^/]*$/, "");
+  return { url: `${base}Supervision/index-supervisor.html?t=${out.token}`, expiresAt: out.expiresAt };
+}
+
 // One call, one purpose: wake the phones on this trade. The dashboard proves
 // who it is with its own sign-in token, which the server checks. (11.9.26)
 async function subsAnnounce(projectId, trade) {
@@ -8329,7 +8347,6 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
     triggerDownload(url, `${sanitizeFileNamePart(projectName || "Project")} - ${c.title}.xlsx`);
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   };
-  const [savedNote, setSavedNote] = useState6(false);
   const [printAsk, setPrintAsk] = useState6(null);
   // The sheet is for whoever receives it, so the language is the one chosen on
   // the way to the printer — not the one this screen happens to be in.
@@ -10399,6 +10416,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [printAsk, setPrintAsk] = useState6(null);
   // Which row is being dragged, and the row the line is currently drawn above.
   const [drag, setDrag] = useState6(null);
+  const [savedNote, setSavedNote] = useState6(false);
   // The picture cell she last clicked. Ctrl+V lands there.
   const [pasteAt, setPasteAt] = useState6(null);
   // Which row has its schedule warning open. One at a time: the note is a
