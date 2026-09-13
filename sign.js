@@ -15,6 +15,12 @@
 // =============================================================================
 
 import React15, { useState as useState6, useRef as useRef5, useEffect as useEffect5 } from "react";
+import {
+  AirVent as AirVent2, Building2 as Building23, Cctv as Cctv2, Droplets as Droplets2,
+  FileText as FileTextIcon, Grid3x3 as Grid3x32, Layers as Layers2,
+  Lightbulb as Lightbulb2, PanelTop as PanelTop2, Zap as Zap2,
+  PenLine, Printer, Stamp
+} from "lucide-react";
 
 function printedStampText(lang) {
   const d = new Date();
@@ -1126,6 +1132,9 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
 
 export {
   PrintLangAsk,
+  sbSpecNoteList,
+  SubmittalSpecs,
+  SignaturePad,
   printedStampText,
   sanitizeFileNamePart,
   printSheetCss,
