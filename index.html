@@ -505,7 +505,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.9.2026 · build 143";
+var APP_BUILD = "12.9.2026 · build 144";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5375,8 +5375,17 @@ function supStateLabel(st) {
   if (st.openedAt) return { text: "\u05e0\u05e4\u05ea\u05d7 " + supFmt(st.openedAt), tone: "live" };
   return { text: "\u05d4\u05d5\u05e0\u05e4\u05e7 " + supFmt(st.issuedAt), tone: "live" };
 }
-async function supCopy(text) {
+async function supCopy(text, html) {
   try {
+    if (html && window.ClipboardItem && navigator.clipboard && navigator.clipboard.write) {
+      await navigator.clipboard.write([
+        new ClipboardItem({
+          "text/html": new Blob([html], { type: "text/html" }),
+          "text/plain": new Blob([text], { type: "text/plain" }),
+        }),
+      ]);
+      return true;
+    }
     await navigator.clipboard.writeText(text);
     return true;
   } catch (e) {
@@ -5395,6 +5404,20 @@ async function supCopy(text) {
   }
 }
 // The message she pastes into an e-mail. One document or many, same shape.
+function supMessageHtml({ projectName, kind, rows }) {
+  const esc = (x) => String(x == null ? "" : x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  const head = kind === "sd" ? "\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05ea\u05d5\u05db\u05e0\u05d9\u05d5\u05ea SD"
+                             : "\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd";
+  const body = rows.map((r) => {
+    const title = [r.no, r.desc].filter(Boolean).join(" - ");
+    const due = r.due ? `<div>\u05e0\u05d3\u05e8\u05e9 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3: ${esc(supFmt(r.due))}</div>` : "";
+    return `<p style="margin:0 0 14px"><b>${esc(title)}</b>${due}<a href="${esc(r.url)}">${esc(r.url)}</a></p>`;
+  }).join("");
+  return `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">` +
+    `<p style="margin:0 0 14px">\u05e9\u05dc\u05d5\u05dd,<br>${esc(head)}<br>\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 ${esc(projectName || "")}</p>` +
+    body +
+    `<p style="margin:0">\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3 \u05dc-30 \u05d9\u05d5\u05dd.</p></div>`;
+}
 function supMessage({ projectName, kind, rows }) {
   const head = kind === "sd"
     ? `\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05ea\u05d5\u05db\u05e0\u05d9\u05d5\u05ea SD`
@@ -5466,7 +5489,7 @@ function SupervisionList({ kind, projectId, projectName, rows, onBack }) {
         kind,
         rows: chosen.map((x) => ({ no: x.no, desc: x.desc, due: x.due, url: supUrl(r.tokens[x.id]) })),
       });
-      const ok = await supCopy(text);
+      const ok = await supCopy(text, supMessageHtml({ projectName, kind, rows: chosen.map((x) => ({ no: x.no, desc: x.desc, due: x.due, url: supUrl(r.tokens[x.id]) })) }));
       setNote(ok ? "\u05d4\u05d4\u05d5\u05d3\u05e2\u05d4 \u05d4\u05d5\u05e2\u05ea\u05e7\u05d4" : "\u05dc\u05d0 \u05e0\u05d9\u05ea\u05df \u05dc\u05d4\u05e2\u05ea\u05d9\u05e7 \u2014 \u05e1\u05de\u05e0\u05d5 \u05d5\u05d4\u05e2\u05ea\u05d9\u05e7\u05d5 \u05d9\u05d3\u05e0\u05d9\u05ea");
       const next = { ...(docs || {}) };
       chosen.forEach((x) => {
@@ -21943,8 +21966,9 @@ function SubmittalCard({
               style: { minWidth: 240, justifyContent: "center", gap: 8 },
               onClick: () => setSupOpen(true)
             },
-            sbH(SendIcon2, { size: 15, strokeWidth: 2 }),
-            sbH("span", null, "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7")
+            sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 10, flexDirection: "row-reverse" } },
+              sbH(SendIcon2, { size: 15, strokeWidth: 2 }),
+              sbH("span", null, "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7"))
           )
         )
       : null,
