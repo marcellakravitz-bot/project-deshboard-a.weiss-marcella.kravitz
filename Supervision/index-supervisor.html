@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#101114">
+<meta name="robots" content="noindex, nofollow">
+<title>אישור מסמך · א. וייס הנדסה</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#17181c; --steel:#5b5e66; --mist:#9a9da5;
+    --line:#e6e6e9; --surface:#ffffff; --bg:#f6f6f7;
+    --panel:#101114; --navy:#103460; --ok:#1a7f4b; --warn:#e08a12; --bad:#d02f2f;
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:'Assistant','Inter',sans-serif;-webkit-text-size-adjust:100%}
+  .num{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
+  .bar{position:sticky;top:0;z-index:5;background:var(--panel);color:#fff;
+    padding:calc(env(safe-area-inset-top) + 12px) 18px 12px;
+    display:flex;align-items:center;justify-content:center;min-height:52px}
+  .bar h1{margin:0;font-size:15px;font-weight:800}
+  .bar .logo{position:absolute;left:18px;top:50%;transform:translateY(-50%);height:24px}
+  .wrap{padding:20px 16px 40px;max-width:860px;margin:0 auto}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+    padding:20px;margin-bottom:16px}
+  .proj{text-align:center;margin-bottom:18px}
+  .proj .pn{font-size:17px;font-weight:800;display:block}
+  .proj .doc{font-size:14px;font-weight:700;color:var(--navy);margin-top:4px;display:block}
+  .proj .no{font-size:12.5px;color:var(--steel);margin-top:2px;display:block}
+  h2{font-size:14px;font-weight:800;margin:0 0 12px;color:var(--navy)}
+  .step{font-size:11px;font-weight:800;color:#fff;background:var(--navy);
+    border-radius:999px;padding:2px 9px;margin-inline-end:8px}
+  .files{display:flex;flex-wrap:wrap;gap:10px}
+  .file{display:flex;align-items:center;gap:8px;border:1px solid var(--line);
+    border-radius:10px;padding:10px 14px;background:#fafbfc;text-decoration:none;
+    color:var(--ink);font-size:13px;font-weight:700}
+  .file:hover{background:#f2f5f9}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media (max-width:640px){ .grid2{grid-template-columns:1fr} }
+  label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}
+  input[type=text],textarea{width:100%;font:inherit;font-size:15px;padding:10px 12px;
+    border:1px solid var(--line);border-radius:10px;background:#fff}
+  textarea{min-height:110px;resize:vertical}
+  .decs{display:flex;flex-direction:column;gap:10px}
+  .dec{display:flex;align-items:center;gap:10px;border:1px solid var(--line);
+    border-radius:12px;padding:12px 14px;cursor:pointer;background:#fff;font-size:14px;font-weight:700}
+  .dec input{width:18px;height:18px;accent-color:var(--navy)}
+  .dec.on{border-color:var(--navy);background:#f4f8fd}
+  .dec .ok{color:var(--ok)} .dec .warn{color:var(--warn)} .dec .bad{color:var(--bad)}
+  .drop{border:1px dashed var(--line);border-radius:12px;padding:18px;text-align:center;
+    color:var(--steel);font-size:13px;cursor:pointer;background:#fafbfc}
+  .drop img{max-height:90px;max-width:100%;display:block;margin:0 auto 8px}
+  .padWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
+  canvas{display:block;width:100%;height:180px;touch-action:none;cursor:crosshair}
+  .padBar{display:flex;justify-content:space-between;align-items:center;
+    padding:8px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--mist)}
+  .padBar button{border:none;background:transparent;color:var(--steel);font:inherit;
+    font-size:12.5px;font-weight:700;cursor:pointer;padding:4px}
+  .go{width:100%;margin-top:6px;padding:14px;border:none;border-radius:999px;
+    background:#c3c6cc;color:#fff;font:inherit;font-weight:800;font-size:16px;cursor:not-allowed;
+    display:flex;align-items:center;justify-content:center;gap:9px}
+  .go.ready{background:var(--navy);cursor:pointer}
+  .missing{margin:10px 0 0;font-size:12.5px;color:var(--steel);text-align:center}
+  .err{margin:12px 0 0;font-size:13px;color:var(--bad);text-align:center}
+  .locked{text-align:center}
+  .locked .tag{display:inline-block;font-size:13px;font-weight:800;padding:8px 16px;
+    border-radius:999px;margin-bottom:14px}
+  .locked p{font-size:14px;line-height:1.8;color:var(--steel);margin:0 0 18px}
+  .foot{padding:24px 16px calc(env(safe-area-inset-bottom) + 20px);text-align:center;
+    font-size:11px;color:var(--mist)}
+  .lead{text-align:center;color:var(--steel);font-size:14px;padding:40px 0}
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>אישור מסמך</h1>
+</div>
+<main id="app" class="wrap"><p class="lead">טוען…</p></main>
+<p class="foot">א. וייס הנדסה · 12.9.2026 · build 1</p>
+
+<script>
+// ---------------------------------------------------------------------------
+// The supervisor's page. It holds nothing and decides nothing: the link in the
+// address bar is the only thing it knows, and every answer comes from the
+// server. There is no account here and no way to reach any other document.
+//
+// Downloading is looking, not acting — the link stays open. Only a decision,
+// with what that decision requires, closes it. (12.9.26)
+// ---------------------------------------------------------------------------
+var API = "https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/supervision";
+var TOKEN = new URLSearchParams(location.search).get("t") || "";
+
+var DECISIONS = [
+  { key:"approved",     t:"מאושר",                                  cls:"ok",   sign:true  },
+  { key:"approvedNoted",t:"מאושר בכפוף להערות",                     cls:"ok",   sign:true,  needsText:true },
+  { key:"revise",       t:"נדרש להגיש טופס חדש (בכפוף להערות)",     cls:"warn", sign:false, needsText:true },
+  { key:"rejected",     t:"לא מאושר",                               cls:"bad",  sign:false, needsText:true }
+];
+
+var state = { doc:null, decision:null, stamp:null, signature:null, sending:false, err:null };
+var app = document.getElementById("app");
+
+function esc(x){ return String(x==null?"":x).replace(/[&<>"]/g,function(c){
+  return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
+function call(body){
+  return fetch(API,{ method:"POST", headers:{"content-type":"application/json"},
+    body:JSON.stringify(Object.assign({ token:TOKEN }, body)) })
+    .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, data:j }; }); });
+}
+function dec(){ return DECISIONS.filter(function(d){ return d.key===state.decision })[0] || null; }
+
+// ---------------------------------------------------------------- the header
+function head(d){
+  return '<div class="proj">'+
+    '<span class="pn">'+esc(d.project||"")+'</span>'+
+    '<span class="doc">'+(d.kind==="sd"?"תוכנית ייצור (SD)":"סבמיטל")+'</span>'+
+    '<span class="no num">'+esc(d.no||"")+'</span>'+
+  '</div>';
+}
+function filesBlock(d){
+  if(!d.files || !d.files.length) return '<p class="missing">לא צורפו קבצים למסמך זה.</p>';
+  return '<div class="files">'+d.files.map(function(f,i){
+    return '<a class="file" href="'+esc(f.url)+'" target="_blank" rel="noopener" data-dl="'+i+'">'+
+      '<span>⤓</span><span>'+esc(f.name||"מסמך")+'</span></a>';
+  }).join("")+'</div>';
+}
+
+// --------------------------------------------------------------- the locked view
+function lockedView(d){
+  var chosen = DECISIONS.filter(function(x){ return x.key===d.decision })[0];
+  var colour = chosen && chosen.cls==="bad" ? "#fdeaea" : chosen && chosen.cls==="warn" ? "#fdf3e2" : "#e9f6ee";
+  var ink = chosen && chosen.cls==="bad" ? "#a01d1d" : chosen && chosen.cls==="warn" ? "#8a5a08" : "#14532d";
+  var why = d.state==="revoked" ? "הקישור בוטל על ידי מנהלת הפרויקט."
+          : d.state==="expired" ? "תוקף הקישור פג."
+          : "המסמך כבר נבדק ונשלחה עליו החלטה.";
+  app.innerHTML = head(d)+
+    '<div class="card locked">'+
+      (chosen ? '<span class="tag" style="background:'+colour+';color:'+ink+'">'+esc(chosen.t)+'</span>' : '')+
+      '<p>'+esc(why)+'<br>לא ניתן לבצע שינויים נוספים דרך קישור זה.</p>'+
+      filesBlock(d)+
+    '</div>';
+  wireDownloads(d);
+}
+
+// ------------------------------------------------------------------ the form
+function formView(d){
+  var chosen = dec();
+  var needSign = !!(chosen && chosen.sign);
+  app.innerHTML = head(d)+
+    '<div class="card"><h2>המסמך</h2>'+filesBlock(d)+
+      '<p class="missing">הורדת המסמך אינה סוגרת את הקישור. אפשר לחזור אליו עד למתן החלטה.</p></div>'+
+
+    '<div class="card"><h2><span class="step">1</span>פרטי החותם</h2>'+
+      '<div class="grid2">'+
+        '<div><label for="nm">שם מלא של המפקח</label><input id="nm" type="text" value="'+esc(state.name||"")+'"></div>'+
+        '<div><label for="co">חברת פיקוח</label><input id="co" type="text" value="'+esc(state.company||"")+'"></div>'+
+      '</div></div>'+
+
+    '<div class="card"><h2>החלטה</h2><div class="decs">'+
+      DECISIONS.map(function(x){
+        return '<label class="dec'+(state.decision===x.key?" on":"")+'">'+
+          '<input type="radio" name="dec" value="'+x.key+'"'+(state.decision===x.key?" checked":"")+'>'+
+          '<span class="'+x.cls+'">'+esc(x.t)+'</span></label>';
+      }).join("")+
+    '</div>'+
+    '<div style="margin-top:14px"><label for="cm">'+
+      (chosen && chosen.needsText ? "הערות / סיבה (חובה)" : "הערות")+
+    '</label><textarea id="cm">'+esc(state.comments||"")+'</textarea></div></div>'+
+
+    (needSign
+      ? '<div class="card"><h2><span class="step">2</span>חותמת החברה</h2>'+
+          '<label class="drop" id="stampDrop">'+
+            (state.stamp?'<img src="'+state.stamp+'" alt="">':"")+
+            (state.stamp?"לחצו להחלפת החותמת":"לחצו להעלאת חותמת · PNG שקוף מומלץ")+
+            '<input id="stampFile" type="file" accept="image/*,application/pdf" style="display:none">'+
+          '</label></div>'+
+
+        '<div class="card"><h2><span class="step">3</span>חתימה ידנית</h2>'+
+          '<div class="padWrap"><canvas id="pad"></canvas>'+
+            '<div class="padBar"><span>חתמו בתוך המסגרת</span>'+
+            '<button type="button" id="padClear">ניקוי</button></div></div></div>'
+      : "")+
+
+    '<div class="card">'+
+      '<button class="go'+(canSend()?" ready":"")+'" id="send">'+
+        '<span>➤</span><span>'+(state.sending?"שולח…":"אישור ושלח")+'</span></button>'+
+      (canSend()?"":'<p class="missing">'+esc(whatIsMissing())+'</p>')+
+      (state.err?'<p class="err">'+esc(state.err)+'</p>':"")+
+    '</div>';
+
+  wireForm(d, needSign);
+}
+
+function readInputs(){
+  var g=function(id){ var el=document.getElementById(id); return el?el.value:""; };
+  state.name=g("nm"); state.company=g("co"); state.comments=g("cm");
+}
+function canSend(){
+  var c=dec();
+  if(!c) return false;
+  if(!(state.name||"").trim() || !(state.company||"").trim()) return false;
+  if(c.needsText && !(state.comments||"").trim()) return false;
+  if(c.sign && (!state.stamp || !state.signature)) return false;
+  return !state.sending;
+}
+function whatIsMissing(){
+  var c=dec();
+  if(!c) return "יש לבחור החלטה.";
+  var miss=[];
+  if(!(state.name||"").trim()) miss.push("שם מלא");
+  if(!(state.company||"").trim()) miss.push("חברת פיקוח");
+  if(c.needsText && !(state.comments||"").trim()) miss.push(c.key==="approvedNoted"?"הערות":"סיבה");
+  if(c.sign && !state.stamp) miss.push("חותמת חברה");
+  if(c.sign && !state.signature) miss.push("חתימה ידנית");
+  return miss.length ? "חסר: "+miss.join(" · ") : "";
+}
+
+function wireDownloads(d){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-dl]"), function(a){
+    a.addEventListener("click", function(){
+      var f=(d.files||[])[Number(a.getAttribute("data-dl"))]||{};
+      call({ action:"downloaded", name:f.name||"" });
+    });
+  });
+}
+
+function wireForm(d, needSign){
+  wireDownloads(d);
+  ["nm","co","cm"].forEach(function(id){
+    var el=document.getElementById(id);
+    if(!el) return;
+    el.addEventListener("input", function(){
+      readInputs();
+      var btn=document.getElementById("send");
+      if(btn){ btn.className="go"+(canSend()?" ready":""); }
+      var note=document.querySelector(".missing:last-of-type");
+      if(note && note.textContent.indexOf("חסר")===0) note.textContent=whatIsMissing();
+    });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll('input[name=dec]'), function(r){
+    r.addEventListener("change", function(){
+      readInputs();
+      state.decision=r.value;
+      state.err=null;
+      formView(d);
+    });
+  });
+
+  if(needSign){
+    var file=document.getElementById("stampFile");
+    if(file) file.addEventListener("change", function(){
+      var f=file.files && file.files[0];
+      if(!f) return;
+      var fr=new FileReader();
+      fr.onload=function(){ readInputs(); state.stamp=fr.result; formView(d); };
+      fr.readAsDataURL(f);
+    });
+    setupPad(d);
+  }
+
+  var send=document.getElementById("send");
+  if(send) send.addEventListener("click", function(){
+    readInputs();
+    if(!canSend()) return;
+    state.sending=true; state.err=null; formView(d);
+    call({
+      action:"sign",
+      decision:state.decision,
+      name:state.name,
+      company:state.company,
+      comments:state.comments,
+      stamp:state.stamp,
+      signature:state.signature
+    }).then(function(r){
+      state.sending=false;
+      if(!r.ok){
+        state.err = r.data && r.data.error === "closed"
+          ? "המסמך כבר נבדק. רעננו את העמוד."
+          : "השליחה נכשלה. "+((r.data&&(r.data.detail||r.data.error))||"");
+        formView(d);
+        return;
+      }
+      load();
+    }).catch(function(){
+      state.sending=false;
+      state.err="אין חיבור לשרת. נסו שוב.";
+      formView(d);
+    });
+  });
+}
+
+// A signature is drawn, not typed. The canvas is sized to its box so the
+// stroke lands where the pen is, on a desktop mouse or a tablet.
+function setupPad(d){
+  var c=document.getElementById("pad");
+  if(!c) return;
+  var rect=c.getBoundingClientRect();
+  c.width=Math.round(rect.width*2);
+  c.height=Math.round(rect.height*2);
+  var ctx=c.getContext("2d");
+  ctx.scale(2,2);
+  ctx.lineWidth=2; ctx.lineCap="round"; ctx.lineJoin="round"; ctx.strokeStyle="#17181c";
+  if(state.signature){
+    var img=new Image();
+    img.onload=function(){ ctx.drawImage(img,0,0,rect.width,rect.height); };
+    img.src=state.signature;
+  }
+  var drawing=false, dirty=false;
+  var at=function(e){
+    var r=c.getBoundingClientRect();
+    var p=e.touches?e.touches[0]:e;
+    return { x:p.clientX-r.left, y:p.clientY-r.top };
+  };
+  var start=function(e){ e.preventDefault(); drawing=true; var p=at(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); };
+  var move=function(e){ if(!drawing) return; e.preventDefault(); var p=at(e); ctx.lineTo(p.x,p.y); ctx.stroke(); dirty=true; };
+  var end=function(){ if(!drawing) return; drawing=false; if(dirty) state.signature=c.toDataURL("image/png"); syncBtn(); };
+  c.addEventListener("mousedown",start); c.addEventListener("mousemove",move);
+  window.addEventListener("mouseup",end);
+  c.addEventListener("touchstart",start,{passive:false});
+  c.addEventListener("touchmove",move,{passive:false});
+  c.addEventListener("touchend",end);
+  var clear=document.getElementById("padClear");
+  if(clear) clear.addEventListener("click", function(){
+    ctx.clearRect(0,0,c.width,c.height); state.signature=null; dirty=false; syncBtn();
+  });
+  function syncBtn(){
+    readInputs();
+    var btn=document.getElementById("send");
+    if(btn) btn.className="go"+(canSend()?" ready":"");
+    var note=document.querySelector(".card:last-child .missing");
+    if(note) note.textContent=whatIsMissing();
+  }
+}
+
+// ------------------------------------------------------------------- loading
+function load(){
+  if(!TOKEN){ app.innerHTML='<p class="lead">קישור לא תקין.</p>'; return; }
+  app.innerHTML='<p class="lead">טוען…</p>';
+  call({ action:"open" }).then(function(r){
+    if(!r.ok || !r.data || r.data.error){
+      app.innerHTML='<p class="lead">'+(r.status===404?"הקישור אינו קיים או שבוטל.":"אירעה תקלה. נסו שוב.")+'</p>';
+      return;
+    }
+    var d=r.data;
+    state.doc=d;
+    if(d.missing){ app.innerHTML='<p class="lead">המסמך אינו זמין.</p>'; return; }
+    if(d.state!=="open"){ lockedView(d); return; }
+    formView(d);
+  }).catch(function(){
+    app.innerHTML='<p class="lead">אין חיבור לשרת. נסו שוב.</p>';
+  });
+}
+load();
+</script>
+</body>
+</html>
