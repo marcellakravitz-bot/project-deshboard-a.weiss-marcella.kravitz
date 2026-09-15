@@ -24,6 +24,76 @@ import {
 // The print-language question and the signature pad open over the page, so
 // they are portalled to the body — the same way the dashboard does it.
 import { createPortal } from "react-dom";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+
+var SUBMITTAL_BUCKET = "submittals";var SB_PRINT_PAGE_CAP = 40;
+// An attachment with no page list covers the whole file. One that has a list
+// covers exactly those pages — that is how a product gets only its own spec.
+async function loadPdfJs() {
+  if (typeof window !== "undefined" && window.pdfjsLib) return window.pdfjsLib;
+  if (pdfJsLoadingPromise) return pdfJsLoadingPromise;
+  pdfJsLoadingPromise = (async () => {
+    let lastErr = null;
+    for (const source of PDFJS_SOURCES) {
+      try {
+        await loadScriptOnce(source.lib);
+        if (!window.pdfjsLib) throw new Error("pdfjsLib not defined after script load");
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = source.worker;
+        return window.pdfjsLib;
+      } catch (e) {
+        lastErr = e;
+        console.error("PDF.js source failed:", source.lib, e);
+      }
+    }
+    pdfJsLoadingPromise = null;
+    throw lastErr || new Error("All PDF.js sources failed to load");
+  })();
+  return pdfJsLoadingPromise;
+}var supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== "undefined" && window.sessionStorage ? window.sessionStorage : void 0
+  }
+});
+// Bump this when the disclaimer wording changes; each acceptance records which
+// version the user agreed to (their "signature").
+
+var SUPABASE_URL = "https://jvssavyfjuhjniqkiymo.supabase.co";
+var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9FY_yBz2KLVfVYdxPbvBHw_Xx233xC4";
+var PRINT_PAGE_MM = 210;
+// The white edge of the paper. 12mm is the measurement the reports were set up
+// with and the one she signed off on; 8mm put the frame too close to the edge
+// (30.8.26).var PRINT_MARGIN_MM = 12;
+// A4 landscape is 297mm across. The frame lives inside the margin on all four
+// sides, so its box is the paper less twice the margin.var PRINT_WIDE_MM = 297;
+// ---------------------------------------------------------------------------
+//  One shell for every document this app issues (7.9.26)
+//
+//  The drawings register, the ordering board, the schedule, the contacts
+//  sheet, the submittal form and the user list are all the same piece of
+//  paper: an A4 sheet, a rounded frame set in from all four edges, the
+//  company strip at the foot of the sheet and the printed-on line under it.
+//  Each builder used to write its own version of that and they had drifted
+//  apart — different margins, different footers, different behaviour on the
+//  last page. They share this shell now, so a change here is a change to
+//  every document she issues.
+//
+//  Two measurements are worth spelling out, because both were bugs she had
+//  to find on paper:
+//
+//  * The sheet is the WHOLE page and the white edge is this box's padding,
+//    not a @page margin. A @page margin leaves the browser's own margin
+//    setting free to disagree with ours, and when it does a fixed-width
+//    frame has nowhere to put the difference: in an RTL document all of it
+//    lands on one side and the frame sits hard against the other edge of
+//    the paper. Padding cannot drift — the frame is centred by the sheet.
+//
+//  * The frame is the full height of the sheet on EVERY page, the last one
+//    included. A frame that closes under the last row reads as a page that
+//    was cut short rather than a page that ended.
+// ---------------------------------------------------------------------------
 
 function printedStampText(lang) {
   const d = new Date();
@@ -790,7 +860,12 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 // for and lives only in the print window.
 function sbPrint(rec, lang, brand, signatures) {
   const w = window.open("", "_blank");
-  if (!w) return;
+  if (!w) {
+    window.alert(lang === "he"
+      ? "\u05d4\u05d3\u05e4\u05d3\u05e4\u05df \u05d7\u05e1\u05dd \u05d0\u05ea \u05d7\u05dc\u05d5\u05df \u05d4\u05de\u05e1\u05de\u05da. \u05d9\u05e9 \u05dc\u05d0\u05e4\u05e9\u05e8 \u05d7\u05dc\u05d5\u05e0\u05d5\u05ea \u05e7\u05d5\u05e4\u05e6\u05d9\u05dd \u05dc\u05d0\u05ea\u05e8 \u05d5\u05dc\u05e0\u05e1\u05d5\u05ea \u05e9\u05d5\u05d1."
+      : "The browser blocked the document window. Allow pop-ups for this site and try again.");
+    return;
+  }
   const waiting = lang === "he" ? "\u05de\u05db\u05d9\u05df \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da\u2026" : "Preparing the document\u2026";
   w.document.open();
   w.document.write(`<html><head><meta charset="utf-8"></head><body style="font-family:Arial,sans-serif;padding:60px;text-align:center;color:#6b7280"><p id="sbmsg">${sbEsc(waiting)}</p></body></html>`);
@@ -1640,6 +1715,15 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
 
 export {
   PrintLangAsk,
+  PRINT_PAGE_MM,
+  PRINT_MARGIN_MM,
+  PRINT_WIDE_MM,
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  SUBMITTAL_BUCKET,
+  SB_PRINT_PAGE_CAP,
+  loadPdfJs,
+  supabase,
   sbPagesOf,
   sbRenderSpecPages,
   sbSpecNoteList,

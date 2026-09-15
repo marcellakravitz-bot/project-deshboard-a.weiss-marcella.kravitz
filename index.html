@@ -67,6 +67,15 @@
 import React15, { useState as useState6, useRef as useRef5, useEffect as useEffect5 } from "react";
 import {
   PrintLangAsk,
+  PRINT_PAGE_MM,
+  PRINT_MARGIN_MM,
+  PRINT_WIDE_MM,
+  SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY,
+  SUBMITTAL_BUCKET,
+  SB_PRINT_PAGE_CAP,
+  loadPdfJs,
+  supabase,
   sbPagesOf,
   sbRenderSpecPages,
   sbSpecNoteList,
@@ -137,9 +146,6 @@ import {
 // Row Level Security) and safe to ship in the browser. The secret key and the
 // database password are never placed here.
 import { createPortal } from "react-dom";
-import { createClient as createSupabaseClient } from "@supabase/supabase-js";
-var SUPABASE_URL = "https://jvssavyfjuhjniqkiymo.supabase.co";
-var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9FY_yBz2KLVfVYdxPbvBHw_Xx233xC4";
 // Capture the landing URL at the earliest possible moment — supabase-js strips
 // the auth tokens from the URL as soon as it initializes, so we must read them
 // before creating the client (used to detect invite / password-recovery links).
@@ -151,16 +157,7 @@ var AWDASH_LOOKS_LIKE_INVITE = /type=(invite|recovery|signup)/.test(AWDASH_INITI
 // me for weeks": sessionStorage belongs to the tab, so reloading keeps the
 // session and closing the browser ends it. On a shared site office machine that
 // is the behaviour you want.
-var supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: typeof window !== "undefined" && window.sessionStorage ? window.sessionStorage : void 0
-  }
-});
-// Bump this when the disclaimer wording changes; each acceptance records which
-// version the user agreed to (their "signature").
+
 var DISCLAIMER_VERSION = "1.0";
 var BRAND_PALETTES = [
   { key: "navy", nameHe: "נייבי", nameEn: "Navy", accent: "#1A559E", ink: "#103460", soft: "#eceef1" },
@@ -541,7 +538,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "13.9.2026 · build 154";
+var APP_BUILD = "13.9.2026 · build 160";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -4291,27 +4288,7 @@ function loadScriptOnce(src) {
   });
 }
 var pdfJsLoadingPromise = null;
-async function loadPdfJs() {
-  if (typeof window !== "undefined" && window.pdfjsLib) return window.pdfjsLib;
-  if (pdfJsLoadingPromise) return pdfJsLoadingPromise;
-  pdfJsLoadingPromise = (async () => {
-    let lastErr = null;
-    for (const source of PDFJS_SOURCES) {
-      try {
-        await loadScriptOnce(source.lib);
-        if (!window.pdfjsLib) throw new Error("pdfjsLib not defined after script load");
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc = source.worker;
-        return window.pdfjsLib;
-      } catch (e) {
-        lastErr = e;
-        console.error("PDF.js source failed:", source.lib, e);
-      }
-    }
-    pdfJsLoadingPromise = null;
-    throw lastErr || new Error("All PDF.js sources failed to load");
-  })();
-  return pdfJsLoadingPromise;
-}
+
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -5866,7 +5843,7 @@ var SUBS_TRADE_SUBMITTAL_CATS = {
   electric: ["electrical", "lighting", "security"],
   plumbing: ["plumbing"],
   security: ["security"],
-  drywall: [],
+  drywall: ["ceiling", "cladding"],
   paint: []
 };
 var SUBS_CELL = { padding: "10px 12px", borderBottom: "1px solid var(--line)", fontSize: 13, verticalAlign: "top" };
@@ -5883,7 +5860,7 @@ function SubsShell({ title, children }) {
 }
 
 // --------------------------------------------------------------- submittals
-function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, printBrand, boqData, boqFlags, submittalChkOff, pickedCat, onPickCat, onClearCat }) {
+function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, onChangeApprovals, projectId, printBrand, boqData, boqFlags, submittalChkOff, pickedCat, onPickCat, onClearCat }) {
   const [openId, setOpenId] = React9.useState(null);
   // An electrician carries three folders. Thirty lines of three kinds in one
   // scroll is worse than three doors. The choice is held by the card so that
@@ -5961,7 +5938,27 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, 
         type: "button",
         className: "functionEditBtn",
         style: { minWidth: 220, justifyContent: "center", gap: 8 },
-        onClick: () => sbPrint({ ...open, reviews: [((submittalApprovals || {})[open.id] || {}).review || (open.reviews || [])[0] || {}] }, "he", printBrand, null)
+        onClick: async () => {
+          const ap = (submittalApprovals || {})[open.id] || {};
+          const rv = ap.review || (open.reviews || [])[0] || {};
+          const doc = { ...open, reviews: [rv] };
+          sbPrint(doc, "he", printBrand, null);
+          if (!ap.doc && onChangeApprovals) {
+            try {
+              const html = sbBuildPrintHtml(doc, "he", printBrand, [], null);
+              const name = `${sbNumber(open.category, open.seq)}.html`;
+              const file = new File([html], name, { type: "text/html" });
+              const stored = await subsUploadFile(projectId, "signed", file);
+              onChangeApprovals({
+                ...(submittalApprovals || {}),
+                [open.id]: { ...ap, doc: { ...stored, name, type: "text/html" } },
+              });
+            } catch (e) {
+              // A copy that could not be kept must never stop her reading it.
+              console.warn("[awdash] could not keep a copy of the signed submittal", e);
+            }
+          }
+        }
       },
         React9.createElement(Printer, { size: 15, strokeWidth: 2 }),
         React9.createElement("span", null, "\u05e6\u05e4\u05d9\u05d9\u05d4 \u05d1\u05de\u05e1\u05de\u05da \u05d4\u05d7\u05ea\u05d5\u05dd")),
@@ -6456,7 +6453,7 @@ function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange 
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, submittalApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail }) {
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
@@ -6616,7 +6613,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
 
   if (view === "board" && trade && section === "submittal") {
     return React9.createElement(SubsSubmittalList, {
-      trade, tradeLabel: tradeOf(trade).label || "", submittals, submittalApprovals, printBrand, boqData, boqFlags, submittalChkOff,
+      trade, tradeLabel: tradeOf(trade).label || "", submittals, submittalApprovals, onChangeApprovals, projectId, printBrand, boqData, boqFlags, submittalChkOff,
       pickedCat: subCat,
       onPickCat: (k) => goDeeper(() => setSubCat(k)),
       onClearCat: () => { try { window.history.back(); } catch (e) {} },
@@ -8075,7 +8072,7 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
@@ -10225,40 +10222,7 @@ function boardXlsxPlain(opts) {
 // house template: the coloured frame, the logo, the centred title, the footer.
 // A4 landscape is 210mm tall; the page margin is what keeps the frame off the
 // edge of the paper.
-var PRINT_PAGE_MM = 210;
-// The white edge of the paper. 12mm is the measurement the reports were set up
-// with and the one she signed off on; 8mm put the frame too close to the edge
-// (30.8.26).
-var PRINT_MARGIN_MM = 12;
-// A4 landscape is 297mm across. The frame lives inside the margin on all four
-// sides, so its box is the paper less twice the margin.
-var PRINT_WIDE_MM = 297;
-// ---------------------------------------------------------------------------
-//  One shell for every document this app issues (7.9.26)
-//
-//  The drawings register, the ordering board, the schedule, the contacts
-//  sheet, the submittal form and the user list are all the same piece of
-//  paper: an A4 sheet, a rounded frame set in from all four edges, the
-//  company strip at the foot of the sheet and the printed-on line under it.
-//  Each builder used to write its own version of that and they had drifted
-//  apart — different margins, different footers, different behaviour on the
-//  last page. They share this shell now, so a change here is a change to
-//  every document she issues.
-//
-//  Two measurements are worth spelling out, because both were bugs she had
-//  to find on paper:
-//
-//  * The sheet is the WHOLE page and the white edge is this box's padding,
-//    not a @page margin. A @page margin leaves the browser's own margin
-//    setting free to disagree with ours, and when it does a fixed-width
-//    frame has nowhere to put the difference: in an RTL document all of it
-//    lands on one side and the frame sits hard against the other edge of
-//    the paper. Padding cannot drift — the frame is centred by the sheet.
-//
-//  * The frame is the full height of the sheet on EVERY page, the last one
-//    included. A frame that closes under the last row reads as a page that
-//    was cut short rather than a page that ended.
-// ---------------------------------------------------------------------------
+
 function printPaginateJs(stampText) {
   return `<script>
 (function () {
@@ -17063,7 +17027,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
 // whole document, no runtime translation.
 // -----------------------------------------------------------------------------
 import { Sparkles, Trash2, FileText as FileTextIcon, ImagePlus, Pencil, RotateCcw, PenLine, Stamp, Save as SaveIcon2, SendHorizonal as SendIcon2, Globe as Globe2 } from "lucide-react";
-var SUBMITTAL_BUCKET = "submittals";
+
 var BOARD_ONLY_CATEGORIES = [
   { key: "joinery", en: "Joinery", he: "נגרות", icon: Hammer2, boardOnly: true }
 ];
@@ -17771,9 +17735,6 @@ async function sbExtractPdfText(file) {
 // name it offers in "Save as PDF", so this is the name on her disk: the
 // project, the discipline, the serial with its revision, and the day it was
 // produced — enough to tell two saves of the same submittal apart (30.8.26).
-var SB_PRINT_PAGE_CAP = 40;
-// An attachment with no page list covers the whole file. One that has a list
-// covers exactly those pages — that is how a product gets only its own spec.
 
 var SB_AI_IMAGE_PAGES = 5;
 async function sbRenderSpecImages(rec, maxPages) {
