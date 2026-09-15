@@ -1,6 +1,6 @@
 // =============================================================================
 //  sign.js — the review-and-approval screen, and nothing else.
-//  A. Weiss project dashboard · 12.9.2026
+//  A. Weiss project dashboard · 15.9.2026 — carries its own CSS (signCss)
 // =============================================================================
 //
 //  One screen, one copy of it. The dashboard imports it for the client, and the
@@ -19,7 +19,9 @@ import {
   AirVent as AirVent2, Building2 as Building23, Cctv as Cctv2, Droplets as Droplets2,
   FileText as FileTextIcon, Grid3x3 as Grid3x32, Layers as Layers2,
   Lightbulb as Lightbulb2, PanelTop as PanelTop2, Zap as Zap2,
-  PenLine, Printer, Stamp, Upload as Upload3, X as X4, ArrowLeft, ArrowRight
+  PenLine, Printer, Stamp, Upload as Upload3, X as X4, ArrowLeft, ArrowRight,
+  // the drawing-signing screen keeps its own aliases (moved here 15.9.26)
+  Download as DownloadSd, PenLine as PenLineSd, X as XSd, Move as MoveSd, Check as CheckSd, Stamp as StampSd, ArrowLeft as ArrowLeftSd, ArrowRight as ArrowRightSd
 } from "lucide-react";
 // The print-language question and the signature pad open over the page, so
 // they are portalled to the body — the same way the dashboard does it.
@@ -1080,7 +1082,7 @@ function SubmittalSpecs({ rec, lang, isRTL, notes, canNote, onChangeNotes, curre
           canNote
             ? sbH(
                 "button",
-                { type: "button", className: `ghostBtn small ${noteMode ? "on" : ""}`.trim(), onClick: () => { setNoteMode(!noteMode); setEditing(null); } },
+                { type: "button", className: `sgGhost small ${noteMode ? "on" : ""}`.trim(), onClick: () => { setNoteMode(!noteMode); setEditing(null); } },
                 sbH(PenLine, { size: 14, strokeWidth: 2 }),
                 " ",
                 noteMode ? L("specsNotesOff") : L("specsNotesOn")
@@ -1089,7 +1091,7 @@ function SubmittalSpecs({ rec, lang, isRTL, notes, canNote, onChangeNotes, curre
           sbH("span", { style: { flex: 1 } }),
           sbH(
             "button",
-            { type: "button", className: "drawerClose", onClick: onClose, "aria-label": L("close") || "X" },
+            { type: "button", className: "sgClose", onClick: onClose, "aria-label": L("close") || "X" },
             sbH(X4, { size: 16, strokeWidth: 2 })
           )
         ),
@@ -1152,7 +1154,7 @@ function SubmittalSpecs({ rec, lang, isRTL, notes, canNote, onChangeNotes, curre
                               "div",
                               { className: "sbSpecsNoteRow" },
                               sbH("button", { type: "button", className: "sbLinkBtn muted", onClick: () => setEditing(null) }, L("specsNoteRemove")),
-                              sbH("button", { type: "button", className: "functionEditBtn", onClick: keep }, L("specsNoteDone"))
+                              sbH("button", { type: "button", className: "sgBtn", onClick: keep }, L("specsNoteDone"))
                             )
                           )
                         : null
@@ -1341,7 +1343,7 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
           { className: "sigStampRow" },
           sbH(
             "label",
-            { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } },
+            { className: "sgGhost small", style: { cursor: "pointer", fontFamily: "inherit" } },
             sbH(Upload3, { size: 14, strokeWidth: 2 }),
             " ",
             stamp ? t("החלפת חותמת", "Replace stamp") : t("העלאת חותמת", "Upload a stamp"),
@@ -1356,10 +1358,10 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
           { className: "sigPadRow" },
           sbH("button", { type: "button", className: "sbLinkBtn muted", onClick: clear }, t("ניקוי", "Clear")),
           sbH("span", { style: { flex: 1 } }),
-          sbH("button", { type: "button", className: "ghostBtn small", onClick: onCancel }, t("ביטול", "Cancel")),
+          sbH("button", { type: "button", className: "sgGhost small", onClick: onCancel }, t("ביטול", "Cancel")),
           sbH(
             "button",
-            { type: "button", className: "functionEditBtn", disabled: !dirty && !stamp, onClick: done },
+            { type: "button", className: "sgBtn", disabled: !dirty && !stamp, onClick: done },
             t("אישור החתימה", "Confirm signature")
           )
         )
@@ -1488,8 +1490,8 @@ function PrintLangAsk({ onPick, onClose, withAudience }) {
           { className: "printAskBtns" },
           // The window that actually prints is opened inside this click, so the
           // browser still counts it as a gesture and does not block the popup.
-          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => pick("he") }, "עברית"),
-          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => pick("en") }, "English")
+          sbH("button", { type: "button", className: "sgBtn", onClick: () => pick("he") }, "עברית"),
+          sbH("button", { type: "button", className: "sgBtn", onClick: () => pick("en") }, "English")
         ),
         sbH("button", { type: "button", className: "sbLinkBtn printAskCancel", onClick: onClose }, "ביטול · Cancel")
       )
@@ -1564,7 +1566,7 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
       { className: "sbFormHeadSide start" },
       sbH(
         "button",
-        { type: "button", className: "loginBack", onClick: onCancel },
+        { type: "button", className: "sgBack", onClick: onCancel },
         sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }),
         " ",
         L("back")
@@ -1588,7 +1590,7 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
       specCount
         ? sbH(
             "button",
-            { type: "button", className: "ghostBtn small", onClick: () => setSpecsOpen(true) },
+            { type: "button", className: "sgGhost small", onClick: () => setSpecsOpen(true) },
             sbH(FileTextIcon, { size: 14, strokeWidth: 2 }),
             " ",
             L("specsView"),
@@ -1597,7 +1599,7 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
         : null,
       sbH(
         "button",
-        { type: "button", className: "ghostBtn small", title: L("pdfHint"), onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures)) },
+        { type: "button", className: "sgGhost small", title: L("pdfHint"), onClick: () => setPrintAsk(() => (lg) => sbPrint(d, lg, printBrand, userSignatures)) },
         sbH(Printer, { size: 14, strokeWidth: 2 }),
         " ",
         L("print")
@@ -1704,7 +1706,7 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
               { className: "sbSaveRow" },
               sbH(
                 "button",
-                { type: "button", className: "functionEditBtn", disabled: !ready, onClick: file },
+                { type: "button", className: "sgBtn", disabled: !ready, onClick: file },
                 L("fileDecision")
               )
             ),
@@ -1739,6 +1741,1222 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
   );
 }
 
+
+
+// ---------------------------------------------------------------------------
+//  Moved here 15.9.2026 (build 168) from index.html.
+//
+//  The supervision page has to offer a supervisor the same signing the site
+//  offers the client, and for a drawing that means this screen: the marks on
+//  the plan, the stamp, the pen, and the burn into a new PDF. It lived in the
+//  dashboard, so only the dashboard could show it. It lives here now, and the
+//  dashboard imports it back — one copy, two pages, same as the submittal
+//  review above it.
+//
+//  The five general helpers below (fileToDataUrl, boardFileName, sbToday,
+//  sbFileUrl, sbClipboardImage) came with it for the same reason: this screen
+//  needs them and the dashboard already imports this file.
+// ---------------------------------------------------------------------------
+
+function fileToDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function boardFileName(projectName, docName, ext) {
+  const day = new Date();
+  const stamp = `${String(day.getDate()).padStart(2, "0")}.${String(day.getMonth() + 1).padStart(2, "0")}.${String(day.getFullYear()).slice(2)}`;
+  const parts = [sanitizeFileNamePart(projectName || "Project"), docName, stamp].filter(Boolean);
+  return `${parts.join(" - ")}${ext ? `.${ext}` : ""}`;
+}
+
+function sbToday() {
+  const d = new Date();
+  const p = (x) => String(x).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+async function sbFileUrl(att) {
+  if (!att) return null;
+  if (att.inline && att.dataUrl) return dataUrlToBlobUrl(att.dataUrl, att.name) || att.dataUrl;
+  if (!att.path) return null;
+  try {
+    // Downloaded and handed over as a blob with the right content type, rather
+    // than as a signed link. A file stored before the content type was being
+    // set — and every file she uploaded until yesterday is one — is served as
+    // "application/octet-stream", and a browser downloads that instead of
+    // showing it, whatever the link says. Reading the bytes ourselves settles
+    // it for old files and new ones alike (29.8.26).
+    const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).download(att.path);
+    if (error) throw error;
+    const type = (data && data.type && data.type !== "application/octet-stream")
+      ? data.type
+      : guessContentType(att.name || att.path);
+    return URL.createObjectURL(new Blob([await data.arrayBuffer()], { type }));
+  } catch (e) {
+    console.warn("[awdash] could not read the file for viewing; falling back to a link", e);
+    try {
+      const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(att.path, 3600);
+      if (error) throw error;
+      return data && data.signedUrl || null;
+    } catch (e2) {
+      return null;
+    }
+  }
+}
+
+function sbClipboardImage(e) {
+  const items = (e.clipboardData && e.clipboardData.items) || [];
+  for (let i = 0; i < items.length; i++) {
+    if (items[i].kind === "file" && /^image\//.test(items[i].type || "")) {
+      const f = items[i].getAsFile();
+      if (f) return f;
+    }
+  }
+  const fs = (e.clipboardData && e.clipboardData.files) || [];
+  if (fs.length && /^image\//.test(fs[0].type || "")) return fs[0];
+  return null;
+}
+
+function dataUrlToBlobUrl(dataUrl, name) {
+  const m = String(dataUrl || "").match(/^data:([^;,]*)(;base64)?,(.*)$/);
+  if (!m) return null;
+  const type = m[1] || guessContentType(name);
+  try {
+    const raw = m[2] ? atob(m[3]) : decodeURIComponent(m[3]);
+    const buf = new Uint8Array(raw.length);
+    for (let i = 0; i < raw.length; i++) buf[i] = raw.charCodeAt(i);
+    return URL.createObjectURL(new Blob([buf], { type: type || "application/octet-stream" }));
+  } catch (e) {
+    return null;
+  }
+}
+
+function guessContentType(name) {
+  const ext = String(name || "").split(".").pop().toLowerCase();
+  return CONTENT_TYPES[ext] || "application/octet-stream";
+}
+
+function sdStatus(key) {
+  return SD_STATUSES.find((s) => s.key === key) || SD_STATUSES[0];
+}
+
+var CONTENT_TYPES = {
+  pdf: "application/pdf", png: "image/png", jpg: "image/jpeg", jpeg: "image/jpeg",
+  gif: "image/gif", webp: "image/webp", svg: "image/svg+xml", txt: "text/plain",
+  csv: "text/csv", xml: "application/xml", html: "text/html",
+  doc: "application/msword",
+  docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  xls: "application/vnd.ms-excel",
+  xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+};
+
+var SD_STATUSES = [
+  { key: "required", en: "Required", he: "נדרש", color: "#9aa3af" },
+  { key: "drafting", en: "In preparation", he: "בהכנה", color: "#3a7bd5" },
+  { key: "submitted", en: "Submitted", he: "הוגש", color: "#7a5cd6" },
+  { key: "approvedNoted", en: "Approved as noted", he: "מאושר בכפוף להערות", color: "#e08a12" },
+  { key: "approved", en: "Approved", he: "מאושר", color: "#1a7f4b" },
+  { key: "revise", en: "Resubmit", he: "הגשה מחדש", color: "#c0392b" }
+];
+
+// pdf-lib burns the marks into a new file. Same three sources as pdf.js, same
+// reason: one CDN having a bad afternoon must not stop her signing a drawing.
+var PDFLIB_VERSION = "1.17.1";
+var PDFLIB_SOURCES = [
+  `https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/${PDFLIB_VERSION}/pdf-lib.min.js`,
+  `https://cdn.jsdelivr.net/npm/pdf-lib@${PDFLIB_VERSION}/dist/pdf-lib.min.js`,
+  `https://unpkg.com/pdf-lib@${PDFLIB_VERSION}/dist/pdf-lib.min.js`
+];
+var sdPdfLibLoading = null;
+async function loadPdfLib() {
+  if (typeof window !== "undefined" && window.PDFLib) return window.PDFLib;
+  if (sdPdfLibLoading) return sdPdfLibLoading;
+  sdPdfLibLoading = (async () => {
+    let lastErr = null;
+    for (const src of PDFLIB_SOURCES) {
+      try {
+        await loadScriptOnce(src);
+        if (!window.PDFLib) throw new Error("PDFLib not defined after script load");
+        return window.PDFLib;
+      } catch (e) {
+        lastErr = e;
+        console.error("pdf-lib source failed:", src, e);
+      }
+    }
+    sdPdfLibLoading = null;
+    throw lastErr || new Error("pdf-lib failed to load");
+  })();
+  return sdPdfLibLoading;
+}
+
+var SDC_L = {
+  title: { en: "Shop drawings for approval", he: "תוכניות ייצור לאישור" },
+  lead: {
+    en: "Open a drawing to download it or to sign it.",
+    he: "פתיחה מאפשרת הורדה או חתימה."
+  },
+  boq: { en: "BOQ", he: "BOQ" },
+  category: { en: "Category", he: "קטגוריה" },
+  desc: { en: "Description", he: "תיאור" },
+  dueAt: { en: "Approval due", he: "תאריך יעד לאישור" },
+  submittedAt: { en: "Submitted", he: "תאריך הגשה" },
+  file: { en: "File", he: "קובץ" },
+  status: { en: "Status", he: "סטטוס" },
+  approvedAt: { en: "Approved on", he: "תאריך אישור" },
+  open: { en: "Open", he: "פתיחה" },
+  empty: {
+    en: "No drawing has been issued for your approval yet.",
+    he: "עדיין לא הוגשה תוכנית לאישורכם."
+  },
+  // the dialog
+  askTitle: { en: "What would you like to do?", he: "מה תרצו לעשות?" },
+  download: { en: "Download the file", he: "הורדת הקובץ" },
+  sign: { en: "Sign", he: "חתימה" },
+  cancel: { en: "Cancel", he: "ביטול" },
+  approvedAlready: { en: "Signed and approved", he: "נחתם ואושר" },
+  viewSigned: { en: "Open the signed file", he: "פתיחת הקובץ החתום" },
+  // the signing screen
+  noteTool: { en: "Handwritten note", he: "חתימה ידנית" },
+  noteDone: { en: "Finish notes", he: "סיום" },
+  stampTool: { en: "Stamp", he: "חותמת" },
+  finish: { en: "Approve and finish", he: "אישור וסיום" },
+  close: { en: "Close", he: "סגירה" },
+  placeHint: {
+    en: "Click anywhere on the drawing to place a note. Add as many as you need, then press Finish.",
+    he: "לחיצה על התוכנית ממקמת תיבת טקסט. אפשר להוסיף כמה שצריך, ואז ללחוץ סיום."
+  },
+  stampHint: { en: "Drag the stamp into place and set its size.", he: "גוררים את החותמת למקום ומכווננים את הגודל." },
+  stampPick: {
+    en: "Click to choose an image, or press Ctrl+V to paste one.",
+    he: "לחיצה לבחירת קובץ, או Ctrl+V להדבקת תמונה."
+  },
+  next: { en: "Next", he: "הבא" },
+  drawHead: { en: "Sign over the stamp", he: "חתימה על גבי החותמת" },
+  drawHint: {
+    en: "Draw your signature over the stamp with the mouse or your finger.",
+    he: "מציירים את החתימה על גבי החותמת עם העכבר או האצבע."
+  },
+  clearDraw: { en: "Clear", he: "ניקוי" },
+  doneDraw: { en: "Finish", he: "סיום" },
+  size: { en: "Size", he: "גודל" },
+  remove: { en: "Remove", he: "הסרה" },
+  loading: { en: "Loading the drawing…", he: "טוען את התוכנית…" },
+  burning: { en: "Writing the signed file…", he: "כותב את הקובץ החתום…" },
+  confirmTitle: { en: "Approve this drawing?", he: "לאשר את התוכנית?" },
+  confirmBody: {
+    en: "A new signed file is created and the drawing is marked approved. This cannot be undone from here.",
+    he: "ייווצר קובץ חתום חדש והתוכנית תסומן כמאושרת. לא ניתן לבטל את זה מכאן."
+  },
+  confirmYes: { en: "Approve", he: "אישור" },
+  nothingToSign: {
+    en: "Add a note or a stamp before approving.",
+    he: "יש להוסיף הערה או חותמת לפני האישור."
+  },
+  failed: { en: "The signed file could not be saved. Nothing was changed.", he: "לא הצלחתי לשמור את הקובץ החתום. שום דבר לא השתנה." },
+  noPdf: { en: "Only a PDF can be signed here. Use Download for this file.", he: "אפשר לחתום כאן על PDF בלבד. עבור הקובץ הזה יש להשתמש בהורדה." }
+};
+
+// An approval, once made, is the whole story of the row as far as the client is
+// concerned: when, by whom, and which file carries the marks.
+// A description is a sentence; a file name is not. Slashes and quotes are
+// taken out, runs of space collapsed, and the whole thing capped — a name that
+// is 200 characters long is unusable in every mail client there is.
+function sdFileLabel(text) {
+  const clean = String(text || "").replace(/[\\/:*?"<>|\r\n\t]/g, " ").replace(/\s+/g, " ").trim();
+  if (!clean) return "SD";
+  return clean.length > 60 ? `${clean.slice(0, 60).trim()}…` : clean;
+}
+function sdApprovalOf(approvals, code) {
+  return (approvals || {})[code] || null;
+}
+// Green, and "approved", is driven by the approval record — not by the status
+// the administrator set. The two can differ for a moment while a save is in
+// flight, and the client should see their own action immediately.
+function sdClientStatus(row, approval, lang) {
+  if (approval) return { key: "approved", label: lang === "he" ? "אושר" : "Approved", color: "#1a7f4b" };
+  const st = sdStatus((row || {}).status);
+  return { key: st.key, label: lang === "he" ? st.he : st.en, color: st.color };
+}
+
+// ---- geometry ---------------------------------------------------------------
+// Every mark is stored in PDF points against the page it sits on, with the
+// origin at the TOP-left — the same way the screen thinks. Storing screen
+// pixels instead would move every mark the first time somebody signs on a
+// different sized window; points are what the printed page is measured in, so
+// what is placed is what is burned.
+function sdMarkBlank(kind, page, xPt, yPt) {
+  return {
+    id: `k-${Date.now()}-${Math.floor(Math.random() * 1e4)}`,
+    kind, page,
+    x: xPt, y: yPt,
+    w: kind === "note" ? 170 : 130,
+    h: kind === "note" ? 44 : 60,
+    text: "",
+    dataUrl: null,
+    locked: false
+  };
+}
+// A note is drawn to a small transparent PNG and that PNG is embedded.
+//
+// The alternative — asking pdf-lib to draw the text — needs a font embedded
+// with Hebrew glyphs and a right-to-left shaper, which is a large dependency to
+// carry for a sentence. The browser already draws Hebrew correctly, so it draws
+// it once into a canvas and the canvas goes into the page. The drawing itself
+// stays vector; only the note is a picture, and it is a picture of exactly what
+// she saw on screen.
+var SD_NOTE_PAD = 4;
+var SD_NOTE_FONT = 11;
+var SD_NOTE_LINE = 1.35;
+var SD_NOTE_STAMP_FONT = 8;
+function sdWrapText(ctx, text, maxW) {
+  const out = [];
+  String(text || "").split("\n").forEach((para) => {
+    const words = para.split(/\s+/).filter(Boolean);
+    if (!words.length) { out.push(""); return; }
+    let line = words[0];
+    for (let i = 1; i < words.length; i++) {
+      const next = `${line} ${words[i]}`;
+      if (ctx.measureText(next).width <= maxW) line = next;
+      else { out.push(line); line = words[i]; }
+    }
+    out.push(line);
+  });
+  return out;
+}
+// Height in points, for a note of this width holding this text. The screen and
+// the burned page both ask this, so neither can drift from the other.
+function sdNoteHeight(text, wPt, stampLine) {
+  const c = document.createElement("canvas").getContext("2d");
+  c.font = `${SD_NOTE_FONT}px Assistant, Arial, sans-serif`;
+  const lines = sdWrapText(c, text, Math.max(10, wPt - SD_NOTE_PAD * 2));
+  const body = Math.max(1, lines.length) * SD_NOTE_FONT * SD_NOTE_LINE;
+  const stamp = stampLine ? SD_NOTE_STAMP_FONT * 1.5 + 3 : 0;
+  return Math.ceil(body + stamp + SD_NOTE_PAD * 2);
+}
+function sdNoteToPng(mark, stampLine, scale) {
+  const s = scale || 4;
+  const wPt = mark.w;
+  const hPt = sdNoteHeight(mark.text, wPt, stampLine);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(wPt * s);
+  canvas.height = Math.ceil(hPt * s);
+  const ctx = canvas.getContext("2d");
+  ctx.scale(s, s);
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.fillRect(0, 0, wPt, hPt);
+  // navy, 2pt, drawn inside the box so nothing is clipped
+  ctx.strokeStyle = "#10275a";
+  ctx.lineWidth = 1.4;
+  ctx.strokeRect(0.7, 0.7, wPt - 1.4, hPt - 1.4);
+  ctx.direction = /[֐-׿]/.test(String(mark.text || "") + String(stampLine || "")) ? "rtl" : "ltr";
+  // Centred, because that is how the box reads on screen. The two must agree:
+  // the burned page is meant to be a picture of exactly what she saw. (7.9.26)
+  const startX = wPt / 2;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "top";
+  ctx.fillStyle = "#10275a";
+  ctx.font = `${SD_NOTE_FONT}px Assistant, Arial, sans-serif`;
+  const lines = sdWrapText(ctx, mark.text, Math.max(10, wPt - SD_NOTE_PAD * 2));
+  let y = SD_NOTE_PAD;
+  lines.forEach((ln) => {
+    ctx.fillText(ln, startX, y);
+    y += SD_NOTE_FONT * SD_NOTE_LINE;
+  });
+  if (stampLine) {
+    ctx.strokeStyle = "#c8d0dc";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(SD_NOTE_PAD, y + 1.5);
+    ctx.lineTo(wPt - SD_NOTE_PAD, y + 1.5);
+    ctx.stroke();
+    ctx.fillStyle = "#4a5a72";
+    ctx.font = `${SD_NOTE_STAMP_FONT}px Assistant, Arial, sans-serif`;
+    ctx.fillText(stampLine, startX, y + 4);
+  }
+  return { dataUrl: canvas.toDataURL("image/png"), wPt, hPt };
+}
+
+// The one function that turns marks into a file. Kept apart from the screen so
+// it can be run on its own — the screen is hard to test, this is not.
+async function sdBurnMarks(pdfBytes, marks, stampLine) {
+  const { PDFDocument } = await loadPdfLib();
+  const doc = await PDFDocument.load(pdfBytes);
+  const pages = doc.getPages();
+  const embedPng = async (dataUrl) => doc.embedPng(dataUrl);
+  for (const mark of marks) {
+    const page = pages[mark.page - 1];
+    if (!page) continue;
+    const pageH = page.getSize().height;
+    if (mark.kind === "note") {
+      if (!String(mark.text || "").trim()) continue;
+      const shot = sdNoteToPng(mark, stampLine);
+      const img = await embedPng(shot.dataUrl);
+      page.drawImage(img, {
+        x: mark.x,
+        // The page counts from the bottom; the screen counts from the top.
+        y: pageH - mark.y - shot.hPt,
+        width: shot.wPt,
+        height: shot.hPt
+      });
+    } else if (mark.kind === "stamp" && mark.dataUrl) {
+      const img = /^data:image\/png/i.test(mark.dataUrl)
+        ? await doc.embedPng(mark.dataUrl)
+        : await doc.embedJpg(mark.dataUrl);
+      page.drawImage(img, { x: mark.x, y: pageH - mark.y - mark.h, width: mark.w, height: mark.h });
+    }
+  }
+  return doc.save();
+}
+
+// -----------------------------------------------------------------------------
+// The signing screen.
+// -----------------------------------------------------------------------------
+function SdSignScreen({ lang, isRTL, L, file, title, who, projectName, docLabel, onCancel, onDone }) {
+  const [doc, setDoc] = useState6(null);
+  const [pages, setPages] = useState6([]);       // { num, wPt, hPt }
+  const [bytes, setBytes] = useState6(null);
+  const [scale, setScale] = useState6(1);
+  const [marks, setMarks] = useState6([]);
+  const [noteMode, setNoteMode] = useState6(false);
+  const [stampStep, setStampStep] = useState6(null);   // null | "pick"
+  const [stampImg, setStampImg] = useState6(null);
+  const drawRef = useRef5(null);
+  const inkRef = useRef5(false);
+  const [sel, setSel] = useState6(null);
+  const [busy, setBusy] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [ask, setAsk] = useState6(false);
+  const wrapRef = useRef5(null);
+  const dragRef = useRef5(null);
+  const pageRefs = useRef5({});
+
+  const stampLine = `${sbFmtDate(sbToday())} · ${who || ""}`.trim();
+
+  // ---- load ----------------------------------------------------------------
+  useEffect5(() => {
+    let dead = false;
+    (async () => {
+      setBusy(L("loading"));
+      setErr(null);
+      try {
+        const url = await sbFileUrl(file);
+        if (!url) throw new Error("no url");
+        const raw = new Uint8Array(await (await fetch(url)).arrayBuffer());
+        if (dead) return;
+        setBytes(raw);
+        // pdf.js takes ownership of the buffer it is handed, so it gets a copy
+        // and the original stays intact for pdf-lib to burn later.
+        const pdfjsLib = await loadPdfJs();
+        const loaded = await pdfjsLib.getDocument({ data: raw.slice() }).promise;
+        if (dead) return;
+        const list = [];
+        for (let i = 1; i <= loaded.numPages; i++) {
+          const p = await loaded.getPage(i);
+          const vp = p.getViewport({ scale: 1 });
+          list.push({ num: i, wPt: vp.width, hPt: vp.height });
+        }
+        if (dead) return;
+        setDoc(loaded);
+        setPages(list);
+        // Fit the widest page to the panel, and never blow a small page up
+        // past its own size.
+        const avail = (wrapRef.current ? wrapRef.current.clientWidth : 900) - 48;
+        const widest = Math.max(...list.map((p) => p.wPt), 1);
+        setScale(Math.max(0.3, Math.min(1.6, avail / widest)));
+        setBusy(null);
+      } catch (e) {
+        if (dead) return;
+        console.error("[awdash] sd sign: could not open the drawing", e);
+        setErr(String((e && e.message) || e));
+        setBusy(null);
+      }
+    })();
+    return () => { dead = true; };
+  }, [file && (file.path || file.dataUrl)]);
+
+  // ---- placing -------------------------------------------------------------
+  const pageClick = (pageNum, e) => {
+    if (!noteMode) return;
+    if (e.target.closest && e.target.closest(".sdMark")) return;
+    const box = e.currentTarget.getBoundingClientRect();
+    const xPt = (e.clientX - box.left) / scale;
+    const yPt = (e.clientY - box.top) / scale;
+    const m = sdMarkBlank("note", pageNum, Math.max(0, xPt), Math.max(0, yPt));
+    setMarks((prev) => prev.concat(m));
+    setSel(m.id);
+  };
+  const patchMark = (id, next) => setMarks((prev) => prev.map((m) => (m.id === id ? { ...m, ...next } : m)));
+  const dropMark = (id) => {
+    setMarks((prev) => prev.filter((m) => m.id !== id));
+    setSel((s) => (s === id ? null : s));
+  };
+  // Dragging is done on the pointer, not on HTML5 drag-and-drop: a drag image
+  // over a canvas is a ghost of the whole page, and the drop coordinates come
+  // back wrong on a scrolled panel.
+  const startDrag = (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const m = marks.find((x) => x.id === id);
+    if (!m) return;
+    const host = pageRefs.current[m.page];
+    const box = host ? host.getBoundingClientRect() : { left: 0, top: 0 };
+    dragRef.current = {
+      id, page: m.page,
+      rectX: box.left, rectY: box.top,
+      // Where inside the mark she took hold of it, so it does not jump under
+      // the cursor on the first pixel of movement.
+      grabX: e.clientX - box.left - m.x * scale,
+      grabY: e.clientY - box.top - m.y * scale
+    };
+    const move = (ev) => {
+      const d = dragRef.current;
+      if (!d) return;
+      // A mark dragged over another page belongs to that page. Without this a
+      // stamp can be dropped anywhere on screen and still be burned onto the
+      // page it started on — which is how a signature ends up on the wrong
+      // sheet of a drawing set. (7.9.26)
+      let page = d.page;
+      let originX = d.rectX;
+      let originY = d.rectY;
+      Object.keys(pageRefs.current).forEach((num) => {
+        const el = pageRefs.current[num];
+        if (!el) return;
+        const box = el.getBoundingClientRect();
+        if (ev.clientX >= box.left && ev.clientX <= box.right && ev.clientY >= box.top && ev.clientY <= box.bottom) {
+          page = Number(num);
+          originX = box.left;
+          originY = box.top;
+        }
+      });
+      patchMark(d.id, {
+        page,
+        x: Math.max(0, (ev.clientX - originX - d.grabX) / scale),
+        y: Math.max(0, (ev.clientY - originY - d.grabY) / scale)
+      });
+    };
+    const up = () => {
+      dragRef.current = null;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+
+  const finishNotes = () => {
+    setNoteMode(false);
+    // Empty boxes are not notes; they are clicks in the wrong place.
+    setMarks((prev) => prev
+      .filter((m) => m.kind !== "note" || String(m.text || "").trim())
+      .map((m) => (m.kind === "note" ? { ...m, locked: true } : m)));
+  };
+
+  const takeStampFile = async (f) => {
+    if (!f || !/^image\//.test(f.type || "")) return;
+    setStampImg(await fileToDataUrl(f));
+  };
+  // Which page is she actually looking at. A stamp always dropped on page one
+  // is wrong for anything but a one-page drawing, and a forty-page set is the
+  // normal case here. The page filling the middle of the panel is the page she
+  // means. (7.9.26)
+  const pageInView = () => {
+    const wrap = wrapRef.current;
+    if (!wrap) return 1;
+    const mid = wrap.getBoundingClientRect().top + wrap.clientHeight / 2;
+    let best = 1, bestGap = Infinity;
+    Object.keys(pageRefs.current).forEach((num) => {
+      const el = pageRefs.current[num];
+      if (!el) return;
+      const box = el.getBoundingClientRect();
+      const gap = mid < box.top ? box.top - mid : mid > box.bottom ? mid - box.bottom : 0;
+      if (gap < bestGap) { bestGap = gap; best = Number(num); }
+    });
+    return best;
+  };
+  // A scanned stamp and a signature drawn over it are one image by the time
+  // they reach the drawing: flattened here, so what is placed, what is dragged
+  // and what is burned are all the same picture. (7.9.26)
+  const flattenStamp = () => new Promise((resolve) => {
+    const canvas = drawRef.current;
+    const img = new Image();
+    img.onload = () => {
+      if (!canvas) { resolve(stampImg); return; }
+      const out = document.createElement("canvas");
+      out.width = img.width;
+      out.height = img.height;
+      const ctx = out.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+      ctx.drawImage(canvas, 0, 0, out.width, out.height);
+      resolve(out.toDataURL("image/png"));
+    };
+    img.onerror = () => resolve(stampImg);
+    img.src = stampImg;
+  });
+  const startInk = (e) => {
+    const canvas = drawRef.current;
+    if (!canvas) return;
+    e.preventDefault();
+    inkRef.current = true;
+    const ctx = canvas.getContext("2d");
+    ctx.strokeStyle = "#10275a";
+    ctx.lineWidth = Math.max(2, canvas.width / 220);
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.beginPath();
+    const at = (ev) => {
+      const b = canvas.getBoundingClientRect();
+      return [(ev.clientX - b.left) * canvas.width / b.width, (ev.clientY - b.top) * canvas.height / b.height];
+    };
+    ctx.moveTo(...at(e));
+    const move = (ev) => { if (!inkRef.current) return; ctx.lineTo(...at(ev)); ctx.stroke(); };
+    const up = () => {
+      inkRef.current = false;
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const clearInk = () => {
+    const c = drawRef.current;
+    if (c) c.getContext("2d").clearRect(0, 0, c.width, c.height);
+  };
+  const fitInk = (imgEl) => {
+    const c = drawRef.current;
+    if (!c || !imgEl) return;
+    c.width = imgEl.naturalWidth || imgEl.clientWidth;
+    c.height = imgEl.naturalHeight || imgEl.clientHeight;
+  };
+  const placeStamp = async () => {
+    if (!stampImg) return;
+    const flat = await flattenStamp();
+    const img = new Image();
+    img.onload = () => {
+      const num = pageInView();
+      const pg = pages.find((x) => x.num === num) || pages[0] || { wPt: 600, hPt: 800 };
+      const w = Math.min(140, pg.wPt / 4);
+      const h = w * (img.height / img.width || 0.6);
+      const m = {
+        ...sdMarkBlank("stamp", num, pg.wPt - w - 40, pg.hPt - h - 40),
+        w, h, dataUrl: flat, locked: true
+      };
+      setMarks((prev) => prev.concat(m));
+      setSel(m.id);
+      setStampStep(null);
+      setStampImg(null);
+    };
+    img.src = flat;
+  };
+  const resizeStamp = (id, w) => {
+    const m = marks.find((x) => x.id === id);
+    if (!m) return;
+    const ratio = m.h / m.w;
+    patchMark(id, { w, h: w * ratio });
+  };
+
+  // ---- finish --------------------------------------------------------------
+  const usable = marks.filter((m) => (m.kind === "note" ? String(m.text || "").trim() : !!m.dataUrl));
+  const doFinish = async () => {
+    setAsk(false);
+    setBusy(L("burning"));
+    setErr(null);
+    try {
+      const out = await sdBurnMarks(bytes, usable, stampLine);
+      // The same shape as every other document the site produces:
+      // <project> - <what it is> - <date>. boardFileName owns that rule, so a
+      // signed drawing is named the way an exported board is. (7.9.26)
+      const name = boardFileName(projectName, docLabel || title || "Signed", "pdf");
+      const signed = new File([out], name, { type: "application/pdf" });
+      await onDone(signed, usable.length);
+    } catch (e) {
+      console.error("[awdash] sd sign: burning failed", e);
+      setErr(L("failed"));
+      setBusy(null);
+    }
+  };
+
+  // ---- render --------------------------------------------------------------
+  const markEl = (m) => {
+    const common = {
+      key: m.id,
+      style: {
+        left: m.x * scale,
+        top: m.y * scale,
+        width: m.w * scale
+      }
+    };
+    if (m.kind === "stamp") {
+      return sbH(
+        "div",
+        {
+          ...common,
+          className: `sdMark ${sel === m.id ? "sel" : ""}`.trim(),
+          style: { ...common.style, height: m.h * scale },
+          onPointerDown: () => setSel(m.id)
+        },
+        sbH("img", { src: m.dataUrl, alt: "" }),
+        sbH("button", { type: "button", className: "sdMoveBtn", onPointerDown: (e) => startDrag(m.id, e), title: L("size") },
+          sbH(MoveSd, { size: 12, strokeWidth: 2.2 })),
+        sbH("button", { type: "button", className: "sdMarkBtn", title: L("remove"), onClick: () => dropMark(m.id) }, "×")
+      );
+    }
+    const h = sdNoteHeight(m.text, m.w, m.locked ? stampLine : "") * scale;
+    return sbH(
+      "div",
+      {
+        ...common,
+        className: `sdMark sdNote ${m.locked ? "locked" : "draft"}`,
+        style: { ...common.style, minHeight: h, fontSize: SD_NOTE_FONT * scale },
+        onPointerDown: () => setSel(m.id)
+      },
+      m.locked
+        ? sbH(
+            "div",
+            null,
+            sbH("div", { className: "sdNoteText", style: { lineHeight: SD_NOTE_LINE } }, m.text),
+            sbH("div", { className: "sdNoteStamp", style: { fontSize: SD_NOTE_STAMP_FONT * scale } }, stampLine)
+          )
+        : sbH("textarea", {
+            autoFocus: sel === m.id,
+            rows: 2,
+            value: m.text,
+            style: { fontSize: SD_NOTE_FONT * scale, lineHeight: SD_NOTE_LINE },
+            onChange: (e) => patchMark(m.id, { text: e.target.value }),
+            onPointerDown: (e) => e.stopPropagation()
+          }),
+      sbH("button", { type: "button", className: "sdMoveBtn", onPointerDown: (e) => startDrag(m.id, e) },
+        sbH(MoveSd, { size: 12, strokeWidth: 2.2 })),
+      sbH("button", { type: "button", className: "sdMarkBtn", title: L("remove"), onClick: () => dropMark(m.id) }, "×")
+    );
+  };
+
+  const selMark = marks.find((m) => m.id === sel && m.kind === "stamp");
+
+  return createPortal(
+    sbH(
+    "div",
+    { className: "sdSign", dir: isRTL ? "rtl" : "ltr" },
+    sbH(
+      "div",
+      { className: "sdSignBar" },
+      sbH("span", { className: "sdSignName" }, title),
+      sbH(
+        "button",
+        {
+          type: "button",
+          className: `sdSignBtn ${noteMode ? "on" : ""}`.trim(),
+          onClick: () => (noteMode ? finishNotes() : setNoteMode(true))
+        },
+        sbH(PenLineSd, { size: 14, strokeWidth: 2.2 }), " ", noteMode ? L("noteDone") : L("noteTool")
+      ),
+      sbH("button", { type: "button", className: "sdSignBtn", onClick: () => { setNoteMode(false); setStampStep("pick"); } },
+        sbH(StampSd, { size: 14, strokeWidth: 2.2 }), " ", L("stampTool")),
+      selMark
+        ? sbH(
+            "span",
+            { className: "sdSizeRow" },
+            sbH("span", { className: "sdSignHint" }, L("size")),
+            sbH("input", {
+              type: "range", min: 40, max: 400, value: Math.round(selMark.w),
+              onChange: (e) => resizeStamp(selMark.id, Number(e.target.value))
+            })
+          )
+        : sbH("span", { className: "sdSignHint" }, noteMode ? L("placeHint") : ""),
+      sbH("button", { type: "button", className: "sdSignBtn go", disabled: !usable.length || !!busy, onClick: () => setAsk(true) },
+        sbH(CheckSd, { size: 14, strokeWidth: 2.4 }), " ", L("finish")),
+      sbH("button", { type: "button", className: "sdSignBtn", onClick: onCancel },
+        sbH(XSd, { size: 14, strokeWidth: 2.2 }), " ", L("close"))
+    ),
+
+    err ? sbH("div", { style: { padding: "10px 14px" } }, sbH("div", { className: "sdSignErr" }, err)) : null,
+
+    sbH(
+      "div",
+      { className: "sdSignScroll", ref: wrapRef },
+      pages.map((p) => sbH(
+        "div",
+        {
+          key: p.num,
+          className: `sdSignPage ${noteMode ? "placing" : ""}`.trim(),
+          "data-page": p.num,
+          ref: (el) => { pageRefs.current[p.num] = el; },
+          style: { width: p.wPt * scale, height: p.hPt * scale },
+          onClick: (e) => pageClick(p.num, e)
+        },
+        sbH(SdPageCanvas, { doc, num: p.num, wPt: p.wPt, hPt: p.hPt, scale }),
+        marks.filter((m) => m.page === p.num).map(markEl)
+      ))
+    ),
+
+    busy ? sbH("div", { className: "sdSignBusy" }, busy) : null,
+
+    stampStep === "pick"
+      ? sbH(
+          "div",
+          { className: "sdcAsk", onClick: () => setStampStep(null) },
+          sbH(
+            "div",
+            { className: "sdcAskBox", onClick: (e) => e.stopPropagation() },
+            sbH("h3", { className: "sdcAskTitle" }, L("stampTool")),
+            sbH("p", { className: "sdcAskName" }, L("stampPick")),
+            sbH(
+              "div",
+              {
+                className: `sdStampPad ${stampImg ? "on" : ""}`.trim(),
+                tabIndex: 0,
+                onPaste: (e) => { const f = sbClipboardImage(e); if (f) { e.preventDefault(); takeStampFile(f); } },
+                onClick: (e) => { const i = e.currentTarget.querySelector("input"); if (i) i.click(); }
+              },
+              stampImg ? sbH("img", { src: stampImg, alt: "" }) : sbH("span", null, L("stampPick")),
+              sbH("input", {
+                type: "file", accept: "image/*", style: { display: "none" },
+                onChange: (e) => { const f = e.target.files && e.target.files[0]; e.target.value = ""; takeStampFile(f); }
+              })
+            ),
+            sbH(
+              "div",
+              { style: { display: "flex", gap: 8, marginTop: 14 } },
+              sbH("button", { type: "button", className: "sdcAskBtn primary", disabled: !stampImg, onClick: () => setStampStep("draw") },
+                L("next"), " ", sbH(isRTL ? ArrowLeftSd : ArrowRightSd, { size: 14, strokeWidth: 2.2 })),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { setStampStep(null); setStampImg(null); } }, L("cancel"))
+            )
+          )
+        )
+      : null,
+
+    stampStep === "draw"
+      ? sbH(
+          "div",
+          { className: "sdcAsk" },
+          sbH(
+            "div",
+            { className: "sdcAskBox", onClick: (e) => e.stopPropagation(), style: { maxWidth: 560 } },
+            sbH("h3", { className: "sdcAskTitle" }, L("drawHead")),
+            sbH("p", { className: "sdcAskName" }, L("drawHint")),
+            sbH(
+              "div",
+              { className: "sdDrawWrap" },
+              sbH("img", { src: stampImg, alt: "", onLoad: (e) => fitInk(e.currentTarget) }),
+              sbH("canvas", { ref: drawRef, onPointerDown: startInk })
+            ),
+            sbH(
+              "div",
+              { style: { display: "flex", gap: 8, marginTop: 14 } },
+              sbH("button", { type: "button", className: "sdcAskBtn primary", onClick: placeStamp },
+                sbH(CheckSd, { size: 15, strokeWidth: 2.4 }), " ", L("doneDraw")),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: clearInk }, L("clearDraw")),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { setStampStep("pick"); } }, L("cancel"))
+            )
+          )
+        )
+      : null,
+
+    ask
+      ? sbH(
+          "div",
+          { className: "sdcAsk", onClick: () => setAsk(false) },
+          sbH(
+            "div",
+            { className: "sdcAskBox", onClick: (e) => e.stopPropagation() },
+            sbH("h3", { className: "sdcAskTitle" }, L("confirmTitle")),
+            sbH("p", { className: "sdcAskName" }, L("confirmBody")),
+            sbH(
+              "div",
+              { className: "sdcAskRow" },
+              sbH("button", { type: "button", className: "sdcAskBtn primary", onClick: doFinish },
+                sbH(CheckSd, { size: 15, strokeWidth: 2.4 }), " ", L("confirmYes")),
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => setAsk(false) }, L("cancel"))
+            )
+          )
+        )
+      : null
+    ),
+    document.body
+  );
+}
+
+// One page, drawn once. Its own component so that adding a note does not make
+// pdf.js redraw every page of a forty-page drawing set.
+function SdPageCanvas({ doc, num, wPt, hPt, scale }) {
+  const ref = useRef5(null);
+  useEffect5(() => {
+    if (!doc || !ref.current) return;
+    let dead = false;
+    doc.getPage(num).then((page) => {
+      if (dead || !ref.current) return;
+      const dpr = window.devicePixelRatio || 1;
+      const vp = page.getViewport({ scale: scale * dpr });
+      const canvas = ref.current;
+      canvas.width = vp.width;
+      canvas.height = vp.height;
+      canvas.style.width = `${wPt * scale}px`;
+      canvas.style.height = `${hPt * scale}px`;
+      page.render({ canvasContext: canvas.getContext("2d"), viewport: vp });
+    }).catch((e) => console.error("[awdash] sd page render failed", e));
+    return () => { dead = true; };
+  }, [doc, num, scale]);
+  return sbH("canvas", { ref });
+}
+
+// ---------------------------------------------------------------------------
+//  signCss — the look of this screen, in the file that holds the screen.
+//
+//  Until 15.9.2026 these rules lived in the dashboard's pdfViewer stylesheet,
+//  which the supervision page does not load: the component travelled to
+//  sign.js and its appearance stayed behind. Both pages now take it from this
+//  one string — the dashboard appends signCss to its styles array, the
+//  supervision page puts it in a <style> of its own.
+//
+//  Nine of these classes — sbField, sbFieldLbl, sbFormHead, sbFormHeadSide,
+//  sbLinkBtn, sbNoBox, sbSaveRow, sbSecBar, sbSpecsCount — are also rendered
+//  by the dashboard's own submittal form. That is why the dashboard must LOAD
+//  signCss and not merely stop defining them.
+//
+//  It asks the page it lands on for six tokens and the font:
+//      --ink  --steel  --mist  --line  --accent  --surface
+//      body { font-family: 'Assistant', ... }
+// ---------------------------------------------------------------------------
+var signCss = `
+        .printAskChoice {
+          border: 1px solid var(--line); background: #fff; color: var(--steel);
+          border-radius: 10px; padding: 9px 12px; font-family: inherit;
+          font-size: 12.5px; font-weight: 700; cursor: pointer;
+        }
+        .printAskChoice.on { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-ink); }
+        /* ---------- the reviewer's page ---------- */
+        /* The page is a flex item with auto inline margins, so it shrinks to fit
+           its content — and an iframe has almost no intrinsic width. A definite
+           width in design pixels gives the document room to be read. */
+        .sbReviewPage { width: 1180px; max-width: 100%; margin: 0 auto; }
+        .sbDocFrame {
+          display: block; width: 100%; height: 1140px; border: 1px solid var(--line);
+          border-radius: 10px; background: #fff; margin-top: 10px;
+        }
+        .sbSignPanel {
+          margin-top: 16px; border: 1px solid var(--line); border-radius: 10px;
+          overflow: hidden; background: #fff;
+        }
+        .sbSignPanel .sbSecBar { margin: 0; }
+        .sbSignPanel .sbField, .sbSignPanel .sbDecisions, .sbSignRow, .sbSignPanel .sbSaveRow { padding: 0 14px; }
+        .sbSignPanel .sbDecisions { padding-top: 12px; }
+        .sbSignPanel .sbField { margin-top: 10px; }
+        .sbDecRowWide {
+          display: flex; flex-direction: row; gap: 22px; flex-wrap: wrap;
+          justify-content: center; align-items: center; text-align: center;
+        }
+        .sbDecRowWide .sbDecRow { justify-content: center; }
+        .sbSignRow {
+          display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+          justify-content: center; margin-top: 14px;
+        }
+        .sbSignBtn {
+          display: inline-flex; align-items: center; gap: 7px; background: #14181f;
+          border: 1px solid #14181f; color: #fff; border-radius: 10px; padding: 10px 20px;
+          cursor: pointer; font-family: inherit; font-size: 13.5px; font-weight: 800;
+        }
+        .sbSignBtn:hover { background: #232a35; }
+        .sbSignedBox {
+          display: flex; align-items: center; gap: 10px; border: 1px solid var(--line);
+          border-radius: 10px; padding: 8px 12px; background: #fbfcfd;
+        }
+        .sbSignedBox img { height: 46px; max-width: 190px; object-fit: contain; }
+        .sbSignedMeta { display: flex; flex-direction: column; font-size: 11px; font-weight: 700; color: var(--mist); }
+        .sbClosedBar {
+          display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+          margin-top: 16px; padding: 12px 16px; border: 1px solid #cfe3d6;
+          border-radius: 10px; background: #f2faf5; color: #14532d;
+          font-size: 13px; font-weight: 800;
+        }
+        .sbClosedNote { font-weight: 600; color: var(--steel); }
+        .sbSignHint { text-align: center; font-size: 12px; color: var(--mist); margin: 0 0 14px; }
+        .sbSignPanel .sbSaveRow { padding-bottom: 14px; }
+        /* ---------- the specifications, on screen ---------- */
+        .sbSpecsScrim {
+          position: fixed; inset: 0; z-index: 1180; background: rgba(16,18,22,.6);
+          display: flex; align-items: stretch; justify-content: center; padding: 18px;
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .sbSpecsView {
+          background: #fff; border-radius: 14px; width: min(1040px, 100%);
+          display: flex; flex-direction: column; overflow: hidden;
+          box-shadow: 0 18px 60px rgba(0,0,0,.3);
+        }
+        .sbSpecsBar {
+          display: flex; align-items: center; gap: 10px; padding: 12px 14px;
+          border-bottom: 1px solid var(--line); flex: 0 0 auto;
+        }
+        .sbSpecsBarTitle { font-size: 14.5px; font-weight: 800; color: var(--ink); }
+        .sbSpecsCount {
+          display: inline-flex; align-items: center; justify-content: center; min-width: 17px; height: 17px;
+          margin-inline-start: 6px; padding: 0 4px; border-radius: 999px; background: var(--accent);
+          color: #fff; font-size: 10.5px; font-weight: 800;
+        }
+        .sbSpecsBar .sgGhost.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .sbSpecsHint { margin: 0; padding: 8px 14px; font-size: 12.5px; color: var(--mist); background: #fbfcfd; border-bottom: 1px solid var(--line); }
+        .sbSpecsScroll { flex: 1 1 auto; overflow: auto; padding: 14px; background: #eef1f5; }
+        .sbSpecsMsg { text-align: center; color: var(--mist); font-size: 13px; padding: 40px 0; }
+        .sbSpecsPageWrap { max-width: 820px; margin: 0 auto 18px; }
+        .sbSpecsLbl { font-size: 10.5px; color: var(--mist); text-align: center; margin-bottom: 5px; }
+        .sbSpecsPage { position: relative; background: #fff; box-shadow: 0 2px 12px -6px rgba(0,0,0,.4); }
+        .sbSpecsPage img { display: block; width: 100%; height: auto; }
+        .sbSpecsPage.noting { cursor: crosshair; }
+        /* A note is anchored by its top-inline-start corner, which is the point
+           that was clicked — so it reads from the click outwards in both
+           directions. */
+        .sbSpecsNote {
+          position: absolute; max-width: 34%; min-width: 120px;
+          background: rgba(255,249,219,.97); border: 1.5px solid var(--accent);
+          border-radius: 7px; padding: 6px 8px; font-size: 12px; line-height: 1.35;
+          box-shadow: 0 3px 10px -4px rgba(0,0,0,.35);
+        }
+        .sbSpecsNoteTxt { white-space: pre-wrap; word-break: break-word; }
+        .sbSpecsNoteBy { font-size: 10px; color: var(--mist); font-weight: 700; margin-top: 3px; }
+        .sbSpecsNoteDel {
+          position: absolute; top: -8px; inset-inline-end: -8px; width: 18px; height: 18px;
+          border-radius: 999px; border: 1px solid var(--line); background: #fff; color: #c0392b;
+          cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .sbSpecsNote.editing { min-width: 210px; }
+        .sbSpecsNote.editing textarea {
+          width: 100%; border: 1px solid var(--line); border-radius: 6px; padding: 6px 7px;
+          font-family: inherit; font-size: 12.5px; resize: vertical; background: #fff;
+        }
+        .sbSpecsNoteRow { display: flex; align-items: center; gap: 8px; margin-top: 6px; justify-content: space-between; }
+        .sbSpecsNoteRow .sgBtn { padding: 5px 12px; font-size: 12px; }
+        /* ---------- the pad ---------- */
+        .sigPadScrim {
+          position: fixed; inset: 0; z-index: 1200; background: rgba(16,18,22,.55);
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .sigPad {
+          background: #fff; border-radius: 14px; padding: 18px 20px 16px;
+          width: min(560px, 100%); box-shadow: 0 18px 60px rgba(0,0,0,.28);
+          font-family: 'Assistant', 'Inter', sans-serif;
+        }
+        .sigPadTitle { font-size: 15px; font-weight: 800; color: var(--ink); }
+        .sigPadHint { margin: 4px 0 12px; font-size: 12.5px; color: var(--mist); }
+        /* The pad is two layers: an uploaded stamp underneath, and the ink on
+           top of it. Signing over a company stamp is how these forms are
+           signed on paper, so it is how they are signed here (7.9.26). */
+        .sigStage { position: relative; }
+        .sigStage img.sigStampImg {
+          position: absolute; inset: 6px; width: calc(100% - 12px); height: calc(100% - 12px);
+          object-fit: contain; pointer-events: none;
+        }
+        .sigCanvas {
+          display: block; width: 100%; height: 210px; border: 2px dashed var(--line);
+          border-radius: 10px; background: transparent; touch-action: none; cursor: crosshair;
+          position: relative;
+        }
+        .sigStage { background: #fff; border-radius: 10px; }
+        .sigPadRow { display: flex; align-items: center; gap: 10px; margin-top: 12px; }
+        .sigStampRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+        .sigStampRow .sgGhost { display: inline-flex; align-items: center; justify-content: center; gap: 7px; }
+        .sigPadRow .sgBtn:disabled { opacity: .45; cursor: default; }
+        .sbLinkBtn {
+          border: none; background: none; padding: 0; cursor: pointer; font-family: inherit;
+          font-size: 12.5px; font-weight: 700; color: var(--accent); display: inline-flex;
+          align-items: center; gap: 5px;
+        }
+        .sbLinkBtn:hover { text-decoration: underline; }
+        .sbFormHead {
+          display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+          gap: 12px; margin-bottom: 12px;
+        }
+        .sbFormHeadSide { display: flex; align-items: center; gap: 8px; }
+        /* ---------- which language to print in ---------- */
+        .printAskScrim {
+          position: fixed; inset: 0; background: rgba(16,22,34,.55); z-index: 900;
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        .printAskBox {
+          background: #fff; border-radius: 14px; padding: 22px 26px; width: 100%; max-width: 380px;
+          box-shadow: 0 20px 60px rgba(0,0,0,.3); text-align: center;
+          font-family: 'Assistant', 'Inter', sans-serif; color: var(--ink);
+        }
+        .printAskBox h3 { margin: 0 0 6px; font-size: 17px; }
+        .printAskBox p { margin: 2px 0; font-size: 13px; color: var(--steel); }
+        .printAskEn { font-size: 12px !important; }
+        .printAskBtns { display: flex; gap: 10px; margin: 18px 0 10px; }
+        .printAskBtns button { flex: 1; }
+        .printAskCancel { font-size: 12px; }
+        .sbFormHeadSide.start { justify-content: flex-start; }
+        .sbFormHeadSide.end { justify-content: flex-end; }
+        @media (max-width: 640px) {
+          .sbFormHead { grid-template-columns: 1fr; justify-items: center; }
+          .sbFormHeadSide.start, .sbFormHeadSide.end { justify-content: center; }
+        }
+        .sbFormHead.noBack { margin-bottom: 6px; }
+        .sbNoBox {
+          border: 1px solid var(--accent); border-radius: 8px; padding: 5px 14px; text-align: center; line-height: 1.25;
+        }
+        .sbNoBox b { display: block; font-size: 9.5px; color: var(--accent); letter-spacing: .4px; }
+        .sbNoBox span { font-size: 14px; font-weight: 800; }
+        .sbNoBox i { display: block; font-style: normal; font-size: 10.5px; color: var(--mist); font-weight: 700; }
+        .sbSecBar {
+          background: var(--accent); color: #fff; text-align: center;
+          font-size: 11.5px; font-weight: 800; letter-spacing: .5px;
+          padding: 5px 0; margin: 16px 0 10px; border-radius: 5px;
+        }
+        .sbField { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .sbFieldLbl { font-size: 12px; font-weight: 700; color: var(--steel); }
+        .sbDecisions { display: flex; flex-direction: column; gap: 3px; padding-top: 18px; }
+        .sbDecRow { display: flex; align-items: center; gap: 7px; font-size: 12.5px; cursor: pointer; }
+        .sbLinkBtn.muted { color: var(--mist); font-weight: 600; }
+        .sbSaveRow { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 22px 0 6px; }
+
+        /* ---------- the screen's own buttons ----------
+           Borrowed from the dashboard until 15.9.26 (.functionEditBtn,
+           .ghostBtn, .drawerClose, .loginBack). Copied here under names of
+           this file's own so the screen asks the page it lands on for
+           nothing. The dashboard keeps its four, untouched, for its own use. */
+        .sgBtn {
+          padding: 10px 26px; border-radius: 999px; border: 1px solid var(--line);
+          background: var(--surface); color: var(--ink); font-weight: 800; font-size: 13px;
+          cursor: pointer; font-family: 'Assistant', sans-serif; transition: border-color .15s ease;
+        }
+        .sgBtn:hover { border-color: var(--accent); }
+        .sgBtn[disabled], .sgBtn:disabled { opacity: .55; cursor: default; }
+        .sgGhost {
+          display: flex; align-items: center; gap: 6px; border: 1px solid var(--line);
+          background: var(--surface); border-radius: 8px; padding: 8px 12px; font-size: 12.5px;
+          font-weight: 700; color: var(--ink); cursor: pointer; white-space: nowrap;
+          font-family: inherit;
+        }
+        .sgGhost:hover { border-color: var(--ink); }
+        .sgGhost.small { padding: 7px 11px; font-size: 12px; }
+        .sgClose {
+          border: none; background: transparent; color: var(--steel); cursor: pointer;
+          font-size: 18px; line-height: 1; padding: 4px 8px; font-family: inherit;
+        }
+        .sgClose:hover { color: var(--ink); }
+        .sgBack {
+          border: none; background: transparent; color: var(--steel); cursor: pointer;
+          display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700;
+          padding: 4px; font-family: inherit;
+        }
+        .sgBack:hover { color: var(--ink); }
+        .sdSignErr {
+          background: #fdf2f3; border: 1px solid #f0c4c9; color: #b02a37;
+          border-radius: 8px; padding: 8px 12px; font-weight: 700; font-size: 12.5px;
+        }
+        .sdSignBusy {
+          position: absolute; inset: 0; background: rgba(255,255,255,.82); z-index: 5;
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 800; color: #103460; font-size: 14px;
+        }
+        .sdDrawWrap canvas { position: absolute; inset: 0; width: 100%; height: 100%; cursor: crosshair; }
+        .sdDrawWrap img { display: block; max-width: 100%; }
+        /* Signing over the stamp: the picture underneath, a drawing surface on
+           top, one flattened image out. */
+        .sdDrawWrap {
+          position: relative; display: inline-block; border: 1px solid var(--line);
+          border-radius: 10px; overflow: hidden; background: #fff; touch-action: none;
+        }
+        .sdStampPad img { max-width: 100%; max-height: 180px; }
+        .sdStampPad.on { border-color: var(--accent); }
+
+        /* the stamp picker */
+        .sdStampPad {
+          border: 2px dashed var(--line); border-radius: 10px; min-height: 130px;
+          display: flex; align-items: center; justify-content: center; cursor: pointer;
+          background: #fbfcfd; color: var(--steel); font-weight: 600; font-size: 12.5px;
+          text-align: center; padding: 12px;
+        }
+        .sdSizeRow input[type="range"] { width: 130px; }
+        .sdSizeRow { display: flex; align-items: center; gap: 8px; }
+        .sdMoveBtn:hover { border-color: var(--accent); color: var(--accent); }
+        .sdMarkBtn:hover { border-color: #c0392b; }
+        .sdMoveBtn { inset-inline-start: -13px; color: var(--steel); cursor: move; }
+        .sdMarkBtn { inset-inline-end: -13px; color: #c0392b; font-weight: 900; font-size: 15px; }
+        .sdMarkBtn, .sdMoveBtn {
+          position: absolute; top: -13px; width: 26px; height: 26px; z-index: 4;
+          border-radius: 999px; border: 1px solid var(--line); background: #fff;
+          cursor: pointer; padding: 0; font-family: inherit; line-height: 1;
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 2px 6px rgba(16,32,58,.22);
+        }
+        .sdMark img { width: 100%; height: 100%; display: block; object-fit: contain; }
+        /* Room for the handles to sit outside the mark without being clipped by
+           the scrolling panel, and a stacking order that keeps them above the
+           next mark along. */
+        .sdSignScroll { padding: 26px 26px 40px; }
+        .sdMark { position: absolute; box-sizing: border-box; }
+        .sdNoteStamp { color: #4a5a72; border-top: 1px solid #c8d0dc; margin-top: 3px; padding-top: 2px; text-align: center; }
+        .sdNoteText { color: #10275a; white-space: pre-wrap; word-break: break-word; text-align: center; }
+        .sdNote textarea {
+          width: 100%; border: none; outline: none; resize: none; background: transparent;
+          font-family: inherit; color: #10275a; padding: 0; display: block; overflow: hidden;
+          text-align: center;
+        }
+
+        /* an annotation, on screen. The burned PDF is drawn to match. */
+        /* overflow must stay visible: the move and remove buttons hang outside
+           the box on purpose, and clipping them left half a circle showing.
+           The height is computed from the text, so nothing overflows anyway.
+           (7.9.26) */
+        .sdNote {
+          position: absolute; box-sizing: border-box; background: rgba(255,255,255,.92);
+          padding: 4px 6px; overflow: visible;
+        }
+        .sdSignPage.placing { cursor: crosshair; }
+        .sdSignPage canvas { display: block; }
+        .sdSignPage { position: relative; box-shadow: 0 6px 24px rgba(16,32,58,.16); background: #fff; direction: ltr; }
+        .sdSignScroll { flex: 1; overflow: auto; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 16px; }
+        .sdSignHint { font-size: 12px; color: var(--steel); font-weight: 600; }
+        .sdSignBtn:disabled { opacity: .45; cursor: default; }
+        .sdSignBtn.go:hover { background: #17693f; color: #fff; }
+        .sdSignBtn.go { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
+        .sdSignBtn.on { background: #10275a; border-color: #10275a; color: #fff; }
+        .sdSignBtn:hover { border-color: var(--accent); color: var(--accent); }
+        .sdSignBtn {
+          display: inline-flex; align-items: center; gap: 6px;
+          border: 1px solid var(--line); background: #fff; border-radius: 8px;
+          padding: 6px 12px; font-size: 12.5px; font-weight: 700; cursor: pointer;
+          font-family: inherit; color: #16324f;
+        }
+        .sdSignName { font-size: 13px; font-weight: 800; color: #103460; margin-inline-end: auto; }
+        .sdSignBar {
+          display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+          padding: 9px 14px; background: #fff; border-bottom: 1px solid var(--line);
+        }
+
+        /* ---- the signing screen ---- */
+        .sdSign { position: fixed; inset: 0; z-index: 950; background: #eceef1; display: flex; flex-direction: column; }
+        .sdcAskBtn.primary:hover { background: #1f2733; color: #fff; }
+        .sdcAskBtn.primary { background: #14181f; color: #fff; border-color: #14181f; }
+        .sdcAskBtn:hover { border-color: var(--accent); color: var(--accent); }
+        .sdcAskBtn {
+          display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%;
+          border: 1px solid var(--line); background: #fff; border-radius: 10px;
+          padding: 11px 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+          font-family: inherit; color: #16324f; text-align: center;
+        }
+        .sdcAskRow { display: flex; flex-direction: column; gap: 8px; }
+        /* A file name breaks anywhere; a sentence must not. The old rule broke
+           "מכאן" across two lines and left a full stop stranded. (7.9.26) */
+        .sdcAskName {
+          margin: 0 0 16px; font-size: 12.5px; color: var(--steel); font-weight: 600;
+          text-align: center; line-height: 1.55; overflow-wrap: anywhere;
+        }
+        .sdcAskTitle { margin: 0 0 6px; font-size: 16px; font-weight: 800; color: #103460; text-align: center; }
+        .sdcAskBox {
+          background: #fff; border-radius: 14px; padding: 22px 26px; width: 100%; max-width: 480px;
+          box-shadow: 0 20px 60px rgba(0,0,0,.3); text-align: center;
+        }
+
+        /* ---- the little "download or sign" dialog ---- */
+        .sdcAsk {
+          position: fixed; inset: 0; z-index: 900; background: rgba(16,32,58,.42);
+          display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+`;
 
 export {
   PrintLangAsk,
@@ -1787,5 +3005,20 @@ export {
   sbBuildPrintHtml,
   sbPrint,
   sbIsClosed,
-  SubmittalReview
+  SubmittalReview,
+  signCss,
+  // moved out of index.html 15.9.26 so the supervision page can reach them
+  SDC_L,
+  SD_STATUSES,
+  SdSignScreen,
+  boardFileName,
+  fileToDataUrl,
+  guessContentType,
+  sbClipboardImage,
+  sbFileUrl,
+  sbToday,
+  sdApprovalOf,
+  sdClientStatus,
+  sdFileLabel,
+  sdStatus
 };
