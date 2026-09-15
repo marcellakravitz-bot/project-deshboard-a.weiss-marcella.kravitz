@@ -21,6 +21,9 @@ import {
   Lightbulb as Lightbulb2, PanelTop as PanelTop2, Zap as Zap2,
   PenLine, Printer, Stamp, Upload as Upload3, X as X4, ArrowLeft, ArrowRight
 } from "lucide-react";
+// The print-language question and the signature pad open over the page, so
+// they are portalled to the body — the same way the dashboard does it.
+import { createPortal } from "react-dom";
 
 function printedStampText(lang) {
   const d = new Date();
@@ -1271,6 +1274,75 @@ function SignaturePad({ isRTL, onCancel, onDone }) {
 // a place to sign. They never see the editing form — there is nothing here for
 // them to change.
 // -----------------------------------------------------------------------------
+function sbPagesOf(att, numPages) {
+  const list = att && att.pageList;
+  if (!Array.isArray(list) || !list.length) {
+    return Array.from({ length: numPages }, (_, i) => i + 1);
+  }
+  return list.map(Number).filter((n) => n >= 1 && n <= numPages).sort((a, b) => a - b);
+}async function sbRenderSpecPages(rec, onProgress) {
+  const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
+  if (!atts.length) return [];
+  let pdfjsLib;
+  try {
+    pdfjsLib = await loadPdfJs();
+  } catch (e) {
+    console.warn("[awdash] no PDF.js, printing without the specs", e);
+    return [];
+  }
+  const out = [];
+  for (const att of atts) {
+    if (out.length >= SB_PRINT_PAGE_CAP) break;
+    let buf = null;
+    try {
+      if (att.inline && att.dataUrl) {
+        buf = await (await fetch(att.dataUrl)).arrayBuffer();
+      } else if (att.path) {
+        const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).download(att.path);
+        if (error) throw error;
+        buf = await data.arrayBuffer();
+      }
+    } catch (e) {
+      console.warn("[awdash] could not fetch a spec for printing", att.name, e);
+      continue;
+    }
+    if (!buf) continue;
+    try {
+      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
+      const wanted = sbPagesOf(att, doc.numPages);
+      for (const i of wanted) {
+        if (out.length >= SB_PRINT_PAGE_CAP) break;
+        const page = await doc.getPage(i);
+        // ~150 DPI against A4 width: readable in print without a huge payload.
+        const base = page.getViewport({ scale: 1 });
+        const scale = Math.min(1240 / base.width, 3);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.round(viewport.width);
+        canvas.height = Math.round(viewport.height);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        out.push({
+          // The file name is ours, not the reader's. "SPEC-REV3-FINAL-v2.pdf"
+          // on a printed page says nothing about the product and everything
+          // about how the folder is kept. The submittal number, the revision
+          // and the page are what identify the sheet. (7.9.26)
+          label: `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0} · p.${i}/${doc.numPages}`,
+          dataUrl: canvas.toDataURL("image/jpeg", 0.8)
+        });
+        if (onProgress) onProgress(out.length);
+      }
+    } catch (e) {
+      console.warn("[awdash] could not render a spec for printing", att.name, e);
+    }
+  }
+  return out;
+}
+
+// Some specifications carry no text at all — every page is a picture (a scan,
+// or a PDF printed by a tool that rasterises everything). There is nothing to
+// extract, so the pages themselves are sent and the model reads them by eye.
+// Deliberately smaller and fewer than the print render: legible is enough.
+
 function PrintLangAsk({ onPick, onClose, withAudience }) {
   // Two questions on the boards, one everywhere else. The audience decides
   // which columns are printed: a client's copy carries what a client sees on
@@ -1568,6 +1640,8 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
 
 export {
   PrintLangAsk,
+  sbPagesOf,
+  sbRenderSpecPages,
   sbSpecNoteList,
   SubmittalSpecs,
   SignaturePad,

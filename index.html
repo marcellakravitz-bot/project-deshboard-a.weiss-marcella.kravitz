@@ -67,6 +67,8 @@
 import React15, { useState as useState6, useRef as useRef5, useEffect as useEffect5 } from "react";
 import {
   PrintLangAsk,
+  sbPagesOf,
+  sbRenderSpecPages,
   sbSpecNoteList,
   SubmittalSpecs,
   SignaturePad,
@@ -539,7 +541,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.9.2026 · build 147";
+var APP_BUILD = "13.9.2026 · build 152";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5420,18 +5422,24 @@ async function supCopy(text, html) {
 }
 // The message she pastes into an e-mail. One document or many, same shape.
 function supMessageHtml({ projectName, kind, rows }) {
+  // The same message, line for line, as the plain text version — only with the
+  // address made clickable. Anything that re-flows it differently means the
+  // mail looks one way in her editor and another in the client's. (13.9.26)
   const esc = (x) => String(x == null ? "" : x).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
-  const head = kind === "sd" ? "\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05ea\u05d5\u05db\u05e0\u05d9\u05d5\u05ea SD"
-                             : "\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd";
-  const body = rows.map((r) => {
-    const title = [r.no, r.desc].filter(Boolean).join(" - ");
-    const due = r.due ? `<div>\u05e0\u05d3\u05e8\u05e9 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3: ${esc(supFmt(r.due))}</div>` : "";
-    return `<p style="margin:0 0 14px"><b>${esc(title)}</b>${due}<a href="${esc(r.url)}">${esc(r.url)}</a></p>`;
-  }).join("");
-  return `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px">` +
-    `<p style="margin:0 0 14px">\u05e9\u05dc\u05d5\u05dd,<br>${esc(head)}<br>\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 ${esc(projectName || "")}</p>` +
-    body +
-    `<p style="margin:0">\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3 \u05dc-30 \u05d9\u05d5\u05dd.</p></div>`;
+  const head = kind === "sd"
+    ? "\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05ea\u05d5\u05db\u05e0\u05d9\u05d5\u05ea SD"
+    : "\u05dc\u05d0\u05d9\u05e9\u05d5\u05e8\u05db\u05dd - \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd";
+  const lines = ["\u05e9\u05dc\u05d5\u05dd,", head, `\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 ${esc(projectName || "")}`, ""];
+  rows.forEach((r) => {
+    lines.push(esc([r.no, r.desc].filter(Boolean).join(" - ")));
+    if (r.due) lines.push(`\u05e0\u05d3\u05e8\u05e9 \u05d0\u05d9\u05e9\u05d5\u05e8 \u05e2\u05d3: ${esc(supFmt(r.due))}`);
+    lines.push(`<a href="${esc(r.url)}">${esc(r.url)}</a>`);
+    lines.push("");
+  });
+  lines.push("\u05d4\u05e7\u05d9\u05e9\u05d5\u05e8\u05d9\u05dd \u05d1\u05ea\u05d5\u05e7\u05e3 \u05dc-30 \u05d9\u05d5\u05dd.");
+  return `<div dir="rtl" style="font-family:Arial,sans-serif;font-size:14px;line-height:1.5">`
+    + lines.map((l) => (l === "" ? "<br>" : `<div>${l}</div>`)).join("")
+    + `</div>`;
 }
 function supMessage({ projectName, kind, rows }) {
   const head = kind === "sd"
@@ -5875,7 +5883,7 @@ function SubsShell({ title, children }) {
 }
 
 // --------------------------------------------------------------- submittals
-function SubsSubmittalList({ trade, tradeLabel, submittals, boqData, boqFlags, submittalChkOff, pickedCat, onPickCat, onClearCat }) {
+function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, boqData, boqFlags, submittalChkOff, pickedCat, onPickCat, onClearCat }) {
   const [openId, setOpenId] = React9.useState(null);
   // An electrician carries three folders. Thirty lines of three kinds in one
   // scroll is worse than three doors. The choice is held by the card so that
@@ -5883,7 +5891,10 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, boqData, boqFlags, s
   const allCats = SUBS_TRADE_SUBMITTAL_CATS[trade] || [];
   const cats = allCats.length > 1 && pickedCat ? [pickedCat] : allCats;
   const records = (submittals || []).filter((r) => r && !r.hidden && cats.indexOf(r.category) >= 0);
-  const decisionOf = (r) => ((r.reviews || [])[0] || {}).decision || null;
+  const decisionOf = (r) =>
+    ((submittalApprovals || {})[r.id] || {}).review?.decision
+    || ((r.reviews || [])[0] || {}).decision
+    || null;
   const isApproved = (r) => ["approved", "approvedNoted"].indexOf(decisionOf(r)) >= 0;
 
   // His list is her checklist, line for line: the bill-of-quantities rows she
@@ -6437,7 +6448,7 @@ function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange 
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail }) {
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, submittalApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail }) {
   const list = (subsData && subsData.list) || [];
   const [view, setView] = React9.useState("board");
   const [trade, setTrade] = React9.useState(null);
@@ -6559,7 +6570,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
 
   if (view === "board" && trade && section === "submittal") {
     return React9.createElement(SubsSubmittalList, {
-      trade, tradeLabel: tradeOf(trade).label || "", submittals, boqData, boqFlags, submittalChkOff,
+      trade, tradeLabel: tradeOf(trade).label || "", submittals, submittalApprovals, boqData, boqFlags, submittalChkOff,
       pickedCat: subCat,
       onPickCat: (k) => goDeeper(() => setSubCat(k)),
       onClearCat: () => { try { window.history.back(); } catch (e) {} },
@@ -6655,7 +6666,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
         React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
           React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05e9\u05dd",
             React9.createElement("input", { style: inputS, value: draft.name, onChange: (e) => setDraft({ ...draft, name: e.target.value }) })),
-          React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05d7\u05d1\u05e8\u05d4",
+          React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05e4\u05e7\u05d9\u05d3",
             React9.createElement("input", { style: inputS, value: draft.company, onChange: (e) => setDraft({ ...draft, company: e.target.value }) })),
           React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05d8\u05dc\u05e4\u05d5\u05df",
             React9.createElement("input", { style: { ...inputS, direction: "ltr" }, inputMode: "tel", value: draft.phone, onChange: (e) => setDraft({ ...draft, phone: e.target.value }) })),
@@ -6671,10 +6682,10 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", minWidth: 720, margin: "0 auto" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
-            ["\u05e9\u05dd", "\u05d7\u05d1\u05e8\u05d4", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05e4\u05e2\u05d9\u05dc", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
+            ["\u05e9\u05dd", "\u05ea\u05e4\u05e7\u05d9\u05d3", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05e4\u05e2\u05d9\u05dc", "\u05d4\u05d6\u05de\u05e0\u05d4", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
           React9.createElement("tbody", null,
             rows.length === 0
-              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 7 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e3 \u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05d4\u05d6\u05d4."))
+              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 8 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e3 \u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05d4\u05d6\u05d4."))
               : rows.map((r) => React9.createElement("tr", { key: r.id },
                   React9.createElement("td", { style: cellS }, r.name || "\u2014"),
                   React9.createElement("td", { style: cellS }, r.company || "\u2014"),
@@ -6683,6 +6694,20 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
                     React9.createElement("span", { style: { fontWeight: 800, letterSpacing: 1 } }, r.code || "\u2014"),
                     canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginInlineStart: 8, padding: "2px 8px", fontSize: 11 }, onClick: () => setField(r.id, "code", makeSubCode()) }, "\u05d7\u05d3\u05e9")),
                   React9.createElement("td", { style: cellS }, r.pm ? "\u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd" : (tradeOf(r.trade).label || "\u2014")),
+                  React9.createElement("td", { style: { ...cellS, whiteSpace: "nowrap" } },
+                    React9.createElement("button", {
+                      type: "button",
+                      className: "ghostBtn",
+                      style: { padding: "3px 10px", fontSize: 11.5 },
+                      // Everything in the invitation comes from this row, so a
+                      // code copied by hand into an e-mail can no longer be the
+                      // wrong one. (13.9.26)
+                      onClick: async () => {
+                        const ok = await supCopy(inviteText(r));
+                        setCopied(ok ? r.id : null);
+                        setTimeout(() => setCopied(null), 2200);
+                      }
+                    }, copied === r.id ? "\u05d4\u05d5\u05e2\u05ea\u05e7" : "\u05d4\u05e2\u05ea\u05e7\u05ea \u05d4\u05d6\u05de\u05e0\u05d4")),
                   React9.createElement("td", { style: cellS },
                     React9.createElement("button", { type: "button", disabled: !canEdit, onClick: () => setField(r.id, "active", r.active === false), style: { border: "none", cursor: canEdit ? "pointer" : "default", borderRadius: 999, padding: "4px 12px", fontWeight: 800, fontSize: 12, color: "#fff", background: r.active === false ? "#9aa3af" : "#1a7f4b" } },
                       r.active === false ? "\u05db\u05d1\u05d5\u05d9" : "\u05e4\u05e2\u05d9\u05dc")),
@@ -8004,7 +8029,7 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(
     RoomsCard,
     {
       appIsRTL: isRTL,
@@ -17703,75 +17728,7 @@ async function sbExtractPdfText(file) {
 var SB_PRINT_PAGE_CAP = 40;
 // An attachment with no page list covers the whole file. One that has a list
 // covers exactly those pages — that is how a product gets only its own spec.
-function sbPagesOf(att, numPages) {
-  const list = att && att.pageList;
-  if (!Array.isArray(list) || !list.length) {
-    return Array.from({ length: numPages }, (_, i) => i + 1);
-  }
-  return list.map(Number).filter((n) => n >= 1 && n <= numPages).sort((a, b) => a - b);
-}
-async function sbRenderSpecPages(rec, onProgress) {
-  const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
-  if (!atts.length) return [];
-  let pdfjsLib;
-  try {
-    pdfjsLib = await loadPdfJs();
-  } catch (e) {
-    console.warn("[awdash] no PDF.js, printing without the specs", e);
-    return [];
-  }
-  const out = [];
-  for (const att of atts) {
-    if (out.length >= SB_PRINT_PAGE_CAP) break;
-    let buf = null;
-    try {
-      if (att.inline && att.dataUrl) {
-        buf = await (await fetch(att.dataUrl)).arrayBuffer();
-      } else if (att.path) {
-        const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).download(att.path);
-        if (error) throw error;
-        buf = await data.arrayBuffer();
-      }
-    } catch (e) {
-      console.warn("[awdash] could not fetch a spec for printing", att.name, e);
-      continue;
-    }
-    if (!buf) continue;
-    try {
-      const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-      const wanted = sbPagesOf(att, doc.numPages);
-      for (const i of wanted) {
-        if (out.length >= SB_PRINT_PAGE_CAP) break;
-        const page = await doc.getPage(i);
-        // ~150 DPI against A4 width: readable in print without a huge payload.
-        const base = page.getViewport({ scale: 1 });
-        const scale = Math.min(1240 / base.width, 3);
-        const viewport = page.getViewport({ scale });
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(viewport.width);
-        canvas.height = Math.round(viewport.height);
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
-        out.push({
-          // The file name is ours, not the reader's. "SPEC-REV3-FINAL-v2.pdf"
-          // on a printed page says nothing about the product and everything
-          // about how the folder is kept. The submittal number, the revision
-          // and the page are what identify the sheet. (7.9.26)
-          label: `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0} · p.${i}/${doc.numPages}`,
-          dataUrl: canvas.toDataURL("image/jpeg", 0.8)
-        });
-        if (onProgress) onProgress(out.length);
-      }
-    } catch (e) {
-      console.warn("[awdash] could not render a spec for printing", att.name, e);
-    }
-  }
-  return out;
-}
 
-// Some specifications carry no text at all — every page is a picture (a scan,
-// or a PDF printed by a tool that rasterises everything). There is nothing to
-// extract, so the pages themselves are sent and the model reads them by eye.
-// Deliberately smaller and fewer than the print render: legible is enough.
 var SB_AI_IMAGE_PAGES = 5;
 async function sbRenderSpecImages(rec, maxPages) {
   const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
