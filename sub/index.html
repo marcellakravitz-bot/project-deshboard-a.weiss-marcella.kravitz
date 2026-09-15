@@ -203,7 +203,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">13.9.2026 · build 32</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">13.9.2026 · build 33</span></footer>
 
 <script>
 
@@ -598,6 +598,15 @@ function openDoc(url){
     render();
   });
 }
+function fitDoc(html){
+  var css='<style>@media screen{'+
+    'html,body{background:#fff!important;padding:0!important;margin:0!important}'+
+    '.page{width:100%!important;height:auto!important;min-height:0!important;'+
+      'padding:8px!important;margin:0 0 10px!important;box-shadow:none!important}'+
+    '.sheet{height:auto!important}.frame{height:auto!important}'+
+  '}</style>';
+  return String(html||"").replace(/<\/head>/i, css+'</head>');
+}
 function viewDoc(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
@@ -605,7 +614,7 @@ function viewDoc(){
       icon("M15 6l-6 6 6 6")+'</button>'+
     (state.doc==="loading"
       ? '<p class="lead">טוען את המסמך…</p>'
-      : '<iframe class="docFrame" srcdoc="'+esc(state.doc)+'"></iframe>');
+      : '<iframe class="docFrame" srcdoc="'+esc(fitDoc(state.doc))+'"></iframe>');
   var b=document.getElementById("docBack");
   if(b) b.onclick=function(){ state.doc=null; render(); };
 }
