@@ -29,6 +29,7 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 var SUBMITTAL_BUCKET = "submittals";var SB_PRINT_PAGE_CAP = 40;
 // An attachment with no page list covers the whole file. One that has a list
 // covers exactly those pages — that is how a product gets only its own spec.
+var PDFJS_VERSION = "3.11.174";
 var PDFJS_SOURCES = [
   {
     lib: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`,
@@ -1741,6 +1742,7 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
 
 export {
   PrintLangAsk,
+  PDFJS_VERSION,
   PDFJS_SOURCES,
   pdfJsLoadingPromise,
   loadScriptOnce,
