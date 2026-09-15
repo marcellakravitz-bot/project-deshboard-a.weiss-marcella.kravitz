@@ -542,7 +542,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "13.9.2026 · build 163";
+var APP_BUILD = "13.9.2026 · build 164";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5924,7 +5924,9 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, 
           sbPrint(doc, "he", printBrand, null);
           if (!ap.doc && onChangeApprovals) {
             try {
-              const html = sbBuildPrintHtml(doc, "he", printBrand, [], null);
+              let pages = [];
+              try { pages = await sbRenderSpecPages(doc, null); } catch (e) { pages = []; }
+              const html = sbBuildPrintHtml(doc, "he", printBrand, pages, null);
               const name = `${sbNumber(open.category, open.seq)}.html`;
               const file = new File([html], name, { type: "text/html" });
               const stored = await subsUploadFile(projectId, "signed", file);
@@ -20250,7 +20252,9 @@ function SubmittalCard({
     const now = (/* @__PURE__ */ new Date()).toISOString();
     let doc = null;
     try {
-      const html = sbBuildPrintHtml({ ...rec, reviews: [rv] }, lang, printBrand, [], userSignatures);
+      let pages = [];
+      try { pages = await sbRenderSpecPages(rec, null); } catch (e) { pages = []; }
+      const html = sbBuildPrintHtml({ ...rec, reviews: [rv] }, lang, printBrand, pages, userSignatures);
       const file = new File([html], `${sbNumber(rec.category, rec.seq)}.html`, { type: "text/html" });
       doc = await sbUploadFile(projectId, `submittal-signed-${rec.id}`, file);
     } catch (e) {
