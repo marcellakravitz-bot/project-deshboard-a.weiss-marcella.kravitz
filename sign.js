@@ -74,7 +74,9 @@ async function loadPdfJs() {
     throw lastErr || new Error("All PDF.js sources failed to load");
   })();
   return pdfJsLoadingPromise;
-}var supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+}var SUPABASE_URL = "https://jvssavyfjuhjniqkiymo.supabase.co";
+var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9FY_yBz2KLVfVYdxPbvBHw_Xx233xC4";
+var supabase = createSupabaseClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -85,8 +87,6 @@ async function loadPdfJs() {
 // Bump this when the disclaimer wording changes; each acceptance records which
 // version the user agreed to (their "signature").
 
-var SUPABASE_URL = "https://jvssavyfjuhjniqkiymo.supabase.co";
-var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9FY_yBz2KLVfVYdxPbvBHw_Xx233xC4";
 var PRINT_PAGE_MM = 210;
 // The white edge of the paper. 12mm is the measurement the reports were set up
 // with and the one she signed off on; 8mm put the frame too close to the edge
