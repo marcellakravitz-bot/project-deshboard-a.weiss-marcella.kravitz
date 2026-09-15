@@ -58,6 +58,8 @@
     border-radius:50%;background:#fff;transition:transform .18s}
   .tgl.on{background:var(--navy)}
   .tgl.on span{transform:translateX(-19px)}
+  .docFrame{width:100%;height:calc(100vh - 150px);border:1px solid var(--line);
+    border-radius:var(--radius);background:#fff}
   .backArrow{position:absolute;top:14px;right:14px;
     z-index:6;width:38px;height:38px;border:1px solid var(--line);border-radius:12px;
     background:var(--surface);color:var(--steel);display:flex;align-items:center;
@@ -201,7 +203,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">13.9.2026 · build 31</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">13.9.2026 · build 32</span></footer>
 
 <script>
 
@@ -338,7 +340,7 @@ var SD_STATUS = {
 var CAT_HE = { electrical:"חשמל", lighting:"תאורה", security:"ביטחון, בקרה ותקשורת",
   hvac:"מיזוג אוויר", plumbing:"אינסטלציה", ceiling:"תקרה", flooring:"ריצוף",
   cladding:"גמרים", architecture:"אדריכלות" };
-var state = { token:null, projects:[], project:null, board:null, screen:null, cat:null, trade:null };
+var state = { token:null, projects:[], project:null, board:null, screen:null, cat:null, trade:null, doc:null };
 var app = document.getElementById("app");
 var out = document.getElementById("out");
 document.getElementById("yr").textContent = new Date().getFullYear();
@@ -583,8 +585,34 @@ function files(list){
       (img ? '<img src="'+esc(f.url)+'" alt="">' : esc(f.name||"קובץ"))+'</a>';
   }).join("")+'</div>';
 }
+function isDoc(f){ return /html/.test((f&&f.type)||"") || /\.html(\?|$)/i.test((f&&f.url)||""); }
+function openDoc(url){
+  state.doc="loading";
+  render();
+  fetch(url).then(function(r){ return r.text(); }).then(function(html){
+    state.doc=html;
+    render();
+  }).catch(function(){
+    state.doc=null;
+    alert("לא ניתן לפתוח את המסמך.");
+    render();
+  });
+}
+function viewDoc(){
+  out.hidden=false;
+  document.querySelector(".bar").classList.remove("guest");
+  app.innerHTML='<button class="backArrow" id="docBack" aria-label="חזרה">'+
+      icon("M15 6l-6 6 6 6")+'</button>'+
+    (state.doc==="loading"
+      ? '<p class="lead">טוען את המסמך…</p>'
+      : '<iframe class="docFrame" srcdoc="'+esc(state.doc)+'"></iframe>');
+  var b=document.getElementById("docBack");
+  if(b) b.onclick=function(){ state.doc=null; render(); };
+}
 function eye(list){
   if(!list||!list.length) return '<span class="eye off">'+icon("M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6")+'</span>';
+  if(isDoc(list[0])) return '<button class="eye" data-doc="'+esc(list[0].url)+'">'+
+    icon("M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6")+'</button>';
   return '<a class="eye" href="'+esc(list[0].url)+'" target="_blank" rel="noopener">'+
     icon("M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM12 9a3 3 0 100 6 3 3 0 000-6")+'</a>';
 }
@@ -846,6 +874,9 @@ function screen(){
       logDraft=null; loadBoard();
     }).catch(function(){ ls.disabled=false; ls.textContent="שמירה"; alert("אין חיבור."); });
   };
+  Array.prototype.forEach.call(app.querySelectorAll("[data-doc]"), function(el){
+    el.onclick=function(){ history.pushState({s:1},""); openDoc(el.getAttribute("data-doc")); };
+  });
   Array.prototype.forEach.call(app.querySelectorAll(".note"), function(el){
     el.onclick=function(){
       var box=document.getElementById("nb"+el.getAttribute("data-n"));
@@ -858,6 +889,9 @@ function render(){
   if(!state.token){ login(); return; }
   if(!state.project){ picker(); return; }
   if(!state.board){ busy(); return; }
+  // The signed document, opened inside the app rather than handed to the
+  // phone as a file.
+  if(state.doc){ viewDoc(); return; }
   // A project manager sees every trade, so he says which one first.
   if(state.board.isPm && !state.trade){ tradePicker(); return; }
   if(state.screen) screen(); else board();
@@ -870,6 +904,7 @@ function signOut(msg){
 }
 out.onclick=function(){ signOut(); };
 window.addEventListener("popstate", function(){
+  if(state.doc){ state.doc=null; render(); return; }
   if(state.cat){ state.cat=null; render(); return; }
   if(state.screen){ state.screen=null; render(); return; }
   if(state.board&&state.board.isPm&&state.trade){ state.trade=null; state.board.trade=null; render(); return; }
