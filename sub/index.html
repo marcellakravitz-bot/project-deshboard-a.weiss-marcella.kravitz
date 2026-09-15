@@ -124,7 +124,7 @@
   .file img{width:100%;height:100%;object-fit:cover}
   .tbl{width:100%;border-collapse:collapse;background:var(--surface);
     border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
-  .tbl th,.tbl td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:12.5px;text-align:center}
+  .tbl th,.tbl td{padding:10px 8px;border-bottom:1px solid var(--line);font-size:12.5px;text-align:center;white-space:pre-line}
   .tbl thead th{background:#f4f6f9;font-weight:800;font-size:12px}
   .tbl td:nth-child(2){text-align:right}
   .tbl tr:last-child td{border-bottom:none}
@@ -201,7 +201,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">11.9.2026 · build 30</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">13.9.2026 · build 31</span></footer>
 
 <script>
 
@@ -675,7 +675,7 @@ function viewSubmittal(b){
     '<table class="tbl"><thead><tr><th>מס׳</th><th>תיאור</th><th>סטטוס</th><th></th></tr></thead><tbody>'+
     rows.map(function(r){
       var d=DECISIONS[r.decision];
-      var label = d ? d.t : (r.submitted ? "הוגש" : "טרם הוגש");
+      var label = d ? d.t : (r.submitted ? "הוגש,\nטרם אושר" : "טרם הוגש");
       return '<tr><td class="num">'+esc(r.no||"—")+'</td><td>'+esc(r.typeId||r.description)+'</td>'+
         '<td style="color:'+(d?d.c:"#9a9da5")+';font-weight:700">'+esc(label)+'</td>'+
         '<td>'+eye(r.files)+'</td></tr>';
