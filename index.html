@@ -542,7 +542,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "13.9.2026 · build 164";
+var APP_BUILD = "13.9.2026 · build 166";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -11824,6 +11824,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // list says all of it, and says it by name: any status, one named status, or
   // the rows that were put aside.
   const [statusFilter, setStatusFilter] = useState6("all");
+  const [supOpen, setSupOpen] = useState6(false);
 
   const [busyRow, setBusyRow] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
@@ -12072,6 +12073,27 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       label
     );
 
+  // Sending drawings out for approval. Only what has a drawing on it can go:
+  // a line with nothing attached has nothing to approve. (13.9.26)
+  if (supOpen && canEdit) {
+    const rows = Object.entries(data || {})
+      .filter(([, v]) => v && (v.file || {}).path)
+      .map(([code, v]) => ({
+        id: code,
+        no: "",
+        desc: v.desc || code,
+        due: v.dueDate || "",
+        cat: "",
+      }));
+    return sbH(SupervisionList, {
+      kind: "sd",
+      projectId,
+      projectName,
+      rows,
+      onBack: () => setSupOpen(false),
+    });
+  }
+
   return sbH(
     "div",
     { className: "lliCard sdCard", dir: isRTL ? "rtl" : "ltr" },
@@ -12133,6 +12155,15 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         SD_STATUSES.map((st) => sbH("option", { key: st.key, value: st.key }, sbText(st, lang))),
       ),
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
+      canEdit
+        ? sbH(
+            "button",
+            { type: "button", className: "ghostBtn small", onClick: () => setSupOpen(true) },
+            sbH(SendIcon2, { size: 14, strokeWidth: 2 }),
+            " ",
+            "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7"
+          )
+        : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
       exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
@@ -12306,7 +12337,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                                 // get: project - description - the day it was
                                 // saved. The stored key is a UUID and nobody
                                 // should ever see it (7.9.26).
-                                onClick: () => sbDownloadAs(shownFile, projectName, sdFileLabel(v.desc || r.title || ""))
+                                onClick: () => sbDownloadAs(shownFile, projectName, `SD - ${sdFileLabel(v.desc || r.title || "")}`)
                               },
                               sbH(Download2, { size: 13, strokeWidth: 2 })
                             ),
