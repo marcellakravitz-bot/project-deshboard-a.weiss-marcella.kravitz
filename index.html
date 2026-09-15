@@ -67,6 +67,9 @@
 import React15, { useState as useState6, useRef as useRef5, useEffect as useEffect5 } from "react";
 import {
   PrintLangAsk,
+  PDFJS_SOURCES,
+  pdfJsLoadingPromise,
+  loadScriptOnce,
   PRINT_PAGE_MM,
   PRINT_MARGIN_MM,
   PRINT_WIDE_MM,
@@ -538,7 +541,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "13.9.2026 · build 160";
+var APP_BUILD = "13.9.2026 · build 161";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -4264,30 +4267,6 @@ function measureTextWidth(text, font) {
 
 // src/lib/files.js
 var PDFJS_VERSION = "3.11.174";
-var PDFJS_SOURCES = [
-  {
-    lib: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`,
-    worker: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`
-  },
-  {
-    lib: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
-    worker: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.js`
-  },
-  {
-    lib: `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
-    worker: `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.js`
-  }
-];
-function loadScriptOnce(src) {
-  return new Promise((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = src;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
-    document.head.appendChild(script);
-  });
-}
-var pdfJsLoadingPromise = null;
 
 function fileToDataUrl(file) {
   return new Promise((resolve, reject) => {

@@ -29,6 +29,30 @@ import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 var SUBMITTAL_BUCKET = "submittals";var SB_PRINT_PAGE_CAP = 40;
 // An attachment with no page list covers the whole file. One that has a list
 // covers exactly those pages — that is how a product gets only its own spec.
+var PDFJS_SOURCES = [
+  {
+    lib: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.min.js`,
+    worker: `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${PDFJS_VERSION}/pdf.worker.min.js`
+  },
+  {
+    lib: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
+    worker: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.js`
+  },
+  {
+    lib: `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.min.js`,
+    worker: `https://unpkg.com/pdfjs-dist@${PDFJS_VERSION}/build/pdf.worker.min.js`
+  }
+];
+var pdfJsLoadingPromise = null;
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+    document.head.appendChild(script);
+  });
+}
 async function loadPdfJs() {
   if (typeof window !== "undefined" && window.pdfjsLib) return window.pdfjsLib;
   if (pdfJsLoadingPromise) return pdfJsLoadingPromise;
@@ -65,9 +89,11 @@ var SUPABASE_PUBLISHABLE_KEY = "sb_publishable_9FY_yBz2KLVfVYdxPbvBHw_Xx233xC4";
 var PRINT_PAGE_MM = 210;
 // The white edge of the paper. 12mm is the measurement the reports were set up
 // with and the one she signed off on; 8mm put the frame too close to the edge
-// (30.8.26).var PRINT_MARGIN_MM = 12;
+// (30.8.26).
+var PRINT_MARGIN_MM = 12;
 // A4 landscape is 297mm across. The frame lives inside the margin on all four
-// sides, so its box is the paper less twice the margin.var PRINT_WIDE_MM = 297;
+// sides, so its box is the paper less twice the margin.
+var PRINT_WIDE_MM = 297;
 // ---------------------------------------------------------------------------
 //  One shell for every document this app issues (7.9.26)
 //
@@ -1715,6 +1741,9 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
 
 export {
   PrintLangAsk,
+  PDFJS_SOURCES,
+  pdfJsLoadingPromise,
+  loadScriptOnce,
   PRINT_PAGE_MM,
   PRINT_MARGIN_MM,
   PRINT_WIDE_MM,
