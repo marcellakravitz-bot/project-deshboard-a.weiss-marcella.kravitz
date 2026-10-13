@@ -8,20 +8,37 @@
 <title>אישור מסמך · א. וייס הנדסה</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom": "https://esm.sh/react-dom@18.3.1?external=react",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react",
+    "lucide-react": "https://esm.sh/lucide-react@0.417.0?external=react",
+    "@supabase/supabase-js": "https://esm.sh/@supabase/supabase-js@2"
+  }
+}
+</script>
+
 <style>
   :root{
     --ink:#17181c; --steel:#5b5e66; --mist:#9a9da5;
-    --line:#e6e6e9; --surface:#ffffff; --bg:#f6f6f7;
+    --line:#e6e6e9; --line-soft:#f0f0f2; --surface:#ffffff; --bg:#f6f6f7;
     --panel:#101114; --navy:#103460; --ok:#1a7f4b; --warn:#e08a12; --bad:#d02f2f;
     --radius:14px;
+    /* signCss asks the page it lands on for these three as well. Without them
+       the borders and hovers of the signing screen simply do not paint, and
+       nothing says so. (15.9.26) */
+    --accent:#17181c; --accent-ink:#000000; --accent-soft:#eceef1;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
     font-family:'Assistant','Inter',sans-serif;-webkit-text-size-adjust:100%}
   .num{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
   .bar{position:sticky;top:0;z-index:5;background:var(--panel);color:#fff;
-    padding:calc(env(safe-area-inset-top) + 12px) 18px 12px;
+    padding:calc(env(safe-area-inset-top, 0px) + 12px) 18px 12px;
     display:flex;align-items:center;justify-content:center;min-height:52px}
   .bar h1{margin:0;font-size:15px;font-weight:800}
   .bar .logo{position:absolute;left:18px;top:50%;transform:translateY(-50%);height:24px}
@@ -38,8 +55,9 @@
   .files{display:flex;flex-wrap:wrap;gap:10px}
   .file{display:flex;align-items:center;gap:8px;border:1px solid var(--line);
     border-radius:10px;padding:10px 14px;background:#fafbfc;text-decoration:none;
-    color:var(--ink);font-size:13px;font-weight:700}
+    color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;font-family:inherit}
   .file:hover{background:#f2f5f9}
+  .file[disabled]{opacity:.6;cursor:default}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media (max-width:640px){ .grid2{grid-template-columns:1fr} }
   label{display:block;font-size:12px;font-weight:800;margin-bottom:6px}
@@ -56,24 +74,43 @@
     color:var(--steel);font-size:13px;cursor:pointer;background:#fafbfc}
   .drop img{max-height:90px;max-width:100%;display:block;margin:0 auto 8px}
   .padWrap{border:1px solid var(--line);border-radius:12px;background:#fff;overflow:hidden}
-  canvas{display:block;width:100%;height:180px;touch-action:none;cursor:crosshair}
+  #pad{display:block;width:100%;height:180px;touch-action:none;cursor:crosshair}
   .padBar{display:flex;justify-content:space-between;align-items:center;
     padding:8px 12px;border-top:1px solid var(--line);font-size:12px;color:var(--mist)}
   .padBar button{border:none;background:transparent;color:var(--steel);font:inherit;
     font-size:12.5px;font-weight:700;cursor:pointer;padding:4px}
-  .go{width:100%;margin-top:6px;padding:14px;border:none;border-radius:999px;
+  /* Named for this page, not "go": signCss uses .go as a modifier on the
+     signing screen's finish button, and a bare .go here won the width and
+     broke that toolbar into three rows. A page that hosts someone else's
+     stylesheet does not get to own one-word class names. (15.9.26) */
+  .sendBtn{width:100%;margin-top:6px;padding:14px;border:none;border-radius:999px;
     background:#c3c6cc;color:#fff;font:inherit;font-weight:800;font-size:16px;cursor:not-allowed;
     display:flex;align-items:center;justify-content:center;gap:9px}
-  .go.ready{background:var(--navy);cursor:pointer}
+  .sendBtn.ready{background:var(--navy);cursor:pointer}
   .missing{margin:10px 0 0;font-size:12.5px;color:var(--steel);text-align:center}
   .err{margin:12px 0 0;font-size:13px;color:var(--bad);text-align:center}
   .locked{text-align:center}
   .locked .tag{display:inline-block;font-size:13px;font-weight:800;padding:8px 16px;
     border-radius:999px;margin-bottom:14px}
   .locked p{font-size:14px;line-height:1.8;color:var(--steel);margin:0 0 18px}
-  .foot{padding:24px 16px calc(env(safe-area-inset-bottom) + 20px);text-align:center;
+  .foot{padding:24px 16px calc(env(safe-area-inset-bottom, 0px) + 20px);text-align:center;
     font-size:11px;color:var(--mist)}
   .lead{text-align:center;color:var(--steel);font-size:14px;padding:40px 0}
+
+  /* ---------- signing a drawing ---------- */
+  .signBtn{width:100%;padding:13px;border:1px solid var(--navy);border-radius:12px;
+    background:#fff;color:var(--navy);font:inherit;font-weight:800;font-size:14.5px;
+    cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+  .signBtn:hover{background:#f4f8fd}
+  .signBtn[disabled]{opacity:.5;cursor:default}
+  .signedOk{display:flex;align-items:center;justify-content:center;gap:9px;
+    border:1px solid #bfe3ce;background:#e9f6ee;color:#14532d;border-radius:12px;
+    padding:13px;font-size:14px;font-weight:800}
+  .signedOk button{border:none;background:transparent;color:#14532d;font:inherit;
+    font-size:12.5px;font-weight:700;text-decoration:underline;cursor:pointer;padding:0}
+  .hint{margin:10px 0 0;font-size:12.5px;color:var(--steel);line-height:1.7}
+  /* The signing screen is fixed to the viewport and paints over everything. */
+  #sdsign{position:relative;z-index:900}
 </style>
 </head>
 <body>
@@ -81,7 +118,70 @@
   <h1>אישור מסמך</h1>
 </div>
 <main id="app" class="wrap"><p class="lead">טוען…</p></main>
-<p class="foot">א. וייס הנדסה · 12.9.2026 · build 1</p>
+<div id="sdsign"></div>
+<p class="foot">א. וייס הנדסה · 15.9.2026 · build 2</p>
+
+<!-- ---------------------------------------------------------------------- -->
+<!-- The drawing-signing screen, imported from the site's own sign.js.        -->
+<!--                                                                          -->
+<!-- It is the SAME screen the client signs a drawing with inside the          -->
+<!-- dashboard — not a copy of it. A second implementation would drift from    -->
+<!-- the first the moment one of them was corrected, and a supervisor's        -->
+<!-- signature that behaves differently from a client's is exactly the thing   -->
+<!-- that must not exist. sign.js carries its own CSS (signCss), so the screen  -->
+<!-- arrives here looking the way it looks there. (15.9.26)                    -->
+<!--                                                                          -->
+<!-- This is a module: it loads after the classic script below and only fills  -->
+<!-- in window.awSdSign. Everything else on the page works without it, and the -->
+<!-- submittal route does not touch it at all.                                 -->
+<!-- ---------------------------------------------------------------------- -->
+<script type="module">
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { SdSignScreen, SDC_L, sbText, sbH, signCss, sbFileUrl } from "../sign.js";
+
+// One <style>, once, holding exactly what the dashboard holds.
+const tag = document.createElement("style");
+tag.id = "sign-css";
+tag.textContent = signCss;
+document.head.appendChild(tag);
+
+let root = null;
+const host = document.getElementById("sdsign");
+
+// Opens the drawing for reading only — no signing, no marks. Used by the file
+// list: a supervisor looks before deciding, and looking must not be a download.
+window.awViewFile = async (att) => {
+  const url = await sbFileUrl(att);
+  if (!url) return false;
+  window.open(url, "_blank", "noopener");
+  return true;
+};
+
+// opts: { file, title, projectName, docLabel, who, initialStamp, onDone, onCancel }
+// onDone receives the burned PDF as a File, and the number of marks on it.
+window.awSdSign = (opts) => {
+  const L = (k) => sbText(SDC_L[k] || { en: k, he: k }, "he");
+  const close = () => { if (root) { root.unmount(); root = null; } host.innerHTML = ""; };
+  root = root || createRoot(host);
+  root.render(sbH(SdSignScreen, {
+    lang: "he",
+    isRTL: true,
+    L,
+    file: opts.file,
+    title: opts.title,
+    who: opts.who,
+    projectName: opts.projectName,
+    docLabel: opts.docLabel,
+    initialStamp: opts.initialStamp || null,
+    onCancel: () => { close(); if (opts.onCancel) opts.onCancel(); },
+    onDone: async (signedFile, markCount) => { close(); await opts.onDone(signedFile, markCount); }
+  }));
+};
+
+window.awSdSignReady = true;
+document.dispatchEvent(new Event("awsdsign"));
+</script>
 
 <script>
 // ---------------------------------------------------------------------------
@@ -89,8 +189,18 @@
 // address bar is the only thing it knows, and every answer comes from the
 // server. There is no account here and no way to reach any other document.
 //
-// Downloading is looking, not acting — the link stays open. Only a decision,
-// with what that decision requires, closes it. (12.9.26)
+// Looking is not acting — the link stays open. Only a decision, with what that
+// decision requires, closes it. (12.9.26)
+//
+// 15.9.26 — two changes, and only these:
+//   1. A file OPENS. It used to be a plain <a href> onto a signed URL, and a
+//      file stored as "application/octet-stream" — which every older one is —
+//      makes the browser save it instead of showing it. It is read as bytes
+//      and handed over as a typed blob, exactly as the site does it.
+//   2. A drawing is signed on the drawing. Where a submittal takes a signature
+//      in the box below, an SD opens the site's own signing screen: notes
+//      placed where they belong, the company stamp signed over, and a new PDF
+//      burned from it. The submittal route is untouched.
 // ---------------------------------------------------------------------------
 var API = "https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/supervision";
 var TOKEN = new URLSearchParams(location.search).get("t") || "";
@@ -102,7 +212,8 @@ var DECISIONS = [
   { key:"rejected",     t:"לא מאושר",                               cls:"bad",  sign:false, needsText:true }
 ];
 
-var state = { doc:null, decision:null, stamp:null, signature:null, sending:false, err:null };
+var state = { doc:null, decision:null, stamp:null, signature:null,
+              signedFile:null, signedMarks:0, sending:false, err:null };
 var app = document.getElementById("app");
 
 function esc(x){ return String(x==null?"":x).replace(/[&<>"]/g,function(c){
@@ -113,20 +224,23 @@ function call(body){
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, data:j }; }); });
 }
 function dec(){ return DECISIONS.filter(function(d){ return d.key===state.decision })[0] || null; }
+function isSd(d){ return (d && d.kind) === "sd"; }
 
 // ---------------------------------------------------------------- the header
 function head(d){
   return '<div class="proj">'+
     '<span class="pn">'+esc(d.project||"")+'</span>'+
-    '<span class="doc">'+(d.kind==="sd"?"תוכנית ייצור (SD)":"סבמיטל")+'</span>'+
+    '<span class="doc">'+(isSd(d)?"תוכנית ייצור (SD)":"סבמיטל")+'</span>'+
     '<span class="no num">'+esc(d.no||"")+'</span>'+
   '</div>';
 }
 function filesBlock(d){
   if(!d.files || !d.files.length) return '<p class="missing">לא צורפו קבצים למסמך זה.</p>';
+  // A button, not a link: the file is fetched and opened as a typed blob, so a
+  // drawing is shown and not saved. The <a href> that was here downloaded it.
   return '<div class="files">'+d.files.map(function(f,i){
-    return '<a class="file" href="'+esc(f.url)+'" target="_blank" rel="noopener" data-dl="'+i+'">'+
-      '<span>⤓</span><span>'+esc(f.name||"מסמך")+'</span></a>';
+    return '<button type="button" class="file" data-view="'+i+'">'+
+      '<span>⤢</span><span>'+esc(f.name||"מסמך")+'</span></button>';
   }).join("")+'</div>';
 }
 
@@ -144,16 +258,18 @@ function lockedView(d){
       '<p>'+esc(why)+'<br>לא ניתן לבצע שינויים נוספים דרך קישור זה.</p>'+
       filesBlock(d)+
     '</div>';
-  wireDownloads(d);
+  wireFiles(d);
 }
 
 // ------------------------------------------------------------------ the form
 function formView(d){
   var chosen = dec();
   var needSign = !!(chosen && chosen.sign);
+  var sd = isSd(d);
+
   app.innerHTML = head(d)+
     '<div class="card"><h2>המסמך</h2>'+filesBlock(d)+
-      '<p class="missing">הורדת המסמך אינה סוגרת את הקישור. אפשר לחזור אליו עד למתן החלטה.</p></div>'+
+      '<p class="missing">פתיחת המסמך אינה סוגרת את הקישור. אפשר לחזור אליו עד למתן החלטה.</p></div>'+
 
     '<div class="card"><h2><span class="step">1</span>פרטי החותם</h2>'+
       '<div class="grid2">'+
@@ -177,23 +293,46 @@ function formView(d){
           '<label class="drop" id="stampDrop">'+
             (state.stamp?'<img src="'+state.stamp+'" alt="">':"")+
             (state.stamp?"לחצו להחלפת החותמת":"לחצו להעלאת חותמת · PNG שקוף מומלץ")+
-            '<input id="stampFile" type="file" accept="image/*,application/pdf" style="display:none">'+
+            '<input id="stampFile" type="file" accept="image/*" style="display:none">'+
           '</label></div>'+
 
-        '<div class="card"><h2><span class="step">3</span>חתימה ידנית</h2>'+
-          '<div class="padWrap"><canvas id="pad"></canvas>'+
-            '<div class="padBar"><span>חתמו בתוך המסגרת</span>'+
-            '<button type="button" id="padClear">ניקוי</button></div></div></div>'
+        (sd ? sdSignBlock(d) : submittalPadBlock())
       : "")+
 
     '<div class="card">'+
-      '<button class="go'+(canSend()?" ready":"")+'" id="send">'+
+      '<button class="sendBtn'+(canSend()?" ready":"")+'" id="send">'+
         '<span>➤</span><span>'+(state.sending?"שולח…":"אישור ושלח")+'</span></button>'+
       (canSend()?"":'<p class="missing">'+esc(whatIsMissing())+'</p>')+
       (state.err?'<p class="err">'+esc(state.err)+'</p>':"")+
     '</div>';
 
-  wireForm(d, needSign);
+  wireForm(d, needSign, sd);
+}
+
+// The drawing route: one button that opens the site's signing screen.
+function sdSignBlock(d){
+  if(state.signedFile){
+    return '<div class="card"><h2><span class="step">3</span>חתימה על התוכנית</h2>'+
+      '<div class="signedOk"><span>✓</span><span>התוכנית נחתמה'+
+      (state.signedMarks?' · '+state.signedMarks+' סימונים':'')+
+      '</span><button type="button" id="sdRedo">חתימה מחדש</button></div>'+
+      '<p class="hint">הקובץ החתום נוצר ויישלח עם ההחלטה. הוא עדיין לא נשלח.</p></div>';
+  }
+  var ready = !!state.stamp;
+  return '<div class="card"><h2><span class="step">3</span>חתימה על התוכנית</h2>'+
+    '<button type="button" class="signBtn" id="sdSign"'+(ready?"":" disabled")+'>'+
+      '<span>✒</span><span>פתיחת התוכנית לחתימה</span></button>'+
+    '<p class="hint">'+(ready
+      ? 'התוכנית תיפתח במסך מלא. אפשר להוסיף הערות בכתב יד במקום שאליו הן שייכות, ולחתום על גבי חותמת החברה. בסיום נוצר קובץ PDF חדש עם הסימונים.'
+      : 'יש להעלות את חותמת החברה למעלה לפני החתימה — חותמים על גביה.')+'</p></div>';
+}
+
+// The submittal route, exactly as it was.
+function submittalPadBlock(){
+  return '<div class="card"><h2><span class="step">3</span>חתימה ידנית</h2>'+
+    '<div class="padWrap"><canvas id="pad"></canvas>'+
+      '<div class="padBar"><span>חתמו בתוך המסגרת</span>'+
+      '<button type="button" id="padClear">ניקוי</button></div></div></div>';
 }
 
 function readInputs(){
@@ -205,7 +344,11 @@ function canSend(){
   if(!c) return false;
   if(!(state.name||"").trim() || !(state.company||"").trim()) return false;
   if(c.needsText && !(state.comments||"").trim()) return false;
-  if(c.sign && (!state.stamp || !state.signature)) return false;
+  if(c.sign){
+    if(!state.stamp) return false;
+    // A drawing is signed on the drawing; a submittal in the box.
+    if(isSd(state.doc) ? !state.signedFile : !state.signature) return false;
+  }
   return !state.sending;
 }
 function whatIsMissing(){
@@ -216,30 +359,38 @@ function whatIsMissing(){
   if(!(state.company||"").trim()) miss.push("חברת פיקוח");
   if(c.needsText && !(state.comments||"").trim()) miss.push(c.key==="approvedNoted"?"הערות":"סיבה");
   if(c.sign && !state.stamp) miss.push("חותמת חברה");
-  if(c.sign && !state.signature) miss.push("חתימה ידנית");
+  if(c.sign && state.stamp){
+    if(isSd(state.doc) ? !state.signedFile : !state.signature)
+      miss.push(isSd(state.doc) ? "חתימה על התוכנית" : "חתימה ידנית");
+  }
   return miss.length ? "חסר: "+miss.join(" · ") : "";
 }
 
-function wireDownloads(d){
-  Array.prototype.forEach.call(document.querySelectorAll("[data-dl]"), function(a){
-    a.addEventListener("click", function(){
-      var f=(d.files||[])[Number(a.getAttribute("data-dl"))]||{};
+// Opening a file is logged the same way a download was: the server's journal
+// records that the supervisor looked, and looking still does not close the link.
+function wireFiles(d){
+  Array.prototype.forEach.call(document.querySelectorAll("[data-view]"), function(btn){
+    btn.addEventListener("click", function(){
+      var f=(d.files||[])[Number(btn.getAttribute("data-view"))]||{};
       call({ action:"downloaded", name:f.name||"" });
+      if(!window.awViewFile){ window.open(f.url, "_blank", "noopener"); return; }
+      btn.setAttribute("disabled","");
+      window.awViewFile({ url:f.url, name:f.name })
+        .then(function(ok){ if(!ok) window.open(f.url, "_blank", "noopener"); })
+        .catch(function(){ window.open(f.url, "_blank", "noopener"); })
+        .then(function(){ btn.removeAttribute("disabled"); });
     });
   });
 }
 
-function wireForm(d, needSign){
-  wireDownloads(d);
+function wireForm(d, needSign, sd){
+  wireFiles(d);
   ["nm","co","cm"].forEach(function(id){
     var el=document.getElementById(id);
     if(!el) return;
     el.addEventListener("input", function(){
       readInputs();
-      var btn=document.getElementById("send");
-      if(btn){ btn.className="go"+(canSend()?" ready":""); }
-      var note=document.querySelector(".missing:last-of-type");
-      if(note && note.textContent.indexOf("חסר")===0) note.textContent=whatIsMissing();
+      syncBtn();
     });
   });
   Array.prototype.forEach.call(document.querySelectorAll('input[name=dec]'), function(r){
@@ -260,42 +411,117 @@ function wireForm(d, needSign){
       fr.onload=function(){ readInputs(); state.stamp=fr.result; formView(d); };
       fr.readAsDataURL(f);
     });
-    setupPad(d);
+
+    if(sd) wireSd(d); else setupPad(d);
   }
 
   var send=document.getElementById("send");
-  if(send) send.addEventListener("click", function(){
+  if(send) send.addEventListener("click", function(){ submit(d); });
+}
+
+// --------------------------------------------------------- signing a drawing
+function wireSd(d){
+  var redo=document.getElementById("sdRedo");
+  if(redo) redo.addEventListener("click", function(){
     readInputs();
-    if(!canSend()) return;
-    state.sending=true; state.err=null; formView(d);
-    call({
+    state.signedFile=null; state.signedMarks=0;
+    formView(d);
+  });
+
+  var open=document.getElementById("sdSign");
+  if(!open) return;
+  open.addEventListener("click", function(){
+    readInputs();
+    if(!state.stamp) return;
+    if(!window.awSdSign){
+      state.err="מסך החתימה לא נטען. רעננו את העמוד.";
+      formView(d);
+      return;
+    }
+    var f=(d.files||[])[0]||{};
+    window.awSdSign({
+      // The server signed this URL; the screen is handed the link, not a
+      // storage path — it has no account here to look one up with.
+      file: { url:f.url, name:f.name || "drawing.pdf" },
+      title: f.name || d.no || "",
+      docLabel: "SD " + (d.no || ""),
+      projectName: d.project || "",
+      // What is burned next to each mark: who signed, and for whom.
+      who: [state.name, state.company].filter(Boolean).join(" · "),
+      initialStamp: state.stamp,
+      onCancel: function(){ formView(d); },
+      onDone: function(signedFile, marks){
+        state.signedFile=signedFile;
+        state.signedMarks=marks||0;
+        state.err=null;
+        formView(d);
+        return Promise.resolve();
+      }
+    });
+  });
+}
+
+// ------------------------------------------------------------------ sending
+function fileToDataUrl(f){
+  return new Promise(function(resolve,reject){
+    var fr=new FileReader();
+    fr.onload=function(){ resolve(fr.result); };
+    fr.onerror=reject;
+    fr.readAsDataURL(f);
+  });
+}
+
+function submit(d){
+  readInputs();
+  if(!canSend()) return;
+  state.sending=true; state.err=null; formView(d);
+
+  var prep = state.signedFile
+    ? fileToDataUrl(state.signedFile).then(function(dataUrl){
+        return { name: state.signedFile.name, type: "application/pdf", dataUrl: dataUrl };
+      })
+    : Promise.resolve(null);
+
+  prep.then(function(signed){
+    return call({
       action:"sign",
       decision:state.decision,
       name:state.name,
       company:state.company,
       comments:state.comments,
       stamp:state.stamp,
-      signature:state.signature
-    }).then(function(r){
-      state.sending=false;
-      if(!r.ok){
-        state.err = r.data && r.data.error === "closed"
-          ? "המסמך כבר נבדק. רעננו את העמוד."
-          : "השליחה נכשלה. "+((r.data&&(r.data.detail||r.data.error))||"");
-        formView(d);
-        return;
-      }
-      load();
-    }).catch(function(){
-      state.sending=false;
-      state.err="אין חיבור לשרת. נסו שוב.";
-      formView(d);
+      signature:state.signature,
+      // Present only for a drawing. The server stores it and hands it on as the
+      // approved file, the same way an approved submittal carries its signed
+      // copy. `supervision` must accept it — see the note at the end of this file.
+      signedFile: signed
     });
+  }).then(function(r){
+    state.sending=false;
+    if(!r.ok){
+      state.err = r.data && r.data.error === "closed"
+        ? "המסמך כבר נבדק. רעננו את העמוד."
+        : "השליחה נכשלה. "+((r.data&&(r.data.detail||r.data.error))||"");
+      formView(d);
+      return;
+    }
+    load();
+  }).catch(function(){
+    state.sending=false;
+    state.err="אין חיבור לשרת. נסו שוב.";
+    formView(d);
   });
 }
 
-// A signature is drawn, not typed. The canvas is sized to its box so the
-// stroke lands where the pen is, on a desktop mouse or a tablet.
+function syncBtn(){
+  var btn=document.getElementById("send");
+  if(btn) btn.className="sendBtn"+(canSend()?" ready":"");
+  var note=document.querySelector(".card:last-child .missing");
+  if(note) note.textContent=whatIsMissing();
+}
+
+// A signature is drawn, not typed. Submittal route only — a drawing is signed
+// on the drawing itself.
 function setupPad(d){
   var c=document.getElementById("pad");
   if(!c) return;
@@ -318,7 +544,7 @@ function setupPad(d){
   };
   var start=function(e){ e.preventDefault(); drawing=true; var p=at(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); };
   var move=function(e){ if(!drawing) return; e.preventDefault(); var p=at(e); ctx.lineTo(p.x,p.y); ctx.stroke(); dirty=true; };
-  var end=function(){ if(!drawing) return; drawing=false; if(dirty) state.signature=c.toDataURL("image/png"); syncBtn(); };
+  var end=function(){ if(!drawing) return; drawing=false; if(dirty) state.signature=c.toDataURL("image/png"); readInputs(); syncBtn(); };
   c.addEventListener("mousedown",start); c.addEventListener("mousemove",move);
   window.addEventListener("mouseup",end);
   c.addEventListener("touchstart",start,{passive:false});
@@ -326,15 +552,8 @@ function setupPad(d){
   c.addEventListener("touchend",end);
   var clear=document.getElementById("padClear");
   if(clear) clear.addEventListener("click", function(){
-    ctx.clearRect(0,0,c.width,c.height); state.signature=null; dirty=false; syncBtn();
+    ctx.clearRect(0,0,c.width,c.height); state.signature=null; dirty=false; readInputs(); syncBtn();
   });
-  function syncBtn(){
-    readInputs();
-    var btn=document.getElementById("send");
-    if(btn) btn.className="go"+(canSend()?" ready":"");
-    var note=document.querySelector(".card:last-child .missing");
-    if(note) note.textContent=whatIsMissing();
-  }
 }
 
 // ------------------------------------------------------------------- loading
@@ -348,6 +567,7 @@ function load(){
     }
     var d=r.data;
     state.doc=d;
+    state.signedFile=null; state.signedMarks=0;
     if(d.missing){ app.innerHTML='<p class="lead">המסמך אינו זמין.</p>'; return; }
     if(d.state!=="open"){ lockedView(d); return; }
     formView(d);
@@ -356,6 +576,29 @@ function load(){
   });
 }
 load();
+
+// ---------------------------------------------------------------------------
+// WHAT THE SERVER STILL HAS TO DO  (supervision, currently version 3)
+//
+// 1. `sign` receives one new field for a drawing:
+//        signedFile: { name, type: "application/pdf", dataUrl: "data:…" }
+//    It is the drawing with the supervisor's notes and stamp burned into it,
+//    produced in the browser. It has to be stored beside the original and
+//    recorded as the approved file of that SD, so the dashboard shows it the
+//    way it shows a submittal's signed copy. Until it does, everything on this
+//    page works and the signed drawing is the one thing that does not arrive.
+//
+// 2. A signed drawing is a real PDF and a JSON body carrying it base64-encoded
+//    is roughly a third larger again. If the function has a body limit that a
+//    few megabytes would cross, the better shape is a second action —
+//    `signedUploadUrl` returning a one-time upload URL — with the page PUTting
+//    the bytes straight to storage and `sign` carrying only the path. That is a
+//    change in `submit()` here and nowhere else.
+//
+// 3. `open` must return a `url` for the drawing that the browser may FETCH,
+//    not only follow. A signed Supabase URL already allows it; a link that only
+//    works as a navigation would leave the screen with nothing to draw.
+// ---------------------------------------------------------------------------
 </script>
 </body>
 </html>
