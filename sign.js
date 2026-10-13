@@ -1,6 +1,6 @@
 // =============================================================================
 //  sign.js — the review-and-approval screen, and nothing else.
-//  A. Weiss project dashboard · 15.9.2026 — carries its own CSS (signCss)
+//  A. Weiss project dashboard · 15.9.2026 — both signing screens, and their CSS
 // =============================================================================
 //
 //  One screen, one copy of it. The dashboard imports it for the client, and the
@@ -1783,6 +1783,27 @@ function sbToday() {
 async function sbFileUrl(att) {
   if (!att) return null;
   if (att.inline && att.dataUrl) return dataUrlToBlobUrl(att.dataUrl, att.name) || att.dataUrl;
+  // A file handed over as a ready URL. The supervision link has no storage
+  // account of its own — the server signs the URL and the page is given it —
+  // so there is nothing here to look up in the bucket. Read as bytes and
+  // handed back as a typed blob for the same reason as below: a link whose
+  // response says "application/octet-stream", or carries a download
+  // disposition, makes the browser save the drawing instead of showing it.
+  // A drawing that must be signed has to open. (15.9.26)
+  if (att.url) {
+    try {
+      const r = await fetch(att.url);
+      if (!r.ok) throw new Error("http " + r.status);
+      const raw = await r.blob();
+      const type = (raw.type && raw.type !== "application/octet-stream")
+        ? raw.type
+        : guessContentType(att.name || att.url);
+      return URL.createObjectURL(new Blob([await raw.arrayBuffer()], { type }));
+    } catch (e) {
+      console.warn("[awdash] could not read the handed-over file; using the link as it is", e);
+      return att.url;
+    }
+  }
   if (!att.path) return null;
   try {
     // Downloaded and handed over as a blob with the right content type, rather
@@ -2116,15 +2137,20 @@ async function sdBurnMarks(pdfBytes, marks, stampLine) {
 // -----------------------------------------------------------------------------
 // The signing screen.
 // -----------------------------------------------------------------------------
-function SdSignScreen({ lang, isRTL, L, file, title, who, projectName, docLabel, onCancel, onDone }) {
+// `initialStamp` (15.9.26): a stamp the page already has. A supervisor arriving
+// by link gives their company stamp once, at the identification step, before
+// they ever see the drawing — so the stamp step opens with it already in place
+// and all that is left is to sign over it. For the client inside the dashboard
+// nothing is passed and the step behaves exactly as it did.
+function SdSignScreen({ lang, isRTL, L, file, title, who, projectName, docLabel, initialStamp, onCancel, onDone }) {
   const [doc, setDoc] = useState6(null);
   const [pages, setPages] = useState6([]);       // { num, wPt, hPt }
   const [bytes, setBytes] = useState6(null);
   const [scale, setScale] = useState6(1);
   const [marks, setMarks] = useState6([]);
   const [noteMode, setNoteMode] = useState6(false);
-  const [stampStep, setStampStep] = useState6(null);   // null | "pick"
-  const [stampImg, setStampImg] = useState6(null);
+  const [stampStep, setStampStep] = useState6(null);   // null | "pick" | "draw"
+  const [stampImg, setStampImg] = useState6(initialStamp || null);
   const drawRef = useRef5(null);
   const inkRef = useRef5(false);
   const [sel, setSel] = useState6(null);
@@ -2348,7 +2374,10 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, projectName, docLabel,
       setMarks((prev) => prev.concat(m));
       setSel(m.id);
       setStampStep(null);
-      setStampImg(null);
+      // Back to the stamp the page supplied, not to nothing: a supervisor who
+      // places one mark and then wants a second should not be asked for their
+      // company stamp again.
+      setStampImg(initialStamp || null);
     };
     img.src = flat;
   };
@@ -2523,7 +2552,7 @@ function SdSignScreen({ lang, isRTL, L, file, title, who, projectName, docLabel,
               { style: { display: "flex", gap: 8, marginTop: 14 } },
               sbH("button", { type: "button", className: "sdcAskBtn primary", disabled: !stampImg, onClick: () => setStampStep("draw") },
                 L("next"), " ", sbH(isRTL ? ArrowLeftSd : ArrowRightSd, { size: 14, strokeWidth: 2.2 })),
-              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { setStampStep(null); setStampImg(null); } }, L("cancel"))
+              sbH("button", { type: "button", className: "sdcAskBtn", onClick: () => { setStampStep(null); setStampImg(initialStamp || null); } }, L("cancel"))
             )
           )
         )
