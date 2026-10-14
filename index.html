@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "13.10.2026 · build 170";
+var APP_BUILD = "14.10.2026 · build 171";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2890,6 +2890,33 @@ var pdfViewer = `
           padding: 6px 16px; font-size: 12.5px; font-weight: 700; cursor: pointer; font-family: inherit;
         }
         .contactsTabBtn.on { background: #14181f; color: #fff; border-color: #14181f; }
+        /* The search sits where the project picker sits on the other tab —
+           the far end of the toolbar, so the two tabs never move. */
+        .contactsSearch {
+          margin-inline-start: auto; display: flex; align-items: center; gap: 7px;
+          border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
+          background: #fff; color: var(--mist); min-width: 240px;
+        }
+        .contactsSearch:focus-within { border-color: var(--accent); color: var(--steel); }
+        .contactsSearch input {
+          border: none; outline: none; background: transparent; font: inherit; font-size: 13px;
+          color: var(--ink); flex: 1; min-width: 0; padding: 0;
+        }
+        .contactsSearchClear {
+          border: none; background: transparent; color: var(--mist); cursor: pointer;
+          padding: 0; display: flex; align-items: center;
+        }
+        .contactsSearchClear:hover { color: var(--ink); }
+        /* A section head is a button now. It keeps the look it had. */
+        .contactsSecHead {
+          width: 100%; border: none; cursor: pointer; font-family: inherit; text-align: start;
+        }
+        .contactsSecChev { color: var(--steel); transition: transform .15s ease; flex: none; }
+        .contactsSecCount {
+          font-size: 10.5px; font-weight: 800; color: var(--steel);
+          background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px;
+        }
+        .contactsSecHead.open .contactsSecChev { color: var(--ink); }
         .contactsProjectPick {
           margin-inline-start: auto; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px;
           font-size: 13px; font-family: inherit; background: #fff; color: var(--ink); min-width: 180px;
@@ -2992,6 +3019,14 @@ var pdfViewer = `
         .contactsCatalogRow.head span { font-size: 11px; font-weight: 800; color: var(--mist); text-align: center; }
 
         /* Type-ahead picker */
+        /* A catalog value is written in two boxes, Hebrew above and English
+           below — the same shape the contact name has. Picking a value that
+           already exists fills the lower box by itself. (14.10.26) */
+        .catalogCombo.bi { display: flex; flex-direction: column; gap: 4px; }
+        .catalogComboEn::placeholder { font-size: 12px; }
+        /* The list hangs below BOTH boxes. Anchored under the Hebrew one it
+           sat exactly on top of the English one, which could then not be
+           clicked into at all. (14.10.26) */
         .catalogCombo { position: relative; }
         .catalogComboInput {
           width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px;
@@ -8226,7 +8261,7 @@ function contactsFocusNext(el) {
   else if (el.blur) el.blur();
 }
 
-function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholder, isRTL, onCreate }) {
+function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholder, isRTL, onCreate, enLabel, onPatchEntry }) {
   const [open, setOpen] = useState6(false);
   const [query, setQuery] = useState6("");
   // Until the user actually types, the box keeps showing what is already chosen
@@ -8237,6 +8272,9 @@ function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholde
   // gate: until the arrow keys are actually used, Enter keeps what was typed
   // rather than silently swapping in whichever entry happened to match first.
   const [active, setActive] = useState6(-1);
+  // The English for a value that does not exist yet. A value that does exist
+  // carries its own, and that is what the box below shows.
+  const [enDraft, setEnDraft] = useState6("");
   const boxRef = useRef5(null);
   const inputRef = useRef5(null);
   // Look the chosen entry up in the FULL catalog, not in the group-filtered
@@ -8280,12 +8318,12 @@ function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholde
     const hit = (options || []).find((o) =>
       String(o.he || "").trim().toLowerCase() === lower || String(o.en || "").trim().toLowerCase() === lower);
     if (hit) onChange(hit.id);
-    else if (onCreate) onCreate(q);
+    else if (onCreate) { onCreate(q, enDraft.trim()); setEnDraft(""); }
     reset();
     if (el) contactsFocusNext(el);
   };
   const choose = (i, el) => {
-    if (canCreate && i === items.length) onCreate(query.trim());
+    if (canCreate && i === items.length) { onCreate(query.trim(), enDraft.trim()); setEnDraft(""); }
     else if (items[i]) onChange(items[i].id);
     reset();
     contactsFocusNext(el || inputRef.current);
@@ -8304,9 +8342,16 @@ function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholde
     if (open && count && active >= 0) choose(Math.min(active, count - 1), e.target);
     else commitTyped(e.target);
   };
+  // What the lower box shows: the chosen value's English, or the English being
+  // written for a value that is about to be created.
+  const enValue = selected ? (selected.en || "") : enDraft;
+  const setEn = (v) => {
+    if (selected && onPatchEntry) onPatchEntry(selected.id, { en: v });
+    else setEnDraft(v);
+  };
   return /* @__PURE__ */ React15.createElement(
     "div",
-    { className: "catalogCombo", ref: boxRef },
+    { className: `catalogCombo ${enLabel ? "bi" : ""}`.trim(), ref: boxRef },
     /* @__PURE__ */ React15.createElement("input", {
       type: "text",
       className: "catalogComboInput",
@@ -8315,6 +8360,10 @@ function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholde
       value: open ? query : catalogLabel(selected, lang),
       placeholder: placeholder || "",
       onFocus: (e) => {
+        // Coming back from the English box below is not a fresh start: the
+        // Hebrew typed a moment ago is still the thing being written, and
+        // resetting to the chosen label here threw it away. (14.10.26)
+        if (open && typed) { setOpen(true); return; }
         const current = catalogLabel(selected, lang);
         setQuery(current);
         setTyped(false);
@@ -8334,6 +8383,24 @@ function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholde
         setActive(-1);
       },
       dir: "auto"
+    }),
+    enLabel && /* @__PURE__ */ React15.createElement("input", {
+      type: "text",
+      className: "catalogComboInput catalogComboEn",
+      value: enValue,
+      placeholder: enLabel,
+      onChange: (e) => setEn(e.target.value),
+      // Enter here files the pair — the Hebrew above is still only typed, and
+      // leaving by keyboard fires no click for the outside-listener to catch.
+      onKeyDown: (e) => {
+        if (e.key === "Tab") { if (typed) commitTyped(); return; }
+        if (e.key !== "Enter") return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (typed) commitTyped(e.target);
+        else contactsFocusNext(e.target);
+      },
+      dir: "ltr"
     }),
     open && /* @__PURE__ */ React15.createElement(
       "div",
@@ -8546,7 +8613,7 @@ ${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? 
 // is not is created straight from what was typed, through the combo's own
 // "add to the catalog" line. The little + and its separate Hebrew/English form
 // are gone — they asked for the two names a second time. (15.9.26)
-function CompanyField({ companies, valueId, onPick, onAddCompany, lang, isRTL }) {
+function CompanyField({ companies, valueId, onPick, onAddCompany, onPatchEntry, lang, isRTL }) {
   return /* @__PURE__ */ React15.createElement(
     "div",
     { className: "companyField" },
@@ -8554,7 +8621,9 @@ function CompanyField({ companies, valueId, onPick, onAddCompany, lang, isRTL })
       options: companies,
       valueId,
       onChange: onPick,
-      onCreate: (text) => onAddCompany({ he: text, en: text }),
+      onCreate: (text, en) => onAddCompany({ he: text, en: en || text }),
+      onPatchEntry,
+      enLabel: "Company",
       lang,
       isRTL,
       placeholder: isRTL ? "חברה" : "Company"
@@ -8629,6 +8698,14 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   const [dirty, setDirty] = useState6(false);
   const [savedFlash, setSavedFlash] = useState6(null);
   const [dragId, setDragId] = useState6(null);
+  // ---- the Catalog tab: one search, and sections that start closed --------
+  //
+  // The catalog is long and is read far more often than it is edited, so the
+  // sections open on request rather than all at once. A search opens whichever
+  // ones have something in them — searching inside a closed drawer would be a
+  // search that answers nothing. (14.10.26)
+  const [catQ, setCatQ] = useState6("");
+  const [openSec, setOpenSec] = useState6({});
   const lang = isRTL ? "he" : "en";
   const cat = catalogDraft || { disciplines: [], roles: [], companies: [] };
   useEffect5(() => {
@@ -8733,8 +8810,8 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   // A new discipline or role, typed straight into the box. It is tagged to the
   // group it was created in, so it shows up in that group's list next time and
   // does not clutter the others.
-  const addCatalogValue = (listKey, prefix, text, groupKey, assign) => {
-    const entry = { id: `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e4)}`, he: text, en: text };
+  const addCatalogValue = (listKey, prefix, text, en, assign) => {
+    const entry = { id: `${prefix}-${Date.now()}-${Math.round(Math.random() * 1e4)}`, he: text, en: (en || text) };
     setCatalogDraft((c) => ({ ...c, [listKey]: (c[listKey] || []).concat([entry]) }));
     if (assign) assign(entry.id);
     setDirty(true);
@@ -8828,6 +8905,9 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   };
   const listKeys = [
     { key: "disciplines", he: "תחום", en: "Discipline", prefix: "d" },
+    // Companies were edited only from a row, never listed here — so a name
+    // entered once could not be corrected anywhere. (14.10.26)
+    { key: "companies", he: "חברה", en: "Company", prefix: "c" },
     { key: "roles", he: "תפקיד", en: "Role", prefix: "r" }
   ];
   const addCatalogEntry = (listKey, prefix) => {
@@ -8842,6 +8922,23 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     setCatalogDraft({ ...cat, [listKey]: (cat[listKey] || []).filter((e) => e.id !== id) });
     setDirty(true);
   };
+  const catNeedle = catQ.trim().toLowerCase();
+  // Hebrew or English, whichever was typed: both names of every value are
+  // searched, so "electric" finds חשמל and the other way round.
+  const catMatch = (...parts) => !catNeedle || parts.some((s) => String(s || "").toLowerCase().includes(catNeedle));
+  const toggleSec = (k) => setOpenSec((s) => ({ ...s, [k]: !s[k] }));
+  const secOpen = (k, hasHits) => catNeedle ? hasHits : !!openSec[k];
+  const secHead = (k, label, hits, tag) => /* @__PURE__ */ React15.createElement(
+    "button",
+    { type: "button", className: `contactsAdminGroupHead contactsSecHead ${secOpen(k, hits > 0) ? "open" : ""}`, onClick: () => toggleSec(k) },
+    /* @__PURE__ */ React15.createElement(ChevronDown2, {
+      size: 15, strokeWidth: 2.2, className: "contactsSecChev",
+      style: { transform: secOpen(k, hits > 0) ? "rotate(180deg)" : "none" }
+    }),
+    /* @__PURE__ */ React15.createElement("span", null, label),
+    /* @__PURE__ */ React15.createElement("span", { className: "contactsSecCount numerals" }, hits),
+    tag ? /* @__PURE__ */ React15.createElement("span", { className: "contactsClientTag" }, tag) : null
+  );
   const tabBtn = (key, he, en) => /* @__PURE__ */ React15.createElement(
     "button",
     { type: "button", className: `contactsTabBtn ${tab === key ? "on" : ""}`, onClick: () => setTab(key) },
@@ -8868,6 +8965,19 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
           "select",
           { className: "contactsProjectPick", value: projectId || "", onChange: (e) => switchProject(e.target.value) },
           projects.map((p) => /* @__PURE__ */ React15.createElement("option", { key: p.id, value: p.id }, p.name))
+        ),
+        tab === "catalog" && /* @__PURE__ */ React15.createElement(
+          "div",
+          { className: "contactsSearch" },
+          /* @__PURE__ */ React15.createElement(Search2, { size: 14, strokeWidth: 2.2 }),
+          /* @__PURE__ */ React15.createElement("input", {
+            type: "text",
+            value: catQ,
+            onChange: (e) => setCatQ(e.target.value),
+            placeholder: isRTL ? "חיפוש בעברית או באנגלית" : "Search in Hebrew or English",
+            dir: "auto"
+          }),
+          catQ && /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsSearchClear", onClick: () => setCatQ(""), "aria-label": isRTL ? "ניקוי" : "Clear" }, /* @__PURE__ */ React15.createElement(X4, { size: 13, strokeWidth: 2.4 }))
         )
       ),
       /* @__PURE__ */ React15.createElement(
@@ -8920,8 +9030,8 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
                 onDragEnd: () => setDragId(null)
               },
               /* @__PURE__ */ React15.createElement("span", { className: "contactsDragHandle", title: isRTL ? "גרירה לסידור" : "Drag to reorder" }, "⋮⋮"),
-              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: catalogForGroup(cat.disciplines, g.key), allOptions: cat.disciplines, valueId: r.disciplineId, onChange: (id) => patchContact(r.id, { disciplineId: id }), onCreate: (text) => addCatalogValue("disciplines", "d", text, g.key, (id) => patchContact(r.id, { disciplineId: id })), lang, isRTL, placeholder: isRTL ? "תחום" : "Discipline" }),
-              /* @__PURE__ */ React15.createElement(CompanyField, { companies: cat.companies, valueId: r.companyId, onPick: (id) => pickCompany(r, id), onAddCompany: (names) => addCompany(r.id, names), lang, isRTL }),
+              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: catalogForGroup(cat.disciplines, g.key), allOptions: cat.disciplines, valueId: r.disciplineId, onChange: (id) => patchContact(r.id, { disciplineId: id }), onCreate: (text, en) => addCatalogValue("disciplines", "d", text, en, (id) => patchContact(r.id, { disciplineId: id })), onPatchEntry: (id, patch) => patchCatalogEntry("disciplines", id, patch), enLabel: "Discipline", lang, isRTL, placeholder: isRTL ? "תחום" : "Discipline" }),
+              /* @__PURE__ */ React15.createElement(CompanyField, { companies: cat.companies, valueId: r.companyId, onPick: (id) => pickCompany(r, id), onAddCompany: (names) => addCompany(r.id, names), onPatchEntry: (id, patch) => patchCatalogEntry("companies", id, patch), lang, isRTL }),
               /* @__PURE__ */ React15.createElement(PersonField, {
                 row: r,
                 people: cat.people,
@@ -8932,7 +9042,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
                 onChange: (which, value) => patchContact(r.id, { person: { ...r.person || {}, [which]: value } }),
                 onPick: (pp) => applyKnown(r.id, pp)
               }),
-              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: catalogForGroup(cat.roles, g.key), allOptions: cat.roles, valueId: r.roleId, onChange: (id) => patchContact(r.id, { roleId: id }), onCreate: (text) => addCatalogValue("roles", "r", text, g.key, (id) => patchContact(r.id, { roleId: id })), lang, isRTL, placeholder: isRTL ? "תפקיד" : "Role" }),
+              /* @__PURE__ */ React15.createElement(CatalogCombo, { options: catalogForGroup(cat.roles, g.key), allOptions: cat.roles, valueId: r.roleId, onChange: (id) => patchContact(r.id, { roleId: id }), onCreate: (text, en) => addCatalogValue("roles", "r", text, en, (id) => patchContact(r.id, { roleId: id })), onPatchEntry: (id, patch) => patchCatalogEntry("roles", id, patch), enLabel: "Role", lang, isRTL, placeholder: isRTL ? "תפקיד" : "Role" }),
               /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", placeholder: isRTL ? "טלפון" : "Phone", value: r.phone || "", onKeyDown: rowFieldKey, onChange: (e) => patchContact(r.id, { phone: e.target.value }), dir: "ltr" }),
               /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", type: "email", placeholder: isRTL ? 'דוא"ל' : "E-mail", value: r.email || "", onKeyDown: rowFieldKey, onChange: (e) => patchContact(r.id, { email: e.target.value }), dir: "ltr" }),
               /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsRowDel", onClick: () => removeContact(r.id), title: isRTL ? "מחיקה" : "Delete" }, /* @__PURE__ */ React15.createElement(X4, { size: 14, strokeWidth: 2.4 }))
@@ -8940,17 +9050,20 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
           ),
           /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addContact(g.key) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת איש קשר" : "Add contact")
         )),
-        tab === "catalog" && /* @__PURE__ */ React15.createElement(
+        tab === "catalog" && (() => {
+          const shown = (cat.people || []).filter((pp) => catMatch(
+            pp.person && pp.person.he, pp.person && pp.person.en,
+            catalogLabel(catalogFind(cat.companies, pp.companyId), "he"),
+            catalogLabel(catalogFind(cat.companies, pp.companyId), "en"),
+            catalogLabel(catalogFind(cat.roles, pp.roleId), "he"),
+            catalogLabel(catalogFind(cat.roles, pp.roleId), "en")
+          ));
+          return /* @__PURE__ */ React15.createElement(
           "div",
           { className: "contactsAdminGroup" },
-          /* @__PURE__ */ React15.createElement(
-            "div",
-            { className: "contactsAdminGroupHead" },
-            /* @__PURE__ */ React15.createElement("span", null, isRTL ? "אנשי קשר במאגר" : "Contacts catalog"),
-            /* @__PURE__ */ React15.createElement("span", { className: "contactsClientTag" }, isRTL ? "משותף לכל הפרויקטים" : "shared by every project")
-          ),
-          (cat.people || []).length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "אנשי קשר שתשמרי ייכנסו לכאן ויוצעו אוטומטית בפרויקטים הבאים." : "Contacts you save land here and are offered automatically on the next project."),
-          (cat.people || []).length > 0 && /* @__PURE__ */ React15.createElement(
+          secHead("people", isRTL ? "אנשי קשר במאגר" : "Contacts catalog", shown.length, isRTL ? "משותף לכל הפרויקטים" : "shared by every project"),
+          secOpen("people", shown.length > 0) && (cat.people || []).length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "אנשי קשר שתשמרי ייכנסו לכאן ויוצעו אוטומטית בפרויקטים הבאים." : "Contacts you save land here and are offered automatically on the next project."),
+          secOpen("people", shown.length > 0) && shown.length > 0 && /* @__PURE__ */ React15.createElement(
             "div",
             { className: "peopleCatalogRows" },
             /* @__PURE__ */ React15.createElement(
@@ -8963,7 +9076,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
               /* @__PURE__ */ React15.createElement("span", null, isRTL ? 'דוא"ל' : "E-mail"),
               /* @__PURE__ */ React15.createElement("span", null)
             ),
-            (cat.people || []).map((pp) => /* @__PURE__ */ React15.createElement(
+            shown.map((pp) => /* @__PURE__ */ React15.createElement(
               "div",
               { key: pp.id, className: "peopleCatalogRow" },
               /* @__PURE__ */ React15.createElement("span", { dir: "auto" }, (pp.person && (lang === "he" ? pp.person.he || pp.person.en : pp.person.en || pp.person.he)) || ""),
@@ -8982,16 +9095,19 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
               }, /* @__PURE__ */ React15.createElement(X4, { size: 14, strokeWidth: 2.4 }))
             ))
           )
-        ),
-        tab === "catalog" && listKeys.map((lk) => /* @__PURE__ */ React15.createElement(
+        ); })(),
+        tab === "catalog" && listKeys.map((lk) => {
+          const shown = (cat[lk.key] || []).filter((e) => catMatch(e.he, e.en));
+          const isOpen = secOpen(lk.key, shown.length > 0);
+          return /* @__PURE__ */ React15.createElement(
           "div",
           { key: lk.key, className: "contactsAdminGroup" },
-          /* @__PURE__ */ React15.createElement("div", { className: "contactsAdminGroupHead" }, /* @__PURE__ */ React15.createElement("span", null, isRTL ? lk.he : lk.en)),
-          /* @__PURE__ */ React15.createElement(
+          secHead(lk.key, isRTL ? lk.he : lk.en, shown.length),
+          isOpen && /* @__PURE__ */ React15.createElement(
             "div",
             { className: "contactsCatalogRows" },
             /* @__PURE__ */ React15.createElement("div", { className: "contactsCatalogRow head" }, /* @__PURE__ */ React15.createElement("span", null, "עברית"), /* @__PURE__ */ React15.createElement("span", null, "English"), /* @__PURE__ */ React15.createElement("span", null)),
-            (cat[lk.key] || []).map((e) => /* @__PURE__ */ React15.createElement(
+            shown.map((e) => /* @__PURE__ */ React15.createElement(
               "div",
               { key: e.id, className: "contactsCatalogRow" },
               /* @__PURE__ */ React15.createElement("input", { className: "contactsInput", value: e.he || "", onChange: (ev) => patchCatalogEntry(lk.key, e.id, { he: ev.target.value }), dir: "rtl" }),
@@ -8999,8 +9115,8 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
               /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsRowDel", onClick: () => removeCatalogEntry(lk.key, e.id), title: isRTL ? "מחיקה" : "Delete" }, /* @__PURE__ */ React15.createElement(X4, { size: 14, strokeWidth: 2.4 }))
             ))
           ),
-          /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addCatalogEntry(lk.key, lk.prefix) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספה למאגר" : "Add to catalog")
-        ))
+          isOpen && /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addCatalogEntry(lk.key, lk.prefix) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספה למאגר" : "Add to catalog")
+        ); })
       ),
       /* @__PURE__ */ React15.createElement(
         "div",
