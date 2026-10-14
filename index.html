@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "14.10.2026 · build 175";
+var APP_BUILD = "14.10.2026 · build 176";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -21661,11 +21661,27 @@ function ProjectDashboardApp() {
   // Nothing is lost: the last state always wins, and the local copy is written
   // immediately either way. (2.9.26)
   const saveTimerRef = useRef5(null);
+  // Which save run is the current one.
+  //
+  // A run writes up to thirteen parts for every project, one await after
+  // another, so a single run takes a while. The debounce only cancels a run
+  // that has not STARTED yet — once a run is in flight, a newer edit starts a
+  // second run beside it. The two race, and whichever finishes last is what
+  // the server keeps. When the older one finishes last, the newer edit is
+  // overwritten by the state as it was before it: the save looks like it
+  // worked, no error is raised, and the row quietly goes back one step. That
+  // is how contacts entered and saved came back missing. (14.10.26)
+  //
+  // Every run takes a number on the way in and checks before each write that
+  // it is still the newest. An overtaken run stops where it is; the newer one
+  // is carrying the same data and more.
+  const saveRunRef = useRef5(0);
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
     (async () => {
+      const myRun = ++saveRunRef.current;
       const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps, subs } = splitExtras(projectExtras);
       const byPart = {
         "project-extras": rest,
@@ -21685,8 +21701,10 @@ function ProjectDashboardApp() {
       let failed = null;
       // One row per project. saveAppState skips a row whose content has not
       // changed, so an edit to one project writes one row, not twenty-eight.
+      let overtaken = false;
       for (const [key, byPid] of Object.entries(byPart)) {
         for (const pid of Object.keys(byPid || {})) {
+          if (saveRunRef.current !== myRun) { overtaken = true; break; }
           try {
             await saveAppState(key + ":" + pid, byPid[pid]);
           } catch (e) {
@@ -21694,6 +21712,11 @@ function ProjectDashboardApp() {
             failed = e && e.message || String(e);
           }
         }
+        if (overtaken) break;
+      }
+      if (overtaken) {
+        console.log("[awdash] save run", myRun, "stopped — a newer one is running");
+        return;
       }
       // A silent failure here is how work goes missing. Say it out loud.
       setSaveError(failed ? (isRTL ? "\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05e9\u05e8\u05ea \u05e0\u05db\u05e9\u05dc\u05d4" : "Saving to the server failed") + ": " + failed : null);
