@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "14.10.2026 · build 174";
+var APP_BUILD = "14.10.2026 · build 175";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -8857,7 +8857,11 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     setDirty(true);
   };
   const commit = (flashId) => {
-    if (loadedFor !== projectId) return;
+    console.log("[awdash] contacts SAVE pressed:", { projectId, loadedFor, draftRows: draft.length, dirty });
+    if (loadedFor !== projectId) {
+      console.warn("[awdash] contacts SAVE did nothing — the draft is not loaded for this project", { projectId, loadedFor });
+      return;
+    }
     const nextCatalog = { ...cat, people: learnPeople(draft, cat) };
     setCatalogDraft(nextCatalog);
     onContactsChange(projectId, draft);
@@ -8895,7 +8899,11 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     // project's stored rows, so what is in hand is not that project's data.
     // Writing anyway is how an empty screen became an empty list on the
     // server. (14.10.26)
-    if (!pid || !isDirty || lf !== pid) return;
+    if (!pid || !isDirty || lf !== pid) {
+      console.warn("[awdash] contacts auto-save skipped:", { pid, loadedFor: lf, dirty: isDirty, rows: d.length });
+      return;
+    }
+    console.log("[awdash] contacts auto-save writing:", { pid, rows: d.length });
     const nextCatalog = { ...c, people: learnPeople(d, c) };
     onContactsChange(pid, d);
     onCatalogChange(nextCatalog);
@@ -21706,7 +21714,10 @@ function ProjectDashboardApp() {
     }));
   };
   const activeExtras = projectExtras[activeProject.id] || { dataSources: [], scheduleData: null };
-  const setProjectContacts = (projectId, contacts) => updateProjectExtras(projectId, { contacts });
+  const setProjectContacts = (projectId, contacts) => {
+    console.log("[awdash] contacts reached the app state:", projectId, (contacts || []).length, "rows");
+    updateProjectExtras(projectId, { contacts });
+  };
   const setContactGroupVisibility = (projectId, visibility) => updateProjectExtras(projectId, { contactGroupVisibility: visibility });
   // The drawings and what was read out of them, one set per project. Only the
   // record travels here; the drawing files themselves sit in Storage.
