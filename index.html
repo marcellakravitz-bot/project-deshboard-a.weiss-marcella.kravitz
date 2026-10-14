@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "14.10.2026 · build 172";
+var APP_BUILD = "14.10.2026 · build 173";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -8722,10 +8722,23 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   const toggleGrp = (key, count) => setOpenGrp((s) => ({ ...s, [key]: !(s[key] === void 0 ? count > 0 : s[key]) }));
   const lang = isRTL ? "he" : "en";
   const cat = catalogDraft || { disciplines: [], roles: [], companies: [] };
+  // Which project's stored contacts the draft is currently a copy of. Until
+  // that is this project, the draft is not something that may be written back.
+  const [loadedFor, setLoadedFor] = useState6(null);
+  const stored = (contactsByProject && contactsByProject[projectId]) || [];
+  // The project's rows arrive from the server after this screen has already
+  // rendered. With only `projectId` in the dependencies the draft stayed as the
+  // empty array it started as, and the save-by-itself added in build 170 then
+  // wrote that empty array over the contacts — which is how a project's whole
+  // contact list disappeared. The stored list is a dependency now, so a late
+  // arrival fills the draft; an edited draft is never overwritten by it.
+  // (14.10.26)
+  const storedKey = JSON.stringify(stored);
   useEffect5(() => {
-    setDraft(((contactsByProject && contactsByProject[projectId]) || []).map((r) => ({ ...r })));
-    setDirty(false);
-  }, [projectId]);
+    if (dirty) return;
+    setDraft(stored.map((r) => ({ ...r })));
+    setLoadedFor(projectId);
+  }, [projectId, storedKey]);
   useEffect5(() => {
     setCatalogDraft(catalog);
   }, [catalog]);
@@ -8844,6 +8857,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     setDirty(true);
   };
   const commit = (flashId) => {
+    if (loadedFor !== projectId) return;
     const nextCatalog = { ...cat, people: learnPeople(draft, cat) };
     setCatalogDraft(nextCatalog);
     onContactsChange(projectId, draft);
@@ -8868,15 +8882,20 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   // the thing the draft exists to avoid.
   const AUTOSAVE_MS = 4000;
   const autoRef = useRef5(null);
-  const liveRef = useRef5({ draft, cat, projectId });
-  liveRef.current = { draft, cat, projectId };
+  const liveRef = useRef5({ draft, cat, projectId, dirty, loadedFor });
+  liveRef.current = { draft, cat, projectId, dirty, loadedFor };
   const [autoFlash, setAutoFlash] = useState6(false);
   // `quiet` is for the two moments when this component is about to stop
   // looking at this draft — unmounting, and switching project. The write still
   // has to happen; setting state on the way out does not.
   const flush = (quiet) => {
-    const { draft: d, cat: c, projectId: pid } = liveRef.current;
-    if (!pid) return;
+    const { draft: d, cat: c, projectId: pid, dirty: isDirty, loadedFor: lf } = liveRef.current;
+    // Two guards, and both of them are the same lesson. Nothing was edited, so
+    // there is nothing to write. And the draft is not yet a copy of THIS
+    // project's stored rows, so what is in hand is not that project's data.
+    // Writing anyway is how an empty screen became an empty list on the
+    // server. (14.10.26)
+    if (!pid || !isDirty || lf !== pid) return;
     const nextCatalog = { ...c, people: learnPeople(d, c) };
     onContactsChange(pid, d);
     onCatalogChange(nextCatalog);
@@ -8901,6 +8920,10 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   const switchProject = (id) => {
     if (autoRef.current) clearTimeout(autoRef.current);
     if (dirty) flush(true);
+    // Cleared together: the new project's rows have not been read yet, and
+    // until they have, nothing here belongs to it.
+    setDirty(false);
+    setLoadedFor(null);
     setProjectId(id);
   };
   // Drag a row onto another row in the same group to reorder.
