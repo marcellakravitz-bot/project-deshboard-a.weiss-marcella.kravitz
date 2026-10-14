@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "14.10.2026 · build 171";
+var APP_BUILD = "14.10.2026 · build 172";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2912,6 +2912,12 @@ var pdfViewer = `
           width: 100%; border: none; cursor: pointer; font-family: inherit; text-align: start;
         }
         .contactsSecChev { color: var(--steel); transition: transform .15s ease; flex: none; }
+        .contactsGrpToggle {
+          border: none; background: transparent; cursor: pointer; padding: 0;
+          display: flex; align-items: center; flex: none;
+        }
+        .contactsGrpName { cursor: pointer; }
+        .contactsAdminGroupHead.open .contactsSecChev { color: var(--ink); }
         .contactsSecCount {
           font-size: 10.5px; font-weight: 800; color: var(--steel);
           background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px;
@@ -8706,6 +8712,14 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   // search that answers nothing. (14.10.26)
   const [catQ, setCatQ] = useState6("");
   const [openSec, setOpenSec] = useState6({});
+  // The groups on the Project tab fold too, and each head carries how many are
+  // inside — so an empty group is visibly empty rather than looking like a
+  // group whose contents went missing. A group that HAS contacts opens on
+  // arrival; an empty one stays shut and keeps the screen short. Touching a
+  // chevron fixes that group's state from then on. (14.10.26)
+  const [openGrp, setOpenGrp] = useState6({});
+  const grpOpen = (key, count) => openGrp[key] === void 0 ? count > 0 : !!openGrp[key];
+  const toggleGrp = (key, count) => setOpenGrp((s) => ({ ...s, [key]: !(s[key] === void 0 ? count > 0 : s[key]) }));
   const lang = isRTL ? "he" : "en";
   const cat = catalogDraft || { disciplines: [], roles: [], companies: [] };
   useEffect5(() => {
@@ -8737,6 +8751,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     email: ""
   });
   const addContact = (groupKey) => {
+    setOpenGrp((s) => ({ ...s, [groupKey]: true }));
     const row = newContact(groupKey);
     setDraft((d) => d.concat([row]));
     setDirty(true);
@@ -8984,13 +8999,25 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
         "div",
         { className: "adminPanelScroll contactsListWindow" },
         tab === "document" && !projectId && /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים." : "No projects yet."),
-        tab === "document" && projectId && CONTACT_GROUPS.map((g) => /* @__PURE__ */ React15.createElement(
+        tab === "document" && projectId && CONTACT_GROUPS.map((g) => {
+          const rows = draft.filter((r) => r.group === g.key);
+          const isOpen = grpOpen(g.key, rows.length);
+          return /* @__PURE__ */ React15.createElement(
           "div",
           { key: g.key, className: "contactsAdminGroup" },
           /* @__PURE__ */ React15.createElement(
             "div",
-            { className: "contactsAdminGroupHead" },
-            /* @__PURE__ */ React15.createElement("span", null, isRTL ? g.he : g.en),
+            { className: `contactsAdminGroupHead ${isOpen ? "open" : ""}`.trim() },
+            // The chevron is its own button. The head cannot be one: it holds
+            // the "show to client" checkbox, and a checkbox inside a button is
+            // not a thing a browser will let you tick.
+            /* @__PURE__ */ React15.createElement(
+              "button",
+              { type: "button", className: "contactsGrpToggle", onClick: () => toggleGrp(g.key, rows.length), "aria-label": isRTL ? "פתיחה וסגירה" : "Open or close" },
+              /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 15, strokeWidth: 2.2, className: "contactsSecChev", style: { transform: isOpen ? "rotate(180deg)" : "none" } })
+            ),
+            /* @__PURE__ */ React15.createElement("span", { className: "contactsGrpName", onClick: () => toggleGrp(g.key, rows.length) }, isRTL ? g.he : g.en),
+            /* @__PURE__ */ React15.createElement("span", { className: "contactsSecCount numerals" }, rows.length),
             /* @__PURE__ */ React15.createElement(
               "label",
               { className: "contactsVisToggle", title: isRTL ? "הצגה ללקוח" : "Show to client" },
@@ -9002,7 +9029,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
               /* @__PURE__ */ React15.createElement("span", null, isRTL ? "הצגה ללקוח" : "Show to client")
             )
           ),
-          /* @__PURE__ */ React15.createElement(
+          isOpen && /* @__PURE__ */ React15.createElement(
             "div",
             { className: "contactsAdminRow head" },
             /* @__PURE__ */ React15.createElement("span", null),
@@ -9014,10 +9041,10 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
             /* @__PURE__ */ React15.createElement("span", null, isRTL ? 'דוא"ל' : "E-mail"),
             /* @__PURE__ */ React15.createElement("span", null)
           ),
-          /* @__PURE__ */ React15.createElement(
+          isOpen && /* @__PURE__ */ React15.createElement(
             "div",
             { className: "contactsAdminRows" },
-            draft.filter((r) => r.group === g.key).map((r) => /* @__PURE__ */ React15.createElement(
+            rows.map((r) => /* @__PURE__ */ React15.createElement(
               "div",
               {
                 key: r.id,
@@ -9048,8 +9075,8 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
               /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsRowDel", onClick: () => removeContact(r.id), title: isRTL ? "מחיקה" : "Delete" }, /* @__PURE__ */ React15.createElement(X4, { size: 14, strokeWidth: 2.4 }))
             ))
           ),
-          /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addContact(g.key) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת איש קשר" : "Add contact")
-        )),
+          isOpen && /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addContact(g.key) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת איש קשר" : "Add contact")
+        ); }),
         tab === "catalog" && (() => {
           const shown = (cat.people || []).filter((pp) => catMatch(
             pp.person && pp.person.he, pp.person && pp.person.en,
