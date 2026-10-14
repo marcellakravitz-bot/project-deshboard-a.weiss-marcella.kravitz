@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "14.10.2026 · build 173";
+var APP_BUILD = "14.10.2026 · build 174";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -21619,6 +21619,19 @@ function ProjectDashboardApp() {
           });
         }
         console.log("[awdash] load project data, projects:", Object.keys(merged).length, anyLegacy ? "(some parts still in the old combined rows)" : "(all split by project)");
+        // One line that says what actually arrived, per project. A screen that
+        // shows nothing while the database holds plenty is either a loading
+        // problem or a display one, and until now there was no way to tell
+        // which from the outside. (14.10.26)
+        try {
+          console.log("[awdash] what arrived:", Object.keys(merged).map((pid) => {
+            const e = merged[pid] || {};
+            return pid
+              + " · contacts " + ((e.contacts || []).length)
+              + " · submittals " + ((e.submittals || []).length)
+              + " · photos " + ((e.photos || []).length);
+          }).join("   |   "));
+        } catch (e) {}
         setProjectExtras(merged);
         setExtrasLoaded(true);
       } catch (e) {
