@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "15.10.2026 · build 183";
+var APP_BUILD = "15.10.2026 · build 185";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -10053,6 +10053,15 @@ var AW_TR_BATCH = 60;
 // a dimension or a mark. "FL-02", "60/60", "Ø32" and "08.11.0010" are the same
 // in every language.
 function awTrNeeds(text, to) {
+  // ---------------------------------------------------------------------------
+  // 15.10.26 — ONLY AN ENGLISH SHEET IS TRANSLATED.
+  //
+  // The board is filled in in Hebrew, always. A Hebrew document is therefore
+  // the board exactly as it stands, and nothing in it is sent anywhere: not a
+  // cell, not a word, not a manufacturer's line that happens to be in English.
+  // Printing in Hebrew costs nothing and cannot change what she wrote.
+  // ---------------------------------------------------------------------------
+  if (to !== "en") return false;
   const s = String(text == null ? "" : text).trim();
   if (!s) return false;
   if (!/[A-Za-z\u0590-\u05FF]/.test(s)) return false;
@@ -10875,10 +10884,6 @@ var LLI_L = {
   // 15.10.26 — one date, several fields. The calendar is still there; this is
   // beside it, for the very common case of the same date in three places.
   copyDate: { en: "Copy this date", he: "העתקת התאריך" },
-  pasteDate: { en: "Put the copied date here", he: "הדבקת התאריך שהועתק" },
-  dateHeld: { en: "Date copied", he: "תאריך מועתק" },
-  dateDrop: { en: "Clear", he: "ניקוי" },
-  pickOutHint: { en: "Choose the file, then the language.", he: "בוחרים את הקובץ, ואז את השפה." },
   clearFind: { en: "Clear", he: "ניקוי" },
   restore: { en: "Restore", he: "החזרה" },
   category: { en: "Category", he: "קטגוריה" },
@@ -11471,7 +11476,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     let g = g0;
     let trNote = null;
     try {
-      g = { ...g0, ...(await awTranslateGrid(g0, [2, 3], g0.lg)) };
+      g = { ...g0, ...(await awTranslateGrid(g0, [1, 2, 3], g0.lg)) };
       setPoNote(null);
     } catch (e) {
       console.warn("[awdash] translate failed", e);
@@ -11509,7 +11514,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       let g = g0;
       let trNote = null;
       try {
-        g = { ...g0, ...(await awTranslateGrid(g0, [2, 3], g0.lg)) };
+        g = { ...g0, ...(await awTranslateGrid(g0, [1, 2, 3], g0.lg)) };
       } catch (e) {
         console.warn("[awdash] translate failed", e);
         trNote = g0.T("trFailed");
@@ -11518,7 +11523,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
         title: `${projectName || ""}`.trim() || g.T("oamDoc"),
         fileName: boardFileName(projectName, g.T("oamDoc"), ""),
         subtitle: g.T("oamDoc"),
-        issuedLabel: `${g.T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
         head: g.head, body: g.body, widths: g.widths,
         accent: (printBrand || {}).accent, brand: printBrand,
         isRTL: g.lg === "he", imgCol: 4, imgs: g.imgs,
@@ -11539,7 +11543,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     let g = g0;
     let trNote = null;
     try {
-      g = await awTranslateGrid(g0, [3, 4], lg);
+      g = await awTranslateGrid(g0, [2, 3, 4], lg);
       setPoNote(null);
     } catch (e) {
       console.warn("[awdash] translate failed", e);
@@ -11607,7 +11611,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       let g = g0;
       let trNote = null;
       try {
-        g = await awTranslateGrid(g0, [3, 4], lg);
+        g = await awTranslateGrid(g0, [2, 3, 4], lg);
       } catch (e) {
         console.warn("[awdash] translate failed", e);
         trNote = T("trFailed");
