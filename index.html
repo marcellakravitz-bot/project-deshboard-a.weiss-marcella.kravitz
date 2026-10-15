@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "14.10.2026 · build 177";
+var APP_BUILD = "15.10.2026 · build 178";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2839,7 +2839,12 @@ var pdfViewer = `
         /* Every cell centred, headers included — a deliberate rule for this
            document so the columns read as a block whichever language is on. */
         .contactsCard { width: 100%; }
-        .contactsHead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+        /* The row of controls is NOT part of the document: the search is at the
+           left end and the two export buttons at the right end, in Hebrew and
+           in English alike. Only the table below turns over with the language —
+           a button that changes sides is a button you have to look for
+           (15.10.26). */
+        .contactsHead { display: flex; direction: ltr; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
         .contactsHeadBtns { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
         .contactsSearch {
           border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 13px;
@@ -2891,14 +2896,18 @@ var pdfViewer = `
         }
         .contactsTabBtn.on { background: #14181f; color: #fff; border-color: #14181f; }
         /* The search sits where the project picker sits on the other tab —
-           the far end of the toolbar, so the two tabs never move. */
-        .contactsSearch {
+           the far end of the toolbar, so the two tabs never move.
+           Its own class: it used to be called .contactsSearch, the same name as
+           the pill in the project cube, and being the later rule it was styling
+           that pill too — which is how the pill drifted into the middle of its
+           row (15.10.26). */
+        .contactsAdminSearch {
           margin-inline-start: auto; display: flex; align-items: center; gap: 7px;
           border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
           background: #fff; color: var(--mist); min-width: 240px;
         }
-        .contactsSearch:focus-within { border-color: var(--accent); color: var(--steel); }
-        .contactsSearch input {
+        .contactsAdminSearch:focus-within { border-color: var(--accent); color: var(--steel); }
+        .contactsAdminSearch input {
           border: none; outline: none; background: transparent; font: inherit; font-size: 13px;
           color: var(--ink); flex: 1; min-width: 0; padding: 0;
         }
@@ -5826,6 +5835,8 @@ function subsPrintWeek({ printBrand, projectName, isRTL, weekStart, rows }) {
     head,
     body,
     widths: [16, 14, 14, 14, 14, 14, 14],
+    // The house name, like every other document (15.10.26).
+    fileName: boardFileName(projectName, "\u05dc\u05d5\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 - \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4", ""),
     accent: (printBrand || {}).accent,
     brand: printBrand || {},
     isRTL: isRTL !== false,
@@ -6906,7 +6917,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
     const csv = "\uFEFF" + [header2.map((h) => `"${h}"`).join(","), ...rows].join("\r\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const fname = `${sanitizeFileNamePart(projectName || "Project")} - ${isRTL ? "\u05DC\u05D5\u05D7 \u05D6\u05DE\u05E0\u05D9\u05DD" : "Project Schedule"}.csv`;
+    const fname = boardFileName(projectName, isRTL ? "\u05DC\u05D5\u05D7 \u05D6\u05DE\u05E0\u05D9\u05DD" : "Project Schedule", "csv");
     triggerDownload(url, fname);
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   };
@@ -7023,7 +7034,7 @@ function ScheduleGantt({ tasks, readOnly, onUpdatePercent, onSaveUpdate, project
       : "";
     // The house document shell — the same paper as every other form she
     // issues, down to the millimetre (7.9.26).
-    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || title)}</title><style>
+    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(boardFileName(projectName, title, ""))}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
 ${printSheetCss({ landscape: true, accent })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; }
@@ -7592,7 +7603,7 @@ function DocumentCard({
         type: "button",
         className: "ghostBtn small",
         onClick: () => {
-          const name = `${sanitizeFileNamePart(projectName || "Project")} - ${sanitizeFileNamePart(card.title)}.pdf`;
+          const name = boardFileName(projectName, card.title, "pdf");
           triggerDownload(content.dataUrl, name);
         }
       },
@@ -8548,7 +8559,7 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
     const clientLogo = brand.clientLogoUrl ? `<img class="clientLogo" src="${brand.clientLogoUrl}" alt="logo">` : "<span></span>";
     const footBlock = brand.footerImg ? `<div class="footImg" id="footimg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
     // The house document shell, the same paper as every other form (7.9.26).
-    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || pc.title)}</title><style>
+    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(boardFileName(projectName, pc.title, ""))}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
 ${printSheetCss({ landscape: false, accent })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; }
@@ -9040,7 +9051,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
         ),
         tab === "catalog" && /* @__PURE__ */ React15.createElement(
           "div",
-          { className: "contactsSearch" },
+          { className: "contactsAdminSearch" },
           /* @__PURE__ */ React15.createElement(Search2, { size: 14, strokeWidth: 2.2 }),
           /* @__PURE__ */ React15.createElement("input", {
             type: "text",
@@ -13704,7 +13715,7 @@ function rfiPrint(rec, printLang, brand, projectName) {
     : "";
 
   const html = `<!doctype html><html dir="${isRTL ? "rtl" : "ltr"}" lang="${lang}">
-<head><meta charset="utf-8"><title>RFI ${esc(d.no)}</title>
+<head><meta charset="utf-8"><title>${esc(boardFileName(projectName, `${L("title")} ${d.no}`, ""))}</title>
 <style>
   /* Portrait. An RFI is a letter — a question, an answer and the pictures that
      go with them — not a wide table. (2.9.26) */
@@ -14720,7 +14731,7 @@ ${docsBlock}
 ${rev ? `<p class="issuedBy">${esc(L("issuedBy"))}: ${esc(rev.by)} · ${esc(sbFmtDate(rev.at))}</p>` : ""}`;
 
   const html = `<!doctype html><html dir="${isRTL ? "rtl" : "ltr"}" lang="${lang}">
-<head><meta charset="utf-8"><title>${esc(d.itemNo)}</title>
+<head><meta charset="utf-8"><title>${esc(boardFileName(projectName, `${L("title")} ${d.itemNo}`, ""))}</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -20261,20 +20272,20 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
     });
     return [header, ...body];
   };
-  const exportCsv = () => {
+  // The workbook wears the same colour as the printed list and carries the same
+  // name — it used to come out white, and called "users.xlsx" (15.10.26).
+  const exportCsv = async () => {
     const rows = buildRows();
-    // Same rule as the contacts export: a real workbook, not a renamed CSV.
-    const ws = XLSX3.utils.aoa_to_sheet(rows);
-    const wb = XLSX3.utils.book_new();
-    XLSX3.utils.book_append_sheet(wb, ws, isRTL ? "משתמשים" : "Users");
-    wb.Workbook = { Views: [{ RTL: isRTL }] };
-    const out = XLSX3.write(wb, { bookType: "xlsx", type: "array" });
-    const url = URL.createObjectURL(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "users.xlsx";
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    const docName = isRTL ? "רשימת משתמשים" : "User list";
+    await boardExportXlsx({
+      title: docName,
+      subtitle: `${docName} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      sheetName: isRTL ? "משתמשים" : "Users",
+      fileName: boardFileName("A.Weiss", docName, "xlsx"),
+      head: rows[0], body: rows.slice(1),
+      widths: [30, 14, 26, 16, 12, 10, 16, 16, 10],
+      accent: pdfAccent || "#1A559E", isRTL
+    });
   };
   const [printAsk, setPrintAsk] = useState6(null);
   const exportPdf = (printLang) => {
@@ -20292,7 +20303,7 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
       : '';
     const title = he ? "רשימת משתמשים" : "User list";
     // The house document shell, the same paper as every other form (7.9.26).
-    const html = '<!doctype html><html dir="' + dir + '"><head><meta charset="utf-8"><title>' + title + '</title><style>' +
+    const html = '<!doctype html><html dir="' + dir + '"><head><meta charset="utf-8"><title>' + boardFileName("A.Weiss", title, "") + '</title><style>' +
       printSheetCss({ landscape: true, accent }) +
       'body { font-family: Arial, "Helvetica Neue", sans-serif; color: #1f2a37; direction: ' + dir + '; }' +
       '.hdr { display:flex; align-items:center; justify-content:space-between; border-bottom: 3px solid ' + accent + '; padding-bottom: 10px; margin-bottom: 14px; }' +
@@ -20992,7 +21003,7 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
 // -----------------------------------------------------------------------------
 var PLAN_ACCEPT = ".dxf,.ifc,.pdf,.rvt";
 
-function PlansUploadBlock({ isRTL, projectId, plans, onPlansChange, rooms, onRoomsChange }) {
+function PlansUploadBlock({ isRTL, projectId, projectName, plans, onPlansChange, rooms, onRoomsChange }) {
   const t = (he, en) => (isRTL ? he : en);
   const [picked, setPicked] = useState6([]);
   const [confirmed, setConfirmed] = useState6(false);
@@ -21162,7 +21173,10 @@ function PlansUploadBlock({ isRTL, projectId, plans, onPlansChange, rooms, onRoo
     wb.Workbook = { Views: [{ RTL: isRTL }] };
     const out = XLSX3.write(wb, { bookType: "xlsx", type: "array" });
     const url = URL.createObjectURL(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-    triggerDownload(url, `${sanitizeFileNamePart("rooms")}.xlsx`);
+    // The house name. The SHEET itself stays plain on purpose: this one is
+    // also an upload file — she edits it and sends it back in — and merged
+    // title rows would get in the way of that (15.10.26).
+    triggerDownload(url, boardFileName(projectName, isRTL ? "\u05D7\u05D3\u05E8\u05D9\u05DD \u05D5\u05D0\u05D9\u05E4\u05D9\u05D5\u05E0\u05D9\u05DD" : "Rooms and marks", "xlsx"));
     setTimeout(() => URL.revokeObjectURL(url), 1e3);
   };
 
@@ -21320,7 +21334,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date"), field("\u05E8\u05D5\u05D5\u05D7 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9 %", "Main contractor markup %", "markupPct", "number")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null }), /* @__PURE__ */ React15.createElement("div", { className: "blockRule" }), /* @__PURE__ */ React15.createElement(PlansUploadBlock, { isRTL, projectId: p.id, plans: (plansByProject || {})[p.id] || null, onPlansChange: (next) => onPlansChange && onPlansChange(p.id, next), rooms: (roomsByProject || {})[p.id] || null, onRoomsChange: (next) => onRoomsChange && onRoomsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date"), field("\u05E8\u05D5\u05D5\u05D7 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9 %", "Main contractor markup %", "markupPct", "number")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile }))), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null }), /* @__PURE__ */ React15.createElement("div", { className: "blockRule" }), /* @__PURE__ */ React15.createElement(PlansUploadBlock, { isRTL, projectId: p.id, projectName: p.name, plans: (plansByProject || {})[p.id] || null, onPlansChange: (next) => onPlansChange && onPlansChange(p.id, next), rooms: (roomsByProject || {})[p.id] || null, onRoomsChange: (next) => onRoomsChange && onRoomsChange(p.id, next) }), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -22817,7 +22831,7 @@ function ProjectDashboardApp() {
   const handleExportState = () => {
     const payload = JSON.stringify({ v: 1, contractors, projectExtras }, null, 2);
     const url = URL.createObjectURL(new Blob([payload], { type: "application/json" }));
-    triggerDownload(url, "aweiss-dashboard-backup.json");
+    triggerDownload(url, boardFileName("A.Weiss", "Dashboard Backup", "json"));
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   };
   const handleImportState = async (file) => {
