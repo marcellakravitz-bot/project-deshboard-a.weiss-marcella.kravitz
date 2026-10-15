@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "15.10.2026 · build 185";
+var APP_BUILD = "15.10.2026 · build 186";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2478,6 +2478,9 @@ var pdfViewer = `
         .sbChkTable td.sbChkAct .sbChkAdd { vertical-align: middle; }
         .sbChkTable .sbChkCode { font-weight: 800; }
         .sbChkTable .sbChkDesc { text-align: start; overflow-wrap: anywhere; }
+        /* The mark is a short label, not a sentence: centred, it lines up down
+           the column and the eye can run it (15.10.26). */
+        .sbChkTable .sbChkMark { text-align: center; }
         /* Three lines is enough to recognise the item; the full wording is on
            the row as a tooltip. */
         .sbChkDescText {
@@ -10520,9 +10523,22 @@ function printPaginateJs(stampText) {
     sheet.appendChild(ft);
     pg.appendChild(sheet);
     out.appendChild(pg);
-    var rec = { pg: pg, tb: tb, body: body, frame: fr, strip: strip };
+    var rec = { pg: pg, tb: tb, body: body, frame: fr, strip: strip, sec: null };
     pages.push(rec);
     return rec;
+  }
+  // A document that comes in sections — the O&M file, one discipline at a time
+  // — says which section a page belongs to ABOVE the column titles, on every
+  // page of it. A document with no sections is untouched: no band, no breaks
+  // (15.10.26).
+  function setSec(rec, sec) {
+    rec.sec = sec;
+    if (!sec) return;
+    var band = document.createElement("div");
+    band.className = "pgSec";
+    band.textContent = sec;
+    var t = rec.body.querySelector("table");
+    if (t) rec.body.insertBefore(band, t);
   }
   // Clear paper between the last row and the inside of the frame's bottom
   // rule. Measured, not inferred: the frame hides its overflow, so nothing
@@ -10535,6 +10551,16 @@ function printPaginateJs(stampText) {
   }
   var cur = newPage();
   for (var i = 0; i < rows.length; i++) {
+    var sec = rows[i].getAttribute ? (rows[i].getAttribute("data-sec") || "") : "";
+    if (!cur.tb.children.length) {
+      // The first page takes the section of the first row that lands on it.
+      if (cur.sec === null) setSec(cur, sec);
+    } else if (sec !== cur.sec) {
+      // A new section does not share a page with the one before it.
+      var fresh = newPage();
+      setSec(fresh, sec);
+      cur = fresh;
+    }
     cur.tb.appendChild(rows[i]);
     // A page stops ONE ROW SHORT of full. Filled to the last millimetre the
     // rows sit on the frame's bottom line and the sheet reads as bottom-heavy;
@@ -10542,6 +10568,8 @@ function printPaginateJs(stampText) {
     var spare = rows[i].getBoundingClientRect().height;
     if (cur.tb.children.length > 1 && room(cur) < spare) {
       var next = newPage();
+      // The section runs on, so its heading is repeated over the next page.
+      setSec(next, sec);
       next.tb.appendChild(rows[i]);
       cur = next;
     }
@@ -10564,7 +10592,7 @@ function printPaginateJs(stampText) {
 }
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, toneRows, noStamp, issuedLabel, fileName, win } = opts;
+          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -10584,7 +10612,12 @@ function boardExportPdf(opts) {
     // A row that needs the eye — a long lead item nobody has ordered yet —
     // carries its colour onto the paper too (29.8.26).
     const cls = (alertRows && alertRows[ri] && "alert") || (toneRows && toneRows[ri]) || "";
-    return `<tr${cls ? ` class="${cls}"` : ""}>${tds}</tr>`;
+    // The section this row belongs to, carried on the row itself. The
+    // paginator reads it: a section gets a heading of its own at the top of
+    // every page it occupies, and a new section always starts a new page
+    // (15.10.26).
+    const sec = sections && sections[ri] ? ` data-sec="${esc(sections[ri])}"` : "";
+    return `<tr${cls ? ` class="${cls}"` : ""}${sec}>${tds}</tr>`;
   }).join("");
   const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "";
   // The client's own mark, on the far side of the header and the same height as
@@ -10615,6 +10648,13 @@ body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink}; di
 .ttlWrap .sub { font-size: 10px; font-weight: 600; color: ${P.accent}; margin-top: 2px; }
 .ttlWrap .issued { font-size: 9.5px; font-weight: 700; color: ${P.ink}; margin-top: 3px; }
 .hdr img.clientLogo { justify-self: end; }
+/* The section's own heading, over the column titles, on every page the section
+   occupies. Darker than the column titles so the two read as a heading and a
+   sub-heading and not as two bands (15.10.26). */
+.pgSec {
+  background: ${P.dark}; color: #fff; font-weight: 800; font-size: 10.5px;
+  letter-spacing: .3px; text-align: center; padding: 5px 8px; border-radius: 4px 4px 0 0;
+}
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 8px; padding: 5px 3px;
   border: 1px solid ${P.line}; text-align: center; vertical-align: middle; word-break: break-word; }
@@ -10870,6 +10910,7 @@ var LLI_L = {
     he: "אספקה ארוכה: האישור, הייצור והאספקה מאיימים על לוח הזמנים. אותו סימון כמו בטבלת הסיווג בהגדרות הפרויקט."
   },
   oamCol: { en: "O&M FILE", he: "תיק מתקן" },
+  noCatSection: { en: "Other", he: "ללא תחום" },
   oamHint: {
     en: "Ticked rows go into the finish-materials O&M document. Every row starts ticked.",
     he: "שורות מסומנות נכנסות למסמך חומרי גמר - תיק מתקן. כל שורה מתחילה מסומנת."
@@ -11425,12 +11466,21 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // is "for ordering": the only question asked of a row is whether its O&M tick
   // is on — and every row's is, until she turns one off.
   // ===========================================================================
+  // The O&M document is read one discipline at a time — the ceilings together,
+  // the flooring together — so it is ORDERED BY DISCIPLINE, and inside each one
+  // by the chapter and the order she put the rows in. On paper each discipline
+  // then starts its own page and carries its name over every page it fills
+  // (15.10.26).
   const oamRows = () => {
     const list = all.filter((r) => !isRemoved(r) && inOam(r));
     const out = [];
-    list.forEach((r) => {
+    const catOrder = (r) => {
+      const i = BOARD_CATEGORIES.findIndex((c) => c.key === r.category);
+      return i < 0 ? BOARD_CATEGORIES.length : i;
+    };
+    list.slice().sort((a, b) => catOrder(a) - catOrder(b)).forEach((r) => {
       const ch = homeOf(r);
-      const key = ch ? ch.code : "manual";
+      const key = `${r.category || "~"}|${ch ? ch.code : "manual"}`;
       let g = out.find((x) => x.key === key);
       if (!g) { g = { key, rows: [] }; out.push(g); }
       g.rows.push(r);
@@ -11453,9 +11503,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     const types = ["text", "text", "text", "text", "text"];
     const body = [];
     const imgs = [];
+    const secs = [];
     oamRows().forEach((r) => {
       const v = lliRowOf(data, r.code);
       const c = boardCategoryOf(r.category);
+      // The heading the paginator puts over the page. A row with no discipline
+      // is gathered under one plain heading rather than on a page of its own.
+      secs.push(c ? sbText(c, lg) : T("noCatSection"));
       body.push([
         c ? sbText(c, lg) : "",
         v.typeMark || "",
@@ -11465,7 +11519,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       ]);
       imgs.push(v.image || null);
     });
-    return { head, body, widths, types, imgs, T, lg };
+    return { head, body, widths, types, imgs, secs, T, lg };
   };
   const oamExcel = async (printLang) => {
     const g0 = oamGrid(printLang);
@@ -11524,6 +11578,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
         fileName: boardFileName(projectName, g.T("oamDoc"), ""),
         subtitle: g.T("oamDoc"),
         head: g.head, body: g.body, widths: g.widths,
+        // One discipline per page, named above the column titles (15.10.26).
+        sections: g.secs,
         accent: (printBrand || {}).accent, brand: printBrand,
         isRTL: g.lg === "he", imgCol: 4, imgs: g.imgs,
         noStamp: true,
@@ -19545,7 +19601,7 @@ function SubmittalFolder({
                           : sbH("td", { dir: "ltr", className: "sbChkCode" }, r.code),
                         sbH(
                           "td",
-                          { className: "sbChkDesc", dir: "auto" },
+                          { className: "sbChkDesc sbChkMark", dir: "auto" },
                           // The mark she gave the item on the ordering board is
                           // the mark, wherever it is looked at. Below it, what
                           // the submittal itself says, and last the bill of
