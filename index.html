@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "14.10.2026 · build 176";
+var APP_BUILD = "14.10.2026 · build 177";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -8463,41 +8463,55 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
     en: { title: "Contacts", discipline: "Discipline", company: "Company", person: "Contact Person", role: "Role", phone: "Phone", email: "E-mail", empty: "No contacts have been entered for this project yet.", search: "Search", excel: "Excel", pdf: "PDF" }
   };
   const c = COPY[lang];
-  const cellOf = (row) => ({
-    discipline: catalogLabel(catalogFind(cat.disciplines, row.disciplineId), lang),
-    company: catalogLabel(catalogFind(cat.companies, row.companyId), lang) || bilingual(row.company, lang),
-    person: bilingual(row.person, lang),
-    role: catalogLabel(catalogFind(cat.roles, row.roleId), lang),
-    phone: row.phone || "",
-    email: row.email || ""
-  });
+  // The screen's language by default; the export passes the language that was
+  // chosen on the way out, so a sheet going to the client can be English while
+  // the screen stays in Hebrew (14.10.26).
+  const cellOf = (row, lg) => {
+    const L = lg || lang;
+    return {
+      discipline: catalogLabel(catalogFind(cat.disciplines, row.disciplineId), L),
+      company: catalogLabel(catalogFind(cat.companies, row.companyId), L) || bilingual(row.company, L),
+      person: bilingual(row.person, L),
+      role: catalogLabel(catalogFind(cat.roles, row.roleId), L),
+      phone: row.phone || "",
+      email: row.email || ""
+    };
+  };
   const groupsWithRows = CONTACT_GROUPS.filter((g) => allowed.indexOf(g.key) !== -1).map((g) => ({
     group: g,
     items: visible.filter((r) => r.group === g.key)
   })).filter((g) => g.items.length > 0);
-  const exportCsv = () => {
-    const head = [c.discipline, c.company, c.person, c.role, c.phone, c.email];
-    const lines = [];
-    groupsWithRows.forEach((g) => {
-      lines.push([lang === "he" ? g.group.he : g.group.en, "", "", "", "", ""]);
-      lines.push(head);
-      g.items.forEach((r) => {
-        const v = cellOf(r);
-        lines.push([v.discipline, v.company, v.person, v.role, v.phone, v.email]);
-      });
-      lines.push(["", "", "", "", "", ""]);
+  const [plainNote, setPlainNote] = useState6(null);
+  // The workbook is the same document as the PDF, in the same colours and the
+  // same order, and it is asked for a language the same way the PDF is — it
+  // used to come out in whatever language the screen happened to be in, and
+  // always without the house format (14.10.26).
+  const exportCsv = async (printLang) => {
+    const he = printLang !== "en";
+    const lg = he ? "he" : "en";
+    const cc = COPY[lg];
+    const head = [cc.discipline, cc.company, cc.person, cc.role, cc.phone, cc.email];
+    const sections = groupsWithRows.map((g) => ({
+      label: he ? g.group.he : g.group.en,
+      rows: g.items.map((r) => {
+        const v = cellOf(r, lg);
+        return [v.discipline, v.company, v.person, v.role, v.phone, v.email];
+      })
+    }));
+    setPlainNote(null);
+    const res = await boardExportXlsx({
+      title: `${projectName || ""}`.trim() || cc.title,
+      subtitle: `${cc.title} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      sheetName: he ? "אנשי קשר" : "Contacts",
+      fileName: boardFileName(projectName, cc.title, "xlsx"),
+      head, sections,
+      widths: [26, 24, 22, 22, 16, 26],
+      // Every column is text: a phone number is a name, not a quantity, and a
+      // leading zero must survive the trip.
+      colTypes: ["text", "text", "text", "text", "text", "text"],
+      accent: accentColour, isRTL: he, orientation: "portrait"
     });
-    // A real .xlsx workbook, not a renamed CSV — Excel opens it straight up with
-    // the Hebrew intact and no import dialog.
-    const ws = XLSX3.utils.aoa_to_sheet(lines);
-    ws["!cols"] = [{ wch: 26 }, { wch: 24 }, { wch: 22 }, { wch: 22 }, { wch: 16 }, { wch: 26 }];
-    const wb = XLSX3.utils.book_new();
-    XLSX3.utils.book_append_sheet(wb, ws, isRTL ? "אנשי קשר" : "Contacts");
-    wb.Workbook = { Views: [{ RTL: isRTL }] };
-    const out = XLSX3.write(wb, { bookType: "xlsx", type: "array" });
-    const url = URL.createObjectURL(new Blob([out], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
-    triggerDownload(url, `${sanitizeFileNamePart(projectName || "Project")} - ${c.title}.xlsx`);
-    setTimeout(() => URL.revokeObjectURL(url), 1e3);
+    if (res && res.styled === false) setPlainNote(sbText(BOARD_EXPORT_T.plainNote, lg));
   };
   const [printAsk, setPrintAsk] = useState6(null);
   // The sheet is for whoever receives it, so the language is the one chosen on
@@ -8508,13 +8522,18 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
     // the project colour that the schedule print uses.
     const accent = accentColour;
     const he = printLang !== "en";
+    const lg = he ? "he" : "en";
+    // Column titles and the contents of the cells in the language that was
+    // chosen for the printer too — only the group names were following it, so
+    // an English sheet came out with Hebrew column titles (14.10.26).
+    const pc = COPY[lg];
     const dir = he ? "rtl" : "ltr";
     const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
     const body = groupsWithRows.map((g) => {
       const head = `<tr class="grp"><td colspan="6">${esc(he ? g.group.he : g.group.en)}</td></tr>` +
-        `<tr class="hd"><td>${esc(c.discipline)}</td><td>${esc(c.company)}</td><td>${esc(c.person)}</td><td>${esc(c.role)}</td><td>${esc(c.phone)}</td><td>${esc(c.email)}</td></tr>`;
+        `<tr class="hd"><td>${esc(pc.discipline)}</td><td>${esc(pc.company)}</td><td>${esc(pc.person)}</td><td>${esc(pc.role)}</td><td>${esc(pc.phone)}</td><td>${esc(pc.email)}</td></tr>`;
       const items = g.items.map((r) => {
-        const v = cellOf(r);
+        const v = cellOf(r, lg);
         // Kept as a real link so it stays clickable in the saved PDF.
         const mail = v.email ? `<a href="mailto:${esc(v.email)}">${esc(v.email)}</a>` : "";
         const tel = v.phone ? `<a href="tel:${esc(String(v.phone).replace(/[^0-9+]/g, ""))}">${esc(v.phone)}</a>` : "";
@@ -8522,10 +8541,14 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
       }).join("");
       return head + items;
     }).join("");
-    const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "";
+    // Two logos, ours on one side and the client's on the other, exactly as
+    // every other document this site issues — the contacts sheet was printing
+    // an empty space where the client's logo belongs (14.10.26).
+    const logo = brand.logoUrl ? `<img src="${brand.logoUrl}" alt="logo">` : "<span></span>";
+    const clientLogo = brand.clientLogoUrl ? `<img class="clientLogo" src="${brand.clientLogoUrl}" alt="logo">` : "<span></span>";
     const footBlock = brand.footerImg ? `<div class="footImg" id="footimg"><img src="${brand.footerImg}" alt="footer"></div>` : "";
     // The house document shell, the same paper as every other form (7.9.26).
-    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || c.title)}</title><style>
+    const html = `<!doctype html><html dir="${dir}" lang="${he ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(projectName || pc.title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
 ${printSheetCss({ landscape: false, accent })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: ${dir}; }
@@ -8533,6 +8556,9 @@ body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; dir
    and not in the middle of whatever space the logo happens to leave over. */
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 10px; margin-bottom: 14px; }
 .hdr img { max-height: 44px; max-width: 140px; object-fit: contain; justify-self: start; }
+/* The client's logo sits at the far edge of the third track, so the two logos
+   frame the title instead of crowding it. */
+.hdr img.clientLogo { justify-self: end; }
 .ttlWrap { grid-column: 2; text-align: center; }
 .ttlWrap .ttl { font-size: 19px; font-weight: 800; color: ${accent}; letter-spacing: .5px; }
 .ttlWrap .sub { font-size: 11px; font-weight: 600; color: ${accent}; margin-top: 3px; }
@@ -8543,7 +8569,7 @@ tr.grp td { background: ${shadeDarker(accent)}; color: #fff; font-weight: 800; f
 tr.hd td { background: ${accent}; color: #fff; font-weight: 800; }
 a { color: #17181c; text-decoration: none; }
 </style></head><body><div id="src">
-<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(c.title)}</div></div><span></span></div>
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(pc.title)}</div></div>${clientLogo}</div>
 <table><colgroup><col style="width:19%"><col style="width:18%"><col style="width:16%"><col style="width:16%"><col style="width:14%"><col style="width:17%"></colgroup><tbody>${body}</tbody></table>
 ${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? "he" : "en"))}</body></html>`;
     const w = window.open("", "_blank");
@@ -8569,8 +8595,8 @@ ${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? 
       /* @__PURE__ */ React15.createElement(
         "div",
         { className: "contactsHeadBtns" },
-        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: exportCsv }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.excel),
-        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => exportPdf) }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf), printAsk && /* @__PURE__ */ React15.createElement(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); exportPdf(lg); }, onClose: () => setPrintAsk(null) })
+        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => exportCsv) }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.excel),
+        /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => exportPdf) }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf), printAsk && /* @__PURE__ */ React15.createElement(PrintLangAsk, { onPick: (lg) => { const f = printAsk; setPrintAsk(null); f(lg); }, onClose: () => setPrintAsk(null) }), plainNote && /* @__PURE__ */ React15.createElement("span", { className: "pdfBookStatus", style: { fontSize: 11.5 } }, plainNote)
       )
     ),
     groupsWithRows.length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "pdfBookStatus" }, c.empty),
@@ -10085,14 +10111,16 @@ function boardImageKind(dataUrl) {
 
 async function boardXlsxStyled(ExcelJS, opts) {
   const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows, toneRows,
-          imgCol, imgs, colTypes } = opts;
+          imgCol, imgs, colTypes, sections, orientation } = opts;
   const P = boardExportPalette(accent);
   const wb = new ExcelJS.Workbook();
   wb.creator = "A. Weiss";
   wb.created = new Date();
+  // A sheet built in sections carries its own band and column titles inside the
+  // grid, so only the two title rows are frozen (14.10.26).
   const ws = wb.addWorksheet(sheetName || "Sheet1", {
-    views: [{ rightToLeft: !!isRTL, state: "frozen", ySplit: 3 }],
-    pageSetup: { orientation: "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
+    views: [{ rightToLeft: !!isRTL, state: "frozen", ySplit: sections ? 2 : 3 }],
+    pageSetup: { orientation: orientation || "landscape", fitToPage: true, fitToWidth: 1, fitToHeight: 0 }
   });
   const n = head.length;
   const fill = (hex) => ({ type: "pattern", pattern: "solid", fgColor: { argb: "FF" + boardHexNoHash(hex) } });
@@ -10120,6 +10148,57 @@ async function boardXlsxStyled(ExcelJS, opts) {
   // The widths are set before anything is placed in the sheet, so a picture is
   // fitted to the column it will actually sit in.
   ws.columns = widths.map((w) => ({ width: w }));
+
+  // One cell of the column-title row, so a sheet in sections can repeat it
+  // under every band exactly as the PDF repeats it under every group heading.
+  const headCell = (cell, text) => {
+    cell.value = text;
+    cell.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" }, name: "Arial" };
+    cell.fill = fill(P.accent);
+    cell.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    cell.border = { top: thin, left: thin, bottom: thin, right: thin };
+  };
+
+  // ------------------------------------------------------------- IN SECTIONS
+  // The contacts sheet is not one table but a table per group — main
+  // contractor, supervision, consultants, suppliers — and the workbook is laid
+  // out the way the PDF is: a dark band with the group's name, the column
+  // titles under it, its rows, a blank line, the next group (14.10.26).
+  if (sections) {
+    let at = 3;
+    sections.forEach((sec) => {
+      ws.mergeCells(at, 1, at, n);
+      const band = ws.getCell(at, 1);
+      band.value = sec.label;
+      band.font = { bold: true, size: 11.5, color: { argb: "FFFFFFFF" }, name: "Arial" };
+      band.fill = fill(P.dark);
+      band.alignment = { horizontal: "center", vertical: "middle" };
+      ws.getRow(at).height = 22;
+      at++;
+
+      const shr = ws.getRow(at);
+      head.forEach((h, i) => headCell(shr.getCell(i + 1), h));
+      shr.height = 26;
+      at++;
+
+      (sec.rows || []).forEach((row, ri) => {
+        const r = ws.getRow(at);
+        row.forEach((v, ci) => {
+          const cell = boardCellValue(v, colTypes ? colTypes[ci] : null);
+          const c = r.getCell(ci + 1);
+          c.value = cell.value;
+          if (cell.numFmt) c.numFmt = cell.numFmt;
+          c.font = { size: 10, name: "Arial", color: { argb: "FF" + boardHexNoHash(P.ink) } };
+          c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+          c.border = { top: thin, left: thin, bottom: thin, right: thin };
+          if (ri % 2 === 1) c.fill = fill(P.zebra);
+        });
+        at++;
+      });
+      at++;
+    });
+    return await wb.xlsx.writeBuffer();
+  }
 
   const hr = ws.getRow(3);
   head.forEach((h, i) => {
@@ -10205,8 +10284,18 @@ async function boardXlsxStyled(ExcelJS, opts) {
 // The fallback. A real workbook, correct data, right column widths, and the
 // sheet opens the right way round in Hebrew — it simply has no colour.
 function boardXlsxPlain(opts) {
-  const { title, subtitle, sheetName, head, body, widths, isRTL } = opts;
-  const aoa = [[title], [subtitle], head].concat(body);
+  const { title, subtitle, sheetName, head, body, widths, isRTL, sections } = opts;
+  const blank = head.map(() => "");
+  const secAoa = [];
+  if (sections) {
+    sections.forEach((sec) => {
+      secAoa.push([sec.label].concat(blank.slice(1)));
+      secAoa.push(head);
+      (sec.rows || []).forEach((r) => secAoa.push(r));
+      secAoa.push(blank);
+    });
+  }
+  const aoa = sections ? [[title], [subtitle]].concat(secAoa) : [[title], [subtitle], head].concat(body);
   const ws = XLSX3.utils.aoa_to_sheet(aoa);
   ws["!cols"] = widths.map((w) => ({ wch: w }));
   ws["!merges"] = [
