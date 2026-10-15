@@ -497,6 +497,12 @@ var SB_L = {
   },
   checklistEmpty: { en: "The bill of quantities has nothing in this discipline.", he: "אין בכתב הכמויות פריטים בתחום הזה." },
   chkItem: { en: "BOQ", he: "BOQ" },
+  // 15.10.26 — a line that came from a hand-made row on the ordering board has
+  // no item number of its own until she writes one here.
+  chkCodeHint: {
+    en: "This line was added by hand on the ordering board. Write its BOQ item number here if it has one.",
+    he: "השורה הזו נוספה ידנית בטבלת ההזמנות. אפשר לכתוב כאן את מספר הסעיף בכתב הכמויות, אם יש."
+  },
   chkDesc: { en: "Description", he: "תיאור" },
   chkDocs: { en: "documents attached", he: "מסמכים מצורפים" },
   chkExpired: { en: "The certificate expired on", he: "תוקף המסמך פג בתאריך" },
