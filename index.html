@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "15.10.2026 · build 182";
+var APP_BUILD = "15.10.2026 · build 183";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1789,6 +1789,11 @@ var pdfViewer = `
         .lliTally { text-align: center; font-size: 12px; color: var(--steel); margin-bottom: 6px; }
         .lliMarkFind { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; }
         .lliAlsoOn { display: flex; justify-content: center; gap: 8px; margin-top: 4px; font-size: 10.5px; font-weight: 700; color: var(--steel); }
+        /* The row a new one will be added under. A line at its edge and nothing
+           else: it has to be visible without colouring a row that already says
+           something with its colour (late, ordered, off the board). */
+        .lliTable tbody tr.lliHere > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+        .lliTable tbody tr.lliHere > td:last-child { box-shadow: inset -3px 0 0 var(--accent); }
         /* A date, its calendar, and the two small ways to move it about. */
         .lliDateCell { display: flex; align-items: center; gap: 2px; }
         .lliDateCell .lliIn { flex: 1; min-width: 0; }
@@ -10942,8 +10947,12 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   const [markQuery, setMarkQuery] = useState6("");
   const [hitIx, setHitIx] = useState6(0);
   const hitRef = useRef5(null);
-  // The row whose cell last held the cursor. A new row is added under it.
+  // The row whose cell last held the cursor. A new row is added under it — and
+  // it is marked on screen, so where the next row will go is something she can
+  // see before she clicks, not after (15.10.26).
   const focusRowRef = useRef5(null);
+  const [anchorRow, setAnchorRow] = useState6(null);
+  const standOn = (code) => { focusRowRef.current = code; setAnchorRow(code); };
   // The scrolling box the rows live in, and the timer that scrolls it while a
   // row is being carried to a place that is not on screen yet.
   const wrapRef = useRef5(null);
@@ -11454,9 +11463,21 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     return { head, body, widths, types, imgs, T, lg };
   };
   const oamExcel = async (printLang) => {
-    const g = oamGrid(printLang);
-    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
-    setPoNote(null);
+    const g0 = oamGrid(printLang);
+    if (!g0.body.length) { setPoNote(g0.T("nothingToExport")); return; }
+    setPoNote(g0.T("translating"));
+    // The wording and the supplier are the free text here; the discipline is
+    // known in both languages and a mark is a code.
+    let g = g0;
+    let trNote = null;
+    try {
+      g = { ...g0, ...(await awTranslateGrid(g0, [2, 3], g0.lg)) };
+      setPoNote(null);
+    } catch (e) {
+      console.warn("[awdash] translate failed", e);
+      trNote = g0.T("trFailed");
+      setPoNote(null);
+    }
     const res = await boardExportXlsx({
       title: `${projectName || ""}`.trim() || g.T("oamDoc"),
       subtitle: `${g.T("oamDoc")} \u00b7 ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
@@ -11469,27 +11490,62 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       // in so many words (15.10.26).
       accent: (printBrand || {}).accent, isRTL: g.lg === "he"
     });
-    if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+    if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, g.lg));
+    else if (trNote) setPoNote(trNote);
   };
   const oamPdf = (printLang) => {
-    const g = oamGrid(printLang);
-    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
+    const g0 = oamGrid(printLang);
+    if (!g0.body.length) { setPoNote(g0.T("nothingToExport")); return; }
     setPoNote(null);
-    boardExportPdf({
-      title: `${projectName || ""}`.trim() || g.T("oamDoc"),
-      fileName: boardFileName(projectName, g.T("oamDoc"), ""),
-      subtitle: g.T("oamDoc"),
-      issuedLabel: `${g.T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
-      head: g.head, body: g.body, widths: g.widths,
-      accent: (printBrand || {}).accent, brand: printBrand,
-      isRTL: g.lg === "he", imgCol: 4, imgs: g.imgs,
-      noStamp: true
-    });
+    // The window is opened inside the click, before the translation, or a
+    // pop-up blocker eats it.
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.open();
+      win.document.write(awWaitPage(g0.lg));
+      win.document.close();
+    }
+    (async () => {
+      let g = g0;
+      let trNote = null;
+      try {
+        g = { ...g0, ...(await awTranslateGrid(g0, [2, 3], g0.lg)) };
+      } catch (e) {
+        console.warn("[awdash] translate failed", e);
+        trNote = g0.T("trFailed");
+      }
+      boardExportPdf({
+        title: `${projectName || ""}`.trim() || g.T("oamDoc"),
+        fileName: boardFileName(projectName, g.T("oamDoc"), ""),
+        subtitle: g.T("oamDoc"),
+        issuedLabel: `${g.T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+        head: g.head, body: g.body, widths: g.widths,
+        accent: (printBrand || {}).accent, brand: printBrand,
+        isRTL: g.lg === "he", imgCol: 4, imgs: g.imgs,
+        noStamp: true,
+        win
+      });
+      setPoNote(trNote);
+    })();
   };
-  const onExcel = async (audience) => {
-    const g = exportGrid(audience);
-    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
-    setPoNote(null);
+  const onExcel = async (printLang, audience) => {
+    const lg = printLang === "en" ? "en" : "he";
+    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    const g0 = exportGrid(audience, lg);
+    if (!g0.body.length) { setPoNote(T("nothingToExport")); return; }
+    setPoNote(T("translating"));
+    // The description and the supplier are the only two columns holding free
+    // text; everything else the board already knows in both languages.
+    let g = g0;
+    let trNote = null;
+    try {
+      g = await awTranslateGrid(g0, [3, 4], lg);
+      setPoNote(null);
+    } catch (e) {
+      console.warn("[awdash] translate failed", e);
+      trNote = T("trFailed");
+      setPoNote(null);
+    }
     // The photo travels into the workbook the same way it travels onto the
     // paper — its own column, in the same place, with the picture in the cell
     // (30.8.26).
@@ -11922,11 +11978,11 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       // The row the find is standing on carries the reference,
                       // so the board can bring it into view (30.8.26).
                       ref: hitNow === r.code ? hitRef : void 0,
-                      className: `${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""}`.trim(),
+                      className: `${anchorRow === r.code && canEdit ? "lliHere" : ""} ${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""}`.trim(),
                       // Wherever she puts the cursor in this row, this is now
                       // the row a new one is added under.
-                      onFocusCapture: () => { focusRowRef.current = r.code; },
-                      onMouseDown: () => { focusRowRef.current = r.code; },
+                      onFocusCapture: () => standOn(r.code),
+                      onMouseDown: () => standOn(r.code),
                       onDragOver: canEdit
                         ? (e) => {
                             if (!drag || drag.group !== g.key) return;
