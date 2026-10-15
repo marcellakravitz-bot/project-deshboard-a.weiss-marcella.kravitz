@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "15.10.2026 · build 178";
+var APP_BUILD = "15.10.2026 · build 182";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1789,6 +1789,29 @@ var pdfViewer = `
         .lliTally { text-align: center; font-size: 12px; color: var(--steel); margin-bottom: 6px; }
         .lliMarkFind { display: flex; justify-content: center; align-items: center; gap: 8px; margin-bottom: 8px; }
         .lliAlsoOn { display: flex; justify-content: center; gap: 8px; margin-top: 4px; font-size: 10.5px; font-weight: 700; color: var(--steel); }
+        /* A date, its calendar, and the two small ways to move it about. */
+        .lliDateCell { display: flex; align-items: center; gap: 2px; }
+        .lliDateCell .lliIn { flex: 1; min-width: 0; }
+        .lliDateCopy, .lliDatePaste {
+          border: none; background: transparent; color: var(--mist); cursor: pointer;
+          padding: 1px; display: inline-flex; align-items: center; border-radius: 4px; flex: none;
+        }
+        .lliDateCopy:hover, .lliDatePaste:hover { color: var(--accent); background: var(--accent-soft); }
+        .lliDateCopy.on { color: var(--accent); }
+        .lliDatePaste { color: var(--accent); }
+        .lliDateHeld {
+          display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 700;
+          color: var(--steel); background: var(--accent-soft); border-radius: 999px; padding: 3px 10px;
+        }
+        /* The bill-of-quantities item a hand-made row answers, under its number. */
+        .lliBoqRef { display: block; margin-top: 4px; }
+        .lliBoqRefIn {
+          width: 100%; max-width: 110px; border: 1px solid var(--line); border-radius: 6px;
+          padding: 2px 5px; font-size: 10.5px; font-family: inherit; color: var(--ink);
+          background: #fff; text-align: center; outline: none;
+        }
+        .lliBoqRefIn:focus { border-color: var(--accent); }
+        .lliBoqRefIn::placeholder { color: var(--mist); font-size: 9.5px; }
         .lliAlsoOn label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
         .lliAlsoOn input { width: 12px; height: 12px; accent-color: var(--accent, #0F3460); }
         .lliMarkInput {
@@ -2256,6 +2279,18 @@ var pdfViewer = `
         .sbChkTable th, .sbChkTable td { box-sizing: border-box; }
         .sbChkTable td { text-align: center; }
         .sbChkTable th.cCode, .sbChkTable td.sbChkCode { width: 86px; }
+        /* The item number of a hand-made line is typed in. The box is the width
+           of the cell it sits in and carries no frame of its own until it is
+           touched, so a row with a box and a row with a number are the same
+           shape and the columns do not move (15.10.26). */
+        .sbChkCodeIn {
+          width: 100%; box-sizing: border-box; border: 1px solid transparent; border-radius: 6px;
+          padding: 2px 4px; font-family: inherit; font-size: inherit; color: inherit;
+          background: transparent; text-align: center; outline: none;
+        }
+        .sbChkCodeIn:hover { border-color: var(--line); background: #fff; }
+        .sbChkCodeIn:focus { border-color: var(--accent); background: #fff; }
+        .sbChkCodeIn::placeholder { color: var(--mist); font-weight: 500; }
         .sbChkTable th.cChkNo { width: 74px; }
         /* The description needs a width of its own: with a fixed layout a
            column that declares none is squeezed to nothing, and "גריל OD1"
@@ -7583,7 +7618,7 @@ function ProjectScheduleCard({
 
 // src/cards/DocumentCard.jsx
 import React13 from "react";
-import { FileCheck2 as FileCheck23, Download as Download2 } from "lucide-react";
+import { FileCheck2 as FileCheck23, Download as Download2, Copy as CopyDate, ClipboardPaste as PasteDate } from "lucide-react";
 function DocumentCard({
   card,
   content,
@@ -7733,6 +7768,7 @@ function CardView({
   brandName,
   boqData,
   boqFlags,
+  onChangeBoqFlags,
   lliRows,
   rfiRows,
   onChangeRfiRows,
@@ -7845,7 +7881,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -9989,6 +10025,98 @@ function boardHexNoHash(hex) {
   return String(hex || "").replace("#", "").toUpperCase().slice(0, 6).padStart(6, "0");
 }
 
+// ---------------------------------------------------------------- TRANSLATE
+// A board is filled in in Hebrew and sometimes has to be printed in English.
+// Until now the English sheet carried English column titles over Hebrew
+// contents, which is not an English sheet.
+//
+// The free text goes to `aw-translate`, a function of its own — `submittal-ai`
+// works and is in daily use, and a hundred table cells have nothing to do with
+// reading a specification. Everything the board already knows in both languages
+// (the disciplines, the units, the statuses) is NOT sent: it is simply read in
+// the other language.
+//
+// What comes back is kept for the rest of the session, so printing the same
+// board twice costs one translation. And if the function is not deployed, or
+// does not answer, the document is still produced — in the language it was
+// typed in, with a line on the screen saying so. A sheet in the wrong language
+// beats no sheet (15.10.26).
+// ---------------------------------------------------------------------------
+var AW_TR_CACHE = {};
+var AW_TR_BATCH = 60;
+// A cell worth sending: it has letters, and it is not purely a code, a number,
+// a dimension or a mark. "FL-02", "60/60", "Ø32" and "08.11.0010" are the same
+// in every language.
+function awTrNeeds(text, to) {
+  const s = String(text == null ? "" : text).trim();
+  if (!s) return false;
+  if (!/[A-Za-z\u0590-\u05FF]/.test(s)) return false;
+  // A cell that is nothing but a code comes back the same in every language, so
+  // it is never sent. A code word is a number, a dimension, or a short all-capitals
+  // designation: FL-02, D4, N2XY, DN50, RAL 9016, 60/60, 08.11.0010, Ø32.
+  // "PANEL" is five capitals and a word; "RAL" is three and a standard.
+  const words = s.split(/[\s\/×,()]+/).filter(Boolean);
+  const isCodeWord = (w) => {
+    const t = w.replace(/[.,:;"'\u05f4\u2033]/g, "");
+    if (!t) return true;
+    if (/^[0-9\u00d8][\w\-.\/]*$/.test(t)) return true;
+    if (/^[A-Z0-9][A-Z0-9\-._\/]*$/.test(t) && t.replace(/[^A-Za-z]/g, "").length <= 4) return true;
+    return false;
+  };
+  if (words.every(isCodeWord)) return false;
+  const hasHebrew = /[\u0590-\u05FF]/.test(s);
+  return to === "en" ? hasHebrew : !hasHebrew;
+}
+async function awTranslate(texts, to) {
+  const want = [];
+  const seen = {};
+  (texts || []).forEach((t) => {
+    const s = String(t == null ? "" : t).trim();
+    if (!awTrNeeds(s, to)) return;
+    const k = to + "|" + s;
+    if (AW_TR_CACHE[k] || seen[k]) return;
+    seen[k] = true;
+    want.push(s);
+  });
+  for (let i = 0; i < want.length; i += AW_TR_BATCH) {
+    const batch = want.slice(i, i + AW_TR_BATCH);
+    const { data, error } = await supabase.functions.invoke("aw-translate", { body: { to, texts: batch } });
+    if (error) throw error;
+    const out = (data && data.texts) || [];
+    if (out.length !== batch.length) throw new Error("translate: the answer did not match the request");
+    batch.forEach((src, k) => { AW_TR_CACHE[to + "|" + src] = String(out[k] || src); });
+  }
+  // The lookup the grid uses. A cell that was never sent comes back as it was.
+  return (t) => {
+    const s = String(t == null ? "" : t).trim();
+    if (!s) return t;
+    return AW_TR_CACHE[to + "|" + s] || t;
+  };
+}
+// What the new tab says while the table is being translated. Without it the
+// window sits blank and looks broken.
+function awWaitPage(to) {
+  const he = to !== "en";
+  const msg = he ? "\u05de\u05ea\u05e8\u05d2\u05dd \u05d0\u05ea \u05d4\u05d8\u05d1\u05dc\u05d4\u2026" : "Translating the table\u2026";
+  const sub = he ? "\u05d4\u05de\u05e1\u05de\u05da \u05d9\u05d9\u05e4\u05ea\u05d7 \u05d1\u05e2\u05d5\u05d3 \u05e8\u05d2\u05e2" : "The document will open in a moment";
+  return `<!doctype html><html dir="${he ? "rtl" : "ltr"}"><head><meta charset="utf-8"><title>${msg}</title></head>` +
+    `<body style="font-family:Arial,Helvetica,sans-serif;color:#17181c;display:flex;align-items:center;` +
+    `justify-content:center;height:100vh;margin:0"><div style="text-align:center">` +
+    `<p style="font-size:17px;font-weight:700;margin:0 0 6px">${msg}</p>` +
+    `<p style="font-size:13px;color:#6b7280;margin:0">${sub}</p></div></body></html>`;
+}
+
+// Every cell of the given columns, put through the translator in one trip.
+async function awTranslateGrid(grid, cols, to) {
+  const texts = [];
+  (grid.body || []).forEach((row) => cols.forEach((c) => texts.push(row[c])));
+  const tr = await awTranslate(texts, to);
+  return {
+    ...grid,
+    body: (grid.body || []).map((row) => row.map((v, c) => (cols.indexOf(c) >= 0 ? tr(v) : v)))
+  };
+}
+
 // -------------------------------------------------------------------- EXCEL
 // ExcelJS is loaded only when someone actually clicks, and only then: it is a
 // large library and most visits never export anything. If it will not load, the
@@ -10422,7 +10550,7 @@ function printPaginateJs(stampText) {
 }
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, toneRows, noStamp, issuedLabel, fileName } = opts;
+          alertRows, toneRows, noStamp, issuedLabel, fileName, win } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -10498,7 +10626,10 @@ ${footImg}</div><div id="pages"></div>${printPaginateJs(noStamp ? "" : printedSt
 
   // Opened inside the click that asked for it, like every other print here, or
   // the browser treats it as a pop-up and swallows it.
-  const w = window.open("", "_blank");
+  // A caller that had something to do first — translating the table, say —
+  // opens the window inside the click and hands it over here. Opening it after
+  // an await is what a pop-up blocker stops (15.10.26).
+  const w = win || window.open("", "_blank");
   if (!w) return;
   w.document.open();
   w.document.write(html);
@@ -10550,6 +10681,13 @@ function lliBlankRow() {
     // actually committed to. The second is the one that tells you whether the
     // job is in trouble, and it only means anything next to the first. (3.9.26)
     po: "", eta: "", etaActual: "", status: "pending", hidden: false, byRoom: false,
+    // Every row belongs in the O&M document until she says otherwise — that is
+    // what she asked for, and it is the right default: a row left out of the
+    // file by accident is a material nobody can trace later (15.10.26).
+    oam: true,
+    // A hand-made row may answer a line in the bill of quantities. When it
+    // does, this holds that line's number (15.10.26).
+    boqRef: "",
     // 28.8.26 — her instruction document. The supplier is the company that will
     // actually deliver, and it is never the manufacturer read out of the BOQ:
     // that one belongs in the description. So this field starts empty and stays
@@ -10692,6 +10830,10 @@ var LLI_L = {
   removedSome: { en: "Removed from this list", he: "הוסרו מהרשימה" },
   restoreAll: { en: "Restore all", he: "החזרת הכל" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
+  addUnder: {
+    en: "The new row goes directly under the row you are standing in — the one marked at its edges.",
+    he: "השורה החדשה נכנסת ישירות מתחת לשורה שאת עומדת בה — זו המסומנת בקצוות."
+  },
   manual: { en: "Manual", he: "ידני" },
   empty: { en: "Nothing to order in this category.", he: "אין פריטים להזמנה בקטגוריה הזו." },
   ordersOf: { en: "ordered", he: "הוזמנו" },
@@ -10703,6 +10845,35 @@ var LLI_L = {
   findPrev: { en: "Previous match", he: "התוצאה הקודמת" },
   alsoSd: { en: "Also on the shop-drawing board", he: "מופיע גם בטבלת SD" },
   alsoSubmittal: { en: "Also on the submittal checklist", he: "מופיע גם בסבמיטלים" },
+  // 15.10.26 — the two ticks are on every row now, BOQ lines included, and on a
+  // BOQ line they are the routing itself: ticking one here is the same as
+  // ticking it in the routing table in project settings.
+  routedSd: { en: "On the shop-drawing board", he: "מופיע בטבלת SD" },
+  routedSubmittal: { en: "On the submittal checklist", he: "מופיע בסבמיטלים" },
+  longLeadCol: { en: "LONG LEAD", he: "אספקה ארוכה" },
+  longLeadHint: {
+    en: "Long lead: approval, manufacture and delivery threaten the programme. The same tick as the routing table in project settings.",
+    he: "אספקה ארוכה: האישור, הייצור והאספקה מאיימים על לוח הזמנים. אותו סימון כמו בטבלת הסיווג בהגדרות הפרויקט."
+  },
+  oamCol: { en: "O&M FILE", he: "תיק מתקן" },
+  oamHint: {
+    en: "Ticked rows go into the finish-materials O&M document. Every row starts ticked.",
+    he: "שורות מסומנות נכנסות למסמך חומרי גמר - תיק מתקן. כל שורה מתחילה מסומנת."
+  },
+  oamDoc: { en: "Finish materials - O&M file", he: "חומרי גמר - תיק מתקן" },
+  boqRef: { en: "BOQ item", he: "סעיף כתב כמויות" },
+  boqRefHint: {
+    en: "Type or pick a BOQ item number. Its wording, unit and quantity fill this row.",
+    he: "מקלידים או בוחרים מספר סעיף מכתב הכמויות. הניסוח, היחידה והכמות נכנסים לשורה."
+  },
+  pickOut: { en: "Export", he: "ייצוא" },
+  // 15.10.26 — one date, several fields. The calendar is still there; this is
+  // beside it, for the very common case of the same date in three places.
+  copyDate: { en: "Copy this date", he: "העתקת התאריך" },
+  pasteDate: { en: "Put the copied date here", he: "הדבקת התאריך שהועתק" },
+  dateHeld: { en: "Date copied", he: "תאריך מועתק" },
+  dateDrop: { en: "Clear", he: "ניקוי" },
+  pickOutHint: { en: "Choose the file, then the language.", he: "בוחרים את הקובץ, ואז את השפה." },
   clearFind: { en: "Clear", he: "ניקוי" },
   restore: { en: "Restore", he: "החזרה" },
   category: { en: "Category", he: "קטגוריה" },
@@ -10730,10 +10901,15 @@ var LLI_L = {
   no: { en: "No", he: "לא" },
   excel: { en: "Excel", he: "Excel" },
   pdf: { en: "PDF", he: "PDF" },
-  nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." }
+  nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." },
+  translating: { en: "Translating the table…", he: "מתרגם את הטבלה…" },
+  trFailed: {
+    en: "The translation service did not answer — the document was produced in the language it was typed in.",
+    he: "שירות התרגום לא נענה — המסמך הופק בשפה שבה הוזן."
+  }
 };
 
-function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }) {
+function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -10742,6 +10918,14 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const [busyRow, setBusyRow] = useState6(null);
   const [poNote, setPoNote] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
+  // The O&M document is asked two questions on the way out: which file, and
+  // then which language — one window after the other (15.10.26).
+  const [oamAsk, setOamAsk] = useState6(false);
+  const [oamRun, setOamRun] = useState6(null);
+  // A date she copied off one cell, waiting to be dropped into others. It is
+  // held in the board, not in the system clipboard: the dates in this table go
+  // from one cell to another and almost never leave the page (15.10.26).
+  const [dateClip, setDateClip] = useState6(null);
   // Which row is being dragged, and the row the line is currently drawn above.
   const [drag, setDrag] = useState6(null);
   const [savedNote, setSavedNote] = useState6(false);
@@ -10792,6 +10976,124 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   const patch = (code, next) => {
     if (!onChangeRows) return;
     onChangeRows({ ...data, [code]: { ...lliRowOf(data, code), ...next } });
+  };
+
+  // ---------------------------------------------------------------------------
+  // Every line in the bill of quantities, flat, for the row that wants to name
+  // the item it answers. Notes are not items (15.10.26).
+  // ---------------------------------------------------------------------------
+  const boqLines = [];
+  ((boqData || {}).chapters || []).forEach((ch) => {
+    (ch.subs || []).forEach((sub) => {
+      (sub.items || []).forEach((item) => {
+        if (boqIsNote(item.unit)) return;
+        boqLines.push(item);
+      });
+    });
+  });
+  const boqLineOf = (code) => {
+    const want = String(code || "").trim();
+    if (!want) return null;
+    return boqLines.find((it) => String(it.code) === want) || null;
+  };
+  // Choosing a line fills the row from it — the wording, the unit and the
+  // quantity — and leaves everything she has already typed alone.
+  const setBoqRef = (code, ref) => {
+    const it = boqLineOf(ref);
+    const cur = lliRowOf(data, code);
+    if (!it) { patch(code, { boqRef: String(ref || "").trim() }); return; }
+    patch(code, {
+      boqRef: String(it.code),
+      desc: cur.desc || boqText(it, lang),
+      unit: cur.unit || it.unit || "",
+      qtyBoq: it.qty == null ? "" : String(it.qty)
+    });
+  };
+
+  // ---------------------------------------------------------------------------
+  // The three ticks that say which boards a row belongs on. A hand-made row
+  // keeps them on itself; a BOQ line keeps them in the routing, which is the
+  // one place that decides — so ticking here IS ticking there (15.10.26).
+  // ---------------------------------------------------------------------------
+  const flagOf = (r, key) => {
+    if (r.source === "boq") return !!(r.product && r.product.flags && r.product.flags[key]);
+    const v = lliRowOf(data, r.code);
+    return key === "sd" ? !!v.alsoSd : key === "submittal" ? !!v.alsoSubmittal : !!v.longLead;
+  };
+  const writeFlag = (code, key, value, into) => {
+    const cur = boqFlagsOf(auto, into, code);
+    const f = {
+      submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+      group: cur.group, category: cur.category, main: cur.main, accessory: cur.accessory
+    };
+    f[key] = value;
+    // The routing table's own rule, kept here word for word: a long-lead item
+    // is an ordered item, and taking a line off the ordering board takes its
+    // long-lead mark with it.
+    if (key === "longLead" && value) f.lli = true;
+    if (key === "lli" && !value) f.longLead = false;
+    into[code] = f;
+  };
+  const toggleFlag = (r, key) => {
+    const now = flagOf(r, key);
+    if (r.source !== "boq") {
+      patch(r.code, key === "sd" ? { alsoSd: !now } : key === "submittal" ? { alsoSubmittal: !now } : { longLead: !now });
+      return;
+    }
+    if (!onChangeBoqFlags) return;
+    const p = r.product;
+    const next = { ...(boqFlags || {}) };
+    if (!now) {
+      // Turning it on: the representative line carries it, which is what the
+      // product reads.
+      writeFlag((p.lead && p.lead.code) || p.code, key, true, next);
+    } else {
+      // Turning it off: EVERY line of the product that carries it has to lose
+      // it, or the product still reads as ticked. A product is often a dozen
+      // lines across two chapters.
+      (p.items || []).forEach((it) => {
+        if (boqFlagsOf(auto, next, it.code)[key]) writeFlag(it.code, key, false, next);
+      });
+    }
+    onChangeBoqFlags(next);
+  };
+  // ---------------------------------------------------------------------------
+  // A date cell: the calendar exactly as it was, and beside it a way to carry
+  // the date to the other cells. The same date goes into the order date, the
+  // required delivery and the supplier's date often enough that typing it three
+  // times is work the table should be doing (15.10.26).
+  // ---------------------------------------------------------------------------
+  const dateCell = (code, field, value) => sbH(
+    "div",
+    { className: "lliDateCell" },
+    sbH("input", {
+      type: "date", className: "lliIn", dir: "ltr", value: value || "", readOnly: !canEdit,
+      onChange: (e) => patch(code, { [field]: e.target.value })
+    }),
+    canEdit && value
+      ? sbH("button", {
+          type: "button",
+          className: `lliDateCopy ${dateClip && dateClip === value ? "on" : ""}`,
+          title: L("copyDate"),
+          "aria-label": L("copyDate"),
+          onClick: () => setDateClip(value)
+        }, sbH(CopyDate, { size: 12, strokeWidth: 2.2 }))
+      : null,
+    canEdit && dateClip && dateClip !== value
+      ? sbH("button", {
+          type: "button",
+          className: "lliDatePaste",
+          title: `${L("pasteDate")} · ${sbFmtDate(dateClip)}`,
+          "aria-label": L("pasteDate"),
+          onClick: () => patch(code, { [field]: dateClip })
+        }, sbH(PasteDate, { size: 12, strokeWidth: 2.2 }))
+      : null
+  );
+
+  // The O&M tick lives on the row, and a row that was never touched is in.
+  const inOam = (r) => {
+    const v = lliRowOf(data, r.code);
+    return v.oam === void 0 ? true : !!v.oam;
   };
 
   // The rows the BOQ gives us, plus whatever was added by hand. One row is one
@@ -10909,10 +11211,32 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // number so it is always clear where the line came from. A row with no
   // category yet has nowhere to go, and stays in the manual group (29.8.26).
   const chapterOfCategory = {};
+  const chapterByCode = {};
   boqRows.forEach((r) => {
     if (r.category && r.chapter && !chapterOfCategory[r.category]) chapterOfCategory[r.category] = r.chapter;
+    if (r.chapter && !chapterByCode[r.chapter.code]) chapterByCode[r.chapter.code] = r.chapter;
   });
-  const homeOf = (r) => (r.chapter ? r.chapter : (r.category && chapterOfCategory[r.category]) || null);
+  // ---------------------------------------------------------------------------
+  // 15.10.26 — where a hand-made row lives.
+  //
+  // It used to be decided by its discipline alone: the chapter was whichever
+  // one happened to carry that discipline FIRST. A discipline almost always
+  // appears in more than one chapter — electrical work is priced under the
+  // plumbing chapter as well as its own — so a row added while standing in
+  // chapter 08 was filed into chapter 05, far away from the row she was on. The
+  // order written for chapter 08 was correct and irrelevant, because the row
+  // was never in chapter 08.
+  //
+  // So the chapter a row was created in is written on the row, and that is
+  // where it stays. The discipline is only the fallback, for rows made before
+  // this and for a row created with nothing to stand on.
+  // ---------------------------------------------------------------------------
+  const homeOf = (r) => {
+    if (r.chapter) return r.chapter;
+    const home = (data[r.code] || {}).homeChapter;
+    if (home && chapterByCode[home]) return chapterByCode[home];
+    return (r.category && chapterOfCategory[r.category]) || null;
+  };
   // Grouped under their chapter, in BOQ order; anything with no home comes last.
   const groups = [];
   visible.forEach((r) => {
@@ -11010,12 +11334,18 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   // board that costs money to miss, so it is coloured — on screen, on paper and
   // in the workbook. No note beside it: the colour is the note (29.8.26).
   const needsOrder = (r) => !!r.longLead && !lliRowOf(data, r.code).ordered;
-  const exportGrid = (audience) => {
-    const yn = (v) => (v ? L("yes") : L("no"));
+  // The sheet is produced in the language chosen on the way out — the column
+  // titles, the disciplines, the units and the statuses all read from it, not
+  // from whatever language the screen happens to be in. Before this, choosing
+  // English gave an English heading over a Hebrew table (15.10.26).
+  const exportGrid = (audience, printLang) => {
+    const lg = printLang === "en" ? "en" : printLang === "he" ? "he" : lang;
+    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    const yn = (v) => (v ? T("yes") : T("no"));
     const head = [
-      L("section"), L("category"), L("typeMark"), L("desc"), L("supplier"),
-      L("qtyBoq"), L("unit"), L("qtySurveyor"), L("ordered"), L("poNo"),
-      L("poDate"), L("eta"), L("etaActual"), L("status"), L("longLead")
+      T("section"), T("category"), T("typeMark"), T("desc"), T("supplier"),
+      T("qtyBoq"), T("unit"), T("qtySurveyor"), T("ordered"), T("poNo"),
+      T("poDate"), T("eta"), T("etaActual"), T("status"), T("longLead")
     ];
     const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 12, 9];
     // What each column IS, so the workbook stores it as that. The item number
@@ -11028,7 +11358,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     ];
     const cat = (k) => {
       const c = boardCategoryOf(k);
-      return c ? sbText(c, lang) : "";
+      return c ? sbText(c, lg) : "";
     };
     const body = [];
     const imgs = [];
@@ -11041,21 +11371,21 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
         if (isHidden(r)) return;
         const v = lliRowOf(data, r.code);
         body.push([
-          r.source === "boq" ? r.code : L("manual"),
+          r.source === "boq" ? r.code : T("manual"),
           cat(r.category),
           v.typeMark,
-          v.desc || r.title,
-          v.supplier || tradeOf(r.category),
+          v.desc || (r.product ? boqText(r.product, lg) : r.title),
+          v.supplier || boardTradeCompany(contacts, contactsCatalog, r.category, lg) || "",
           r.qty == null ? "" : r.qty,
-          r.unit ? boqUnit(r.unit, lang) : "",
+          r.unit ? boqUnit(r.unit, lg) : "",
           v.qtyActual,
           yn(v.ordered),
           v.ordered ? v.po : "",
           v.ordered && v.poDate ? sbFmtDate(v.poDate) : "",
           v.ordered && v.eta ? sbFmtDate(v.eta) : "",
           v.ordered && v.etaActual ? sbFmtDate(v.etaActual) : "",
-          v.ordered ? lliStatusLabel(v.status, lang) : "",
-          r.longLead ? L("longLead") : ""
+          v.ordered ? lliStatusLabel(v.status, lg) : "",
+          r.longLead ? T("longLead") : ""
         ]);
         imgs.push(v.image || null);
         alerts.push(needsOrder(r));
@@ -11066,6 +11396,96 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
+
+  // ===========================================================================
+  // חומרי גמר - תיק מתקן — the O&M document (15.10.26)
+  //
+  // The same board, read for a different reason. The ordering columns — who it
+  // was bought from, on what order, when it lands, whether it is late — belong
+  // to the procurement sheet and say nothing to whoever opens the building's
+  // file in three years. What that reader needs is WHAT the material is and
+  // WHERE to buy it again: the discipline, the mark, the wording, the supplier
+  // and a picture.
+  //
+  // It is not filtered by the category chips and it does not care whether a row
+  // is "for ordering": the only question asked of a row is whether its O&M tick
+  // is on — and every row's is, until she turns one off.
+  // ===========================================================================
+  const oamRows = () => {
+    const list = all.filter((r) => !isRemoved(r) && inOam(r));
+    const out = [];
+    list.forEach((r) => {
+      const ch = homeOf(r);
+      const key = ch ? ch.code : "manual";
+      let g = out.find((x) => x.key === key);
+      if (!g) { g = { key, rows: [] }; out.push(g); }
+      g.rows.push(r);
+    });
+    out.forEach((g) => {
+      g.rows.forEach((r, i2) => { r.oamPos = i2; });
+      g.rows.sort((a, b) => {
+        const oa = lliRowOf(data, a.code).order, ob = lliRowOf(data, b.code).order;
+        const va = oa == null ? a.oamPos : oa, vb = ob == null ? b.oamPos : ob;
+        return va === vb ? a.oamPos - b.oamPos : va - vb;
+      });
+    });
+    return out.reduce((acc, g) => acc.concat(g.rows), []);
+  };
+  const oamGrid = (printLang) => {
+    const lg = printLang === "en" ? "en" : "he";
+    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    const head = [T("category"), T("typeMark"), T("desc"), T("supplier"), T("image")];
+    const widths = [18, 14, 40, 20, 16];
+    const types = ["text", "text", "text", "text", "text"];
+    const body = [];
+    const imgs = [];
+    oamRows().forEach((r) => {
+      const v = lliRowOf(data, r.code);
+      const c = boardCategoryOf(r.category);
+      body.push([
+        c ? sbText(c, lg) : "",
+        v.typeMark || "",
+        v.desc || (r.product ? boqText(r.product, lg) : r.title) || "",
+        v.supplier || boardTradeCompany(contacts, contactsCatalog, r.category, lg) || "",
+        ""
+      ]);
+      imgs.push(v.image || null);
+    });
+    return { head, body, widths, types, imgs, T, lg };
+  };
+  const oamExcel = async (printLang) => {
+    const g = oamGrid(printLang);
+    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
+    setPoNote(null);
+    const res = await boardExportXlsx({
+      title: `${projectName || ""}`.trim() || g.T("oamDoc"),
+      subtitle: `${g.T("oamDoc")} \u00b7 ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      sheetName: g.lg === "he" ? "\u05ea\u05d9\u05e7 \u05de\u05ea\u05e7\u05df" : "O&M",
+      fileName: boardFileName(projectName, g.T("oamDoc"), "xlsx"),
+      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      imgCol: 4, imgs: g.imgs,
+      // No red, no green. Nothing on this document is late or ordered, so
+      // nothing on it is coloured for being either — she asked for white paper
+      // in so many words (15.10.26).
+      accent: (printBrand || {}).accent, isRTL: g.lg === "he"
+    });
+    if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+  };
+  const oamPdf = (printLang) => {
+    const g = oamGrid(printLang);
+    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
+    setPoNote(null);
+    boardExportPdf({
+      title: `${projectName || ""}`.trim() || g.T("oamDoc"),
+      fileName: boardFileName(projectName, g.T("oamDoc"), ""),
+      subtitle: g.T("oamDoc"),
+      issuedLabel: `${g.T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      head: g.head, body: g.body, widths: g.widths,
+      accent: (printBrand || {}).accent, brand: printBrand,
+      isRTL: g.lg === "he", imgCol: 4, imgs: g.imgs,
+      noStamp: true
+    });
+  };
   const onExcel = async (audience) => {
     const g = exportGrid(audience);
     if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
@@ -11073,7 +11493,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     // The photo travels into the workbook the same way it travels onto the
     // paper — its own column, in the same place, with the picture in the cell
     // (30.8.26).
-    let head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
+    let head = g.head.slice(0, 4).concat([T("image")], g.head.slice(4));
     let widths = g.widths.slice(0, 4).concat([15], g.widths.slice(4));
     let body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
     let colTypes = g.types.slice(0, 4).concat(["text"], g.types.slice(4));
@@ -11082,9 +11502,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
     // The workbook carries the same columns the person taking it can see —
     // the supplier and the purchase order stay on her board (7.9.26).
     if (audience === "client" || audience === "contractor") {
-      const want = (audience === "client" ? LLI_CLIENT_KEYS : LLI_CONTRACTOR_KEYS).map((k) => L(k));
+      const want = (audience === "client" ? LLI_CLIENT_KEYS : LLI_CONTRACTOR_KEYS).map((k) => T(k));
       const keep = want.map((name) => head.indexOf(name)).filter((i) => i >= 0);
-      imgCol = keep.indexOf(head.indexOf(L("image")));
+      imgCol = keep.indexOf(head.indexOf(T("image")));
       head = keep.map((i) => head[i]);
       widths = keep.map((i) => widths[i]);
       colTypes = keep.map((i) => colTypes[i]);
@@ -11098,9 +11518,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
       // gave it.
       colTypes,
       imgCol, imgs,
-      accent: (printBrand || {}).accent, isRTL
+      accent: (printBrand || {}).accent, isRTL: lg === "he"
     });
-    if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lang));
+    if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lg));
+    else if (trNote) setPoNote(trNote);
   };
   // The columns a client's copy carries, by name. Everything that says WHAT the
   // item is and WHEN it lands; nothing about who it was bought from or on what
@@ -11113,40 +11534,63 @@ function LliCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, pro
 var LLI_CLIENT_KEYS = ["section", "category", "typeMark", "desc", "image", "status", "longLead"];
 var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "supplier", "eta", "etaActual", "status", "longLead"];
   const onPdf = (printLang, audience) => {
-    const g = exportGrid(audience);
-    if (!g.body.length) { setPoNote(L("nothingToExport")); return; }
-    // The photo earns its column here and nowhere else: this is the sheet that
-    // goes to a supplier, and a picture settles an argument a description cannot.
-    let head = g.head.slice(0, 4).concat([L("image")], g.head.slice(4));
-    let widths = g.widths.slice(0, 4).concat([14], g.widths.slice(4));
-    let body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
-    let imgCol = 4;
-    let imgs = g.imgs;
-    if (audience === "client" || audience === "contractor") {
-      const want = (audience === "client" ? LLI_CLIENT_KEYS : LLI_CONTRACTOR_KEYS).map((k) => L(k));
-      const keep = want.map((name) => head.indexOf(name)).filter((i) => i >= 0);
-      imgCol = keep.indexOf(head.indexOf(L("image")));
-      head = keep.map((i) => head[i]);
-      widths = keep.map((i) => widths[i]);
-      body = body.map((row) => keep.map((i) => row[i]));
+    const lg = printLang === "en" ? "en" : "he";
+    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    const g0 = exportGrid(audience, lg);
+    if (!g0.body.length) { setPoNote(T("nothingToExport")); return; }
+    // The window is opened HERE, inside the click, and told what it is waiting
+    // for. Opening it after the translation comes back is what a pop-up blocker
+    // stops (15.10.26).
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.open();
+      win.document.write(awWaitPage(lg));
+      win.document.close();
     }
-    boardExportPdf({
-      title: exportTitle(),
-      // The name the browser offers when she saves it.
-      fileName: boardFileName(projectName, "LLI", ""),
-      // The date is a line of its own, and it says what it is: the day the
-      // report was issued.
-      subtitle: L("title"),
-      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
-      head, body, widths,
-      accent: (printBrand || {}).accent, brand: printBrand,
-      isRTL: printLang !== "en", imgCol, imgs,
-      alertRows: g.alerts,
-      toneRows: g.tone,
-      // The date is in the heading of this report, so it is not repeated at the
-      // foot of every page.
-      noStamp: true
-    });
+    (async () => {
+      let g = g0;
+      let trNote = null;
+      try {
+        g = await awTranslateGrid(g0, [3, 4], lg);
+      } catch (e) {
+        console.warn("[awdash] translate failed", e);
+        trNote = T("trFailed");
+      }
+      // The photo earns its column here and nowhere else: this is the sheet that
+      // goes to a supplier, and a picture settles an argument a description cannot.
+      let head = g.head.slice(0, 4).concat([T("image")], g.head.slice(4));
+      let widths = g.widths.slice(0, 4).concat([14], g.widths.slice(4));
+      let body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
+      let imgCol = 4;
+      let imgs = g.imgs;
+      if (audience === "client" || audience === "contractor") {
+        const want = (audience === "client" ? LLI_CLIENT_KEYS : LLI_CONTRACTOR_KEYS).map((k) => T(k));
+        const keep = want.map((name) => head.indexOf(name)).filter((i) => i >= 0);
+        imgCol = keep.indexOf(head.indexOf(T("image")));
+        head = keep.map((i) => head[i]);
+        widths = keep.map((i) => widths[i]);
+        body = body.map((row) => keep.map((i) => row[i]));
+      }
+      boardExportPdf({
+        title: exportTitle(),
+        // The name the browser offers when she saves it.
+        fileName: boardFileName(projectName, "LLI", ""),
+        // The date is a line of its own, and it says what it is: the day the
+        // report was issued.
+        subtitle: T("title"),
+        issuedLabel: `${T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+        head, body, widths,
+        accent: (printBrand || {}).accent, brand: printBrand,
+        isRTL: lg !== "en", imgCol, imgs,
+        alertRows: g.alerts,
+        toneRows: g.tone,
+        // The date is in the heading of this report, so it is not repeated at the
+        // foot of every page.
+        noStamp: true,
+        win
+      });
+      setPoNote(trNote);
+    })();
   };
   // A new row lands directly under the row she was standing in — the one whose
   // cell last had the cursor. Adding at the bottom meant dragging the row up
@@ -11167,10 +11611,16 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       manualIndex: n
     };
     if (!g || !onChangeRows) { patch(code, blank); return; }
+    // The chapter she is standing in is the chapter the row belongs to, and the
+    // row carries that itself from now on.
+    blank.homeChapter = g.key === "manual" ? null : g.key;
     // Renumber the group with the new row sitting just after the current one.
     const order = g.rows.map((r) => r.code);
     const at = order.indexOf(here);
-    order.splice(at + 1, 0, code);
+    // A row she is standing on is always in this group — but if the board moved
+    // under her, the new row goes to the end rather than to the top, which is
+    // where a -1 would have put it.
+    order.splice(at < 0 ? order.length : at + 1, 0, code);
     const next = { ...data, [code]: blank };
     order.forEach((c, k) => { next[c] = { ...lliRowOf(next, c), order: k }; });
     onChangeRows(next);
@@ -11229,7 +11679,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       // And they take the board away with them, in both shapes, the same as
       // she does. The client looks and does not take.
       canExport: isContractor,
-      onExcel: () => onExcel("contractor"),
+      onExcel: () => onExcel(lang, "contractor"),
       onDownload: (lg) => onPdf(lg, viewerRole)
     });
   }
@@ -11345,21 +11795,80 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       "div",
       { className: "lliBar" },
       poNote ? sbH("span", { className: "lliPoNote" }, poNote) : null,
+      // What is on the board's clipboard, in words, with a way to put it down.
+      dateClip
+        ? sbH(
+            "span",
+            { className: "lliDateHeld" },
+            sbH(CopyDate, { size: 12, strokeWidth: 2.2 }),
+            ` ${L("dateHeld")}: ${sbFmtDate(dateClip)} `,
+            sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => setDateClip(null) }, L("dateDrop"))
+          )
+        : null,
       // A client and the main contractor look at the board; they do not take it
       // away with them. Export, and the way behind the ticks, belong to the
       // system administrator (29.8.26).
-      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
-      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
+      canEdit ? sbH("button", {
+        type: "button", className: "ghostBtn small", onClick: addManual,
+        title: anchorRow ? L("addUnder") : L("addRow")
+      }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onExcel) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
+      // The second document this board can produce. Its own button, because it
+      // is a different document and not a different view of this one.
+      canEdit
+        ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setOamAsk(true) },
+            sbH(Download2, { size: 14, strokeWidth: 2 }), " ", L("oamDoc"))
+        : null,
       printAsk
         ? sbH(PrintLangAsk, {
             withAudience: true,
             onPick: (lg, who) => { setPrintAsk(null); printAsk(lg, who); },
             onClose: () => setPrintAsk(null)
           })
+        : null,
+      // Question one: which file. The same window the language question wears,
+      // so the two steps read as one errand.
+      oamAsk
+        ? createPortal(
+            sbH(
+              "div",
+              { className: "printAskScrim", onClick: () => setOamAsk(false) },
+              sbH(
+                "div",
+                { className: "printAskBox", dir: "rtl", onClick: (e) => e.stopPropagation() },
+                sbH("h3", null, L("oamDoc")),
+                sbH("p", null, "\u05d1\u05d0\u05d9\u05d6\u05d4 \u05e7\u05d5\u05d1\u05e5 \u05dc\u05d4\u05e4\u05d9\u05e7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da?"),
+                sbH("p", { className: "printAskEn", dir: "ltr" }, "Excel or PDF?"),
+                sbH(
+                  "div",
+                  { className: "printAskBtns" },
+                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamRun(() => oamExcel); } }, "Excel"),
+                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamRun(() => oamPdf); } }, "PDF")
+                )
+              )
+            ),
+            document.body
+          )
+        : null,
+      // Question two: which language. Both files are offered both ways.
+      oamRun
+        ? sbH(PrintLangAsk, {
+            onPick: (lg) => { const f = oamRun; setOamRun(null); f(lg); },
+            onClose: () => setOamRun(null)
+          })
         : null
     ),
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
+    // The bill of quantities, offered to any row that wants to name the item it
+    // answers. One list for the whole table (15.10.26).
+    canEdit && boqLines.length
+      ? sbH(
+          "datalist",
+          { id: "lliBoqCodes" },
+          boqLines.slice(0, 4000).map((it) => sbH("option", { key: it.code, value: it.code }, boqText(it, lang)))
+        )
+      : null,
     groups.length === 0
       ? sbH("p", { className: "lliNote" }, L("empty"))
       : sbH(
@@ -11391,7 +11900,9 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 sbH("th", { className: "cEta" }, L("etaActual")),
                 sbH("th", { className: "cSt" }, L("status")),
                 canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
-                canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null
+                canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null,
+                canEdit ? sbH("th", { className: "cRoom", title: L("longLeadHint") }, L("longLeadCol")) : null,
+                canEdit ? sbH("th", { className: "cRoom", title: L("oamHint") }, L("oamCol")) : null
               )
             ),
             groups.map((g) =>
@@ -11479,30 +11990,52 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       { className: `cSec${cellHit(r.source === "boq" ? r.code : L("manual"))}` },
                       sbH("span", { className: "lliCode", dir: "ltr" }, r.source === "boq" ? r.code : L("manual")),
                       r.review ? sbH("span", { className: "lliReviewTag", title: L("reviewTitle") }, L("review")) : null,
-                      // Under "ידני": the two boards this hand-made row also
-                      // belongs on. A BOQ line does not need them — the bill of
-                      // quantities already said (29.8.26).
+                      // Under the number: the item in the bill of quantities
+                      // this hand-made row answers. Typing a number fills the
+                      // wording, the unit and the quantity from it (15.10.26).
                       r.source === "manual" && canEdit
+                        ? sbH(
+                            "span",
+                            { className: "lliBoqRef" },
+                            sbH("input", {
+                              type: "text",
+                              dir: "ltr",
+                              list: "lliBoqCodes",
+                              className: "lliBoqRefIn",
+                              value: v.boqRef || "",
+                              placeholder: L("boqRef"),
+                              title: L("boqRefHint"),
+                              onChange: (e) => setBoqRef(r.code, e.target.value)
+                            })
+                          )
+                        : null,
+                      // Under the number, on EVERY row: the two other boards
+                      // this line belongs on. On a hand-made row the ticks live
+                      // on the row; on a BOQ line they are the routing itself,
+                      // so ticking here is ticking in the routing table — which
+                      // is what she asked for, and it keeps one answer to the
+                      // question instead of two (15.10.26).
+                      canEdit
                         ? sbH(
                             "span",
                             { className: "lliAlsoOn" },
                             sbH(
                               "label",
-                              { title: L("alsoSd") },
+                              { title: r.source === "boq" ? L("routedSd") : L("alsoSd") },
                               sbH("input", {
                                 type: "checkbox",
-                                checked: !!v.alsoSd,
-                                onChange: () => patch(r.code, { alsoSd: !v.alsoSd })
+                                checked: flagOf(r, "sd"),
+                                onChange: () => toggleFlag(r, "sd")
                               }),
                               "SD"
                             ),
                             sbH(
                               "label",
-                              { title: L("alsoSubmittal") },
+                              { title: r.source === "boq" ? L("routedSubmittal") : L("alsoSubmittal") },
                               sbH("input", {
                                 type: "checkbox",
-                                checked: !!v.alsoSubmittal,
-                                onChange: () => patch(r.code, { alsoSubmittal: !v.alsoSubmittal })
+                                checked: flagOf(r, "submittal"),
+                                onChange: () => toggleFlag(r, "submittal")
                               }),
                               "SUB"
                             )
@@ -11653,14 +12186,14 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       "td",
                       { className: "cPoD" },
                       v.ordered
-                        ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.poDate, readOnly: !canEdit, onChange: (e) => patch(r.code, { poDate: e.target.value }) })
+                        ? dateCell(r.code, "poDate", v.poDate)
                         : sbH("span", { className: "lliDash" }, "—")
                     ),
                     sbH(
                       "td",
                       { className: "cEta" },
                       v.ordered
-                        ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.eta, readOnly: !canEdit, onChange: (e) => patch(r.code, { eta: e.target.value }) })
+                        ? dateCell(r.code, "eta", v.eta)
                         : sbH("span", { className: "lliDash" }, "—")
                     ),
                     sbH(
@@ -11670,10 +12203,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                         ? sbH(
                             "div",
                             { className: "lliEtaCell" },
-                            sbH("input", {
-                              type: "date", className: "lliIn", dir: "ltr", value: v.etaActual, readOnly: !canEdit,
-                              onChange: (e) => patch(r.code, { etaActual: e.target.value })
-                            }),
+                            dateCell(r.code, "etaActual", v.etaActual),
                             (() => {
                               const clash = lliScheduleClash(v, scheduleData);
                               if (!clash) return null;
@@ -11753,6 +12283,39 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                             onChange: () => patch(r.code, { byRoom: !v.byRoom })
                           })
                         )
+                      : null,
+                    // Long lead, beside BY ROOM and worked exactly as it is in
+                    // the routing table: on a BOQ line it IS the routing's own
+                    // tick, so the two can never disagree (15.10.26).
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cRoom" },
+                          sbH("input", {
+                            type: "checkbox",
+                            className: "lliShowTick",
+                            checked: flagOf(r, "longLead"),
+                            title: L("longLeadHint"),
+                            "aria-label": L("longLeadCol"),
+                            onChange: () => toggleFlag(r, "longLead")
+                          })
+                        )
+                      : null,
+                    // And the O&M document. Every row is in it until she takes
+                    // it out.
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cRoom" },
+                          sbH("input", {
+                            type: "checkbox",
+                            className: "lliShowTick",
+                            checked: inOam(r),
+                            title: L("oamHint"),
+                            "aria-label": L("oamCol"),
+                            onChange: () => patch(r.code, { oam: !inOam(r) })
+                          })
+                        )
                       : null
                   );
                   // The warning itself, in words, on its own line under the row.
@@ -11769,7 +12332,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       { className: "lliClashRow" },
                       sbH(
                         "td",
-                        { colSpan: canEdit ? 18 : 15 },
+                        { colSpan: canEdit ? 20 : 15 },
                         sbH(
                           "div",
                           { className: "lliClashNote" },
@@ -18188,7 +18751,11 @@ function sbMatchChecklist(product, checklist, said) {
 // ---------------------------------------------------------------------------
 var SB_EXPORT_CLIENT_COLS = ["submittalNo", "chkItem", "chkDesc", "supplierCol", "sentCol", "status", "clientOkCol"];
 function sbBoardGrid(opts) {
-  const { list, boqData, boqFlags, chkOff, lang, audience, categories, withCategory, tradeFor } = opts;
+  const { list, boqData, boqFlags, chkOff, lang, audience, categories, withCategory, tradeFor, lliRows } = opts;
+  // The ordering board, so the printed checklist says exactly what the screen
+  // says: her own mark and wording, and the lines she added there by hand
+  // (15.10.26).
+  const lli = lliRows || {};
   const L = (k) => sbText(SB_L[k], lang);
   const today = new Date().toISOString().slice(0, 10);
   const auto = (boqData || {}).flags || {};
@@ -18232,11 +18799,14 @@ function sbBoardGrid(opts) {
           : lead && lead.sent ? "wait"
           : ""
       );
+      const own = lli[pr.code] || {};
       const cells = {
         catCol: sbText(cat, lang),
         submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
         chkItem: pr.code,
-        chkDesc: (lead && (lead.itemDescription || lead.typeId)) || boqText({ he: pr.he, en: pr.en }, lang),
+        chkDesc: String(own.desc || "").trim()
+          || (lead && (lead.itemDescription || lead.typeId))
+          || boqText({ he: pr.he, en: pr.en }, lang),
         docsCol: docs || "",
         supplierCol: (lead && lead.supplier) || trade || "",
         sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
@@ -18246,6 +18816,40 @@ function sbBoardGrid(opts) {
       };
       body.push(keys.map((k) => cells[k]));
     });
+    // The lines she added by hand on the ordering board and ticked SUB. They
+    // are on the screen's checklist, so they are on the printed one.
+    Object.keys(lli)
+      .filter((k) => k.indexOf("m-") === 0 && lli[k] && lli[k].alsoSubmittal
+        && (lli[k].category || null) === cat.key && !off[k])
+      .forEach((k) => {
+        const v = lli[k] || {};
+        const ref = String(v.boqRef || "").trim();
+        const hits = mine.filter((x) => x.boqCode && (x.boqCode === k || (ref && x.boqCode === ref)));
+        const lead = hits.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
+        const st = lead ? sbStatusOf(lead) : null;
+        const signed = lead ? sbSignedAt(lead) : null;
+        const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
+        const docs = hits.reduce((n, x) => n + ((x.attachments || []).length), 0);
+        tone.push(
+          signed || st === "approved" || st === "approved_as_noted" ? "ok"
+            : (due && due < today && !signed) ? "late"
+            : lead && lead.sent ? "wait"
+            : ""
+        );
+        const cells = {
+          catCol: sbText(cat, lang),
+          submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
+          chkItem: ref,
+          chkDesc: String(v.desc || "").trim() || (lead && (lead.itemDescription || lead.typeId)) || "",
+          docsCol: docs || "",
+          supplierCol: (lead && lead.supplier) || v.supplier || trade || "",
+          sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
+          targetCol: due ? sbFmtDate(due) : "",
+          status: lead ? (lead.sent ? sbStatusLabel(st, lang) : L("draft")) : L("chkMissing"),
+          clientOkCol: signed ? sbFmtDate(signed.slice(0, 10)) : ""
+        };
+        body.push(keys.map((k2) => cells[k2]));
+      });
   });
   // A client's copy carries what a client is owed: what the item is, who is
   // supplying it, when it went in and where it stands. The internal target date
@@ -18401,6 +19005,8 @@ function SubmittalFolder({
   onPatch,
   boqData,
   boqFlags,
+  lliRows,
+  onChangeLliRows,
   chkOff,
   onRemoveChk,
   onRestoreChk,
@@ -18417,7 +19023,7 @@ function SubmittalFolder({
   const [exportAsk, setExportAsk] = useState6(null);
   const [exportNote, setExportNote] = useState6(null);
   const gridFor = (lg, who) => sbBoardGrid({
-    list, boqData, boqFlags,
+    list, boqData, boqFlags, lliRows,
     chkOff: { [category.key]: chkOff || {} },
     lang: lg, audience: who,
     categories: [category],
@@ -18473,6 +19079,18 @@ function SubmittalFolder({
         codes.add(pr.code);
         (pr.items || []).forEach((it) => codes.add(it.code));
       });
+    // A hand-made line on the ordering board is a line of this checklist too,
+    // so a submittal filed against it belongs ON its line and must not also be
+    // listed underneath as unplaced — that was how one submittal used to appear
+    // twice (15.10.26).
+    Object.keys(lliRows || {}).forEach((k) => {
+      const v = (lliRows || {})[k];
+      if (!v || k.indexOf("m-") !== 0 || !v.alsoSubmittal) return;
+      if ((v.category || null) !== category.key || off[k]) return;
+      codes.add(k);
+      const ref = String(v.boqRef || "").trim();
+      if (ref) codes.add(ref);
+    });
     return codes;
   })();
   const isPlaced = (s) => !!(onChecklist && s.boqCode && onChecklist.has(s.boqCode));
@@ -18622,6 +19240,35 @@ function SubmittalFolder({
       // Lines she took off this board by hand stay out of it until she puts
       // them back; the routing table shows them as a grey tick (30.8.26).
       const off = chkOff || {};
+      // -----------------------------------------------------------------------
+      // The ordering board, read from here (15.10.26).
+      //
+      // Two things come from it. First, the mark and the description: she types
+      // them once, on the LLI board, and that is what this list should show —
+      // until now this list kept showing the bill of quantities' own wording and
+      // never changed. Second, the rows she added by hand there and ticked SUB:
+      // they are approvals this discipline owes exactly as a priced line is, and
+      // they had nowhere to appear.
+      // -----------------------------------------------------------------------
+      const lli = lliRows || {};
+      const lliOf = (code) => lli[code] || null;
+      const fromLli = Object.keys(lli)
+        .filter((k) => k.indexOf("m-") === 0 && lli[k] && lli[k].alsoSubmittal && (lli[k].category || null) === category.key && !(chkOff || {})[k])
+        .map((k) => {
+          const v = lli[k] || {};
+          const text = v.desc || "";
+          return {
+            // A hand-made row is its own product: one row, no lines under it,
+            // and the item number is whatever she writes in the box.
+            product: { code: k, he: text, en: text, items: [], flags: {} },
+            code: k,
+            node: { he: text, en: text },
+            lines: [],
+            fromLli: true,
+            own: [],
+            count: 0
+          };
+        });
       const rowsChk = groups.filter((p) => !off[p.code]).map((p) => {
         // One row per thing that gets approved once — steel pipe in eight
         // diameters is one specification, not eight submittals — carrying the
@@ -18643,7 +19290,15 @@ function SubmittalFolder({
         });
         // A product that is one line has nothing to open into.
         return { product: p, code: p.code, node, lines: perLine.length > 1 ? perLine : [], own, count: all.length };
-      });
+      }).concat(fromLli.map((r) => {
+        // A submittal started from a hand-made row is attached by that row's
+        // own code, or by the BOQ number she wrote in the box.
+        const ref = String((lliOf(r.code) || {}).boqRef || "").trim();
+        const own = attached(r.code, r.node).concat(ref ? attached(ref, r.node) : []);
+        const seen = {};
+        const uniq = own.filter((s2) => (s2 && !seen[s2.id] ? (seen[s2.id] = true) : false));
+        return { ...r, own: uniq, count: uniq.length };
+      }));
       const hits = rowsChk.filter((r) => r.count > 0).length;
       const pill = (s) =>
         sbH(
@@ -18783,6 +19438,8 @@ function SubmittalFolder({
                       const head = sbH(
                         "tr",
                         { key: r.code, className: r.count ? "sbChkOn" : "" },
+                        // The submittal's number — a running one, given when a
+                        // submittal is opened, not before.
                         sbH("td", { className: "sbChkNo" }, lead ? sbNumber(lead.category, lead.seq) : "—"),
                         // The gutter: only the chevron lives here, so the BOQ
                         // number beside it is never pushed off centre.
@@ -18803,19 +19460,45 @@ function SubmittalFolder({
                               )
                             : null
                         ),
-                        sbH("td", { dir: "ltr", className: "sbChkCode" }, r.code),
+                        // The item number. A priced line has one; a row she
+                        // added by hand has whatever she writes here, and the
+                        // box is the size of the column so nothing shifts when
+                        // a hand-made row joins the list (15.10.26).
+                        r.fromLli
+                          ? sbH(
+                              "td",
+                              { className: "sbChkCode" },
+                              sbH("input", {
+                                type: "text",
+                                dir: "ltr",
+                                className: "sbChkCodeIn",
+                                value: String((lli[r.code] || {}).boqRef || ""),
+                                placeholder: L("chkItem"),
+                                title: L("chkCodeHint"),
+                                readOnly: !onChangeLliRows,
+                                onChange: (e) => onChangeLliRows && onChangeLliRows({
+                                  ...lli,
+                                  [r.code]: { ...(lli[r.code] || {}), boqRef: e.target.value }
+                                })
+                              })
+                            )
+                          : sbH("td", { dir: "ltr", className: "sbChkCode" }, r.code),
                         sbH(
                           "td",
                           { className: "sbChkDesc", dir: "auto" },
-                          (lead && lead.typeId) || boqText(r.node, lang)
+                          // The mark she gave the item on the ordering board is
+                          // the mark, wherever it is looked at. Below it, what
+                          // the submittal itself says, and last the bill of
+                          // quantities' own wording (15.10.26).
+                          ((lliOf(r.code) || {}).typeMark || "").trim() || (lead && lead.typeId) || boqText(r.node, lang)
                         ),
                         sbH(
                           "td",
                           { className: "sbChkDesc", dir: "auto" },
-                          // What the model read off the specification when there
-                          // is one; the bill of quantities' own wording when
-                          // there is not.
-                          (lead && lead.itemDescription) || boqText(r.node, lang),
+                          // Her description from the ordering board first; then
+                          // what the model read off the specification; then the
+                          // bill of quantities' wording.
+                          ((lliOf(r.code) || {}).desc || "").trim() || (lead && lead.itemDescription) || boqText(r.node, lang),
                           // A line the classification was unsure about.
                           r.product.flags.review
                             ? sbH("span", { className: "lliReviewTag", title: L("chkReviewTitle") }, L("chkReview"))
@@ -19347,7 +20030,12 @@ function SubmittalCard({
   submittalReview,
   onChangeReview,
   submittalApprovals,
-  onChangeApprovals
+  onChangeApprovals,
+  // 15.10.26 — the checklist reads the ordering board: the mark and the
+  // description she typed there are the ones shown here, and a row she added by
+  // hand and ticked SUB is a line of this checklist like any other.
+  lliRows,
+  onChangeLliRows
 }) {
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
@@ -19450,7 +20138,7 @@ function SubmittalCard({
   const [allAsk, setAllAsk] = useState6(null);
   const [allNote, setAllNote] = useState6(null);
   const allGrid = (lg, who) => sbBoardGrid({
-    list: visibleList, boqData, boqFlags,
+    list: visibleList, boqData, boqFlags, lliRows,
     chkOff: submittalChkOff || {},
     lang: lg, audience: who,
     categories: SUBMITTAL_CATEGORIES,
@@ -19814,6 +20502,8 @@ function SubmittalCard({
         isRTL,
         boqData,
         boqFlags,
+        lliRows,
+        onChangeLliRows,
         list: visibleList,
         canEdit,
         canSign,
@@ -21779,6 +22469,33 @@ function ProjectDashboardApp() {
   // it is still the newest. An overtaken run stops where it is; the newer one
   // is carrying the same data and more.
   const saveRunRef = useRef5(0);
+  // ---------------------------------------------------------------------------
+  // 15.10.26 — closing the last of the build-176 hole.
+  //
+  // That build stopped a run from STARTING a write once a newer run existed,
+  // and that covered most of it. What it could not cover is a write already in
+  // the air: run A checks, is still the newest, and sets off; run B starts,
+  // writes the row and finishes; A's write lands afterwards and puts the row
+  // back to what it held before B's edit. The check was right and the row still
+  // went backwards, because the check happened before the journey, not before
+  // the landing.
+  //
+  // So writes to one row are now queued behind each other, and the "am I still
+  // the newest" question is asked at the moment a write actually begins. A's
+  // late write waits for B's to finish, finds it has been overtaken, and stands
+  // down instead of landing on top.
+  // ---------------------------------------------------------------------------
+  const writeQueueRef = useRef5({});
+  const queuedWrite = (rowKey, run, body) => {
+    const q = writeQueueRef.current;
+    const prev = q[rowKey] || Promise.resolve();
+    const next = prev.catch(() => {}).then(() => {
+      if (saveRunRef.current !== run) return "overtaken";
+      return body();
+    });
+    q[rowKey] = next;
+    return next;
+  };
   useEffect5(() => {
     if (!isAuthenticated || !extrasLoaded) return;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -21808,10 +22525,12 @@ function ProjectDashboardApp() {
       for (const [key, byPid] of Object.entries(byPart)) {
         for (const pid of Object.keys(byPid || {})) {
           if (saveRunRef.current !== myRun) { overtaken = true; break; }
+          const rowKey = key + ":" + pid;
           try {
-            await saveAppState(key + ":" + pid, byPid[pid]);
+            const res = await queuedWrite(rowKey, myRun, () => saveAppState(rowKey, byPid[pid]));
+            if (res === "overtaken") { overtaken = true; break; }
           } catch (e) {
-            console.error(`[awdash] save ${key}:${pid} failed`, e);
+            console.error(`[awdash] save ${rowKey} failed`, e);
             failed = e && e.message || String(e);
           }
         }
@@ -23126,6 +23845,9 @@ function ProjectDashboardApp() {
         onChangeReview: (next) => updateProjectExtras(activeProject.id, { submittalReview: next }),
         boqData: activeExtras.boqData || null,
         boqFlags: activeExtras.boqFlagOverrides || {},
+        // The routing can now be changed from the LLI board itself — the SD and
+        // submittal ticks on a row write straight into it (15.10.26).
+        onChangeBoqFlags: (next) => setBoqFlagOverrides(activeProject.id, next),
         userPerms,
         lliRows: activeExtras.lliRows || {},
         onChangeLliRows: (next) => updateProjectExtras(activeProject.id, { lliRows: next }),
