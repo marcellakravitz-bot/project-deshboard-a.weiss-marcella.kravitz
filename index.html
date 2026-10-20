@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "15.10.2026 · build 186";
+var APP_BUILD = "20.10.2026 · build 187";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1811,11 +1811,13 @@ var pdfViewer = `
         /* The bill-of-quantities item a hand-made row answers, under its number. */
         .lliBoqRef { display: block; margin-top: 4px; }
         .lliBoqRefIn {
-          width: 100%; max-width: 110px; border: 1px solid var(--line); border-radius: 6px;
+          width: 100%; max-width: 130px; border: 1px solid var(--line); border-radius: 6px;
           padding: 2px 5px; font-size: 10.5px; font-family: inherit; color: var(--ink);
           background: #fff; text-align: center; outline: none;
         }
         .lliBoqRefIn:focus { border-color: var(--accent); }
+        /* 20.10.26 — "no BOQ item" reads in red, wherever the row shows it. */
+        .lliBoqRefIn.noBoq, .sbChkCodeIn.noBoq { color: #d32f2f; font-weight: 600; }
         .lliBoqRefIn::placeholder { color: var(--mist); font-size: 9.5px; }
         .lliAlsoOn label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
         .lliAlsoOn input { width: 12px; height: 12px; accent-color: var(--accent, #0F3460); }
@@ -10717,6 +10719,27 @@ function autoGrow(el) {
   el.style.height = "auto";
   el.style.height = `${Math.max(el.scrollHeight, 40)}px`;
 }
+// 20.10.26 — a hand-made LLI row that answers no line in the bill of
+// quantities says so on purpose, and says it in red. The row keeps a fixed
+// mark rather than the words, so the HE/EN switch still reads it, and the
+// mark is never mistaken for an item number by anything that joins on one.
+var NO_BOQ_REF = "__no_boq__";
+var NO_BOQ_LABEL = { he: "אין סעיף כתב כמויות", en: "No BOQ item" };
+function isNoBoqRef(v) {
+  const t = String(v == null ? "" : v).trim();
+  return t === NO_BOQ_REF || t === NO_BOQ_LABEL.he || t === NO_BOQ_LABEL.en;
+}
+// What a box shows for the stored value, and what to store for what is typed.
+function boqRefShown(v, lang) {
+  return isNoBoqRef(v) ? (lang === "he" ? NO_BOQ_LABEL.he : NO_BOQ_LABEL.en) : String(v || "");
+}
+function boqRefStored(typed) {
+  return isNoBoqRef(typed) ? NO_BOQ_REF : String(typed || "");
+}
+// The item number to join on: none at all when the row says there is none.
+function boqRefCode(v) {
+  return isNoBoqRef(v) ? "" : String(v || "").trim();
+}
 // Nine dots: the mark every list uses for "take hold of this one".
 function GripIcon({ size }) {
   const s = size || 13;
@@ -11054,6 +11077,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // Choosing a line fills the row from it — the wording, the unit and the
   // quantity — and leaves everything she has already typed alone.
   const setBoqRef = (code, ref) => {
+    if (isNoBoqRef(ref)) { patch(code, { boqRef: NO_BOQ_REF }); return; }
     const it = boqLineOf(ref);
     const cur = lliRowOf(data, code);
     if (!it) { patch(code, { boqRef: String(ref || "").trim() }); return; }
@@ -11978,10 +12002,12 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
     // The bill of quantities, offered to any row that wants to name the item it
     // answers. One list for the whole table (15.10.26).
-    canEdit && boqLines.length
+    canEdit
       ? sbH(
           "datalist",
           { id: "lliBoqCodes" },
+          // First in the list: the row answers no item at all (20.10.26).
+          sbH("option", { key: "__no_boq__", value: boqRefShown(NO_BOQ_REF, lang) }),
           boqLines.slice(0, 4000).map((it) => sbH("option", { key: it.code, value: it.code }, boqText(it, lang)))
         )
       : null,
@@ -12115,10 +12141,10 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                             { className: "lliBoqRef" },
                             sbH("input", {
                               type: "text",
-                              dir: "ltr",
                               list: "lliBoqCodes",
-                              className: "lliBoqRefIn",
-                              value: v.boqRef || "",
+                              className: `lliBoqRefIn${isNoBoqRef(v.boqRef) ? " noBoq" : ""}`,
+                              dir: isNoBoqRef(v.boqRef) ? "rtl" : "ltr",
+                              value: boqRefShown(v.boqRef, lang),
                               placeholder: L("boqRef"),
                               title: L("boqRefHint"),
                               onChange: (e) => setBoqRef(r.code, e.target.value)
@@ -18939,7 +18965,7 @@ function sbBoardGrid(opts) {
         && (lli[k].category || null) === cat.key && !off[k])
       .forEach((k) => {
         const v = lli[k] || {};
-        const ref = String(v.boqRef || "").trim();
+        const ref = boqRefCode(v.boqRef);
         const hits = mine.filter((x) => x.boqCode && (x.boqCode === k || (ref && x.boqCode === ref)));
         const lead = hits.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
         const st = lead ? sbStatusOf(lead) : null;
@@ -18955,7 +18981,7 @@ function sbBoardGrid(opts) {
         const cells = {
           catCol: sbText(cat, lang),
           submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
-          chkItem: ref,
+          chkItem: isNoBoqRef(v.boqRef) ? boqRefShown(v.boqRef, lang) : ref,
           chkDesc: String(v.desc || "").trim() || (lead && (lead.itemDescription || lead.typeId)) || "",
           docsCol: docs || "",
           supplierCol: (lead && lead.supplier) || v.supplier || trade || "",
@@ -19204,7 +19230,7 @@ function SubmittalFolder({
       if (!v || k.indexOf("m-") !== 0 || !v.alsoSubmittal) return;
       if ((v.category || null) !== category.key || off[k]) return;
       codes.add(k);
-      const ref = String(v.boqRef || "").trim();
+      const ref = boqRefCode(v.boqRef);
       if (ref) codes.add(ref);
     });
     return codes;
@@ -19409,7 +19435,7 @@ function SubmittalFolder({
       }).concat(fromLli.map((r) => {
         // A submittal started from a hand-made row is attached by that row's
         // own code, or by the BOQ number she wrote in the box.
-        const ref = String((lliOf(r.code) || {}).boqRef || "").trim();
+        const ref = boqRefCode((lliOf(r.code) || {}).boqRef);
         const own = attached(r.code, r.node).concat(ref ? attached(ref, r.node) : []);
         const seen = {};
         const uniq = own.filter((s2) => (s2 && !seen[s2.id] ? (seen[s2.id] = true) : false));
@@ -19587,14 +19613,14 @@ function SubmittalFolder({
                               sbH("input", {
                                 type: "text",
                                 dir: "ltr",
-                                className: "sbChkCodeIn",
-                                value: String((lli[r.code] || {}).boqRef || ""),
+                                className: `sbChkCodeIn${isNoBoqRef((lli[r.code] || {}).boqRef) ? " noBoq" : ""}`,
+                                value: boqRefShown((lli[r.code] || {}).boqRef, lang),
                                 placeholder: L("chkItem"),
                                 title: L("chkCodeHint"),
                                 readOnly: !onChangeLliRows,
                                 onChange: (e) => onChangeLliRows && onChangeLliRows({
                                   ...lli,
-                                  [r.code]: { ...(lli[r.code] || {}), boqRef: e.target.value }
+                                  [r.code]: { ...(lli[r.code] || {}), boqRef: boqRefStored(e.target.value) }
                                 })
                               })
                             )
