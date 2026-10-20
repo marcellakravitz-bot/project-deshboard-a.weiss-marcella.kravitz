@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "20.10.2026 · build 189";
+var APP_BUILD = "20.10.2026 · build 190";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -20391,6 +20391,10 @@ function SubmittalCard({
   const [draft, setDraft] = useState6(null);
   const [signAsClient, setSignAsClient] = useState6(false);
   const [supOpen, setSupOpen] = useState6(false);
+  // 20.10.26 — creating a submittal from the main screen, before any folder is
+  // open: she picks the folder (it sets the number), and may write her own
+  // discipline and sub-category straight away.
+  const [newAsk, setNewAsk] = useState6(null);
   // The records, with each one's filed decision merged over it.
   const list = (submittals || []).map((s) => sbMergeApproval(s, submittalApprovals));
   const label = (c) => sbText(c, lang);
@@ -20541,17 +20545,21 @@ function SubmittalCard({
   // quantities: it carries the item number it answers and the wording to start
   // from. Started from the button at the top it is empty, and the submittal
   // belongs to no BOQ line at all — which is exactly what that button is for.
-  const startCreate = (preset) => {
+  const startCreate = (preset, inCat) => {
+    // A folder named by the caller (the main screen's create button), or the
+    // one that is open.
+    const fold = inCat || chosen;
+    if (!fold) return;
     // The trade's own contractor, off the contacts, so the field is right
     // before she opens the form rather than after (30.8.26).
-    const trade = boardTradeCompany(contacts, contactsCatalog, chosen.key, lang);
+    const trade = boardTradeCompany(contacts, contactsCatalog, fold.key, lang);
     const rec = sbNewSubmittal({
-      category: chosen.key,
-      seq: sbNextSeq(list, chosen.key),
+      category: fold.key,
+      seq: sbNextSeq(list, fold.key),
       projectName: pName,
       contractor: contractorName,
-      disciplineEn: chosen.en,
-      disciplineHe: chosen.he,
+      disciplineEn: fold.en,
+      disciplineHe: fold.he,
       email: currentEmail || "",
       submittedBy: (currentEmail || "").split("@")[0] || ""
     });
@@ -20565,9 +20573,12 @@ function SubmittalCard({
           // The bill of quantities names the type, not the product. What it
           // says goes in Type ID; the description is for the thing that is
           // actually being offered, and only the person filling it in knows it.
-          typeId: preset.text || rec.typeId
+          typeId: preset.text || rec.typeId,
+          disciplineText: preset.disciplineText || ""
         }
       : rec;
+    // Back from the form, she lands in the folder it was filed in.
+    if (inCat) setSelected(inCat.key);
     setDraft(withPreset);
     setOpenId(withPreset.id);
   };
@@ -20780,9 +20791,77 @@ function SubmittalCard({
             sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 10, flexDirection: "row-reverse" } },
               sbH(SendIcon2, { size: 15, strokeWidth: 2 }),
               sbH("span", null, "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7"))
+          ),
+          // 20.10.26 — a new submittal from here, without opening a folder.
+          sbH(
+            "button",
+            {
+              type: "button",
+              className: "functionEditBtn",
+              style: { minWidth: 240, justifyContent: "center", gap: 8, marginInlineStart: 10 },
+              onClick: () => setNewAsk({ cat: selected || "", disc: "", sub: "" })
+            },
+            sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 10 } },
+              sbH(Plus2, { size: 15, strokeWidth: 2.4 }),
+              sbH("span", null, L("create")))
           )
         )
       : null,
+    newAsk && canEdit ? (() => {
+      const fold = SUBMITTAL_CATEGORIES.find((c) => c.key === newAsk.cat) || null;
+      const he = lang === "he";
+      const discNames = [];
+      if (fold) discNames.push(sbText(fold, lang));
+      BOARD_CATEGORIES.forEach((x) => { const nm = sbText(x, lang); if (nm && discNames.indexOf(nm) < 0) discNames.push(nm); });
+      const go = () => {
+        if (!fold) return;
+        const folderName = sbText(fold, lang);
+        const disc = newAsk.disc.trim();
+        setNewAsk(null);
+        startCreate({
+          code: "", text: "",
+          subCategory: newAsk.sub.trim() ? sbSubcatCanon(newAsk.sub, fold.key) : "",
+          disciplineText: disc && disc !== folderName ? disc : ""
+        }, fold);
+      };
+      const lbl = { display: "block", fontSize: 12, fontWeight: 700, margin: "10px 0 4px", textAlign: he ? "right" : "left" };
+      const inp = { width: "100%", boxSizing: "border-box", padding: "7px 9px", border: "1px solid #d5d9df", borderRadius: 8, fontFamily: "inherit", fontSize: 13 };
+      return createPortal(
+        sbH(
+          "div",
+          { className: "printAskScrim", onClick: () => setNewAsk(null) },
+          sbH(
+            "div",
+            { className: "printAskBox", dir: he ? "rtl" : "ltr", style: { maxWidth: 420, width: "calc(100vw - 32px)" }, onClick: (e) => e.stopPropagation() },
+            sbH("h3", null, L("create")),
+            sbH("label", { style: lbl }, he ? "\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 (\u05e7\u05d5\u05d1\u05e2\u05ea \u05d0\u05ea \u05de\u05e1\u05e4\u05e8 \u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc)" : "Folder (sets the submittal number)"),
+            sbH("select", { style: inp, value: newAsk.cat, onChange: (e) => setNewAsk({ ...newAsk, cat: e.target.value }) },
+              sbH("option", { value: "" }, he ? "\u05d1\u05d7\u05e8\u05d9 \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4" : "Choose a folder"),
+              SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))),
+            sbH("label", { style: lbl }, L("discipline")),
+            sbH("input", { style: inp, type: "text", list: "sb-new-disc", value: newAsk.disc,
+              placeholder: fold ? sbText(fold, lang) : "",
+              // Typing a folder's own name picks that folder too.
+              onChange: (e) => {
+                const t = e.target.value;
+                const n = t.trim().toLowerCase();
+                const hit = n ? SUBMITTAL_CATEGORIES.find((c) => [c.he, c.en].some((x) => String(x || "").trim().toLowerCase() === n)) : null;
+                setNewAsk({ ...newAsk, disc: t, cat: hit ? hit.key : newAsk.cat });
+              } }),
+            sbH("datalist", { id: "sb-new-disc" }, discNames.map((nm) => sbH("option", { key: nm, value: nm }))),
+            sbH("label", { style: lbl }, L("subCategory")),
+            sbH("input", { style: inp, type: "text", list: "sb-new-sub", value: newAsk.sub,
+              onChange: (e) => setNewAsk({ ...newAsk, sub: e.target.value }) }),
+            sbH("datalist", { id: "sb-new-sub" },
+              (fold ? sbSubcats(fold.key) : []).map((r) => sbH("option", { key: r[0], value: he ? r[1] : r[0] }))),
+            sbH("div", { className: "printAskBtns", style: { marginTop: 14 } },
+              sbH("button", { type: "button", className: "sgBtn", disabled: !fold, style: fold ? null : { opacity: 0.45 }, onClick: go }, L("create")),
+              sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setNewAsk(null) }, he ? "\u05d1\u05d9\u05d8\u05d5\u05dc" : "Cancel"))
+          )
+        ),
+        document.body
+      );
+    })() : null,
     sbH(
       "div",
       // The grid keeps a fixed direction so the tiles never jump to the other
