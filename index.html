@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "20.10.2026 · build 193";
+var APP_BUILD = "20.10.2026 · build 194";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2469,6 +2469,11 @@ var pdfViewer = `
           flex-wrap: wrap; margin-top: 12px;
         }
         .sbExportAll { margin: 16px 0 4px; }
+        .sbPdfCols { display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+          gap: 6px 12px; flex-basis: 100%; font-size: 12.5px; color: #6b7280; margin-top: 8px; }
+        .sbPdfColsLbl { font-weight: 700; }
+        .sbPdfCol { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: var(--ink); }
+        .sbPdfCol input { width: 15px; height: 15px; margin: 0; cursor: pointer; }
         .sbExportSep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
         .sbExportAllLabel {
           font-size: 12px; font-weight: 800; color: var(--steel, #5b6472);
@@ -10636,7 +10641,7 @@ function awPrintWhenPaged(w, minDelay) {
 }
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections } = opts;
+          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections, imgH } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -10716,7 +10721,7 @@ tbody tr.late td, tbody tr.late:nth-child(even) td { background: #fbe3e3; }
 tbody tr.wait td, tbody tr.wait:nth-child(even) td { background: #fdeed8; }
 tbody tr.ok td, tbody tr.ok:nth-child(even) td { background: #e3f3e6; }
 td.img { padding: 2px; }
-td.img img { max-width: 100%; max-height: 60px; object-fit: contain; display: block; margin: 0 auto; }
+td.img img { max-width: 100%; max-height: ${imgH || 60}px; object-fit: contain; display: block; margin: 0 auto; }
 </style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
@@ -19127,8 +19132,84 @@ function sbMatchChecklist(product, checklist, said) {
 // at a time, or all of them at once with a discipline column (30.8.26).
 // ---------------------------------------------------------------------------
 var SB_EXPORT_CLIENT_COLS = ["submittalNo", "chkItem", "chkDesc", "supplierCol", "sentCol", "status", "clientOkCol"];
+// Which columns go on the printed tracking list. A tick beside each column
+// title; an unticked column is left off the PDF. Kept in this browser, so the
+// choice is there the next time she prints (20.10.26).
+var SB_PDF_COLS = [
+  ["submittalNo", "submittalNo"], ["typeCol", "typeCol"], ["chkItem", "chkItem"],
+  ["chkDesc", "chkDesc"], ["imgCol", null], ["sentCol", "sentCol"],
+  ["targetCol", "targetCol"], ["status", "status"], ["clientOkCol", "clientOkCol"]
+];
+var SB_PDF_HIDE_KEY = "aw.sbPdfHide";
+function sbPdfHidden() {
+  try {
+    const v = JSON.parse(window.localStorage.getItem(SB_PDF_HIDE_KEY) || "[]");
+    return Array.isArray(v) ? v : [];
+  } catch (e) { return []; }
+}
+function SbPdfColPick({ lang }) {
+  const [hide, setHide] = useState6(sbPdfHidden);
+  const flip = (k) => {
+    const next = hide.indexOf(k) >= 0 ? hide.filter((x) => x !== k) : hide.concat([k]);
+    // At least one column stays on the page.
+    if (next.length >= SB_PDF_COLS.length) return;
+    setHide(next);
+    try { window.localStorage.setItem(SB_PDF_HIDE_KEY, JSON.stringify(next)); } catch (e) {}
+  };
+  return sbH(
+    "div",
+    { className: "sbPdfCols" },
+    sbH("span", { className: "sbPdfColsLbl" }, lang === "he" ? "\u05e2\u05de\u05d5\u05d3\u05d5\u05ea \u05d1-PDF:" : "PDF columns:"),
+    SB_PDF_COLS.map(([k, lk]) => sbH(
+      "label",
+      { key: k, className: "sbPdfCol" },
+      sbH("input", { type: "checkbox", checked: hide.indexOf(k) < 0, onChange: () => flip(k) }),
+      lk ? sbText(SB_L[lk], lang) : (lang === "he" ? "\u05ea\u05de\u05d5\u05e0\u05d4" : "Photo")
+    ))
+  );
+}
+// Leaves out the columns she unticked, keeping the photo column's position.
+function sbDropCols(g, keysOut) {
+  const out = keysOut || [];
+  if (!out.length || !g.keys) return g;
+  const want = g.keys.map((k, i) => (out.indexOf(k) < 0 ? i : -1)).filter((i) => i >= 0);
+  if (!want.length) return g;
+  return {
+    ...g,
+    keys: want.map((i) => g.keys[i]),
+    head: want.map((i) => g.head[i]),
+    widths: want.map((i) => g.widths[i]),
+    types: want.map((i) => g.types[i]),
+    body: g.body.map((r) => want.map((i) => r[i])),
+    imgCol: g.imgCol != null && want.indexOf(g.imgCol) >= 0 ? want.indexOf(g.imgCol) : null
+  };
+}
+
+// Rows grouped by discipline, the groups in the order they first appear.
+function sbGroupBySection(g) {
+  const order = [];
+  const map = {};
+  g.body.forEach((row, i) => {
+    const k = g.secs[i] || "";
+    if (!map[k]) { map[k] = []; order.push(k); }
+    map[k].push(i);
+  });
+  const idx = [];
+  order.forEach((k) => map[k].forEach((i) => idx.push(i)));
+  return {
+    imgs: idx.map((i) => (g.imgs || [])[i] || null),
+    body: idx.map((i) => g.body[i]),
+    tone: idx.map((i) => g.tone[i]),
+    secs: idx.map((i) => g.secs[i]),
+    sections: order.map((k) => ({ label: k, rows: map[k].map((i) => g.body[i]) }))
+  };
+};
 function sbBoardGrid(opts) {
-  const { list, boqData, boqFlags, chkOff, lang, audience, categories, withCategory, tradeFor, lliRows } = opts;
+  const res = sbBoardGridRaw(opts);
+  return opts.forPdf ? sbDropCols(res, sbPdfHidden()) : res;
+}
+function sbBoardGridRaw(opts) {
+  const { list, boqData, boqFlags, chkOff, lang, audience, categories, withCategory, tradeFor, lliRows, forPdf } = opts;
   // The ordering board, so the printed checklist says exactly what the screen
   // says: her own mark and wording, and the lines she added there by hand
   // (15.10.26).
@@ -19143,10 +19224,14 @@ function sbBoardGrid(opts) {
   const col = (key, label, width, kind) => { keys.push(key); head.push(label); widths.push(width); types.push(kind); };
   if (withCategory) col("catCol", L("catCol"), 14, "text");
   col("submittalNo", L("submittalNo"), 15, "text");
+  // On paper (20.10.26): the type mark right after the number, and the
+  // submittal's own photo where the file count and the supplier used to be.
+  if (forPdf) col("typeCol", L("typeCol"), 12, "text");
   col("chkItem", L("chkItem"), 14, "text");
   col("chkDesc", L("chkDesc"), 40, "text");
-  col("docsCol", L("docsCol"), 9, "number");
-  col("supplierCol", L("supplierCol"), 20, "text");
+  if (forPdf) col("imgCol", sbText({ en: "Photo", he: "\u05ea\u05de\u05d5\u05e0\u05d4" }, lang), 16, "text");
+  if (!forPdf) col("docsCol", L("docsCol"), 9, "number");
+  if (!forPdf) col("supplierCol", L("supplierCol"), 20, "text");
   col("sentCol", L("sentCol"), 13, "date");
   col("targetCol", L("targetCol"), 14, "date");
   col("status", L("status"), 16, "text");
@@ -19157,7 +19242,17 @@ function sbBoardGrid(opts) {
   // The discipline each row is filed under: what she wrote in the submittal's
   // own discipline box, otherwise the folder it lives in (20.10.26).
   const secs = [];
-  const discOf = (rec, cat) => String((rec && rec.disciplineText) || "").trim() || sbText(cat, lang);
+  const rowLead = [];
+  // A field filled on an earlier revision and left blank on the newest one
+  // still belongs to the submittal: the newest revision that has it wins.
+  const famVal = (rec, get) => {
+    if (!rec) return null;
+    if (get(rec)) return get(rec);
+    const fam = (list || []).filter((x) => x.category === rec.category && String(x.seq) === String(rec.seq) && get(x))
+      .sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0));
+    return fam.length ? get(fam[0]) : null;
+  };
+  const discOf = (rec, cat) => String(famVal(rec, (x) => String(x.disciplineText || "").trim()) || "").trim() || sbText(cat, lang);
   const isOk = (st) => st === "approved" || st === "approvedNoted" || st === "approved_as_noted";
   (categories || []).forEach((cat) => {
     const off = ((chkOff || {})[cat.key]) || {};
@@ -19180,7 +19275,7 @@ function sbBoardGrid(opts) {
       // The fan she set for all three boards: signed off green, in somebody's
       // hands orange, past its approval date and still not approved red.
       hits.forEach((x) => { usedIds[x.id] = true; });
-      secs.push(discOf(lead, cat));
+      secs.push(discOf(lead, cat)); rowLead.push(lead);
       tone.push(
         signed || isOk(st) ? "ok"
           : (due && due < today && !signed) ? "late"
@@ -19219,7 +19314,7 @@ function sbBoardGrid(opts) {
         const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
         const docs = hits.reduce((n, x) => n + ((x.attachments || []).length), 0);
         hits.forEach((x) => { usedIds[x.id] = true; });
-        secs.push(discOf(lead, cat));
+        secs.push(discOf(lead, cat)); rowLead.push(lead);
         tone.push(
           signed || isOk(st) ? "ok"
             : (due && due < today && !signed) ? "late"
@@ -19256,7 +19351,7 @@ function sbBoardGrid(opts) {
         const signed = sbSignedAt(lead);
         const due = String(lead.requiredApprovalDate || "").slice(0, 10);
         const docs = famAll.reduce((n, x) => n + ((x.attachments || []).length), 0);
-        secs.push(discOf(lead, cat));
+        secs.push(discOf(lead, cat)); rowLead.push(lead);
         tone.push(
           signed || isOk(st) ? "ok"
             : (due && due < today && !signed) ? "late"
@@ -19281,18 +19376,25 @@ function sbBoardGrid(opts) {
   // A client's copy carries what a client is owed: what the item is, who is
   // supplying it, when it went in and where it stands. The internal target date
   // and the paperwork count stay on her side (30.8.26).
+  const imgs = rowLead.map((x) => famVal(x, (y) => y.image && y.image.thumb) || null);
+  const tIdx = keys.indexOf("typeCol");
+  if (tIdx >= 0) body.forEach((r, i) => { r[tIdx] = famVal(rowLead[i], (y) => y.typeId) || ""; });
+  const iIdx = keys.indexOf("imgCol");
+  if (iIdx >= 0) body.forEach((r) => { r[iIdx] = ""; });
   if (audience === "client") {
-    const want = keys.map((k, i) => ((withCategory && k === "catCol") || SB_EXPORT_CLIENT_COLS.indexOf(k) >= 0 ? i : -1))
+    const want = keys.map((k, i) => ((withCategory && k === "catCol") || k === "typeCol" || k === "imgCol" || SB_EXPORT_CLIENT_COLS.indexOf(k) >= 0 ? i : -1))
       .filter((i) => i >= 0);
+    const imgCol = iIdx >= 0 ? want.indexOf(iIdx) : null;
     return {
       head: want.map((i) => head[i]),
       widths: want.map((i) => widths[i]),
       types: want.map((i) => types[i]),
       body: body.map((r) => want.map((i) => r[i])),
-      tone, secs
+      keys: want.map((i) => keys[i]),
+      tone, secs, imgs, imgCol
     };
   }
-  return { head, body, widths, types, tone, secs };
+  return { head, body, widths, types, keys, tone, secs, imgs, imgCol: iIdx >= 0 ? iIdx : null };
 }
 
 function sbSignedAt(rec) {
@@ -19450,12 +19552,13 @@ function SubmittalFolder({
   // ordering board asks before it prints (30.8.26).
   const [exportAsk, setExportAsk] = useState6(null);
   const [exportNote, setExportNote] = useState6(null);
-  const gridFor = (lg, who) => sbBoardGrid({
+  const gridFor = (lg, who, pdf) => sbBoardGrid({
     list, boqData, boqFlags, lliRows,
     chkOff: { [category.key]: chkOff || {} },
     lang: lg, audience: who,
     categories: [category],
-    tradeFor: () => tradeCompany || ""
+    tradeFor: () => tradeCompany || "",
+    forPdf: !!pdf
   });
   const onFolderExcel = async () => {
     const g = gridFor(lang, "admin");
@@ -19472,17 +19575,18 @@ function SubmittalFolder({
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
   const onFolderPdf = (lg, who) => {
-    const g = gridFor(lg, who);
+    const g = gridFor(lg, who, true);
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     setExportNote(null);
+    // The header says SUBMITTAL and nothing more; the discipline is the band
+    // above the table (20.10.26).
     boardExportPdf({
       title: projectName || "",
       fileName: boardFileName(projectName, `SUB - ${category.en}`, ""),
-      // The board's name leads the line, the way "LLI — מעקב הזמנות" does on
-      // the ordering report (30.8.26).
-      subtitle: `SUBMITTAL — ${L("trackingList")} · ${sbText(category, lg)}`,
-      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
-      head: g.head, body: g.body, widths: g.widths, toneRows: g.tone,
+      subtitle: "SUBMITTAL",
+      head: g.head, widths: g.widths,
+      ...(() => { const gr = sbGroupBySection(g); return { body: gr.body, toneRows: gr.tone, sections: gr.secs, imgs: gr.imgs }; })(),
+      imgCol: g.imgCol, imgH: 48,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
   };
@@ -20104,7 +20208,8 @@ function SubmittalFolder({
                         onClose: () => setExportAsk(null)
                       })
                     : null
-                )
+                ),
+                sbH(SbPdfColPick, { lang })
               )
       );
     })(),
@@ -20586,32 +20691,17 @@ function SubmittalCard({
   // discipline, and on paper every discipline starts its own page.
   const [allAsk, setAllAsk] = useState6(null);
   const [allNote, setAllNote] = useState6(null);
-  const gridOf = (lg, who, cats) => sbBoardGrid({
+  const gridOf = (lg, who, cats, pdf) => sbBoardGrid({
     list: visibleList, boqData, boqFlags, lliRows,
     chkOff: submittalChkOff || {},
     lang: lg, audience: who,
     categories: cats,
     withCategory: false,
+    forPdf: !!pdf,
     tradeFor: (key) => boardTradeCompany(contacts, contactsCatalog, key, lg)
   });
-  // Rows grouped by discipline, the groups in the order they first appear.
-  const bySection = (g) => {
-    const order = [];
-    const map = {};
-    g.body.forEach((row, i) => {
-      const k = g.secs[i] || "";
-      if (!map[k]) { map[k] = []; order.push(k); }
-      map[k].push(i);
-    });
-    const idx = [];
-    order.forEach((k) => map[k].forEach((i) => idx.push(i)));
-    return {
-      body: idx.map((i) => g.body[i]),
-      tone: idx.map((i) => g.tone[i]),
-      secs: idx.map((i) => g.secs[i]),
-      sections: order.map((k) => ({ label: k, rows: map[k].map((i) => g.body[i]) }))
-    };
-  };
+  const bySection = sbGroupBySection;
+
   const today2 = () => sbFmtDate(new Date().toISOString().slice(0, 10));
   const runExcel = async (mode) => {
     const one = mode === "cat" && chosen;
@@ -20634,24 +20724,24 @@ function SubmittalCard({
   };
   const runPdf = (mode, lg, who) => {
     const one = mode === "cat" && chosen;
-    const g = gridOf(lg, who, one ? [chosen] : SUBMITTAL_CATEGORIES);
+    const g = gridOf(lg, who, one ? [chosen] : SUBMITTAL_CATEGORIES, true);
     if (!g.body.length) { setAllNote(sbText(SB_L.nothingToExport, lg)); return; }
     setAllNote(null);
     const name = one ? `SUB - ${chosen.en}` : "SUB";
-    const sub = one ? sbText(chosen, lg) : (lg === "he" ? "כל הסבמיטלים" : "All submittals");
-    const grouped = one ? null : bySection(g);
+    const grouped = bySection(g);
+    // The header says SUBMITTAL and nothing more; each discipline is the band
+    // above its own table (20.10.26).
     boardExportPdf({
       title: pName,
       fileName: boardFileName(pName, name, ""),
-      subtitle: `SUBMITTAL — ${sbText(SB_L.trackingList, lg)} · ${sub}`,
-      issuedLabel: `${sbText(SB_L.issuedOn, lg)} ${today2()}`,
+      subtitle: "SUBMITTAL",
       head: g.head, widths: g.widths,
-      body: grouped ? grouped.body : g.body,
-      toneRows: grouped ? grouped.tone : g.tone,
-      sections: grouped ? grouped.secs : null,
+      body: grouped.body, toneRows: grouped.tone, sections: grouped.secs,
+      imgCol: g.imgCol, imgs: grouped.imgs, imgH: 48,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
   };
+
 
   // The contractor line is the company itself. The full row in the contacts tab
   // carries a person, a role and a phone — none of that belongs on the form.
@@ -21033,6 +21123,7 @@ function SubmittalCard({
           sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setAllAsk(() => (lg, who) => runPdf("all", lg, who)) },
             sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"),
           allNote ? sbH("span", { className: "lliPoNote" }, allNote) : null,
+          sbH(SbPdfColPick, { lang }),
           allAsk
             ? sbH(PrintLangAsk, {
                 withAudience: true,
