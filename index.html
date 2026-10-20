@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "20.10.2026 · build 192";
+var APP_BUILD = "20.10.2026 · build 193";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2469,6 +2469,7 @@ var pdfViewer = `
           flex-wrap: wrap; margin-top: 12px;
         }
         .sbExportAll { margin: 16px 0 4px; }
+        .sbExportSep { width: 1px; height: 22px; background: var(--line); margin: 0 6px; }
         .sbExportAllLabel {
           font-size: 12px; font-weight: 800; color: var(--steel, #5b6472);
         }
@@ -19153,8 +19154,17 @@ function sbBoardGrid(opts) {
 
   const body = [];
   const tone = [];
+  // The discipline each row is filed under: what she wrote in the submittal's
+  // own discipline box, otherwise the folder it lives in (20.10.26).
+  const secs = [];
+  const discOf = (rec, cat) => String((rec && rec.disciplineText) || "").trim() || sbText(cat, lang);
+  const isOk = (st) => st === "approved" || st === "approvedNoted" || st === "approved_as_noted";
   (categories || []).forEach((cat) => {
     const off = ((chkOff || {})[cat.key]) || {};
+    // Submittals already reported on a checklist line, so the ones that are
+    // not can follow underneath — they are on the screen, so they are on the
+    // paper. Leaving them out is what made the export say "nothing to export".
+    const usedIds = {};
     const groups = boqProducts(boqData, auto, boqFlags, "submittal", cat.key).filter((pr) => !off[pr.code]);
     const mine = (list || []).filter((x) => x.category === cat.key);
     const trade = tradeFor ? tradeFor(cat.key) : "";
@@ -19169,8 +19179,10 @@ function sbBoardGrid(opts) {
       const docs = hits.reduce((n, x) => n + ((x.attachments || []).length), 0);
       // The fan she set for all three boards: signed off green, in somebody's
       // hands orange, past its approval date and still not approved red.
+      hits.forEach((x) => { usedIds[x.id] = true; });
+      secs.push(discOf(lead, cat));
       tone.push(
-        signed || st === "approved" || st === "approved_as_noted" ? "ok"
+        signed || isOk(st) ? "ok"
           : (due && due < today && !signed) ? "late"
           : lead && lead.sent ? "wait"
           : ""
@@ -19206,8 +19218,10 @@ function sbBoardGrid(opts) {
         const signed = lead ? sbSignedAt(lead) : null;
         const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
         const docs = hits.reduce((n, x) => n + ((x.attachments || []).length), 0);
+        hits.forEach((x) => { usedIds[x.id] = true; });
+        secs.push(discOf(lead, cat));
         tone.push(
-          signed || st === "approved" || st === "approved_as_noted" ? "ok"
+          signed || isOk(st) ? "ok"
             : (due && due < today && !signed) ? "late"
             : lead && lead.sent ? "wait"
             : ""
@@ -19226,6 +19240,43 @@ function sbBoardGrid(opts) {
         };
         body.push(keys.map((k2) => cells[k2]));
       });
+    // Everything else filed in this folder: one row per submittal, at its
+    // newest revision.
+    const fam = {};
+    mine.forEach((x) => {
+      if (usedIds[x.id]) return;
+      const k = String(x.seq);
+      if (!fam[k] || (Number(x.rev) || 0) > (Number(fam[k].rev) || 0)) fam[k] = x;
+    });
+    Object.keys(fam).map((k) => fam[k])
+      .sort((a, b) => (Number(a.seq) || 0) - (Number(b.seq) || 0))
+      .forEach((lead) => {
+        const famAll = mine.filter((x) => String(x.seq) === String(lead.seq));
+        const st = sbStatusOf(lead);
+        const signed = sbSignedAt(lead);
+        const due = String(lead.requiredApprovalDate || "").slice(0, 10);
+        const docs = famAll.reduce((n, x) => n + ((x.attachments || []).length), 0);
+        secs.push(discOf(lead, cat));
+        tone.push(
+          signed || isOk(st) ? "ok"
+            : (due && due < today && !signed) ? "late"
+            : lead.sent ? "wait"
+            : ""
+        );
+        const cells = {
+          catCol: sbText(cat, lang),
+          submittalNo: sbNumber(lead.category, lead.seq),
+          chkItem: lead.boqCode || "",
+          chkDesc: lead.itemDescription || lead.typeId || lead.boqText || "",
+          docsCol: docs || "",
+          supplierCol: lead.supplier || trade || "",
+          sentCol: sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date),
+          targetCol: due ? sbFmtDate(due) : "",
+          status: lead.sent ? sbStatusLabel(st, lang) : L("draft"),
+          clientOkCol: signed ? sbFmtDate(signed.slice(0, 10)) : ""
+        };
+        body.push(keys.map((k2) => cells[k2]));
+      });
   });
   // A client's copy carries what a client is owed: what the item is, who is
   // supplying it, when it went in and where it stands. The internal target date
@@ -19238,10 +19289,10 @@ function sbBoardGrid(opts) {
       widths: want.map((i) => widths[i]),
       types: want.map((i) => types[i]),
       body: body.map((r) => want.map((i) => r[i])),
-      tone
+      tone, secs
     };
   }
-  return { head, body, widths, types, tone };
+  return { head, body, widths, types, tone, secs };
 }
 
 function sbSignedAt(rec) {
@@ -20529,41 +20580,75 @@ function SubmittalCard({
   const projectId = project && project.id;
   const pName = (project && project.name) || projectName || "";
 
-  // ------------------------------------------------- the whole board at once
+  // ------------------------------------------------- export from the main screen
+  // 20.10.26 — two exports. With a folder open, the folder's table. And
+  // always, every submittal together, grouped by discipline: a heading band per
+  // discipline, and on paper every discipline starts its own page.
   const [allAsk, setAllAsk] = useState6(null);
   const [allNote, setAllNote] = useState6(null);
-  const allGrid = (lg, who) => sbBoardGrid({
+  const gridOf = (lg, who, cats) => sbBoardGrid({
     list: visibleList, boqData, boqFlags, lliRows,
     chkOff: submittalChkOff || {},
     lang: lg, audience: who,
-    categories: SUBMITTAL_CATEGORIES,
-    withCategory: true,
+    categories: cats,
+    withCategory: false,
     tradeFor: (key) => boardTradeCompany(contacts, contactsCatalog, key, lg)
   });
-  const onAllExcel = async () => {
-    const g = allGrid(lang, "admin");
+  // Rows grouped by discipline, the groups in the order they first appear.
+  const bySection = (g) => {
+    const order = [];
+    const map = {};
+    g.body.forEach((row, i) => {
+      const k = g.secs[i] || "";
+      if (!map[k]) { map[k] = []; order.push(k); }
+      map[k].push(i);
+    });
+    const idx = [];
+    order.forEach((k) => map[k].forEach((i) => idx.push(i)));
+    return {
+      body: idx.map((i) => g.body[i]),
+      tone: idx.map((i) => g.tone[i]),
+      secs: idx.map((i) => g.secs[i]),
+      sections: order.map((k) => ({ label: k, rows: map[k].map((i) => g.body[i]) }))
+    };
+  };
+  const today2 = () => sbFmtDate(new Date().toISOString().slice(0, 10));
+  const runExcel = async (mode) => {
+    const one = mode === "cat" && chosen;
+    const g = gridOf(lang, "admin", one ? [chosen] : SUBMITTAL_CATEGORIES);
     if (!g.body.length) { setAllNote(L("nothingToExport")); return; }
     setAllNote(null);
+    const name = one ? `SUB - ${chosen.en}` : "SUB";
+    const sub = one ? sbText(chosen, lang) : (lang === "he" ? "כל הסבמיטלים" : "All submittals");
+    const grouped = one ? null : bySection(g);
     const res = await boardExportXlsx({
       title: pName,
-      subtitle: `SUBMITTAL — ${L("trackingList")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
-      sheetName: "Submittals",
-      fileName: boardFileName(pName, "SUB", "xlsx"),
-      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      subtitle: `SUBMITTAL — ${sub} · ${today2()}`,
+      sheetName: one ? chosen.en : "Submittals",
+      fileName: boardFileName(pName, name, "xlsx"),
+      head: g.head, widths: g.widths, colTypes: g.types,
+      ...(grouped ? { sections: grouped.sections, body: grouped.body } : { body: g.body, toneRows: g.tone }),
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setAllNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
-  const onAllPdf = (lg, who) => {
-    const g = allGrid(lg, who);
-    if (!g.body.length) { setAllNote(L("nothingToExport")); return; }
+  const runPdf = (mode, lg, who) => {
+    const one = mode === "cat" && chosen;
+    const g = gridOf(lg, who, one ? [chosen] : SUBMITTAL_CATEGORIES);
+    if (!g.body.length) { setAllNote(sbText(SB_L.nothingToExport, lg)); return; }
     setAllNote(null);
+    const name = one ? `SUB - ${chosen.en}` : "SUB";
+    const sub = one ? sbText(chosen, lg) : (lg === "he" ? "כל הסבמיטלים" : "All submittals");
+    const grouped = one ? null : bySection(g);
     boardExportPdf({
       title: pName,
-      fileName: boardFileName(pName, "SUB", ""),
-      subtitle: `SUBMITTAL — ${L("trackingList")} · ${sbText(SB_L.exportAll, lg)}`,
-      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
-      head: g.head, body: g.body, widths: g.widths, toneRows: g.tone,
+      fileName: boardFileName(pName, name, ""),
+      subtitle: `SUBMITTAL — ${sbText(SB_L.trackingList, lg)} · ${sub}`,
+      issuedLabel: `${sbText(SB_L.issuedOn, lg)} ${today2()}`,
+      head: g.head, widths: g.widths,
+      body: grouped ? grouped.body : g.body,
+      toneRows: grouped ? grouped.tone : g.tone,
+      sections: grouped ? grouped.secs : null,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
   };
@@ -20924,29 +21009,34 @@ function SubmittalCard({
         );
       })
     ),
-    // The whole board, every discipline at once. In the workbook that is a
-    // discipline column; on paper the disciplines follow one another down the
-    // page. Same two questions as everywhere else (30.8.26).
+    // Export from the main screen: the open folder's table, and every
+    // submittal together grouped by discipline (20.10.26).
     canEdit
       ? sbH(
           "div",
           { className: "sbExportBar sbExportAll" },
-          sbH("span", { className: "sbExportAllLabel" }, L("exportAll")),
+          chosen
+            ? sbH(
+                React15.Fragment,
+                null,
+                sbH("span", { className: "sbExportAllLabel" }, `${lang === "he" ? "\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d4\u05d8\u05d1\u05dc\u05d4:" : "This table:"} ${sbText(chosen, lang)}`),
+                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => runExcel("cat") },
+                  sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"),
+                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setAllAsk(() => (lg, who) => runPdf("cat", lg, who)) },
+                  sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"),
+                sbH("span", { className: "sbExportSep" })
+              )
+            : null,
+          sbH("span", { className: "sbExportAllLabel" }, (lang === "he" ? "\u05db\u05dc \u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd \u05dc\u05e4\u05d9 \u05ea\u05d7\u05d5\u05dd:" : "All submittals by discipline:")),
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => runExcel("all") },
+            sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"),
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setAllAsk(() => (lg, who) => runPdf("all", lg, who)) },
+            sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"),
           allNote ? sbH("span", { className: "lliPoNote" }, allNote) : null,
-          sbH(
-            "button",
-            { type: "button", className: "ghostBtn small", onClick: onAllExcel },
-            sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"
-          ),
-          sbH(
-            "button",
-            { type: "button", className: "ghostBtn small", onClick: () => setAllAsk(() => onAllPdf) },
-            sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"
-          ),
           allAsk
             ? sbH(PrintLangAsk, {
                 withAudience: true,
-                onPick: (lg, who) => { setAllAsk(null); allAsk(lg, who); },
+                onPick: (lg, who) => { const f = allAsk; setAllAsk(null); f(lg, who); },
                 onClose: () => setAllAsk(null)
               })
             : null
