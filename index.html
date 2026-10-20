@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "20.10.2026 · build 190";
+var APP_BUILD = "20.10.2026 · build 191";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18501,29 +18501,18 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
               style: { ...inS, background: "#f6f7f9" }
             });
           }
-          const names = [];
-          if (folderName) names.push(folderName);
-          BOARD_CATEGORIES.forEach((x) => {
-            const nm = sbText(x, lang);
-            if (nm && names.indexOf(nm) < 0) names.push(nm);
+          // Free text, no list (20.10.26).
+          return sbH("input", {
+            type: "text",
+            value: own || "",
+            placeholder: folderName,
+            autoComplete: "off",
+            onChange: (e) => {
+              const t = e.target.value;
+              set({ disciplineText: t.trim() === folderName ? "" : t });
+            },
+            style: inS
           });
-          return sbH(
-            React15.Fragment,
-            null,
-            sbH("input", {
-              type: "text",
-              value: own || "",
-              placeholder: folderName,
-              onChange: (e) => {
-                const t = e.target.value;
-                set({ disciplineText: t.trim() === folderName ? "" : t });
-              },
-              style: inS,
-              list: "sb-list-discipline"
-            }),
-            sbH("datalist", { id: "sb-list-discipline" },
-              names.map((nm) => sbH("option", { key: nm, value: nm })))
-          );
         })()
       ),
       field("submittedBy"),
@@ -20799,7 +20788,7 @@ function SubmittalCard({
               type: "button",
               className: "functionEditBtn",
               style: { minWidth: 240, justifyContent: "center", gap: 8, marginInlineStart: 10 },
-              onClick: () => setNewAsk({ cat: selected || "", disc: "", sub: "" })
+              onClick: () => setNewAsk({ cat: selected || "", disc: "" })
             },
             sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 10 } },
               sbH(Plus2, { size: 15, strokeWidth: 2.4 }),
@@ -20810,9 +20799,6 @@ function SubmittalCard({
     newAsk && canEdit ? (() => {
       const fold = SUBMITTAL_CATEGORIES.find((c) => c.key === newAsk.cat) || null;
       const he = lang === "he";
-      const discNames = [];
-      if (fold) discNames.push(sbText(fold, lang));
-      BOARD_CATEGORIES.forEach((x) => { const nm = sbText(x, lang); if (nm && discNames.indexOf(nm) < 0) discNames.push(nm); });
       const go = () => {
         if (!fold) return;
         const folderName = sbText(fold, lang);
@@ -20820,7 +20806,7 @@ function SubmittalCard({
         setNewAsk(null);
         startCreate({
           code: "", text: "",
-          subCategory: newAsk.sub.trim() ? sbSubcatCanon(newAsk.sub, fold.key) : "",
+          subCategory: "",
           disciplineText: disc && disc !== folderName ? disc : ""
         }, fold);
       };
@@ -20839,21 +20825,11 @@ function SubmittalCard({
               sbH("option", { value: "" }, he ? "\u05d1\u05d7\u05e8\u05d9 \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4" : "Choose a folder"),
               SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))),
             sbH("label", { style: lbl }, L("discipline")),
-            sbH("input", { style: inp, type: "text", list: "sb-new-disc", value: newAsk.disc,
+            // Free text, no list (20.10.26). Left empty, the folder's name is used.
+            sbH("input", { style: inp, type: "text", value: newAsk.disc, autoComplete: "off",
               placeholder: fold ? sbText(fold, lang) : "",
-              // Typing a folder's own name picks that folder too.
-              onChange: (e) => {
-                const t = e.target.value;
-                const n = t.trim().toLowerCase();
-                const hit = n ? SUBMITTAL_CATEGORIES.find((c) => [c.he, c.en].some((x) => String(x || "").trim().toLowerCase() === n)) : null;
-                setNewAsk({ ...newAsk, disc: t, cat: hit ? hit.key : newAsk.cat });
-              } }),
-            sbH("datalist", { id: "sb-new-disc" }, discNames.map((nm) => sbH("option", { key: nm, value: nm }))),
-            sbH("label", { style: lbl }, L("subCategory")),
-            sbH("input", { style: inp, type: "text", list: "sb-new-sub", value: newAsk.sub,
-              onChange: (e) => setNewAsk({ ...newAsk, sub: e.target.value }) }),
-            sbH("datalist", { id: "sb-new-sub" },
-              (fold ? sbSubcats(fold.key) : []).map((r) => sbH("option", { key: r[0], value: he ? r[1] : r[0] }))),
+              onChange: (e) => setNewAsk({ ...newAsk, disc: e.target.value }),
+              onKeyDown: (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } } }),
             sbH("div", { className: "printAskBtns", style: { marginTop: 14 } },
               sbH("button", { type: "button", className: "sgBtn", disabled: !fold, style: fold ? null : { opacity: 0.45 }, onClick: go }, L("create")),
               sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setNewAsk(null) }, he ? "\u05d1\u05d9\u05d8\u05d5\u05dc" : "Cancel"))
