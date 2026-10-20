@@ -803,7 +803,7 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
 <table class="info">
 ${infoRow(L("projectName"), val(rec.projectName), L("date"), sbEsc(sbFmtDate(rec.date)))}
 ${infoRow(L("contractor"), val(rec.contractor), L("requiredApprovalDate"), sbEsc(sbFmtDate(rec.requiredApprovalDate)))}
-${infoRow(L("discipline"), sbEsc(cat ? sbText(cat, lang) : rec.discipline), L("submittedBy"), val(rec.submittedBy))}
+${infoRow(L("discipline"), sbEsc(String(rec.disciplineText || "").trim() || (cat ? sbText(cat, lang) : rec.discipline)), L("submittedBy"), val(rec.submittedBy))}
 ${infoRow(L("subCategory"), sbEsc(sbSubcatLabel(rec.subCategory || rec.scope, rec.category, lang)), L("email"), val(rec.email))}
 </table>
 
@@ -1751,6 +1751,8 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
 
 // ---------------------------------------------------------------------------
 //  Moved here 15.9.2026 (build 168) from index.html.
+//  sign.js — 20.10.2026, with site build 189: the printed form shows the
+//  discipline written on the submittal (disciplineText) when there is one.
 //
 //  The supervision page has to offer a supervisor the same signing the site
 //  offers the client, and for a drawing that means this screen: the marks on

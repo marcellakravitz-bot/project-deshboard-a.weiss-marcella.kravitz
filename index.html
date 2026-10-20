@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "20.10.2026 · build 187";
+var APP_BUILD = "20.10.2026 · build 189";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1816,6 +1816,21 @@ var pdfViewer = `
           background: #fff; text-align: center; outline: none;
         }
         .lliBoqRefIn:focus { border-color: var(--accent); }
+        /* 20.10.26 — her own categories for the dropdown. */
+        .lliCatsBox { max-width: 460px; width: calc(100vw - 32px); }
+        .lliCatsList { list-style: none; margin: 10px 0; padding: 0; max-height: 240px; overflow-y: auto;
+          border: 1px solid var(--line); border-radius: 8px; }
+        .lliCatsList li { display: grid; grid-template-columns: 1fr 1fr 28px; gap: 8px; align-items: center;
+          padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
+        .lliCatsList li:last-child { border-bottom: none; }
+        .lliCatsEn { color: var(--mist); }
+        .lliCatsDel { border: none; background: none; cursor: pointer; color: #d32f2f; display: inline-flex;
+          align-items: center; justify-content: center; padding: 2px; border-radius: 6px; }
+        .lliCatsDel:hover { background: #fbe3e3; }
+        .lliCatsNone { color: var(--mist); font-size: 12.5px; }
+        .lliCatsAdd { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; margin-top: 8px; }
+        .lliCatsAdd .sgBtn:disabled { opacity: .45; cursor: default; }
+        .lliCatsDup { color: #d32f2f; font-size: 12px; margin: 6px 0 0; }
         /* 20.10.26 — "no BOQ item" reads in red, wherever the row shows it. */
         .lliBoqRefIn.noBoq, .sbChkCodeIn.noBoq { color: #d32f2f; font-weight: 600; }
         .lliBoqRefIn::placeholder { color: var(--mist); font-size: 9.5px; }
@@ -7136,12 +7151,7 @@ ${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? 
     w.document.write(html);
     w.document.close();
     w.focus();
-    setTimeout(() => {
-      try {
-        w.print();
-      } catch (e) {
-      }
-    }, 700);
+    awPrintWhenPaged(w, 300);
   };
   const validTasks = (tasks || []).filter((t) => {
     const s = new Date(t.start).getTime();
@@ -7766,6 +7776,7 @@ function CardView({
   printBrand,
   contacts,
   contactsCatalog,
+  onChangeBoardCats,
   contactGroupVisibility,
   contractorAccent,
   submittals,
@@ -7891,7 +7902,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
       accept: cardKey === "look" ? "application/pdf" : void 0,
@@ -8250,6 +8261,8 @@ function catalogLabel(entry, lang) {
 // contacts would resolve to the wrong name.
 function mergeContactCatalog(stored, seed) {
   const out = { people: stored && stored.people || [] };
+  // The board categories she added (20.10.26). Kept as they were stored.
+  out.boardCats = stored && Array.isArray(stored.boardCats) ? stored.boardCats : [];
   const used = /* @__PURE__ */ new Set();
   ["disciplines", "roles", "companies"].forEach((key) => {
     const current = (stored && stored[key] || []).map((e) => ({ ...e }));
@@ -8635,12 +8648,7 @@ ${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? 
     w.document.write(html);
     w.document.close();
     w.focus();
-    setTimeout(() => {
-      try {
-        w.print();
-      } catch (e) {
-      }
-    }, 700);
+    awPrintWhenPaged(w, 300);
   };
   return /* @__PURE__ */ React15.createElement(
     "div",
@@ -10475,7 +10483,26 @@ function boardXlsxPlain(opts) {
 
 function printPaginateJs(stampText) {
   return `<script>
-(function () {
+// 20.10.26 — the pages are dealt only once every picture and the fonts have
+// arrived. Measured before that, a row with a picture was measured as a row
+// without one, grew after it was placed, and ran out under the frame — the
+// row cut in half at the foot of the page. window.__awPaged tells the opener
+// that the pages are final and it may print.
+window.__awPaged = false;
+(function (run) {
+  var done = false;
+  function go() { if (done) return; done = true; try { run(); } catch (e) {} window.__awPaged = true; }
+  var imgs = Array.prototype.slice.call(document.images || []);
+  var left = imgs.length + 1;
+  function one() { if (--left <= 0) go(); }
+  imgs.forEach(function (im) {
+    if (im.complete) one();
+    else { im.addEventListener("load", one); im.addEventListener("error", one); }
+  });
+  var fr = document.fonts && document.fonts.ready ? document.fonts.ready : null;
+  if (fr && fr.then) fr.then(one, one); else one();
+  setTimeout(go, 10000);
+})(function () {
   var STAMP = ${JSON.stringify(String(stampText || ""))};
   var src = document.getElementById("src");
   var out = document.getElementById("pages");
@@ -10589,8 +10616,22 @@ function printPaginateJs(stampText) {
     rec.body.style.paddingTop = Math.round(Math.min(gap / 2, rowH * 2.5)) + "px";
   });
   src.remove();
-})();
+});
 <\/script>`;
+}
+// Print a window built with printPaginateJs once its pages are dealt.
+function awPrintWhenPaged(w, minDelay) {
+  const t0 = Date.now();
+  const tick = () => {
+    let ready = false;
+    try { ready = !!w.__awPaged; } catch (e) { ready = true; }
+    if (ready || Date.now() - t0 > 12000) {
+      setTimeout(() => { try { w.print(); } catch (e) {} }, 250);
+      return;
+    }
+    setTimeout(tick, 150);
+  };
+  setTimeout(tick, minDelay || 300);
 }
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
@@ -10695,12 +10736,7 @@ ${footImg}</div><div id="pages"></div>${printPaginateJs(noStamp ? "" : printedSt
   // from there "Save as PDF" is one click, and nothing is downloaded that she
   // did not ask for (29.8.26). The delay lets the fonts and the pictures land
   // first; a print fired before them prints an empty frame.
-  setTimeout(() => {
-    try {
-      w.print();
-    } catch (e) {
-    }
-  }, 700);
+  awPrintWhenPaged(w, 300);
 }
 
 // src/cards/LliCard.jsx
@@ -10934,6 +10970,22 @@ var LLI_L = {
   },
   oamCol: { en: "O&M FILE", he: "תיק מתקן" },
   noCatSection: { en: "Other", he: "ללא תחום" },
+  myCats: { en: "Categories", he: "קטגוריות" },
+  myCatsTitle: { en: "Categories in the list", he: "קטגוריות ברשימה הנפתחת" },
+  myCatsNote: {
+    en: "A category added here appears in the category list of the LLI and SD tables, in every project.",
+    he: "קטגוריה שמוסיפים כאן מופיעה ברשימה הנפתחת של עמודת הקטגוריה בטבלאות LLI ו-SD, בכל הפרויקטים."
+  },
+  myCatsNone: { en: "No categories added yet.", he: "עדיין לא נוספו קטגוריות." },
+  myCatHe: { en: "Name in Hebrew", he: "שם בעברית" },
+  myCatEn: { en: "Name in English", he: "שם באנגלית" },
+  myCatAdd: { en: "Add", he: "הוספה" },
+  myCatDup: { en: "That name is already in the list.", he: "השם הזה כבר קיים ברשימה." },
+  myCatInUse: {
+    en: "Rows are filed under this category. Remove it anyway? They will show no category.",
+    he: "יש שורות שמסווגות לקטגוריה הזו. להסיר בכל זאת? הן יופיעו ללא קטגוריה."
+  },
+  catsClose: { en: "Close", he: "סגירה" },
   oamHint: {
     en: "Ticked rows go into the finish-materials O&M document. Every row starts ticked.",
     he: "שורות מסומנות נכנסות למסמך חומרי גמר - תיק מתקן. כל שורה מתחילה מסומנת."
@@ -10983,7 +11035,7 @@ var LLI_L = {
   }
 };
 
-function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole }) {
+function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -10995,6 +11047,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // The O&M document is asked two questions on the way out: which file, and
   // then which language — one window after the other (15.10.26).
   const [oamAsk, setOamAsk] = useState6(false);
+  // The window where she adds categories to the dropdown (20.10.26).
+  const [catsOpen, setCatsOpen] = useState6(false);
+  const [newCatHe, setNewCatHe] = useState6("");
+  const [newCatEn, setNewCatEn] = useState6("");
   const [oamRun, setOamRun] = useState6(null);
   // A date she copied off one cell, waiting to be dropped into others. It is
   // held in the board, not in the system clipboard: the dates in this table go
@@ -11495,29 +11551,55 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // by the chapter and the order she put the rows in. On paper each discipline
   // then starts its own page and carries its name over every page it fills
   // (15.10.26).
+  // 20.10.26 — ordered by the category written in the row's own column, not
+  // by chapter. Inside a category: its sub-categories in the catalogue's order
+  // (a row with the category alone comes first), and then the order the rows
+  // stand in on the screen. Each category starts a page of its own.
   const oamRows = () => {
     const list = all.filter((r) => !isRemoved(r) && inOam(r));
-    const out = [];
+    // Where each row stands on the screen: chapter by chapter, and inside a
+    // chapter the order she dragged them into — the same rule the table uses.
+    const byCh = [];
+    list.forEach((r) => {
+      const ch = homeOf(r);
+      const key = ch ? ch.code : "manual";
+      let g = byCh.find((x) => x.key === key);
+      if (!g) { g = { key, rows: [] }; byCh.push(g); }
+      g.rows.push(r);
+    });
+    const screenPos = {};
+    let n = 0;
+    byCh.forEach((g) => {
+      g.rows.forEach((r, i2) => { r.oamPos = i2; });
+      g.rows.slice().sort((x, y) => {
+        const oa = lliRowOf(data, x.code).order, ob = lliRowOf(data, y.code).order;
+        const va = oa == null ? x.oamPos : oa, vb = ob == null ? y.oamPos : ob;
+        return va === vb ? x.oamPos - y.oamPos : va - vb;
+      }).forEach((r) => { screenPos[r.code] = n++; });
+    });
     const catOrder = (r) => {
       const i = BOARD_CATEGORIES.findIndex((c) => c.key === r.category);
       return i < 0 ? BOARD_CATEGORIES.length : i;
     };
-    list.slice().sort((a, b) => catOrder(a) - catOrder(b)).forEach((r) => {
-      const ch = homeOf(r);
-      const key = `${r.category || "~"}|${ch ? ch.code : "manual"}`;
-      let g = out.find((x) => x.key === key);
-      if (!g) { g = { key, rows: [] }; out.push(g); }
-      g.rows.push(r);
-    });
-    out.forEach((g) => {
-      g.rows.forEach((r, i2) => { r.oamPos = i2; });
-      g.rows.sort((a, b) => {
-        const oa = lliRowOf(data, a.code).order, ob = lliRowOf(data, b.code).order;
-        const va = oa == null ? a.oamPos : oa, vb = ob == null ? b.oamPos : ob;
-        return va === vb ? a.oamPos - b.oamPos : va - vb;
-      });
-    });
-    return out.reduce((acc, g) => acc.concat(g.rows), []);
+    const subOrder = (r) => {
+      const sub = String(lliRowOf(data, r.code).subCategory || "").trim();
+      if (!sub) return -1;
+      const i = sbSubcats(r.category).findIndex((x) => x[0] === sub || x[1] === sub);
+      return i < 0 ? 9999 : i;
+    };
+    return list.slice().sort((x, y) =>
+      (catOrder(x) - catOrder(y)) || (subOrder(x) - subOrder(y)) || (screenPos[x.code] - screenPos[y.code]));
+  };
+  // The full wording of the BOQ item a row stands for, when there is one: the
+  // representative line of a BOQ product, or the line a hand-made row names.
+  const oamBoqWording = (r, v, lg) => {
+    if (r.source === "boq" && r.product) {
+      const lead = r.product.lead || null;
+      return (lead ? boqText(lead, lg) : "") || boqText(r.product, lg);
+    }
+    const ref = boqRefCode(v.boqRef);
+    const line = ref ? boqLineOf(ref) : null;
+    return line ? boqText(line, lg) : "";
   };
   const oamGrid = (printLang) => {
     const lg = printLang === "en" ? "en" : "he";
@@ -11534,10 +11616,15 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       // The heading the paginator puts over the page. A row with no discipline
       // is gathered under one plain heading rather than on a page of its own.
       secs.push(c ? sbText(c, lg) : T("noCatSection"));
+      // The category cell says what the column says: the sub-category when
+      // one was picked, the category otherwise.
+      const sub = String(v.subCategory || "").trim();
       body.push([
-        c ? sbText(c, lg) : "",
+        c ? (sub ? sbSubcatLabel(sub, r.category, lg) : sbText(c, lg)) : "",
         v.typeMark || "",
-        v.desc || (r.product ? boqText(r.product, lg) : r.title) || "",
+        // What she wrote on the row, and otherwise the item's full wording
+        // from the bill of quantities — not the short family name (20.10.26).
+        String(v.desc || "").trim() || oamBoqWording(r, v, lg) || r.title || "",
         v.supplier || boardTradeCompany(contacts, contactsCatalog, r.category, lg) || "",
         ""
       ]);
@@ -11954,6 +12041,65 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onExcel) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
+      // Her own categories for the dropdown (20.10.26).
+      canEdit && onChangeBoardCats
+        ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setCatsOpen(true) },
+            sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("myCats"))
+        : null,
+      catsOpen && onChangeBoardCats ? (() => {
+        const mine = ((contactsCatalog || {}).boardCats || []).filter((c) => c && c.key);
+        const norm = (t) => String(t || "").trim().toLowerCase();
+        const he = newCatHe.trim(), en = newCatEn.trim();
+        const dup = (he || en) && BOARD_CATEGORIES.some((c) =>
+          (he && (norm(c.he) === norm(he) || norm(c.en) === norm(he))) ||
+          (en && (norm(c.he) === norm(en) || norm(c.en) === norm(en))));
+        const add = () => {
+          if (!(he || en) || dup) return;
+          const key = `c-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+          onChangeBoardCats(mine.concat([{ key, he: he || en, en: en || he }]));
+          setNewCatHe(""); setNewCatEn("");
+        };
+        const drop = (c) => {
+          const used = all.some((r) => r.category === c.key);
+          if (used && !window.confirm(L("myCatInUse"))) return;
+          onChangeBoardCats(mine.filter((x) => x.key !== c.key));
+        };
+        const onKey = (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } };
+        return createPortal(
+          sbH(
+            "div",
+            { className: "printAskScrim", onClick: () => setCatsOpen(false) },
+            sbH(
+              "div",
+              { className: "printAskBox lliCatsBox", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+              sbH("h3", null, L("myCatsTitle")),
+              sbH("p", null, L("myCatsNote")),
+              mine.length
+                ? sbH("ul", { className: "lliCatsList" }, mine.map((c) => sbH(
+                    "li", { key: c.key },
+                    sbH("span", null, c.he),
+                    sbH("span", { className: "lliCatsEn", dir: "ltr" }, c.en),
+                    sbH("button", { type: "button", className: "lliCatsDel", "aria-label": "\u00d7", onClick: () => drop(c) },
+                      sbH(X3, { size: 14, strokeWidth: 2.2 }))
+                  )))
+                : sbH("p", { className: "lliCatsNone" }, L("myCatsNone")),
+              sbH(
+                "div",
+                { className: "lliCatsAdd" },
+                sbH("input", { className: "lliIn", type: "text", dir: "rtl", value: newCatHe, placeholder: L("myCatHe"),
+                  onChange: (e) => setNewCatHe(e.target.value), onKeyDown: onKey }),
+                sbH("input", { className: "lliIn", type: "text", dir: "ltr", value: newCatEn, placeholder: L("myCatEn"),
+                  onChange: (e) => setNewCatEn(e.target.value), onKeyDown: onKey }),
+                sbH("button", { type: "button", className: "sgBtn", disabled: !(he || en) || !!dup, onClick: add }, L("myCatAdd"))
+              ),
+              dup ? sbH("p", { className: "lliCatsDup" }, L("myCatDup")) : null,
+              sbH("div", { className: "printAskBtns" },
+                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setCatsOpen(false) }, L("catsClose")))
+            )
+          ),
+          document.body
+        );
+      })() : null,
       // The second document this board can produce. Its own button, because it
       // is a different document and not a different view of this one.
       canEdit
@@ -17122,6 +17268,25 @@ var BOARD_ONLY_CATEGORIES = [
 ];
 // What the two boards offer. The submittal screen keeps SUBMITTAL_CATEGORIES.
 var BOARD_CATEGORIES = SUBMITTAL_CATEGORIES.concat(BOARD_ONLY_CATEGORIES);
+// 20.10.26 — categories she adds herself, from the top of the LLI table. They
+// live in the global catalogue (one list for every project) and are appended
+// to the two boards' list here, so every dropdown, chip, print and lookup that
+// already reads BOARD_CATEGORIES sees them with no change of its own. The
+// submittal folders are not touched: a folder has a number and a form, and a
+// category typed in a box has neither.
+function boardSetCustomCats(list) {
+  for (let i = BOARD_CATEGORIES.length - 1; i >= 0; i--) {
+    if (BOARD_CATEGORIES[i].custom) BOARD_CATEGORIES.splice(i, 1);
+  }
+  (Array.isArray(list) ? list : []).forEach((c) => {
+    if (!c || !c.key || !(c.he || c.en)) return;
+    if (BOARD_CATEGORIES.some((x) => x.key === c.key)) return;
+    BOARD_CATEGORIES.push({
+      key: c.key, he: c.he || c.en, en: c.en || c.he,
+      icon: Hammer2, boardOnly: true, custom: true
+    });
+  });
+}
 function boardCategoryOf(key) {
   return BOARD_CATEGORIES.find((c) => c.key === key) || null;
 }
@@ -17155,7 +17320,9 @@ var BOARD_TRADE_WORDS = {
 function boardTradeScore(text, key) {
   const t = String(text || "").toLowerCase();
   if (!t) return 0;
-  const words = BOARD_TRADE_WORDS[key] || [];
+  const own = BOARD_TRADE_WORDS[key];
+  const mine = own ? null : BOARD_CATEGORIES.find((c) => c.key === key && c.custom);
+  const words = own || (mine ? [mine.he, mine.en].filter((w) => String(w || "").trim().length > 1) : []);
   let best = 0;
   words.forEach((w) => {
     if (t.indexOf(String(w).toLowerCase()) >= 0) best = Math.max(best, w.length);
@@ -18318,15 +18485,46 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         "label",
         { className: "sbField" },
         sbH("span", { className: "sbFieldLbl" }, L("discipline")),
-        sbH("input", {
-          type: "text",
-          value: (() => {
-            const c = SUBMITTAL_CATEGORIES.find((x) => x.key === d.category);
-            return c ? sbText(c, lang) : d.discipline || "";
-          })(),
-          readOnly: true,
-          style: { ...inS, background: "#f6f7f9" }
-        })
+        // 20.10.26 — on a submittal that does not come from a BOQ line the
+        // discipline is hers to write: the folder's name is offered first,
+        // with every other discipline in the list, but anything typed stands.
+        // The folder and the number do not move — only the word printed in
+        // this box. Clearing the box puts the folder's name back.
+        (() => {
+          const c = SUBMITTAL_CATEGORIES.find((x) => x.key === d.category);
+          const folderName = c ? sbText(c, lang) : d.discipline || "";
+          const own = String(d.disciplineText || "");
+          const free = !ro && !d.boqCode;
+          if (!free) {
+            return sbH("input", {
+              type: "text", value: own.trim() || folderName, readOnly: true,
+              style: { ...inS, background: "#f6f7f9" }
+            });
+          }
+          const names = [];
+          if (folderName) names.push(folderName);
+          BOARD_CATEGORIES.forEach((x) => {
+            const nm = sbText(x, lang);
+            if (nm && names.indexOf(nm) < 0) names.push(nm);
+          });
+          return sbH(
+            React15.Fragment,
+            null,
+            sbH("input", {
+              type: "text",
+              value: own || "",
+              placeholder: folderName,
+              onChange: (e) => {
+                const t = e.target.value;
+                set({ disciplineText: t.trim() === folderName ? "" : t });
+              },
+              style: inS,
+              list: "sb-list-discipline"
+            }),
+            sbH("datalist", { id: "sb-list-discipline" },
+              names.map((nm) => sbH("option", { key: nm, value: nm })))
+          );
+        })()
       ),
       field("submittedBy"),
       // Sub-category: picked from the catalogue for this discipline, but still
@@ -21154,7 +21352,7 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
     w.document.write(html);
     w.document.close();
     w.focus();
-    setTimeout(() => w.print(), 400);
+    awPrintWhenPaged(w, 300);
   };
   const grayPill = { display: "inline-flex", alignItems: "center", gap: 6, background: "#e9ebee", color: "#2b3440", border: "1px solid var(--line)", borderRadius: 999, padding: "9px 18px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" };
   const th = (label) => /* @__PURE__ */ React15.createElement("th", { style: headS }, label);
@@ -22342,6 +22540,11 @@ function ProjectDashboardApp() {
   // Global contacts catalog — one per account, shared by every project.
   const [contactsCatalog, setContactsCatalog] = useState6(() => buildContactCatalogSeed());
   const [catalogLoaded, setCatalogLoaded] = useState6(false);
+  // Her own board categories join the list before anything renders with it.
+  boardSetCustomCats(contactsCatalog && contactsCatalog.boardCats);
+  // Only the LLI table writes them. The contacts screen hands back a catalogue
+  // copied when it opened, so its list is never allowed to replace this one.
+  const onChangeBoardCats = (next) => setContactsCatalog((cur) => ({ ...cur, boardCats: next }));
   useEffect5(() => {
     if (!isAuthenticated) return;
     (async () => {
@@ -23971,6 +24174,7 @@ function ProjectDashboardApp() {
         onRemoveSchedule: handleScheduleRemove,
         contacts: activeExtras.contacts || [],
         contactsCatalog,
+        onChangeBoardCats: appRole === "admin" ? onChangeBoardCats : null,
         contactGroupVisibility: activeExtras.contactGroupVisibility || {},
         // Fixed navy, not the project colour and not the contractor's saved accent.
         contractorAccent: CONTACTS_DOC_ACCENT,
@@ -24037,7 +24241,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: setContactsCatalog, contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [] })), contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
