@@ -453,7 +453,7 @@ var SB_L = {
   subCategory: { en: "Sub-category", he: "תת קטגוריה" },
   email: { en: "E-mail", he: "דוא\"ל" },
   equipment: { en: "EQUIPMENT / MATERIAL DETAILS", he: "פרטי ציוד / חומר" },
-  typeId: { en: "Type ID", he: "מזהה סוג" },
+  typeId: { en: "Type ID", he: "איפיון" },
   itemDescription: { en: "Item Description", he: "תיאור הפריט" },
   modelCode: { en: "Model / Product Code", he: "דגם / מק\"ט מוצר" },
   manufacturer: { en: "Manufacturer", he: "יצרן" },
@@ -662,13 +662,11 @@ var SB_L = {
 };
 var SB_DOC_ROWS = [
   { key: "datasheet", en: "Technical Datasheet", he: "מפרט טכני" },
-  { key: "catalogue", en: "Product Catalogue", he: "קטלוג מוצר" },
   { key: "sample", en: "Sample / Material Board", he: "דוגמה / לוח חומרים" },
-  { key: "shopDrawing", en: "Shop Drawing (SD)", he: "תוכנית ייצור / Shop Drawing (SD)" },
-  { key: "certificates", en: "Certificates and Compliance Documents", he: "תעודות ואישורי התאמה" },
-  { key: "testReports", en: "Test Reports (if applicable)", he: "דוחות בדיקה (אם רלוונטי)" },
-  { key: "warranty", en: "Warranty Certificate", he: "תעודת אחריות" },
-  { key: "sustainability", en: "Sustainability Documentation (EPD / HPD, if applicable)", he: "מסמכי קיימות (EPD / HPD, אם רלוונטי)" },
+  { key: "shopDrawing", en: "SD", he: "SD" },
+  { key: "certificates", en: "Certificates and Standards Approvals", he: "תעודות ואישורי תקנים" },
+  { key: "testReports", en: "Test Reports", he: "דוחות בדיקה" },
+  { key: "sustainability", en: "Sustainability Documentation (EPD / HPD / low VOC)", he: "מסמכי קיימות (EPD / HPD / low VOC)" },
   { key: "installation", en: "Installation Instructions", he: "הוראות התקנה" },
   { key: "other", en: "Other", he: "אחר" }
 ];
@@ -733,15 +731,13 @@ function sbReviewSignature(rv, registry) {
   if (rv && rv.signatureImage) return rv.signatureImage;
   return sbSignatureOf(registry, rv && rv.signedByEmail);
 }
+// The name the PDF is saved under (21.10.26): "<project> submittal <number> -
+// <type mark>". Quote marks are dropped, so נדל"ן is saved as נדלן.
 function sbPrintName(rec, lang) {
-  const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === rec.category) || null;
-  const parts = [
-    sanitizeFileNamePart(rec.projectName || ""),
-    cat ? sanitizeFileNamePart(sbText(cat, lang === "en" ? "en" : "he")) : "",
-    `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0}`,
-    sbFmtDate(new Date().toISOString().slice(0, 10)).replace(/\//g, ".")
-  ].filter(Boolean);
-  return parts.join(" - ");
+  const clean = (x) => sanitizeFileNamePart(String(x || "").replace(/["'\u05f3\u05f4`\u201c\u201d\u2018\u2019]/g, "")).trim();
+  const head = [clean(rec.projectName), "submittal", sbNumber(rec.category, rec.seq)].filter(Boolean).join(" ");
+  const mark = clean(rec.typeId);
+  return mark ? `${head} - ${mark}` : head;
 }
 function sbEsc(s) {
   return String(s == null ? "" : s).replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[ch]);
