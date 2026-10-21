@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "21.10.2026 · build 196";
+var APP_BUILD = "21.10.2026 · build 197";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2469,6 +2469,70 @@ var pdfViewer = `
           flex-wrap: wrap; margin-top: 12px;
         }
         .sbExportAll { margin: 16px 0 4px; }
+        /* ---------- Submittal board, 21.10.26 ---------- */
+        .sbTopCreate { display: flex; justify-content: center; margin: 4px 0 14px; }
+        .sbCatBar {
+          display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
+          max-width: 1180px; margin: 0 auto; padding: 5px; border: 1px solid var(--line);
+          border-radius: 12px; background: #f6f8fb;
+        }
+        .sbCatBtn {
+          border: 1px solid transparent; background: transparent; color: var(--steel);
+          border-radius: 8px; padding: 7px 13px; font-family: inherit; font-size: 13px; font-weight: 700;
+          cursor: pointer; white-space: nowrap;
+        }
+        .sbCatBtn:hover { background: #fff; border-color: var(--line); color: var(--accent-ink); }
+        .sbCatBtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+        .sbCatBtn.all { font-weight: 800; }
+        .sbExportTwo { margin: 12px 0 0; }
+        .sbExpBtn {
+          display: inline-flex; align-items: center; gap: 7px; min-width: 120px; justify-content: center;
+          border: 1px solid var(--line); background: #fff; color: var(--steel); border-radius: 10px;
+          padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
+        }
+        .sbExpBtn.xls { color: #1d6f42; border-color: #b9dcc7; }
+        .sbExpBtn.xls:hover { background: #eaf6ef; }
+        .sbExpBtn.pdf { color: #b42318; border-color: #f0c6c0; }
+        .sbExpBtn.pdf:hover { background: #fdf1ef; }
+        .sbBoardTable th.sbColTh { white-space: nowrap; }
+        .sbColThIn { display: inline-flex; align-items: center; gap: 5px; }
+        .sbColTick { width: 13px; height: 13px; margin: 0; cursor: pointer; accent-color: var(--accent, #0F3460); }
+        .sbBoardTable th.sbColTh.off > .sbColThIn > span { opacity: .45; text-decoration: line-through; }
+        .sbBoardTable tbody tr.sbBandRow td {
+          background: var(--accent); color: #fff; font-weight: 800; font-size: 12.5px;
+          letter-spacing: .3px; padding: 6px 9px; text-align: center;
+        }
+        .sbBoardTable tbody tr.sbBandRow:hover td { background: var(--accent); }
+        .sbBoardTable td.sbChkCode { white-space: nowrap; }
+        .sbBoardTable td.sbChkCode .sbRevToggle { margin-inline-start: 4px; }
+        .sbThumbCell { width: 64px; }
+        .sbThumb { display: block; margin: 0 auto; max-width: 60px; max-height: 44px; object-fit: contain; border-radius: 4px; }
+        .sbBoardTable td.sbDescCell { min-width: 190px; }
+        .sbBoardTable td.sbItemCell { min-width: 70px; }
+        /* The row's buttons: a block of equal squares, the version across the
+           top (21.10.26). */
+        .sbBoardTable td.sbActions { white-space: normal; width: 74px; padding: 5px 6px; }
+        .sbActGrid { display: grid; grid-template-columns: 28px 28px; gap: 4px; justify-content: center; }
+        .sbSq {
+          width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+          border: 1px solid var(--line); background: #fff; color: var(--steel); border-radius: 7px; cursor: pointer;
+        }
+        .sbSq:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+        .sbSq:disabled { opacity: .35; cursor: default; background: #fff; border-color: var(--line); color: var(--steel); }
+        .sbSq.send { color: #1a7f4b; border-color: #b9dcc7; }
+        .sbSq.send:hover:not(:disabled) { background: #e6f4ec; border-color: #1a7f4b; color: #1a7f4b; }
+        .sbSq.del { color: #d02f2f; border-color: #f0c6c0; }
+        .sbSq.del:hover:not(:disabled) { background: #fdecec; border-color: #d02f2f; color: #d02f2f; }
+        .sbRevLong {
+          grid-column: 1 / -1; height: 26px; display: inline-flex; align-items: center; justify-content: center; gap: 3px;
+          border: 1px solid var(--line); background: #fff; color: var(--steel); border-radius: 7px; cursor: pointer;
+          font-family: inherit; font-size: 11.5px; font-weight: 800; white-space: nowrap; padding: 0 4px;
+        }
+        .sbRevLong:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+        .sbRevLong.sign { background: #14181f; border-color: #14181f; color: #fff; }
+        .sbSaveNow { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 22px 0 6px; flex-wrap: wrap; }
+        .sbSaveMsg { font-size: 12.5px; font-weight: 700; color: #1a7f4b; }
+        .sbSaveMsg.err { color: #c0392b; }
         .sbPdfCols { display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
           gap: 6px 12px; flex-basis: 100%; font-size: 12.5px; color: #6b7280; margin-top: 8px; }
         .sbPdfColsLbl { font-weight: 700; }
@@ -19279,44 +19343,24 @@ function sbGroupBySection(g) {
   };
 };
 function sbBoardGrid(opts) {
-  const res = sbBoardGridRaw(opts);
-  return opts.forPdf ? sbDropCols(res, sbPdfHidden()) : res;
+  // The ticks in the column titles decide what is printed, on paper and in
+  // the workbook alike (21.10.26).
+  return sbDropCols(sbBoardGridRaw(opts), sbPdfHidden());
 }
-function sbBoardGridRaw(opts) {
-  const { list, boqData, boqFlags, chkOff, lang, audience, categories, withCategory, tradeFor, lliRows, forPdf } = opts;
-  // The ordering board, so the printed checklist says exactly what the screen
-  // says: her own mark and wording, and the lines she added there by hand
-  // (15.10.26).
+// -----------------------------------------------------------------------------
+// 21.10.26 — ONE list of rows for the submittal board, the same for the screen,
+// the workbook and the PDF. Per discipline: the lines of the bill of
+// quantities this discipline owes a submittal on (and the rows she added by
+// hand on the ordering board and ticked SUB), each with the submittal that
+// answers it; then every submittal that answers no line. The checklist used to
+// be a table of its own above the list; it is now simply the first rows of it.
+// -----------------------------------------------------------------------------
+function sbBoardRows(opts) {
+  const { list, boqData, boqFlags, chkOff, lliRows, categories, lang } = opts;
   const lli = lliRows || {};
-  const L = (k) => sbText(SB_L[k], lang);
-  const today = new Date().toISOString().slice(0, 10);
   const auto = (boqData || {}).flags || {};
-  const head = [];
-  const widths = [];
-  const types = [];
-  const keys = [];
-  const col = (key, label, width, kind) => { keys.push(key); head.push(label); widths.push(width); types.push(kind); };
-  if (withCategory) col("catCol", L("catCol"), 14, "text");
-  col("submittalNo", L("submittalNo"), 15, "text");
-  // On paper (20.10.26): the type mark right after the number, and the
-  // submittal's own photo where the file count and the supplier used to be.
-  col("typeCol", L("typeCol"), 12, "text");
-  col("chkItem", L("chkItem"), 14, "text");
-  col("chkDesc", L("chkDesc"), 40, "text");
-  col("imgCol", sbText({ en: "Photo", he: "\u05ea\u05de\u05d5\u05e0\u05d4" }, lang), 16, "text");
-  if (!forPdf) col("docsCol", L("docsCol"), 9, "number");
-  if (!forPdf) col("supplierCol", L("supplierCol"), 20, "text");
-  col("sentCol", L("sentCol"), 13, "date");
-  col("targetCol", L("targetCol"), 14, "date");
-  col("status", L("status"), 16, "text");
-  col("clientOkCol", L("clientOkCol"), 14, "date");
-
-  const body = [];
-  const tone = [];
-  // The discipline each row is filed under: what she wrote in the submittal's
-  // own discipline box, otherwise the folder it lives in (20.10.26).
-  const secs = [];
-  const rowLead = [];
+  const norm = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
+  const newest = (arr) => arr.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
   // A field filled on an earlier revision and left blank on the newest one
   // still belongs to the submittal: the newest revision that has it wins.
   const famVal = (rec, get) => {
@@ -19326,149 +19370,155 @@ function sbBoardGridRaw(opts) {
       .sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0));
     return fam.length ? get(fam[0]) : null;
   };
-  const discOf = (rec, cat) => String(famVal(rec, (x) => String(x.disciplineText || "").trim()) || "").trim() || sbText(cat, lang);
-  const isOk = (st) => st === "approved" || st === "approvedNoted" || st === "approved_as_noted";
+  const approvedOf = (arr) => arr
+    .filter((x) => { const st = sbStatusOf(x); return st === "approved" || st === "approvedNoted"; })
+    .sort((a, b) => String(sbSignedAt(b) || "").localeCompare(String(sbSignedAt(a) || "")))[0] || null;
+  const out = [];
   (categories || []).forEach((cat) => {
     const off = ((chkOff || {})[cat.key]) || {};
-    // Submittals already reported on a checklist line, so the ones that are
-    // not can follow underneath — they are on the screen, so they are on the
-    // paper. Leaving them out is what made the export say "nothing to export".
-    const usedIds = {};
-    const groups = boqProducts(boqData, auto, boqFlags, "submittal", cat.key).filter((pr) => !off[pr.code]);
-    const mine = (list || []).filter((x) => x.category === cat.key);
-    const trade = tradeFor ? tradeFor(cat.key) : "";
-    groups.forEach((pr) => {
-      // Everything filed against this product, newest revision first.
-      const codes = [pr.code].concat((pr.items || []).map((it) => it.code));
-      const hits = mine.filter((x) => x.boqCode && codes.indexOf(x.boqCode) >= 0);
-      const lead = hits.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
-      const st = lead ? sbStatusOf(lead) : null;
-      const signed = lead ? sbSignedAt(lead) : null;
-      const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
-      const docs = hits.reduce((n, x) => n + ((x.attachments || []).length), 0);
-      // The fan she set for all three boards: signed off green, in somebody's
-      // hands orange, past its approval date and still not approved red.
-      hits.forEach((x) => { usedIds[x.id] = true; });
-      secs.push(discOf(lead, cat)); rowLead.push(lead);
-      tone.push(
-        signed || isOk(st) ? "ok"
-          : (due && due < today && !signed) ? "late"
-          : lead && lead.sent ? "wait"
-          : ""
-      );
-      const own = lli[pr.code] || {};
-      const cells = {
-        catCol: sbText(cat, lang),
-        submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
-        chkItem: pr.code,
-        chkDesc: String(own.desc || "").trim()
-          || (lead && (lead.itemDescription || lead.typeId))
-          || boqText({ he: pr.he, en: pr.en }, lang),
-        docsCol: docs || "",
-        supplierCol: (lead && lead.supplier) || trade || "",
-        sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
-        targetCol: due ? sbFmtDate(due) : "",
-        status: lead ? (lead.sent ? sbStatusLabel(st, lang) : L("draft")) : L("chkMissing"),
-        clientOkCol: signed ? sbFmtDate(signed.slice(0, 10)) : ""
-      };
-      body.push(keys.map((k) => cells[k]));
-    });
-    // The lines she added by hand on the ordering board and ticked SUB. They
-    // are on the screen's checklist, so they are on the printed one.
+    const mine = (list || []).filter((s) => s.category === cat.key);
+    const used = {};
+    // Attached by the item number the submittal was started from. Records made
+    // before the bill of quantities existed still match on an exact
+    // sub-category, so nothing that was already filed goes missing.
+    const attached = (code, node) => {
+      const names = node ? [norm(boqText(node, "en")), norm(boqText(node, "he"))].filter(Boolean) : [];
+      return mine.filter((s) => {
+        if (s.boqCode) return s.boqCode === code;
+        if (!names.length) return false;
+        const picked = [
+          norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "en")),
+          norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "he"))
+        ].filter(Boolean);
+        return picked.some((c) => names.indexOf(c) >= 0);
+      });
+    };
+    const uniq = (arr) => {
+      const seen = {};
+      return arr.filter((s) => (s && !seen[s.id] ? (seen[s.id] = true) : false));
+    };
+    const finish = (r) => {
+      r.hits.forEach((x) => { used[x.id] = true; });
+      r.lead = newest(r.hits);
+      r.approved = approvedOf(r.hits);
+      r.status = r.approved ? sbStatusOf(r.approved) : (r.lead ? sbStatusOf(r.lead) : null);
+      r.signed = r.approved ? sbSignedAt(r.approved) : (r.lead ? sbSignedAt(r.lead) : null);
+      out.push(r);
+    };
+    // Priced lines, one row per product.
+    boqProducts(boqData, auto, boqFlags, "submittal", cat.key)
+      .filter((p) => !off[p.code])
+      .forEach((p) => {
+        const node = { he: p.he, en: p.en };
+        const perLine = (p.items || []).map((it) => {
+          const n = { he: it.he, en: it.en };
+          return { item: it, label: it.code, node: n, hits: attached(it.code, n) };
+        });
+        const own = lli[p.code] || {};
+        finish({
+          key: `${cat.key}:${p.code}`, cat, kind: "line", code: p.code, node, product: p,
+          lines: perLine.length > 1 ? perLine : [],
+          hits: uniq(attached(p.code, node).concat(perLine.flatMap((l) => l.hits))),
+          ownMark: String(own.typeMark || "").trim(), ownDesc: String(own.desc || "").trim()
+        });
+      });
+    // The rows she added by hand on the ordering board and ticked SUB.
     Object.keys(lli)
-      .filter((k) => k.indexOf("m-") === 0 && lli[k] && lli[k].alsoSubmittal
-        && (lli[k].category || null) === cat.key && !off[k])
+      .filter((k) => k.indexOf("m-") === 0 && lli[k] && lli[k].alsoSubmittal && (lli[k].category || null) === cat.key && !off[k])
       .forEach((k) => {
         const v = lli[k] || {};
+        const text = v.desc || "";
+        const node = { he: text, en: text };
         const ref = boqRefCode(v.boqRef);
-        const hits = mine.filter((x) => x.boqCode && (x.boqCode === k || (ref && x.boqCode === ref)));
-        const lead = hits.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
-        const st = lead ? sbStatusOf(lead) : null;
-        const signed = lead ? sbSignedAt(lead) : null;
-        const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
-        const docs = hits.reduce((n, x) => n + ((x.attachments || []).length), 0);
-        hits.forEach((x) => { usedIds[x.id] = true; });
-        secs.push(discOf(lead, cat)); rowLead.push(lead);
-        tone.push(
-          signed || isOk(st) ? "ok"
-            : (due && due < today && !signed) ? "late"
-            : lead && lead.sent ? "wait"
-            : ""
-        );
-        const cells = {
-          catCol: sbText(cat, lang),
-          submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
-          chkItem: isNoBoqRef(v.boqRef) ? boqRefShown(v.boqRef, lang) : ref,
-          chkDesc: String(v.desc || "").trim() || (lead && (lead.itemDescription || lead.typeId)) || "",
-          docsCol: docs || "",
-          supplierCol: (lead && lead.supplier) || v.supplier || trade || "",
-          sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
-          targetCol: due ? sbFmtDate(due) : "",
-          status: lead ? (lead.sent ? sbStatusLabel(st, lang) : L("draft")) : L("chkMissing"),
-          clientOkCol: signed ? sbFmtDate(signed.slice(0, 10)) : ""
-        };
-        body.push(keys.map((k2) => cells[k2]));
+        finish({
+          key: `${cat.key}:${k}`, cat, kind: "line", code: k, node, fromLli: true,
+          product: { code: k, he: text, en: text, items: [], flags: {} }, lines: [],
+          hits: uniq(attached(k, node).concat(ref ? attached(ref, node) : [])),
+          ownMark: String(v.typeMark || "").trim(), ownDesc: String(text).trim()
+        });
       });
-    // Everything else filed in this folder: one row per submittal, at its
-    // newest revision.
+    // Every other submittal in this folder, one row per serial.
     const fam = {};
     mine.forEach((x) => {
-      if (usedIds[x.id]) return;
+      if (used[x.id]) return;
       const k = String(x.seq);
-      if (!fam[k] || (Number(x.rev) || 0) > (Number(fam[k].rev) || 0)) fam[k] = x;
+      (fam[k] = fam[k] || []).push(x);
     });
-    Object.keys(fam).map((k) => fam[k])
-      .sort((a, b) => (Number(a.seq) || 0) - (Number(b.seq) || 0))
-      .forEach((lead) => {
-        const famAll = mine.filter((x) => String(x.seq) === String(lead.seq));
-        const st = sbStatusOf(lead);
-        const signed = sbSignedAt(lead);
-        const due = String(lead.requiredApprovalDate || "").slice(0, 10);
-        const docs = famAll.reduce((n, x) => n + ((x.attachments || []).length), 0);
-        secs.push(discOf(lead, cat)); rowLead.push(lead);
-        tone.push(
-          signed || isOk(st) ? "ok"
-            : (due && due < today && !signed) ? "late"
-            : lead.sent ? "wait"
-            : ""
-        );
-        const cells = {
-          catCol: sbText(cat, lang),
-          submittalNo: sbNumber(lead.category, lead.seq),
-          chkItem: lead.boqCode || "",
-          chkDesc: lead.itemDescription || lead.typeId || lead.boqText || "",
-          docsCol: docs || "",
-          supplierCol: lead.supplier || trade || "",
-          sentCol: sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date),
-          targetCol: due ? sbFmtDate(due) : "",
-          status: lead.sent ? sbStatusLabel(st, lang) : L("draft"),
-          clientOkCol: signed ? sbFmtDate(signed.slice(0, 10)) : ""
-        };
-        body.push(keys.map((k2) => cells[k2]));
-      });
+    Object.keys(fam)
+      .sort((a, b) => (Number(a) || 0) - (Number(b) || 0))
+      .forEach((k) => finish({ key: `${cat.key}:#${k}`, cat, kind: "free", code: null, node: null, lines: [], hits: fam[k], ownMark: "", ownDesc: "" }));
   });
-  // A client's copy carries what a client is owed: what the item is, who is
-  // supplying it, when it went in and where it stands. The internal target date
-  // and the paperwork count stay on her side (30.8.26).
-  const imgs = rowLead.map((x) => famVal(x, (y) => y.image && y.image.thumb) || null);
-  const tIdx = keys.indexOf("typeCol");
-  if (tIdx >= 0) body.forEach((r, i) => { r[tIdx] = famVal(rowLead[i], (y) => y.typeId) || ""; });
-  const iIdx = keys.indexOf("imgCol");
-  if (iIdx >= 0) body.forEach((r) => { r[iIdx] = ""; });
-  if (audience === "client") {
-    const want = keys.map((k, i) => ((withCategory && k === "catCol") || k === "typeCol" || k === "imgCol" || SB_EXPORT_CLIENT_COLS.indexOf(k) >= 0 ? i : -1))
-      .filter((i) => i >= 0);
-    const imgCol = iIdx >= 0 ? want.indexOf(iIdx) : null;
-    return {
-      head: want.map((i) => head[i]),
-      widths: want.map((i) => widths[i]),
-      types: want.map((i) => types[i]),
-      body: body.map((r) => want.map((i) => r[i])),
-      keys: want.map((i) => keys[i]),
-      tone, secs, imgs, imgCol
+  out.forEach((r) => {
+    const lead = r.lead;
+    r.mark = r.ownMark || famVal(lead, (y) => y.typeId) || "";
+    r.desc = r.ownDesc || (lead && lead.itemDescription) || (r.node ? boqText(r.node, lang) : "") || (lead && lead.boqText) || "";
+    r.boq = r.kind === "line" ? (r.fromLli ? boqRefShown((lli[r.code] || {}).boqRef, lang) : r.code) : ((lead && lead.boqCode) || "");
+    r.img = famVal(lead, (y) => y.image && y.image.thumb) || null;
+    r.disc = String(famVal(lead, (y) => String(y.disciplineText || "").trim()) || "").trim() || sbText(r.cat, lang);
+    const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
+    r.due = due;
+    const today = new Date().toISOString().slice(0, 10);
+    r.tone = r.approved ? "ok"
+      : (r.status === "rejected" || (due && due < today)) && lead ? "late"
+      : lead && lead.sent ? "wait"
+      : "";
+  });
+  return out;
+}
+// The contractor column's name on this board (21.10.26).
+var SB_CONTRACTOR_L = { en: "Contractor", he: "קבלן" };
+var SB_PHOTO_L = { en: "Photo", he: "תמונה" };
+// The columns of the board, in the order she reads them, shared by the screen,
+// the workbook and the PDF. The tick in each column title decides whether that
+// column is printed (21.10.26).
+var SB_BOARD_COLS = [
+  { key: "submittalNo", label: (lg) => sbText(SB_L.submittalNo, lg), width: 15, kind: "text" },
+  { key: "chkItem", label: (lg) => sbText(SB_L.chkItem, lg), width: 13, kind: "text" },
+  { key: "typeCol", label: (lg) => sbText(SB_L.typeCol, lg), width: 12, kind: "text" },
+  { key: "chkDesc", label: (lg) => sbText(SB_L.chkDesc, lg), width: 38, kind: "text" },
+  { key: "supplierCol", label: (lg) => sbText(SB_CONTRACTOR_L, lg), width: 18, kind: "text" },
+  { key: "imgCol", label: (lg) => sbText(SB_PHOTO_L, lg), width: 16, kind: "text" },
+  { key: "sentCol", label: (lg) => sbText(SB_L.sentCol, lg), width: 13, kind: "date" },
+  { key: "targetCol", label: (lg) => sbText(SB_L.targetCol, lg), width: 14, kind: "date" },
+  { key: "status", label: (lg) => sbText(SB_L.status, lg), width: 16, kind: "text" },
+  { key: "clientOkCol", label: (lg) => sbText(SB_L.clientOkCol, lg), width: 14, kind: "date" }
+];
+function sbBoardGridRaw(opts) {
+  const { lang, audience, tradeFor } = opts;
+  const L = (k) => sbText(SB_L[k], lang);
+  const rows = sbBoardRows(opts);
+  const keys = SB_BOARD_COLS.map((c) => c.key);
+  const head = SB_BOARD_COLS.map((c) => c.label(lang));
+  const widths = SB_BOARD_COLS.map((c) => c.width);
+  const types = SB_BOARD_COLS.map((c) => c.kind);
+  const body = rows.map((r) => {
+    const lead = r.lead;
+    const trade = tradeFor ? tradeFor(r.cat.key) : "";
+    const cells = {
+      submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
+      chkItem: r.boq || "",
+      typeCol: r.mark,
+      chkDesc: r.desc,
+      supplierCol: (lead && lead.supplier) || trade || "",
+      imgCol: "",
+      sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
+      targetCol: r.due ? sbFmtDate(r.due) : "",
+      status: lead ? (lead.sent || r.approved ? sbStatusLabel(r.status, lang) : L("draft")) : L("chkMissing"),
+      clientOkCol: r.signed ? sbFmtDate(String(r.signed).slice(0, 10)) : ""
     };
-  }
-  return { head, body, widths, types, keys, tone, secs, imgs, imgCol: iIdx >= 0 ? iIdx : null };
+    return keys.map((k) => cells[k]);
+  });
+  const res = {
+    head, body, widths, types, keys,
+    tone: rows.map((r) => r.tone),
+    secs: rows.map((r) => r.disc),
+    imgs: rows.map((r) => r.img),
+    imgCol: keys.indexOf("imgCol")
+  };
+  // A client's copy carries what a client is owed; the internal target date
+  // stays on her side (30.8.26).
+  if (audience === "client") return sbDropCols(res, ["targetCol"]);
+  return res;
 }
 
 function sbSignedAt(rec) {
@@ -19591,6 +19641,7 @@ function PickPasswordModal({ isRTL, email, onDone }) {
 // -----------------------------------------------------------------------------
 function SubmittalFolder({
   category,
+  categories,
   lang,
   isRTL,
   list,
@@ -19602,10 +19653,9 @@ function SubmittalFolder({
   onCreate,
   onOpen,
   onPrint,
-  onPrintNoSpecs,
+  onSend,
   onNewRevision,
   onDelete,
-  onToggleShow,
   onPatch,
   boqData,
   boqFlags,
@@ -19614,170 +19664,234 @@ function SubmittalFolder({
   chkOff,
   onRemoveChk,
   onRestoreChk,
-  tradeCompany,
-  projectName,
-  printBrand,
+  tradeFor,
   reviewRows,
   onPlaceReview,
-  onDismissReview
+  onDismissReview,
+  colHide,
+  onToggleCol
 }) {
   const L = (k) => sbText(SB_L[k], lang);
-  // Who the sheet is for, and in which language — the same two questions the
-  // ordering board asks before it prints (30.8.26).
-  const [exportAsk, setExportAsk] = useState6(null);
-  const [exportNote, setExportNote] = useState6(null);
-  const gridFor = (lg, who, pdf) => sbBoardGrid({
-    list, boqData, boqFlags, lliRows,
-    chkOff: { [category.key]: chkOff || {} },
-    lang: lg, audience: who,
-    categories: [category],
-    tradeFor: () => tradeCompany || "",
-    forPdf: !!pdf
-  });
-  const onFolderExcel = async () => {
-    const g = gridFor(lang, "admin");
-    if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
-    setExportNote(null);
-    const res = await boardExportXlsx({
-      title: projectName || "",
-      subtitle: `SUBMITTAL — ${sbText(category, lang)} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
-      sheetName: category.en,
-      fileName: boardFileName(projectName, `SUB - ${category.en}`, "xlsx"),
-      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
-      toneRows: g.tone, imgCol: g.imgCol, imgs: g.imgs,
-      accent: (printBrand || {}).accent, isRTL
-    });
-    if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
-  };
-  const onFolderPdf = (lg, who) => {
-    const g = gridFor(lg, who, true);
-    if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
-    setExportNote(null);
-    // The header says SUBMITTAL and nothing more; the discipline is the band
-    // above the table (20.10.26).
-    boardExportPdf({
-      title: projectName || "",
-      fileName: boardFileName(projectName, `SUB - ${category.en}`, ""),
-      subtitle: "SUBMITTAL",
-      head: g.head, widths: g.widths,
-      ...(() => { const gr = sbGroupBySection(g); return { body: gr.body, toneRows: gr.tone, sections: gr.secs, imgs: gr.imgs }; })(),
-      imgCol: g.imgCol, imgH: 48, secFlow: true,
-      accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
-    });
-  };
-  // The submittal whose private notes are open.
-  const [notesFor, setNotesFor] = useState6(null);
-  // Which checklist group is opened out into its BOQ lines.
+  const he = lang === "he";
+  const lli = lliRows || {};
+  // Which line has its BOQ lines opened out, and which row its other versions.
   const [openChk, setOpenChk] = useState6(null);
-  // One line per serial — the latest revision. The earlier ones live behind the
-  // little arrow next to it, because that is history, not work in progress.
-  const [openFamily, setOpenFamily] = useState6(null);
-  // A submittal that answers a line of the checklist lives THERE, in the table
-  // above — that table IS the list. What is left underneath is only what could
-  // not be placed on a line. Without this the same submittal appeared twice,
-  // once on its line and once again in the list below it (30.8.26).
-  const onChecklist = (() => {
-    if (!boqData || !canEdit) return null;
-    const off = chkOff || {};
-    const codes = new Set();
-    boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", category.key)
-      .filter((pr) => !off[pr.code])
-      .forEach((pr) => {
-        codes.add(pr.code);
-        (pr.items || []).forEach((it) => codes.add(it.code));
-      });
-    // A hand-made line on the ordering board is a line of this checklist too,
-    // so a submittal filed against it belongs ON its line and must not also be
-    // listed underneath as unplaced — that was how one submittal used to appear
-    // twice (15.10.26).
-    Object.keys(lliRows || {}).forEach((k) => {
-      const v = (lliRows || {})[k];
-      if (!v || k.indexOf("m-") !== 0 || !v.alsoSubmittal) return;
-      if ((v.category || null) !== category.key || off[k]) return;
-      codes.add(k);
-      const ref = boqRefCode(v.boqRef);
-      if (ref) codes.add(ref);
-    });
-    return codes;
-  })();
-  const isPlaced = (s) => !!(onChecklist && s.boqCode && onChecklist.has(s.boqCode));
-  const families = (() => {
-    const bySeq = {};
-    // A draft has not been submitted to anyone. Only the administrator, who is
-    // the one writing it, sees it in the list at all.
-    (list || [])
-      .filter((s) => s.category === category.key && !isPlaced(s))
-      .forEach((s) => {
-      const k = String(s.seq);
-      bySeq[k] = bySeq[k] || [];
-      bySeq[k].push(s);
-    });
-    return Object.keys(bySeq)
-      .map((k) => {
-        const all = bySeq[k].slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0));
-        return { seq: Number(k), latest: all[0], older: all.slice(1) };
-      })
-      .sort((a, b) => b.seq - a.seq);
-  })();
-  const rows = families.flatMap((f) =>
-    openFamily === f.seq ? [f.latest, ...f.older] : [f.latest]
+  const [openFam, setOpenFam] = useState6(null);
+  const scope = categories || (category ? [category] : []);
+  const allMode = !category;
+  // 21.10.26 — one table. The lines of the bill of quantities this discipline
+  // owes, each with the submittal that answers it, then everything else that
+  // was filed here. A client sees only what was actually filed.
+  const rowsAll = sbBoardRows({ list, boqData, boqFlags, chkOff, lliRows, categories: scope, lang })
+    .filter((r) => canEdit || r.lead);
+  // Grouped by discipline, the groups in the order they first appear — the
+  // same order the workbook and the PDF use.
+  const order = [];
+  const bySec = {};
+  rowsAll.forEach((r) => {
+    if (!bySec[r.disc]) { bySec[r.disc] = []; order.push(r.disc); }
+    bySec[r.disc].push(r);
+  });
+  const showBands = allMode || order.length > 1;
+  const ncols = SB_BOARD_COLS.length + 1;
+  const hidden = colHide || [];
+  // Lines she took off the board, across what is on screen.
+  const offCount = scope.reduce((n, c) => {
+    const off = ((chkOff || {})[c.key]) || {};
+    return n + boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", c.key).filter((p) => off[p.code]).length;
+  }, 0);
+  const tradeOf = (r) => (tradeFor ? tradeFor(r.cat.key) : "") || "";
+  const fmtSent = (s) => sbFmtDate((s.sent ? (s.sentAt || "").slice(0, 10) : "") || s.date);
+  const chip = (st, rec) => sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang));
+  // The buttons of a row, as a block of equal squares (21.10.26): the version
+  // on top across the width, then edit and print, then send and delete.
+  const sq = (cls, title, icon, onClick, disabled) => sbH(
+    "button",
+    { type: "button", className: `sbSq ${cls}`.trim(), title, "aria-label": title, disabled: !!disabled, onClick },
+    sbH(icon, { size: 14, strokeWidth: 2.1 })
   );
-  const olderCountOf = (s) => {
-    const f = families.find((x) => x.seq === s.seq);
-    return f && f.latest.id === s.id ? f.older.length : 0;
+  const actions = (r, rec, isMain) => {
+    if (!canEdit) {
+      const signedAt = rec ? sbSignedAt(rec) : null;
+      return sbH(
+        "div",
+        { className: "sbActGrid" },
+        rec && canSign && !signedAt
+          ? sbH("button", { type: "button", className: "sbRevLong sign", onClick: () => onOpen(rec) },
+              sbH(PenLine, { size: 13, strokeWidth: 2 }), " ", L("signColumn"))
+          : null,
+        rec ? sq("", he ? "הדפסת הטופס" : "Print the form", Printer, () => onPrint(rec)) : null
+      );
+    }
+    if (!isMain) {
+      return sbH(
+        "div",
+        { className: "sbActGrid" },
+        sq("", he ? "פתיחה ועריכה" : "Open and edit", Pencil, () => onOpen(rec)),
+        sq("", he ? "הדפסת הטופס" : "Print the form", Printer, () => onPrint(rec))
+      );
+    }
+    return sbH(
+      "div",
+      { className: "sbActGrid" },
+      rec
+        ? sbH("button", { type: "button", className: "sbRevLong", title: L("newRevision"), onClick: () => onNewRevision(rec) },
+            sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${sbNextRev(list, rec)}`)
+        : sbH("button", { type: "button", className: "sbRevLong", title: L("chkAdd"),
+            onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "" }, r.cat) },
+            sbH(Plus2, { size: 13, strokeWidth: 2.4 }), " ", L("chkAdd")),
+      sq("", he ? "פתיחה ועריכה" : "Open and edit", Pencil, () => rec && onOpen(rec), !rec),
+      sq("", he ? "הדפסת הטופס" : "Print the form", Printer, () => rec && onPrint(rec), !rec),
+      sq("send", he ? "שליחה במייל לפיקוח" : "E-mail to the supervision", SendIcon2, () => rec && onSend(rec), !rec),
+      rec
+        ? sq("del", L("remove"), Trash2, () => onDelete(rec))
+        : sq("del", L("removeRow"), Trash2, () => onRemoveChk && onRemoveChk(r.cat.key, r.code))
+    );
   };
-  // Every version of this submittal, oldest first, so the row can offer them
-  // as what they are: Rev.0, Rev.1, Rev.2.
-  const familyOf = (s) => {
-    const f = families.find((x) => x.seq === s.seq);
-    if (!f) return [s];
-    return [f.latest, ...f.older].slice().sort((a, b) => (Number(a.rev) || 0) - (Number(b.rev) || 0));
-  };
-  // A submittal is approved once ANY of its versions has been approved — and
-  // it is normally Rev.0, with a Rev.1 raised afterwards for something else
-  // entirely. Reading only the row in front of you says "open" about a
-  // document that was signed weeks ago (7.9.26).
-  const familyApproval = (s) => {
-    let best = null;
-    familyOf(s).forEach((v) => {
-      const st = sbStatusOf(v);
-      if (st !== "approved" && st !== "approvedNoted") return;
-      const at = sbSignedAt(v);
-      if (!best || (at && at > (best.at || ""))) best = { rec: v, status: st, at };
-    });
-    return best;
-  };
-  const isOlder = (s) => {
-    const f = families.find((x) => x.seq === s.seq);
-    return !!(f && f.latest.id !== s.id);
+  const rowOf = (r) => {
+    const rec = r.lead;
+    const others = r.hits.filter((x) => !rec || x.id !== rec.id)
+      .sort((a, b) => (Number(b.seq) || 0) - (Number(a.seq) || 0) || (Number(b.rev) || 0) - (Number(a.rev) || 0));
+    const famOpen = openFam === r.key;
+    const chkOpen = openChk === r.key;
+    const isNew = !!r.signed && (!seenAt || r.signed > seenAt);
+    const chk = (rec && rec.checks) || null;
+    const warn = chk
+      ? [
+          chk.expired && chk.expires ? `${L("chkExpired")} ${sbFmtDate(chk.expires)}` : "",
+          (chk.missing || []).length ? `${L("chkMissingDocs")}: ${chk.missing.join(", ")}` : "",
+          chk.note || ""
+        ].filter(Boolean).join(" · ")
+      : "";
+    const tone = r.tone === "ok" ? "sbOk" : r.tone === "late" ? "sbLate" : r.tone === "wait" ? "sbWait" : "";
+    const main = sbH(
+      "tr",
+      { key: r.key, className: `${isNew ? "sbRowNew" : ""} ${tone}`.trim() },
+      // The submittal's number and version; the arrow opens the others filed
+      // on the same row.
+      sbH(
+        "td",
+        { className: "sbNoCell" },
+        rec
+          ? sbH(React15.Fragment, null,
+              sbH("span", { className: "sbNoMain" }, sbNumber(rec.category, rec.seq)),
+              sbH("span", { className: "sbNoRev" }, `Rev.${rec.rev || 0}`,
+                others.length
+                  ? sbH("button", {
+                      type: "button", className: `sbRevToggle ${famOpen ? "open" : ""}`, title: L("olderVersions"),
+                      onClick: () => setOpenFam(famOpen ? null : r.key)
+                    }, sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }), others.length)
+                  : null))
+          : sbH("span", { className: "sbChkDash" }, "—")
+      ),
+      // The BOQ number. A row she added by hand has whatever she writes here.
+      sbH(
+        "td",
+        { className: "sbChkCode" },
+        r.fromLli && canEdit
+          ? sbH("input", {
+              type: "text", dir: "ltr",
+              className: `sbChkCodeIn${isNoBoqRef((lli[r.code] || {}).boqRef) ? " noBoq" : ""}`,
+              value: boqRefShown((lli[r.code] || {}).boqRef, lang),
+              placeholder: L("chkItem"), title: L("chkCodeHint"),
+              readOnly: !onChangeLliRows,
+              onChange: (e) => onChangeLliRows && onChangeLliRows({
+                ...lli, [r.code]: { ...(lli[r.code] || {}), boqRef: boqRefStored(e.target.value) }
+              })
+            })
+          : sbH("span", { dir: "ltr" }, r.boq || "—"),
+        r.lines.length
+          ? sbH("button", {
+              type: "button", className: `sbRevToggle ${chkOpen ? "open" : ""}`, title: L("chkLines"),
+              onClick: () => setOpenChk(chkOpen ? null : r.key)
+            }, sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }), r.lines.length)
+          : null
+      ),
+      sbH("td", { className: "sbItemCell", dir: "auto" }, r.mark || "—"),
+      sbH(
+        "td",
+        { className: "sbItemCell sbDescCell", dir: "auto" },
+        r.desc || "—",
+        r.product && r.product.flags && r.product.flags.review
+          ? sbH("span", { className: "lliReviewTag", title: L("chkReviewTitle") }, L("chkReview"))
+          : null,
+        warn ? sbH("span", { className: "sbChkWarn", title: warn }, "!") : null
+      ),
+      sbH(
+        "td",
+        null,
+        rec && canEdit
+          ? sbH("input", {
+              type: "text",
+              className: `sbCellIn ${!rec.supplier && tradeOf(r) ? "sbFromContacts" : ""}`.trim(),
+              value: rec.supplier || tradeOf(r),
+              title: !rec.supplier && tradeOf(r) ? L("fromContacts") : undefined,
+              placeholder: "—",
+              onChange: (e) => onPatch && onPatch(rec, { supplier: e.target.value })
+            })
+          : (rec && (rec.supplier || tradeOf(r))) || "—"
+      ),
+      sbH("td", { className: "sbThumbCell" }, r.img ? sbH("img", { className: "sbThumb", src: r.img, alt: "" }) : sbH("span", { className: "sbChkDash" }, "—")),
+      sbH("td", { dir: "ltr" }, rec ? fmtSent(rec) : "—"),
+      sbH("td", { dir: "ltr" }, r.due ? sbFmtDate(r.due) : "—"),
+      sbH(
+        "td",
+        { className: "sbStatusCell" },
+        !rec
+          ? sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
+          : sbH("div", { className: "sbStatusWrap" },
+              chip(r.status, rec),
+              r.approved && r.approved.id !== rec.id ? sbH("span", { className: "sbChkStatRev" }, `Rev.${r.approved.rev || 0}`) : null,
+              !rec.sent && !r.approved ? sbH("span", { className: "sbDraftTag" }, L("draft")) : null)
+      ),
+      sbH("td", { dir: "ltr" }, r.signed ? sbFmtDate(String(r.signed).slice(0, 10)) : "—"),
+      sbH("td", { className: "sbActions" }, actions(r, rec, true))
+    );
+    const kids = [];
+    if (chkOpen) {
+      r.lines.forEach((l, li) => {
+        const eq = boqIsEquivalent(l.item);
+        kids.push(sbH(
+          "tr",
+          { key: `${r.key}:l:${l.item.code}`, className: "sbChkLine" },
+          sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
+          sbH("td", { dir: "ltr", className: "sbChkCode" }, l.label),
+          sbH("td", { className: "sbChkDesc", colSpan: 2, title: boqText(l.node, lang) },
+            sbH("span", { className: "sbChkDescText" }, boqText(l.node, lang)),
+            sbH("span", { className: `sbChkSpec ${eq ? "eq" : ""}` }, eq ? L("chkEquiv") : L("chkSpecific"))),
+          sbH("td", { colSpan: ncols - 4 })
+        ));
+      });
+    }
+    if (famOpen) {
+      others.forEach((s) => {
+        const st = sbStatusOf(s);
+        const signedAt = sbSignedAt(s);
+        kids.push(sbH(
+          "tr",
+          { key: `${r.key}:v:${s.id}`, className: "sbRowOlder" },
+          sbH("td", { className: "sbNoCell" },
+            sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
+            sbH("span", { className: "sbNoRev" }, `Rev.${s.rev || 0}`)),
+          sbH("td", { dir: "ltr" }, s.boqCode || "—"),
+          sbH("td", { className: "sbItemCell", dir: "auto" }, s.typeId || "—"),
+          sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || "—"),
+          sbH("td", null, s.supplier || "—"),
+          sbH("td", { className: "sbThumbCell" }, s.image && s.image.thumb ? sbH("img", { className: "sbThumb", src: s.image.thumb, alt: "" }) : sbH("span", { className: "sbChkDash" }, "—")),
+          sbH("td", { dir: "ltr" }, fmtSent(s)),
+          sbH("td", { dir: "ltr" }, s.requiredApprovalDate ? sbFmtDate(String(s.requiredApprovalDate).slice(0, 10)) : "—"),
+          sbH("td", { className: "sbStatusCell" }, sbH("div", { className: "sbStatusWrap" }, chip(st, s),
+            !s.sent && !signedAt ? sbH("span", { className: "sbDraftTag" }, L("draft")) : null)),
+          sbH("td", { dir: "ltr" }, signedAt ? sbFmtDate(signedAt.slice(0, 10)) : "—"),
+          sbH("td", { className: "sbActions" }, actions(r, s, false))
+        ));
+      });
+    }
+    return [main, ...kids];
   };
   return sbH(
     "div",
     { className: "submittalPanel", dir: isRTL ? "rtl" : "ltr" },
-    sbH(
-      "div",
-      { className: "submittalPanelHead" },
-      sbH(category.icon, { size: 17, strokeWidth: 1.9 }),
-      sbH("span", null, sbText(category, lang))
-    ),
-    canEdit
-      ? sbH(
-          "div",
-          { className: "sbCreateWrap" },
-          sbH(
-            "button",
-            { type: "button", className: "sbCreateBtn", onClick: () => onCreate() },
-            sbH(Plus2, { size: 16, strokeWidth: 2.4 }),
-            " ",
-            L("create")
-          )
-          // 7.9.26 — the button that took a pile of specifications and made a
-          // submittal out of each one is gone, at her instruction. Loading them
-          // one submittal at a time is slower to do and exactly right every
-          // time; the pile was fast and had to be checked afterwards. The
-          // specification now goes on from inside the submittal it belongs to.
-        )
-      : null,
     // What the AI split out of one set of specifications and is still waiting
     // to be done. It empties itself as each one is sent.
     canEdit && (queue || []).length
@@ -19817,477 +19931,6 @@ function SubmittalFolder({
           )
         )
       : null,
-    // The checklist: what this discipline owes, straight from the routing table.
-    // One row per group; open a row to see the actual lines of the bill of
-    // quantities under it, and start a submittal from any of them. A group can
-    // carry several submittals, because a group is several products.
-    (() => {
-      const auto = (boqData || {}).flags || {};
-      // The discipline of a product is read out of what it is, not out of its
-      // chapter number — a project numbered differently used to land its lines
-      // in the wrong folder.
-      const groups = boqProducts(boqData, auto, boqFlags, "submittal", category.key);
-      const mine = (list || []).filter((s) => s.category === category.key);
-      const norm = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
-      // Attached by the item number the submittal was started from. Records made
-      // before the bill of quantities existed still match on an exact
-      // sub-category, so nothing that was already filed goes missing.
-      const attached = (code, node) => {
-        const names = node ? [norm(boqText(node, "en")), norm(boqText(node, "he"))].filter(Boolean) : [];
-        return mine.filter((s) => {
-          if (s.boqCode) return s.boqCode === code;
-          if (!names.length) return false;
-          const picked = [
-            norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "en")),
-            norm(sbSubcatLabel(s.subCategory || s.scope, s.category, "he"))
-          ].filter(Boolean);
-          return picked.some((c) => names.indexOf(c) >= 0);
-        });
-      };
-      // Lines she took off this board by hand stay out of it until she puts
-      // them back; the routing table shows them as a grey tick (30.8.26).
-      const off = chkOff || {};
-      // -----------------------------------------------------------------------
-      // The ordering board, read from here (15.10.26).
-      //
-      // Two things come from it. First, the mark and the description: she types
-      // them once, on the LLI board, and that is what this list should show —
-      // until now this list kept showing the bill of quantities' own wording and
-      // never changed. Second, the rows she added by hand there and ticked SUB:
-      // they are approvals this discipline owes exactly as a priced line is, and
-      // they had nowhere to appear.
-      // -----------------------------------------------------------------------
-      const lli = lliRows || {};
-      const lliOf = (code) => lli[code] || null;
-      const fromLli = Object.keys(lli)
-        .filter((k) => k.indexOf("m-") === 0 && lli[k] && lli[k].alsoSubmittal && (lli[k].category || null) === category.key && !(chkOff || {})[k])
-        .map((k) => {
-          const v = lli[k] || {};
-          const text = v.desc || "";
-          return {
-            // A hand-made row is its own product: one row, no lines under it,
-            // and the item number is whatever she writes in the box.
-            product: { code: k, he: text, en: text, items: [], flags: {} },
-            code: k,
-            node: { he: text, en: text },
-            lines: [],
-            fromLli: true,
-            own: [],
-            count: 0
-          };
-        });
-      const rowsChk = groups.filter((p) => !off[p.code]).map((p) => {
-        // One row per thing that gets approved once — steel pipe in eight
-        // diameters is one specification, not eight submittals — carrying the
-        // item number of its representative BOQ line. The chevron opens the
-        // actual lines it covers, and a submittal can be started from any of
-        // them.
-        const node = { he: p.he, en: p.en };
-        const own = attached(p.code, node);
-        const perLine = p.items.map((it) => {
-          const n = { he: it.he, en: it.en };
-          return { item: it, label: it.code, node: n, hits: attached(it.code, n) };
-        });
-        const all = [];
-        const seenIds = {};
-        own.concat(perLine.flatMap((l) => l.hits)).forEach((s2) => {
-          if (!s2 || seenIds[s2.id]) return;
-          seenIds[s2.id] = true;
-          all.push(s2);
-        });
-        // A product that is one line has nothing to open into.
-        return { product: p, code: p.code, node, lines: perLine.length > 1 ? perLine : [], own, count: all.length };
-      }).concat(fromLli.map((r) => {
-        // A submittal started from a hand-made row is attached by that row's
-        // own code, or by the BOQ number she wrote in the box.
-        const ref = boqRefCode((lliOf(r.code) || {}).boqRef);
-        const own = attached(r.code, r.node).concat(ref ? attached(ref, r.node) : []);
-        const seen = {};
-        const uniq = own.filter((s2) => (s2 && !seen[s2.id] ? (seen[s2.id] = true) : false));
-        return { ...r, own: uniq, count: uniq.length };
-      }));
-      const hits = rowsChk.filter((r) => r.count > 0).length;
-      const pill = (s) =>
-        sbH(
-          "button",
-          {
-            type: "button",
-            key: s.id,
-            className: `sbChkPill ${s.sent ? "" : "draft"}`,
-            style: s.sent ? { borderColor: sbStatusColor(sbStatusOf(s)) } : null,
-            title: sbStatusLabel(sbStatusOf(s), lang),
-            onClick: () => onOpen(s)
-          },
-          `${sbNumber(s.category, s.seq)} Rev.${s.rev || 0}`
-        );
-      // Once a line has been submitted, asking for another one is almost always
-      // the same item in a different finish — so it opens the next version of
-      // what is already there rather than starting a second serial.
-      const addBtn = (code, node, subCat, existing) => {
-        if (!canEdit) return null;
-        const latest = (existing || []).slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0];
-        return sbH(
-          "button",
-          {
-            type: "button",
-            className: "sbChkAdd",
-            title: latest ? `${L("chkNewRev")} ${sbNumber(latest.category, latest.seq)}` : L("chkAdd"),
-            onClick: () => (latest
-              ? onNewRevision(latest)
-              : onCreate({ code, text: node ? boqText(node, lang) : "", subCategory: subCat || "" }))
-          },
-          sbH(latest ? RotateCcw : Plus2, { size: 12, strokeWidth: 2.6 }),
-          " ",
-          latest ? `Rev.${sbNextRev(list, latest)}` : L("chkAdd")
-        );
-      };
-      if (!canEdit) return null;
-      return sbH(
-        "div",
-        { className: "sbChk" },
-        sbH("div", { className: "sbListTitle" }, L("checklist")),
-        // Nothing is thrown away: what she removed is counted here and comes
-        // back with one press (30.8.26).
-        (() => {
-          const n = groups.filter((p) => off[p.code]).length;
-          if (!n) return null;
-          return sbH(
-            "p",
-            { className: "sbOffBar" },
-            `${n} ${L("removedSome")}`,
-            sbH(
-              "button",
-              { type: "button", className: "sbOffRestore", onClick: () => onRestoreChk && onRestoreChk(category.key) },
-              sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
-              " ",
-              L("restoreAll")
-            )
-          );
-        })(),
-        !boqData
-          ? sbH("p", { className: "submittalPanelNote" }, L("checklistNone"))
-          : rowsChk.length === 0
-            ? sbH("p", { className: "submittalPanelNote" }, L("checklistEmpty"))
-            : sbH(
-                React15.Fragment,
-                null,
-                sbH("p", { className: "sbChkBar" }, `${hits}/${rowsChk.length} ${L("chkDone")}`),
-                sbH(
-                  "div",
-                  { className: "sbTableWrap" },
-                  sbH(
-                    "table",
-                    { className: "sbTable sbChkTable" },
-                    // The widths live on the header row because the table is
-                    // laid out fixed: opening a group must not be allowed to
-                    // re-measure every column and shift the rows under the
-                    // cursor.
-                    // The submittal's own facts, in the table that already
-                    // lists what needs approving. One table, not two (29.8.26).
-                    // The serial leads — it is what the submittal is called —
-                    // and the BOQ number follows it (30.8.26).
-                    sbH("thead", null, sbH("tr", null,
-                      sbH("th", { className: "cChkNo" }, L("submittalNo")),
-                      // The chevron that opens a group gets a slot of its own
-                      // between the serial and the BOQ number. It reads as a
-                      // gutter rather than a column, and it is what keeps the
-                      // BOQ numbers in one straight centred line whether or not
-                      // a row has lines under it (30.8.26).
-                      sbH("th", { className: "cChkChev" }, ""),
-                      sbH("th", { className: "cCode" }, L("chkItem")),
-                      sbH("th", { className: "cDesc" }, L("typeCol")),
-                      sbH("th", { className: "cDesc" }, L("chkDesc")),
-                      sbH("th", { className: "cChkDocs" }, L("docsCol")),
-                      sbH("th", { className: "cChkSup" }, L("supplierCol")),
-                      sbH("th", { className: "cChkDate" }, L("sentCol")),
-                      sbH("th", { className: "cChkDate" }, L("targetCol")),
-                      sbH("th", { className: "cPills" }, L("status")),
-                      sbH("th", { className: "cChkDate" }, L("clientOkCol")),
-                      sbH("th", { className: "cAct" }, L("versionsCol"))
-                    )),
-                    sbH("tbody", null, rowsChk.flatMap((r) => {
-                      const open = openChk === r.code;
-                      // The submittal that answers this line — the newest one,
-                      // when there are revisions — and what it says.
-                      const onLine = [];
-                      {
-                        const seenOnLine = {};
-                        [...r.own, ...r.lines.flatMap((l) => l.hits)].forEach((s2) => {
-                          if (!s2 || seenOnLine[s2.id]) return;
-                          seenOnLine[s2.id] = true;
-                          onLine.push(s2);
-                        });
-                      }
-                      const lead = onLine.length
-                        ? onLine.slice().sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0]
-                        : null;
-                      const leadDue = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
-                      // A submittal is approved once one of its versions has
-                      // been approved, and that is normally Rev.0 with a Rev.1
-                      // raised afterwards for something else. Reading only the
-                      // newest revision says "not submitted yet" about a
-                      // document the client signed last week, and leaves the
-                      // approval-date column empty (7.9.26).
-                      const approvedRec = onLine
-                        .filter((x) => { const st2 = sbStatusOf(x); return st2 === "approved" || st2 === "approvedNoted"; })
-                        .sort((a, b) => String(sbSignedAt(b) || "").localeCompare(String(sbSignedAt(a) || "")))[0] || null;
-                      const leadSigned = approvedRec ? sbSignedAt(approvedRec) : (lead ? sbSignedAt(lead) : null);
-                      const shownStatus = approvedRec ? sbStatusOf(approvedRec) : (lead ? sbStatusOf(lead) : "open");
-                      const docCount = onLine.reduce((n2, x) => n2 + ((x.attachments || []).length), 0);
-                      const chk = (lead && lead.checks) || null;
-                      const warn = chk
-                        ? [
-                            chk.expired && chk.expires ? `${L("chkExpired")} ${sbFmtDate(chk.expires)}` : "",
-                            (chk.missing || []).length ? `${L("chkMissingDocs")}: ${chk.missing.join(", ")}` : "",
-                            chk.note || ""
-                          ].filter(Boolean).join(" · ")
-                        : "";
-                      const head = sbH(
-                        "tr",
-                        { key: r.code, className: r.count ? "sbChkOn" : "" },
-                        // The submittal's number — a running one, given when a
-                        // submittal is opened, not before.
-                        sbH("td", { className: "sbChkNo" }, lead ? sbNumber(lead.category, lead.seq) : "—"),
-                        // The gutter: only the chevron lives here, so the BOQ
-                        // number beside it is never pushed off centre.
-                        sbH(
-                          "td",
-                          { className: "sbChkChev" },
-                          r.lines.length
-                            ? sbH(
-                                "button",
-                                {
-                                  type: "button",
-                                  className: `sbRevToggle ${open ? "open" : ""}`,
-                                  title: L("chkLines"),
-                                  onClick: () => setOpenChk(open ? null : r.code)
-                                },
-                                sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }),
-                                r.lines.length
-                              )
-                            : null
-                        ),
-                        // The item number. A priced line has one; a row she
-                        // added by hand has whatever she writes here, and the
-                        // box is the size of the column so nothing shifts when
-                        // a hand-made row joins the list (15.10.26).
-                        r.fromLli
-                          ? sbH(
-                              "td",
-                              { className: "sbChkCode" },
-                              sbH("input", {
-                                type: "text",
-                                dir: "ltr",
-                                className: `sbChkCodeIn${isNoBoqRef((lli[r.code] || {}).boqRef) ? " noBoq" : ""}`,
-                                value: boqRefShown((lli[r.code] || {}).boqRef, lang),
-                                placeholder: L("chkItem"),
-                                title: L("chkCodeHint"),
-                                readOnly: !onChangeLliRows,
-                                onChange: (e) => onChangeLliRows && onChangeLliRows({
-                                  ...lli,
-                                  [r.code]: { ...(lli[r.code] || {}), boqRef: boqRefStored(e.target.value) }
-                                })
-                              })
-                            )
-                          : sbH("td", { dir: "ltr", className: "sbChkCode" }, r.code),
-                        sbH(
-                          "td",
-                          { className: "sbChkDesc sbChkMark", dir: "auto" },
-                          // The mark she gave the item on the ordering board is
-                          // the mark, wherever it is looked at. Below it, what
-                          // the submittal itself says, and last the bill of
-                          // quantities' own wording (15.10.26).
-                          ((lliOf(r.code) || {}).typeMark || "").trim() || (lead && lead.typeId) || boqText(r.node, lang)
-                        ),
-                        sbH(
-                          "td",
-                          { className: "sbChkDesc", dir: "auto" },
-                          // Her description from the ordering board first; then
-                          // what the model read off the specification; then the
-                          // bill of quantities' wording.
-                          ((lliOf(r.code) || {}).desc || "").trim() || (lead && lead.itemDescription) || boqText(r.node, lang),
-                          // A line the classification was unsure about.
-                          r.product.flags.review
-                            ? sbH("span", { className: "lliReviewTag", title: L("chkReviewTitle") }, L("chkReview"))
-                            : null,
-                          // Something is wrong with the papers themselves.
-                          warn
-                            ? sbH("span", { className: "sbChkWarn", title: warn }, "!")
-                            : null
-                        ),
-                        // The papers attached to this submittal. A document mark
-                        // means there are files on it; pressing it opens the
-                        // submittal, where they are all listed at the bottom
-                        // (30.8.26).
-                        sbH(
-                          "td",
-                          { className: "sbChkDocsCell" },
-                          docCount
-                            ? sbH(
-                                "button",
-                                {
-                                  type: "button",
-                                  className: "sbChkDocs",
-                                  title: `${docCount} ${L("chkDocs")}`,
-                                  onClick: () => lead && onOpen && onOpen(lead)
-                                },
-                                sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
-                                docCount
-                              )
-                            : sbH("span", { className: "sbChkDash" }, "—")
-                        ),
-                        sbH(
-                          "td",
-                          null,
-                          lead && canEdit
-                            ? sbH("input", {
-                                type: "text",
-                                // The trade's own contractor, off the project's
-                                // contacts. Empty when the contacts do not name
-                                // one — never a guess (30.8.26).
-                                className: `sbCellIn ${!lead.supplier && tradeCompany ? "sbFromContacts" : ""}`.trim(),
-                                value: lead.supplier || tradeCompany || "",
-                                title: !lead.supplier && tradeCompany ? L("fromContacts") : undefined,
-                                placeholder: "—",
-                                onChange: (e) => onPatch && onPatch(lead, { supplier: e.target.value })
-                              })
-                            : (lead && (lead.supplier || tradeCompany)) || "—"
-                        ),
-                        sbH("td", { dir: "ltr" }, lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "—"),
-                        sbH("td", { dir: "ltr" }, leadDue ? sbFmtDate(leadDue) : "—"),
-                        // The status column says what the submittal IS —
-                        // approved, with the supervision, still a draft. It
-                        // used to carry the list of versions instead, which is
-                        // a different question and belongs beside the button
-                        // that makes the next one (7.9.26).
-                        sbH(
-                          "td",
-                          { className: "sbChkPills" },
-                          !r.count
-                            ? sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
-                            : sbH(
-                                "div",
-                                { className: "sbChkStatWrap" },
-                                sbH("span", {
-                                  className: "sbStatus",
-                                  style: { background: sbStatusColor(shownStatus) }
-                                }, sbStatusLabel(shownStatus, lang)),
-                                // Which version it was approved on, when that
-                                // is not the one the row is showing.
-                                approvedRec && lead && approvedRec.id !== lead.id
-                                  ? sbH("span", { className: "sbChkStatRev" }, `Rev.${approvedRec.rev || 0}`)
-                                  : null,
-                                // The moment the client signs, the approved
-                                // document exists as a thing to keep — the
-                                // form, their signature and the specifications
-                                // behind it. The printer appears here, under
-                                // the word that says it happened (7.9.26).
-                                approvedRec
-                                  ? sbH(
-                                      "button",
-                                      {
-                                        type: "button",
-                                        className: "sbChkPrint",
-                                        title: L("printApproved"),
-                                        "aria-label": L("printApproved"),
-                                        onClick: () => onPrint(approvedRec)
-                                      },
-                                      sbH(Printer, { size: 13, strokeWidth: 2 })
-                                    )
-                                  : null,
-                                lead && !lead.sent && !approvedRec
-                                  ? sbH("span", { className: "sbDraftTag" }, L("draft"))
-                                  : null
-                              )
-                        ),
-                        sbH("td", { dir: "ltr" }, leadSigned ? sbFmtDate(leadSigned.slice(0, 10)) : "—"),
-                        sbH(
-                          "td",
-                          { className: "sbChkAct" },
-                          // The versions themselves, beside the button that
-                          // raises the next one. Each opens that version.
-                          r.count
-                            ? sbH("div", { className: "sbChkPillWrap" }, onLine.map(pill))
-                            : null,
-                          addBtn(r.code, r.node, "", r.own),
-                          // Taking the line off this board. The routing table
-                          // keeps its tick, in grey (30.8.26).
-                          sbH(
-                            "button",
-                            {
-                              type: "button",
-                              className: "sbRowDel",
-                              title: L("removeRow"),
-                              "aria-label": L("removeRow"),
-                              onClick: () => onRemoveChk && onRemoveChk(r.code)
-                            },
-                            sbH(Trash2, { size: 13, strokeWidth: 2 })
-                          )
-                        )
-                      );
-                      if (!open) return [head];
-                      const kids = r.lines.map((l, li) => {
-                        const eq = boqIsEquivalent(l.item);
-                        return sbH(
-                          "tr",
-                          { key: l.item.code, className: "sbChkLine" },
-                          // The opened list is there to say WHICH bill-of-
-                          // quantities lines this one submittal covers — nothing
-                          // is started from it, so it carries no buttons and no
-                          // columns of its own (30.8.26).
-                          sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
-                          sbH("td", { className: "sbChkChev" }),
-                          sbH(
-                            "td",
-                            { dir: "ltr", className: "sbChkCode" },
-                            l.label
-                          ),
-                          sbH(
-                            "td",
-                            { className: "sbChkDesc", title: boqText(l.node, lang) },
-                            sbH("span", { className: "sbChkDescText" }, boqText(l.node, lang)),
-                            sbH(
-                              "span",
-                              { className: `sbChkSpec ${eq ? "eq" : ""}` },
-                              eq ? L("chkEquiv") : L("chkSpecific")
-                            )
-                          ),
-                          sbH("td", { colSpan: 7 })
-                        );
-                      });
-                      return [head, ...kids];
-                    }))
-                  )
-                ),
-                // The sheet she takes away. Same two questions the ordering
-                // board asks — who it is for, and in which language — and the
-                // same house template on the other side (30.8.26).
-                sbH(
-                  "div",
-                  { className: "sbExportBar" },
-                  exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
-                  sbH(
-                    "button",
-                    { type: "button", className: "ghostBtn small", onClick: onFolderExcel },
-                    sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"
-                  ),
-                  sbH(
-                    "button",
-                    { type: "button", className: "ghostBtn small", onClick: () => setExportAsk(() => onFolderPdf) },
-                    sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"
-                  ),
-                  exportAsk
-                    ? sbH(PrintLangAsk, {
-                        withAudience: true,
-                        onPick: (lg, who) => { setExportAsk(null); exportAsk(lg, who); },
-                        onClose: () => setExportAsk(null)
-                      })
-                    : null
-                ),
-                sbH(SbPdfColPick, { lang })
-              )
-      );
-    })(),
     // ------------------------------------------------- the review list
     // Documents the sorting read but could not file. Her instruction of
     // 30.8.26: this is not where things go by default, and when something does
@@ -20361,233 +20004,52 @@ function SubmittalFolder({
           )
         )
       : null,
-    // With a checklist in front of her, this list has one job: what is NOT on
-    // it. When there is nothing of that kind, the list does not appear at all.
-    onChecklist && rows.length === 0
-      ? null
-      : sbH("div", { className: "sbListTitle" },
-          !canEdit ? L("submittalList") : onChecklist ? L("unplacedList") : L("trackingList")),
-    onChecklist && rows.length === 0
-      ? null
-      : rows.length === 0
+    canEdit && offCount
+      ? sbH(
+          "p",
+          { className: "sbOffBar" },
+          `${offCount} ${L("removedSome")}`,
+          sbH(
+            "button",
+            { type: "button", className: "sbOffRestore", onClick: () => scope.forEach((c) => onRestoreChk && onRestoreChk(c.key)) },
+            sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
+            " ",
+            L("restoreAll")
+          )
+        )
+      : null,
+    rowsAll.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
       : sbH(
           "div",
           { className: "sbTableWrap" },
           sbH(
             "table",
-            { className: "sbTable" },
-            sbH(
-              "thead",
-              null,
-              sbH(
-                "tr",
-                null,
-                sbH("th", null, L("submittalNo")),
-                sbH("th", null, L("catCol")),
-                sbH("th", null, L("typeCol")),
-                sbH("th", null, L("itemCol")),
-                sbH("th", null, L("supplierCol")),
-                sbH("th", null, L("dateCol")),
-                sbH("th", null, L("dueCol")),
-                sbH("th", null, L("status")),
-                sbH("th", null, L("signDate")),
-                canEdit ? sbH("th", { className: "sbShowCol" }, L("showCol")) : null,
-                sbH("th", null, "")
-              )
-            ),
-            sbH(
-              "tbody",
-              null,
-              rows.map((s) => {
-                const st = sbStatusOf(s);
-                const signedAt = sbSignedAt(s);
-                // Yellow = approved since this browser last opened the folder.
-                const isNew = !!signedAt && (!seenAt || signedAt > seenAt);
-                const older = olderCountOf(s);
-                // The same fan as the other two boards: orange while it is
-                // with the supervision, green once it is signed (29.8.26).
-                const due = String(s.requiredApprovalDate || "").slice(0, 10);
-                const settled = st === "approved" || st === "approvedNoted";
-                // A version that a newer one replaced. It is closed: a revision
-                // was raised because this one was not approved (29.8.26).
-                const superseded = isOlder(s) && !settled;
-                const tone = settled ? "sbOk"
-                  // Past the date it had to be approved by, and still not
-                  // approved: red, whatever else is true of it (29.8.26).
-                  : (st === "rejected" || (due && due < sbToday())) ? "sbLate"
-                  : s.sent ? "sbWait"
-                  : "";
-                return sbH(
-                  "tr",
-                  { key: s.id, className: `${isNew ? "sbRowNew" : ""} ${isOlder(s) ? "sbRowOlder" : ""} ${tone}`.trim() },
-                  sbH(
-                    "td",
-                    { className: "sbNoCell" },
-                    sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
-                    sbH(
-                      "span",
-                      { className: "sbNoRev" },
-                      `Rev.${s.rev || 0}`,
-                      older
-                        ? sbH(
-                            "button",
-                            {
-                              type: "button",
-                              className: `sbRevToggle ${openFamily === s.seq ? "open" : ""}`,
-                              title: L("olderVersions"),
-                              onClick: () => setOpenFamily(openFamily === s.seq ? null : s.seq)
-                            },
-                            sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }),
-                            older
-                          )
-                        : null
-                    )
-                  ),
-                  sbH("td", null, sbText(boardCategoryOf(s.category) || { en: "", he: "" }, lang) || "—"),
-                  sbH("td", { className: "sbItemCell", dir: "auto" }, s.typeId || "—"),
-                  sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || "—"),
-                  sbH(
-                    "td",
-                    null,
-                    canEdit
-                      ? sbH("input", {
-                          type: "text",
-                          className: "sbCellIn",
-                          value: s.supplier || "",
-                          placeholder: "—",
-                          onChange: (e) => onPatch && onPatch(s, { supplier: e.target.value })
-                        })
-                      : (s.supplier || "—")
-                  ),
-                  sbH("td", { dir: "ltr" }, s.sent ? sbFmtDate((s.sentAt || "").slice(0, 10) || s.date) : sbFmtDate(s.date)),
-                  sbH("td", { dir: "ltr" }, due ? sbFmtDate(due) : "—"),
-                  sbH(
-                    "td",
-                    { className: "sbStatusCell" },
-                    sbH(
-                      "div",
-                      { className: "sbStatusWrap" },
-                      superseded
-                        ? sbH("span", { className: "sbStatus", style: { background: "#9aa3af" } }, L("closedNoApproval"))
-                        : sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang)),
-                      s.sent || superseded ? null : sbH("span", { className: "sbDraftTag" }, L("draft"))
-                      // "Newly approved" beside "Approved" said the same thing
-                      // twice. The green chip is the whole answer (7.9.26).
-                    )
-                  ),
-                  // Signed: the date. Not signed, and this person may sign:
-                  // the way in sits exactly where the date will end up.
-                  sbH(
-                    "td",
-                    { dir: signedAt ? "ltr" : void 0 },
-                    signedAt
-                      ? sbFmtDate(signedAt.slice(0, 10))
-                      : canSign && !canEdit
-                        ? sbH(
-                            "button",
-                            { type: "button", className: "sbActBtn sign", onClick: () => onOpen(s) },
-                            sbH(PenLine, { size: 13, strokeWidth: 2 }),
-                            " ",
-                            L("signColumn")
-                          )
-                        : "—"
-                  ),
+            { className: "sbTable sbBoardTable" },
+            sbH("thead", null, sbH("tr", null,
+              SB_BOARD_COLS.map((c) => sbH(
+                "th",
+                { key: c.key, className: `sbColTh ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim() },
+                sbH("span", { className: "sbColThIn" },
+                  sbH("span", null, c.label(lang)),
+                  // Ticked: the column is in the workbook and on the PDF.
                   canEdit
-                    ? sbH(
-                        "td",
-                        { className: "sbShowCol" },
-                        superseded
-                          ? sbH("span", { className: "lliDash" }, "—")
-                          : sbH("input", {
-                          type: "checkbox",
-                          className: "lliShowTick",
-                          checked: !s.hidden,
-                          "aria-label": L("showCol"),
-                          onChange: () => onToggleShow(s)
-                        })
-                      )
-                    : null,
-                  sbH(
-                    "td",
-                    { className: "sbActions" },
-                    // The one icon that matters: opens the whole document —
-                    // the form we built plus the specifications uploaded for
-                    // it. A client reads it on the screen; taking it away as a
-                    // PDF is the administrator's to do.
-                    canEdit
-                      ? sbH(
-                          "button",
-                          { type: "button", className: "sbActBtn", title: L("pdfHint"), onClick: () => onPrint(s) },
-                          sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
-                          " ",
-                          L("openDoc")
-                        )
-                      : null,
-                    canEdit && onPrintNoSpecs
-                      ? sbH(
-                          "button",
-                          {
-                            type: "button",
-                            className: "sbActBtn",
-                            title: lang === "he" ? "\u05d8\u05d5\u05e4\u05e1 \u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc \u05d1\u05dc\u05d1\u05d3, \u05d1\u05dc\u05d9 \u05d3\u05e4\u05d9 \u05d4\u05de\u05e4\u05e8\u05d8\u05d9\u05dd" : "The form only, without the specification pages",
-                            onClick: () => onPrintNoSpecs(s)
-                          },
-                          sbH(Printer, { size: 13, strokeWidth: 2 }),
-                          " ",
-                          lang === "he" ? "\u05dc\u05dc\u05d0 \u05de\u05e4\u05e8\u05d8\u05d9\u05dd" : "No specs"
-                        )
-                      : null,
-                    // Once it is signed, the submittal is a document somebody
-                    // has to be able to keep: the form, the signature on it and
-                    // the specifications behind it, as one PDF. A client and
-                    // the main contractor get the printer here; before it is
-                    // approved there is nothing to file (7.9.26).
-                    !canEdit && (signedAt || s.closedAt)
-                      ? sbH(
-                          "button",
-                          { type: "button", className: "sbActBtn", title: L("printApproved"), onClick: () => onPrint(s) },
-                          sbH(Printer, { size: 13, strokeWidth: 2 }),
-                          " ",
-                          L("printCol")
-                        )
-                      : null,
-
-                    // Editing belongs to a draft. Once it has gone out, the
-                    // way to change anything is a new revision.
-                    canEdit && !s.sent && !superseded
-                      ? sbH(
-                          "button",
-                          { type: "button", className: "sbActBtn", onClick: () => onOpen(s) },
-                          sbH(Pencil, { size: 13, strokeWidth: 2 }),
-                          " ",
-                          L("open")
-                        )
-                      : null,
-                    // A superseded version is history: it can be printed and
-                    // nothing else. Raising a revision of a revision, or
-                    // editing one that has already gone out, is how a document
-                    // that was sent quietly turns back into a draft (29.8.26).
-                    canEdit && !superseded
-                      ? sbH(
-                          "button",
-                          { type: "button", className: "sbActBtn", title: L("newRevision"), onClick: () => onNewRevision(s) },
-                          sbH(RotateCcw, { size: 13, strokeWidth: 2 }),
-                          " ",
-                          `Rev.${sbNextRev(list, s)}`
-                        )
-                      : null,
-                    canEdit && !superseded
-                      ? sbH(
-                          "button",
-                          { type: "button", className: "sbActBtn danger", title: L("remove"), onClick: () => onDelete(s) },
-                          sbH(Trash2, { size: 13, strokeWidth: 2 })
-                        )
-                      : null
-                  )
-                );
-              })
-            )
+                    ? sbH("input", {
+                        type: "checkbox", className: "sbColTick",
+                        title: he ? "מסומן — יופיע באקסל וב-PDF" : "Ticked: in the workbook and the PDF",
+                        checked: hidden.indexOf(c.key) < 0,
+                        onChange: () => onToggleCol && onToggleCol(c.key)
+                      })
+                    : null)
+              )),
+              sbH("th", { className: "cAct" }, "")
+            )),
+            sbH("tbody", null, order.flatMap((sec) => {
+              const band = showBands
+                ? [sbH("tr", { key: `band:${sec}`, className: "sbBandRow" }, sbH("td", { colSpan: ncols }, sec))]
+                : [];
+              return band.concat(bySec[sec].flatMap(rowOf));
+            }))
           )
         )
   );
@@ -20612,7 +20074,8 @@ function SubmittalFolder({
 // being shown the outbox instead of the folder.)
 function sbVisibleFor(list, viewerRole) {
   if (viewerRole !== "client") return list || [];
-  return (list || []).filter((s) => s.sent && !s.hidden);
+  // 21.10.26 — the "show" tick is gone: what was sent is what a client sees.
+  return (list || []).filter((s) => s.sent);
 }
 function sbMergeApproval(rec, approvals) {
   const ap = rec && approvals && approvals[rec.id];
@@ -20668,11 +20131,35 @@ function SubmittalCard({
   const langForId = useRef5(null);
   const lang = langOverride || (appIsRTL ? "he" : "en");
   const isRTL = lang === "he";
-  const [selected, setSelected] = useState6(null);
+  // 21.10.26 — the toolbar opens on every discipline at once.
+  const [selected, setSelected] = useState6("all");
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6(null);
   const [signAsClient, setSignAsClient] = useState6(false);
-  const [supOpen, setSupOpen] = useState6(false);
+  // Which columns go into the workbook and the PDF: the ticks in the column
+  // titles. Kept in this browser (21.10.26).
+  const [colHide, setColHide] = useState6(sbPdfHidden);
+  const toggleCol = (k) => {
+    const next = colHide.indexOf(k) >= 0 ? colHide.filter((x) => x !== k) : colHide.concat([k]);
+    // At least one column stays.
+    if (next.length >= SB_BOARD_COLS.length) return;
+    setColHide(next);
+    try { window.localStorage.setItem(SB_PDF_HIDE_KEY, JSON.stringify(next)); } catch (e) {}
+  };
+  // The manual save under the board (21.10.26).
+  const [saveMsg, setSaveMsg] = useState6(null);
+  const saveNow = async () => {
+    if (!window.__awSaveNow) return;
+    setSaveMsg({ busy: true, text: lang === "he" ? "\u05e9\u05d5\u05de\u05e8\u2026" : "Saving\u2026" });
+    try {
+      const r = await window.__awSaveNow();
+      setSaveMsg(r && r.failed
+        ? { err: true, text: (lang === "he" ? "\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05e0\u05db\u05e9\u05dc\u05d4: " : "Save failed: ") + r.failed }
+        : { text: (lang === "he" ? "\u05e0\u05e9\u05de\u05e8 \u2713 " : "Saved \u2713 ") + new Date().toTimeString().slice(0, 5) });
+    } catch (e) {
+      setSaveMsg({ err: true, text: String((e && e.message) || e) });
+    }
+  };
   // 20.10.26 — creating a submittal from the main screen, before any folder is
   // open: she picks the folder (it sets the number), and may write her own
   // discipline and sub-category straight away.
@@ -20682,6 +20169,34 @@ function SubmittalCard({
   const label = (c) => sbText(c, lang);
   const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
   const L = (k) => sbText(SB_L[k], lang);
+  // E-mail to the supervision (21.10.26): her standing message, filled in from
+  // the submittal, opened in the mail program on this computer. The supervision
+  // contacts' addresses go in the "to" line when the contacts have them. A
+  // draft that goes out this way is marked as sent.
+  const sendMail = (s) => {
+    const no = sbNumber(s.category, s.seq) + (Number(s.rev) ? ` Rev.${s.rev}` : "");
+    const mark = String(s.typeId || "").trim();
+    const due = s.requiredApprovalDate ? sbFmtDate(String(s.requiredApprovalDate).slice(0, 10)) : "";
+    const to = (contacts || [])
+      .filter((r) => r && r.group === "supervision" && /\S+@\S+/.test(String(r.email || "")))
+      .map((r) => String(r.email).trim());
+    const subject = `\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 ${pName || ""} - \u05d1\u05e7\u05e9\u05d4 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8 \u05e1\u05d1\u05de\u05d9\u05d8\u05dc - ${no} \u05e2\u05d1\u05d5\u05e8 \u05d0\u05d9\u05e4\u05d9\u05d5\u05df ${mark}`;
+    const body = [
+      "\u05e4\u05d9\u05e7\u05d5\u05d7 \u05e9\u05dc\u05d5\u05dd",
+      `\u05de\u05e6"\u05d1 \u05e1\u05d1\u05de\u05d9\u05d8\u05dc \u05de\u05e1\u05e4\u05e8 ${no} \u05e2\u05d1\u05d5\u05e8 \u05d0\u05d9\u05e4\u05d9\u05d5\u05df ${mark}.`,
+      String(s.itemDescription || "").trim(),
+      `\u05e0\u05d0 \u05dc\u05d0\u05e9\u05e8 / \u05dc\u05d4\u05e2\u05d1\u05d9\u05e8 \u05d4\u05e2\u05e8\u05d5\u05ea \u05dc\u05d0 \u05d9\u05d0\u05d5\u05d7\u05e8 \u05de-${due}.`,
+      "\u05d1\u05de\u05d9\u05d3\u05d4 \u05d5\u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc \u05de\u05d0\u05d5\u05e9\u05e8 \u05e0\u05d0 \u05dc\u05de\u05dc\u05d0 \u05d0\u05ea \u05db\u05dc\u05dc \u05d4\u05e4\u05e8\u05d8\u05d9\u05dd \u05d1\u05ea\u05d7\u05ea\u05d9\u05ea \u05d4\u05d8\u05d5\u05e4\u05e1 \u05d5\u05dc\u05d7\u05ea\u05d5\u05dd \u05e2\u05dc \u05d2\u05d1\u05d9 \u05d4\u05d8\u05d5\u05e4\u05e1 \u05dc\u05de\u05d8\u05d4 \u05de\u05e6\u05d3 \u05d9\u05de\u05d9\u05df \u05e2\u05dd \u05d7\u05d5\u05ea\u05de\u05ea \u05d9\u05e2\u05d5\u05d3\u05d9\u05ea.",
+      "",
+      "\u05ea\u05d5\u05d3\u05d4 \u05e2\u05dc \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4.",
+      "\u05d1\u05d1\u05e8\u05db\u05d4,"
+    ].join("\r\n");
+    const href = `mailto:${to.map(encodeURIComponent).join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    if (!s.sent) {
+      commit((list || []).map((x) => (x.id === s.id ? { ...x, sent: true, sentAt: x.sentAt || new Date().toISOString() } : x)));
+    }
+    try { window.location.href = href; } catch (e) {}
+  };
   // The submittal used to carry its own EN/HE switch, because the document that
   // goes out to a client is not always in the language she is working in. That
   // is still true — but it is a question about the PRINT, so it is now asked at
@@ -20760,53 +20275,45 @@ function SubmittalCard({
   const projectId = project && project.id;
   const pName = (project && project.name) || projectName || "";
 
-  // ------------------------------------------------- export from the main screen
-  // 20.10.26 — two exports. With a folder open, the folder's table. And
-  // always, every submittal together, grouped by discipline: a heading band per
-  // discipline, and on paper every discipline starts its own page.
+  // ------------------------------------------------- export
+  // 21.10.26 — two buttons. They export exactly what the toolbar has open: one
+  // discipline, or every one of them, grouped by discipline under a band.
   const [allAsk, setAllAsk] = useState6(null);
   const [allNote, setAllNote] = useState6(null);
-  const gridOf = (lg, who, cats, pdf) => sbBoardGrid({
+  const gridOf = (lg, who) => sbBoardGrid({
     list: visibleList, boqData, boqFlags, lliRows,
     chkOff: submittalChkOff || {},
     lang: lg, audience: who,
-    categories: cats,
-    withCategory: false,
-    forPdf: !!pdf,
+    categories: chosen ? [chosen] : SUBMITTAL_CATEGORIES,
     tradeFor: (key) => boardTradeCompany(contacts, contactsCatalog, key, lg)
   });
-  const bySection = sbGroupBySection;
-
   const today2 = () => sbFmtDate(new Date().toISOString().slice(0, 10));
-  const runExcel = async (mode) => {
-    const one = mode === "cat" && chosen;
-    const g = gridOf(lang, "admin", one ? [chosen] : SUBMITTAL_CATEGORIES);
+  const runExcel = async () => {
+    const g = gridOf(lang, "admin");
     if (!g.body.length) { setAllNote(L("nothingToExport")); return; }
     setAllNote(null);
-    const name = one ? `SUB - ${chosen.en}` : "SUB";
-    const sub = one ? sbText(chosen, lang) : (lang === "he" ? "כל הסבמיטלים" : "All submittals");
-    const grouped = one ? null : bySection(g);
+    const name = chosen ? `SUB - ${chosen.en}` : "SUB";
+    const grouped = sbGroupBySection(g);
     const res = await boardExportXlsx({
       title: pName,
-      subtitle: `SUBMITTAL — ${sub} · ${today2()}`,
-      sheetName: one ? chosen.en : "Submittals",
+      subtitle: `SUBMITTAL · ${today2()}`,
+      sheetName: chosen ? chosen.en : "Submittals",
       fileName: boardFileName(pName, name, "xlsx"),
       head: g.head, widths: g.widths, colTypes: g.types,
-      ...(grouped ? { sections: grouped.sections, body: grouped.body } : { body: g.body }),
+      sections: grouped.sections, body: grouped.body,
       toneRows: g.tone, imgCol: g.imgCol, imgs: g.imgs,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setAllNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
-  const runPdf = (mode, lg, who) => {
-    const one = mode === "cat" && chosen;
-    const g = gridOf(lg, who, one ? [chosen] : SUBMITTAL_CATEGORIES, true);
+  const runPdf = (lg, who) => {
+    const g = gridOf(lg, who);
     if (!g.body.length) { setAllNote(sbText(SB_L.nothingToExport, lg)); return; }
     setAllNote(null);
-    const name = one ? `SUB - ${chosen.en}` : "SUB";
-    const grouped = bySection(g);
+    const name = chosen ? `SUB - ${chosen.en}` : "SUB";
+    const grouped = sbGroupBySection(g);
     // The header says SUBMITTAL and nothing more; each discipline is the band
-    // above its own table (20.10.26).
+    // above its own rows (20.10.26).
     boardExportPdf({
       title: pName,
       fileName: boardFileName(pName, name, ""),
@@ -20817,7 +20324,6 @@ function SubmittalCard({
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
   };
-
 
   // The contractor line is the company itself. The full row in the contacts tab
   // carries a person, a role and a phone — none of that belongs on the form.
@@ -20879,8 +20385,6 @@ function SubmittalCard({
           disciplineText: preset.disciplineText || ""
         }
       : rec;
-    // Back from the form, she lands in the folder it was filed in.
-    if (inCat) setSelected(inCat.key);
     setDraft(withPreset);
     setOpenId(withPreset.id);
   };
@@ -20973,25 +20477,6 @@ function SubmittalCard({
 
   // While a submittal is open, the whole card is the form — the tiles would
   // only be noise on a page this dense.
-  // Sending out for approval is a screen of its own, reached from the board:
-  // it crosses every category, which is how the covering e-mail is written.
-  if (supOpen && canEdit) {
-    const rows = sbVisibleFor(list, "client").map((r) => ({
-      id: r.id,
-      no: sbNumber(r.category, r.seq),
-      desc: r.typeId || r.itemDescription || "",
-      due: r.requiredApprovalDate || "",
-      cat: sbText(boardCategoryOf(r.category) || { en: "", he: "" }, lang) || "",
-    }));
-    return sbH(SupervisionList, {
-      kind: "submittal",
-      projectId,
-      projectName,
-      rows,
-      onBack: () => setSupOpen(false),
-    });
-  }
-
   if (openId && draft) {
     if (canEdit && signAsClient) {
       return sbH(SubmittalReview, {
@@ -21061,47 +20546,20 @@ function SubmittalCard({
   return sbH(
     "div",
     { className: "submittalCard", dir: isRTL ? "rtl" : "ltr" },
-    sbH(
-      "div",
-      { className: "submittalHead" },
-      sbH(
-        "p",
-        { className: "submittalIntro" },
-        // The same screen reads differently depending on who is standing in
-        // front of it. The administrator submits; the client opens a list of
-        // what is waiting on them. (7.9.26)
-        viewerRole === "client"
-          ? (isRTL
-              ? "בחרו קטגוריה לפתיחת רשימת הסבמיטלים הנדרשים לאישור באותה קטגוריה."
-              : "Choose a category to open the submittals awaiting your approval in it.")
-          : (isRTL ? "בחרו קטגוריה להגשת אישורי חומרים ודגימות." : "Choose a category to submit material and sample approvals.")
-      )
-    ),
     langSwitch,
+    // 21.10.26 — one button, in the middle. The folder and the discipline are
+    // chosen inside it.
     canEdit
       ? sbH(
           "div",
-          { style: { display: "flex", justifyContent: "center", margin: "0 0 14px" } },
+          { className: "sbTopCreate" },
           sbH(
             "button",
             {
               type: "button",
               className: "functionEditBtn",
               style: { minWidth: 240, justifyContent: "center", gap: 8 },
-              onClick: () => setSupOpen(true)
-            },
-            sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 10, flexDirection: "row-reverse" } },
-              sbH(SendIcon2, { size: 15, strokeWidth: 2 }),
-              sbH("span", null, "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7"))
-          ),
-          // 20.10.26 — a new submittal from here, without opening a folder.
-          sbH(
-            "button",
-            {
-              type: "button",
-              className: "functionEditBtn",
-              style: { minWidth: 240, justifyContent: "center", gap: 8, marginInlineStart: 10 },
-              onClick: () => setNewAsk({ cat: selected || "", disc: "" })
+              onClick: () => setNewAsk({ cat: chosen ? chosen.key : "", disc: "" })
             },
             sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 10 } },
               sbH(Plus2, { size: 15, strokeWidth: 2.4 }),
@@ -21151,55 +20609,33 @@ function SubmittalCard({
         document.body
       );
     })() : null,
+    // The disciplines as a toolbar: names only, "all" first (21.10.26).
     sbH(
       "div",
-      // The grid keeps a fixed direction so the tiles never jump to the other
-      // side of the screen when the language changes. Only the label inside a
-      // tile switches direction, and it stays inside its own tile.
-      { className: "submittalGrid", dir: "rtl" },
-      SUBMITTAL_CATEGORIES.map((c) => {
-        const count = visibleList.filter((s) => s.category === c.key).length;
-        return sbH(
-          "button",
-          {
-            key: c.key,
-            type: "button",
-            // Same hover-and-select behaviour as the project board cards.
-            className: `dashCard submittalTile ${selected === c.key ? "selected" : ""}`,
-            "aria-pressed": selected === c.key,
-            onClick: () => setSelected((s) => (s === c.key ? null : c.key))
-          },
-          sbH("div", { className: "cardIcon" }, sbH(c.icon, { size: 20, strokeWidth: 1.7 })),
-          sbH("div", null, sbH("p", { className: "cardTitle", dir: "auto" }, label(c))),
-          count ? sbH("span", { className: "sbTileCount" }, count) : null
-        );
-      })
+      { className: "sbCatBar", role: "tablist" },
+      [{ key: "all", he: "כל הקטגוריות", en: "All categories" }].concat(SUBMITTAL_CATEGORIES).map((c) => sbH(
+        "button",
+        {
+          key: c.key,
+          type: "button",
+          role: "tab",
+          className: `sbCatBtn ${selected === c.key ? "on" : ""} ${c.key === "all" ? "all" : ""}`.trim(),
+          "aria-selected": selected === c.key,
+          onClick: () => setSelected(c.key)
+        },
+        sbText(c, lang)
+      ))
     ),
-    // Export from the main screen: the open folder's table, and every
-    // submittal together grouped by discipline (20.10.26).
+    // What the toolbar has open is what is exported.
     canEdit
       ? sbH(
           "div",
-          { className: "sbExportBar sbExportAll" },
-          chosen
-            ? sbH(
-                React15.Fragment,
-                null,
-                sbH("span", { className: "sbExportAllLabel" }, `${lang === "he" ? "\u05d9\u05d9\u05e6\u05d5\u05d0 \u05d4\u05d8\u05d1\u05dc\u05d4:" : "This table:"} ${sbText(chosen, lang)}`),
-                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => runExcel("cat") },
-                  sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"),
-                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setAllAsk(() => (lg, who) => runPdf("cat", lg, who)) },
-                  sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"),
-                sbH("span", { className: "sbExportSep" })
-              )
-            : null,
-          sbH("span", { className: "sbExportAllLabel" }, (lang === "he" ? "\u05db\u05dc \u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd \u05dc\u05e4\u05d9 \u05ea\u05d7\u05d5\u05dd:" : "All submittals by discipline:")),
-          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => runExcel("all") },
-            sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel"),
-          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setAllAsk(() => (lg, who) => runPdf("all", lg, who)) },
-            sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF"),
+          { className: "sbExportBar sbExportTwo" },
+          sbH("button", { type: "button", className: "sbExpBtn xls", onClick: runExcel, title: "Excel" },
+            sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
+          sbH("button", { type: "button", className: "sbExpBtn pdf", onClick: () => setAllAsk(() => runPdf), title: "PDF" },
+            sbH(Printer, { size: 15, strokeWidth: 2 }), " PDF"),
           allNote ? sbH("span", { className: "lliPoNote" }, allNote) : null,
-          sbH(SbPdfColPick, { lang }),
           allAsk
             ? sbH(PrintLangAsk, {
                 withAudience: true,
@@ -21209,9 +20645,13 @@ function SubmittalCard({
             : null
         )
       : null,
-    chosen &&
-      sbH(SubmittalFolder, {
+    sbH(SubmittalFolder, {
         category: chosen,
+        categories: chosen ? [chosen] : SUBMITTAL_CATEGORIES,
+        colHide,
+        onToggleCol: toggleCol,
+        onSend: sendMail,
+        tradeFor: (key) => boardTradeCompany(contacts, contactsCatalog, key, lang),
         lang,
         isRTL,
         boqData,
@@ -21222,7 +20662,7 @@ function SubmittalCard({
         canEdit,
         canSign,
         seenAt,
-        queue: (submittalQueue || []).filter((q) => q.category === chosen.key),
+        queue: chosen ? (submittalQueue || []).filter((q) => q.category === chosen.key) : [],
         onTakeFromQueue: (q) => {
           const rec = sbNewSubmittal({
             category: chosen.key,
@@ -21262,22 +20702,19 @@ function SubmittalCard({
         // from inside the submittal it belongs to, one at a time, and then it
         // is right the first time.
         onOpen: openExisting,
-        onPrint: (s) => setPrintAsk(() => (lg) => sbPrint(s, lg, printBrand, userSignatures)),
-        // The form alone, without the specification pages behind it (20.10.26).
-        onPrintNoSpecs: (s) => setPrintAsk(() => (lg) => sbPrintNoSpecs(s, lg, printBrand, userSignatures)),
-        // The tick that decides whether this submittal is on the client's
-        // screen and on the paper.
-        onToggleShow: (s) => commit((list || []).map((x) => (x.id === s.id ? { ...x, hidden: !x.hidden } : x))),
+        // The printer prints the form we built, never the specification pages
+        // behind it (21.10.26).
+        onPrint: (s) => setPrintAsk(() => (lg) => sbPrintNoSpecs(s, lg, printBrand, userSignatures)),
         // One field on one submittal, saved where it stands: the supplier
         // typed into the list, her private notes (29.8.26).
         onPatch: (s, next) => commit((list || []).map((x) => (x.id === s.id ? { ...x, ...next } : x))),
         onNewRevision: startRevision,
         onDelete: deleteOne,
         // Removing a checklist line from this folder, and putting them back.
-        chkOff: (submittalChkOff || {})[chosen.key] || null,
-        onRemoveChk: (code) => onChangeChkOff && onChangeChkOff({
+        chkOff: submittalChkOff || {},
+        onRemoveChk: (catKey, code) => onChangeChkOff && onChangeChkOff({
           ...(submittalChkOff || {}),
-          [chosen.key]: { ...((submittalChkOff || {})[chosen.key] || {}), [code]: true }
+          [catKey]: { ...((submittalChkOff || {})[catKey] || {}), [code]: true }
         }),
         onRestoreChk: (catKey) => {
           const next = { ...(submittalChkOff || {}) };
@@ -21286,11 +20723,9 @@ function SubmittalCard({
         },
         // The company that does this discipline on this project, out of the
         // contacts list. Blank when the contacts do not say (30.8.26).
-        tradeCompany: boardTradeCompany(contacts, contactsCatalog, chosen.key, lang),
-        projectName: pName,
-        printBrand,
+
         // What the sorting could not place in this discipline.
-        reviewRows: (submittalReview || []).filter((r) => r && r.category === chosen.key),
+        reviewRows: chosen ? (submittalReview || []).filter((r) => r && r.category === chosen.key) : [],
         // Opening the submittal the reading says is missing, on the line it
         // named, carrying the documents it had already read (30.8.26).
         onPlaceReview: (row, code) => {
@@ -21323,6 +20758,21 @@ function SubmittalCard({
           }
         }
       }),
+    // A save she can press, beside the automatic one (21.10.26).
+    canEdit
+      ? sbH(
+          "div",
+          { className: "sbSaveNow" },
+          sbH(
+            "button",
+            { type: "button", className: "functionEditBtn", disabled: !!(saveMsg && saveMsg.busy), onClick: saveNow },
+            sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 8 } },
+              sbH(SaveIcon2, { size: 15, strokeWidth: 2.2 }),
+              sbH("span", null, lang === "he" ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "Save"))
+          ),
+          saveMsg ? sbH("span", { className: `sbSaveMsg ${saveMsg.err ? "err" : ""}`.trim() }, saveMsg.text) : null
+        )
+      : null,
     printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
   );
 }
@@ -23217,11 +22667,9 @@ function ProjectDashboardApp() {
     q[rowKey] = next;
     return next;
   };
-  useEffect5(() => {
-    if (!isAuthenticated || !extrasLoaded) return;
-    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
-    saveTimerRef.current = setTimeout(() => {
-    (async () => {
+  // One save run, for the timer and for the save button alike (21.10.26).
+  const runSave = async (snapshot) => {
+      const projectExtras = snapshot;
       const myRun = ++saveRunRef.current;
       const { rest, schedules, boqs, llis, sds, rms, flagOverrides, rfis, cis, mks, sdaps, sbaps, subs } = splitExtras(projectExtras);
       const byPart = {
@@ -23259,7 +22707,7 @@ function ProjectDashboardApp() {
       }
       if (overtaken) {
         console.log("[awdash] save run", myRun, "stopped — a newer one is running");
-        return;
+        return { overtaken: true };
       }
       // A silent failure here is how work goes missing. Say it out loud.
       setSaveError(failed ? (isRTL ? "\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05e9\u05e8\u05ea \u05e0\u05db\u05e9\u05dc\u05d4" : "Saving to the server failed") + ": " + failed : null);
@@ -23267,8 +22715,26 @@ function ProjectDashboardApp() {
         await window.storage.set("project-extras", JSON.stringify(projectExtras), true);
       } catch (e) {
       }
-    })();
-    }, 1200);
+      return { failed };
+  };
+  // The save button: whatever is on screen now, written now, without waiting
+  // for the timer. A run already going is overtaken by this one, which carries
+  // the same data and more.
+  const saveNowSnapRef = useRef5(null);
+  saveNowSnapRef.current = { projectExtras, ok: isAuthenticated && extrasLoaded };
+  window.__awSaveNow = async () => {
+    const cur = saveNowSnapRef.current || {};
+    if (!cur.ok) return { failed: isRTL ? "\u05d0\u05d9\u05df \u05d7\u05d9\u05d1\u05d5\u05e8" : "not signed in" };
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    let r = await runSave(cur.projectExtras);
+    // Overtaken by an automatic run that started meanwhile: run once more.
+    if (r && r.overtaken) r = await runSave(saveNowSnapRef.current.projectExtras);
+    return r || {};
+  };
+  useEffect5(() => {
+    if (!isAuthenticated || !extrasLoaded) return;
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => { runSave(projectExtras); }, 1200);
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     };
