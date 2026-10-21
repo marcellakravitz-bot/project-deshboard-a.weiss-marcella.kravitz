@@ -558,7 +558,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "phot
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "20.10.2026 · build 194";
+var APP_BUILD = "21.10.2026 · build 196";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -10323,6 +10323,41 @@ async function boardXlsxStyled(ExcelJS, opts) {
 
   // One cell of the column-title row, so a sheet in sections can repeat it
   // under every band exactly as the PDF repeats it under every group heading.
+  // The same fan the PDF uses, cell for cell: signed off green, in somebody's
+  // hands orange, late red, otherwise the zebra (21.10.26).
+  const TONE = { ok: "#e3f3e6", wait: "#fdeed8", late: "#fbe3e3", alert: "#fbe3e3" };
+  const toneFill = (gi, ri) => {
+    if (alertRows && alertRows[gi]) return TONE.alert;
+    const t = toneRows && toneRows[gi];
+    if (t && TONE[t]) return TONE[t];
+    return ri % 2 === 1 ? P.zebra : null;
+  };
+  // With a photo column every row is a photo's height, photo or not, the way
+  // the printed page has it (21.10.26).
+  const withPics = imgCol != null && !!imgs;
+  const placePic = async (pic, row0) => {
+    const kind = pic ? boardImageKind(pic) : null;
+    if (!kind) return;
+    const boxW = boardColPx(widths[imgCol]);
+    const boxH = boardRowPx(BOARD_XLSX_IMG_ROW);
+    const nat = await boardImageSize(pic);
+    let dw = Math.round(boxW - 6);
+    let dh = Math.round(boxH - 6);
+    if (nat && nat.w && nat.h) {
+      const scale = Math.min((boxW - 6) / nat.w, (boxH - 6) / nat.h);
+      dw = Math.max(8, Math.round(nat.w * scale));
+      dh = Math.max(8, Math.round(nat.h * scale));
+    }
+    const left = Math.max(0, Math.round((boxW - dw) / 2));
+    const top = Math.max(0, Math.round((boxH - dh) / 2));
+    const id = wb.addImage({ base64: pic, extension: kind });
+    ws.addImage(id, {
+      tl: { nativeCol: imgCol, nativeColOff: left * BOARD_XLSX_EMU, nativeRow: row0, nativeRowOff: top * BOARD_XLSX_EMU },
+      br: { nativeCol: imgCol, nativeColOff: (left + dw) * BOARD_XLSX_EMU, nativeRow: row0, nativeRowOff: (top + dh) * BOARD_XLSX_EMU },
+      editAs: "oneCell"
+    });
+  };
+
   const headCell = (cell, text) => {
     cell.value = text;
     cell.font = { bold: true, size: 10, color: { argb: "FFFFFFFF" }, name: "Arial" };
@@ -10338,7 +10373,7 @@ async function boardXlsxStyled(ExcelJS, opts) {
   // titles under it, its rows, a blank line, the next group (14.10.26).
   if (sections) {
     let at = 3;
-    sections.forEach((sec) => {
+    for (const sec of sections) {
       ws.mergeCells(at, 1, at, n);
       const band = ws.getCell(at, 1);
       band.value = sec.label;
@@ -10353,8 +10388,14 @@ async function boardXlsxStyled(ExcelJS, opts) {
       shr.height = 26;
       at++;
 
-      (sec.rows || []).forEach((row, ri) => {
+      const srows = sec.rows || [];
+      for (let ri = 0; ri < srows.length; ri++) {
+        const row = srows[ri];
+        // Where the row sat in the whole list, so its colour and its photo
+        // come with it. A section without that keeps the plain zebra.
+        const gi = sec.idx ? sec.idx[ri] : -1;
         const r = ws.getRow(at);
+        const tint = gi >= 0 ? toneFill(gi, ri) : (ri % 2 === 1 ? P.zebra : null);
         row.forEach((v, ci) => {
           const cell = boardCellValue(v, colTypes ? colTypes[ci] : null);
           const c = r.getCell(ci + 1);
@@ -10363,12 +10404,16 @@ async function boardXlsxStyled(ExcelJS, opts) {
           c.font = { size: 10, name: "Arial", color: { argb: "FF" + boardHexNoHash(P.ink) } };
           c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
           c.border = { top: thin, left: thin, bottom: thin, right: thin };
-          if (ri % 2 === 1) c.fill = fill(P.zebra);
+          if (tint) c.fill = fill(tint);
         });
+        if (withPics && gi >= 0) {
+          r.height = BOARD_XLSX_IMG_ROW;
+          await placePic(imgs[gi], at - 1);
+        }
         at++;
-      });
+      }
       at++;
-    });
+    }
     return await wb.xlsx.writeBuffer();
   }
 
@@ -10399,12 +10444,10 @@ async function boardXlsxStyled(ExcelJS, opts) {
       // Every other row tinted: on a wide sheet it is what stops the eye from
       // sliding into the line above. A row that needs attention — a long lead
       // item nobody has ordered — takes a soft red instead (29.8.26).
-      if (alertRows && alertRows[ri]) c.fill = fill("#fbe3e3");
-      // Ordered, and nothing louder to say about it: the same soft green the
-      // board uses. (12.9.26)
-      else if (toneRows && toneRows[ri] === "ok") c.fill = fill("#e3f3e6");
-      else if (ri % 2 === 1) c.fill = fill(P.zebra);
+      const tint = toneFill(ri, ri);
+      if (tint) c.fill = fill(tint);
     });
+    if (withPics) r.height = BOARD_XLSX_IMG_ROW;
     // A photo on the board is a photo in the workbook, INSIDE the cell: both
     // corners of the picture are pinned to the cell, so it sits in the grid
     // instead of floating over it, and it moves and hides with its row
@@ -10517,6 +10560,8 @@ window.__awPaged = false;
   var colg = table ? table.querySelector("colgroup") : null;
   var thead = table ? table.querySelector("thead") : null;
   var rows = table ? Array.prototype.slice.call(table.querySelectorAll("tbody tr")) : [];
+  var FLOW = src.getAttribute("data-flow") === "1";
+  var NCOLS = colg ? colg.children.length : 1;
   // The closing strip is the house footer, and it belongs at the foot of every
   // sheet — a report handed over page by page has to say whose it is on each
   // one. It is a template here, copied under every frame (7.9.26).
@@ -10590,6 +10635,28 @@ window.__awPaged = false;
     if (!cur.tb.children.length) {
       // The first page takes the section of the first row that lands on it.
       if (cur.sec === null) setSec(cur, sec);
+    } else if (sec !== cur.sec && FLOW) {
+      // 21.10.26 - one continuous run: the next discipline follows straight
+      // on under its own band, and only moves over when the page is full.
+      var band = document.createElement("tr");
+      band.className = "secRow";
+      var bc = document.createElement("td");
+      bc.colSpan = NCOLS;
+      bc.textContent = sec;
+      band.appendChild(bc);
+      cur.tb.appendChild(band);
+      cur.tb.appendChild(rows[i]);
+      cur.sec = sec;
+      if (room(cur) < rows[i].getBoundingClientRect().height) {
+        // No room for the band and a row under it: both go over, and the
+        // page's own heading band names the discipline.
+        band.remove();
+        var nx = newPage();
+        setSec(nx, sec);
+        nx.tb.appendChild(rows[i]);
+        cur = nx;
+      }
+      continue;
     } else if (sec !== cur.sec) {
       // A new section does not share a page with the one before it.
       var fresh = newPage();
@@ -10641,7 +10708,7 @@ function awPrintWhenPaged(w, minDelay) {
 }
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections, imgH } = opts;
+          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections, imgH, secFlow } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -10722,7 +10789,14 @@ tbody tr.wait td, tbody tr.wait:nth-child(even) td { background: #fdeed8; }
 tbody tr.ok td, tbody tr.ok:nth-child(even) td { background: #e3f3e6; }
 td.img { padding: 2px; }
 td.img img { max-width: 100%; max-height: ${imgH || 60}px; object-fit: contain; display: block; margin: 0 auto; }
-</style></head><body><div id="src">
+/* Every row as tall as a row with a picture, picture or not (21.10.26). */
+${imgCol != null && imgH ? `td.img { height: ${imgH + 4}px; }` : ""}
+/* A discipline that starts mid-page: its band runs across the table, the same
+   band that heads a page (21.10.26). */
+tbody tr.secRow td, tbody tr.secRow:nth-child(even) td {
+  background: ${P.dark}; color: #fff; font-weight: 800; font-size: 10.5px;
+  letter-spacing: .3px; padding: 5px 8px; border: 1px solid ${P.dark}; }
+</style></head><body><div id="src"${secFlow ? ' data-flow="1"' : ""}>
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
 ${footImg}</div><div id="pages"></div>${printPaginateJs(noStamp ? "" : printedStampText(isRTL ? "he" : "en"))}</body></html>`;
@@ -19201,7 +19275,7 @@ function sbGroupBySection(g) {
     body: idx.map((i) => g.body[i]),
     tone: idx.map((i) => g.tone[i]),
     secs: idx.map((i) => g.secs[i]),
-    sections: order.map((k) => ({ label: k, rows: map[k].map((i) => g.body[i]) }))
+    sections: order.map((k) => ({ label: k, rows: map[k].map((i) => g.body[i]), idx: map[k] }))
   };
 };
 function sbBoardGrid(opts) {
@@ -19226,10 +19300,10 @@ function sbBoardGridRaw(opts) {
   col("submittalNo", L("submittalNo"), 15, "text");
   // On paper (20.10.26): the type mark right after the number, and the
   // submittal's own photo where the file count and the supplier used to be.
-  if (forPdf) col("typeCol", L("typeCol"), 12, "text");
+  col("typeCol", L("typeCol"), 12, "text");
   col("chkItem", L("chkItem"), 14, "text");
   col("chkDesc", L("chkDesc"), 40, "text");
-  if (forPdf) col("imgCol", sbText({ en: "Photo", he: "\u05ea\u05de\u05d5\u05e0\u05d4" }, lang), 16, "text");
+  col("imgCol", sbText({ en: "Photo", he: "\u05ea\u05de\u05d5\u05e0\u05d4" }, lang), 16, "text");
   if (!forPdf) col("docsCol", L("docsCol"), 9, "number");
   if (!forPdf) col("supplierCol", L("supplierCol"), 20, "text");
   col("sentCol", L("sentCol"), 13, "date");
@@ -19570,6 +19644,7 @@ function SubmittalFolder({
       sheetName: category.en,
       fileName: boardFileName(projectName, `SUB - ${category.en}`, "xlsx"),
       head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      toneRows: g.tone, imgCol: g.imgCol, imgs: g.imgs,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -19586,7 +19661,7 @@ function SubmittalFolder({
       subtitle: "SUBMITTAL",
       head: g.head, widths: g.widths,
       ...(() => { const gr = sbGroupBySection(g); return { body: gr.body, toneRows: gr.tone, sections: gr.secs, imgs: gr.imgs }; })(),
-      imgCol: g.imgCol, imgH: 48,
+      imgCol: g.imgCol, imgH: 48, secFlow: true,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
   };
@@ -20717,7 +20792,8 @@ function SubmittalCard({
       sheetName: one ? chosen.en : "Submittals",
       fileName: boardFileName(pName, name, "xlsx"),
       head: g.head, widths: g.widths, colTypes: g.types,
-      ...(grouped ? { sections: grouped.sections, body: grouped.body } : { body: g.body, toneRows: g.tone }),
+      ...(grouped ? { sections: grouped.sections, body: grouped.body } : { body: g.body }),
+      toneRows: g.tone, imgCol: g.imgCol, imgs: g.imgs,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setAllNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -20737,7 +20813,7 @@ function SubmittalCard({
       subtitle: "SUBMITTAL",
       head: g.head, widths: g.widths,
       body: grouped.body, toneRows: grouped.tone, sections: grouped.secs,
-      imgCol: g.imgCol, imgs: grouped.imgs, imgH: 48,
+      imgCol: g.imgCol, imgs: grouped.imgs, imgH: 48, secFlow: true,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
   };
