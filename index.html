@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "21.10.2026 · build 203";
+var APP_BUILD = "21.10.2026 · build 204";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18122,6 +18122,31 @@ function sbMakeSignature(file) {
 // while the file is still in hand, and kept on the record so a later AI run does
 // not have to fetch the PDF again.
 var SB_TEXT_CAP = 6e4;
+// 21.10.26 — all the files together, as kept on the submittal.
+var SB_TEXT_TOTAL = 15e4;
+// What the AI is sent: the room is shared out equally between the files, so a
+// system of ten specifications has every one of them read.
+var SB_AI_TEXT_ROOM = 38e3;
+function sbSpecSections(specText) {
+  const out = [];
+  const re = /\n*===== (.+?) =====\n/g;
+  let m, last = null;
+  const src = String(specText || "");
+  while ((m = re.exec(src))) {
+    if (last) last.text = src.slice(last.from, m.index);
+    last = { name: m[1], from: re.lastIndex, text: "" };
+    out.push(last);
+  }
+  if (last) last.text = src.slice(last.from);
+  if (!out.length && src.trim()) out.push({ name: "", text: src });
+  return out;
+}
+function sbBalancedSpecText(specText, names) {
+  const secs = sbSpecSections(specText).filter((x) => !names || !x.name || names.indexOf(x.name) >= 0);
+  if (!secs.length) return "";
+  const each = Math.max(2500, Math.floor(SB_AI_TEXT_ROOM / secs.length));
+  return secs.map((x) => (x.name ? `===== ${x.name} =====\n` : "") + String(x.text || "").trim().slice(0, each)).join("\n\n");
+}
 async function sbExtractPdfText(file) {
   try {
     const pdfjsLib = await loadPdfJs();
@@ -18150,10 +18175,13 @@ async function sbExtractPdfText(file) {
 // project, the discipline, the serial with its revision, and the day it was
 // produced — enough to tell two saves of the same submittal apart (30.8.26).
 
-var SB_AI_IMAGE_PAGES = 5;
-async function sbRenderSpecImages(rec, maxPages) {
-  const atts = (rec.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
+var SB_AI_IMAGE_PAGES = 10;
+async function sbRenderSpecImages(rec, maxPages, onlyIds) {
+  const atts = (rec.attachments || []).filter((a) => (!a.type || String(a.type).indexOf("pdf") >= 0) && (!onlyIds || onlyIds.indexOf(a.id) >= 0));
   if (!atts.length) return [];
+  // 21.10.26 — the pages are shared out between the files: with ten scanned
+  // specifications each gets its first page rather than the first file all ten.
+  const perFile = Math.max(1, Math.floor(maxPages / atts.length));
   let pdfjsLib;
   try {
     pdfjsLib = await loadPdfJs();
@@ -18178,7 +18206,7 @@ async function sbRenderSpecImages(rec, maxPages) {
     if (!buf) continue;
     try {
       const doc = await pdfjsLib.getDocument({ data: buf }).promise;
-      const wanted = sbPagesOf(att, doc.numPages);
+      const wanted = sbPagesOf(att, doc.numPages).slice(0, perFile);
       for (const i of wanted) {
         if (out.length >= maxPages) break;
         const page = await doc.getPage(i);
@@ -18286,6 +18314,8 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
   const [busy, setBusy] = useState6(null);
   const [specsOpen, setSpecsOpen] = useState6(false);
   // The sub-category exactly as typed, while the box has the focus.
+  // The question asked before a fill: one product, or one system (21.10.26).
+  const [aiAsk, setAiAsk] = useState6(false);
   const [subTxt, setSubTxt] = useState6(null);
   const [imgSel, setImgSel] = useState6(false);
   const [err, setErr] = useState6(null);
@@ -18417,10 +18447,12 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
           dataUrl: up.inline ? up.dataUrl : null,
           uploadedAt: new Date().toISOString()
         };
-        if ((f.type || "").indexOf("pdf") >= 0 && text.length < SB_TEXT_CAP) {
+        // 21.10.26 — each file keeps its own share of text, so the tenth
+        // specification is not lost behind the first nine.
+        if ((f.type || "").indexOf("pdf") >= 0 && text.length < SB_TEXT_TOTAL) {
           const t2 = await sbExtractPdfText(f);
           att.chars = (t2 || "").trim().length;
-          if (t2) text = `${text}\n\n===== ${f.name} =====\n${t2}`.slice(0, SB_TEXT_CAP);
+          if (t2) text = `${text}\n\n===== ${f.name} =====\n${String(t2).slice(0, SB_TEXT_CAP)}`.slice(0, SB_TEXT_TOTAL);
         }
         added.push(att);
       }
@@ -18454,8 +18486,9 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
   // source from the documents comes back as "No information".
   // A product's fields, with everything the material did not state written as
   // "no information" rather than left blank.
-  const applyProduct = (pr) => {
+  const applyProduct = (pr, kind) => {
     const o = pr || {};
+    const sys = kind === "system";
     const pick = (k) => {
       const v = o[k];
       return v && String(v).trim() ? String(v).trim() : sbText(SB_NO_INFO, lang);
@@ -18464,7 +18497,9 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
     set({
       typeId: d.typeId || pick("typeId"),
       itemDescription: pick("itemDescription"),
-      modelCode: pick("modelCode"),
+      // A system has no single model: its models are listed component by
+      // component in the additional information (21.10.26).
+      modelCode: sys ? said("modelCode") : pick("modelCode"),
       // Her rule of 30.8.26 (§15): the maker's name off the papers, and when
       // the papers do not name one, the supplier already recorded here. Never
       // a guess and never a search — an unnamed manufacturer stays unnamed.
@@ -18484,7 +18519,8 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       conflicts: Array.isArray(o.conflicts)
         ? o.conflicts.map((c) => String(c || "").trim()).filter(Boolean).slice(0, 8)
         : [],
-      attachments: sbScopeAttachments(d.attachments, o.pages),
+      // Every specification of a system stays on it, whole.
+      attachments: sys ? d.attachments : sbScopeAttachments(d.attachments, o.pages),
       aiFilledAt: new Date().toISOString()
     });
   };
@@ -18529,7 +18565,17 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       setBusy(null);
     }
   };
-  const runAi = async () => {
+  // 21.10.26 — before the fill: one product, or the parts of one system?
+  const askAi = () => {
+    setAiMsg(null);
+    setErr(null);
+    if (!(d.specText || "").trim() && !(d.attachments || []).length) {
+      setAiMsg(lang === "he" ? "צריך להעלות מפרט PDF קודם — ה‑AI קורא רק ממנו." : "Upload a specification PDF first — the AI reads only from it.");
+      return;
+    }
+    setAiAsk(true);
+  };
+  const runAi = async (kind) => {
     setAiMsg(null);
     setErr(null);
     const gathered = (d.specText || "").trim();
@@ -18539,32 +18585,34 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
     }
     setBusy("ai");
     try {
-      // Under 200 characters means the file has no usable text layer. Rather
-      // than give up, hand the model the pages as pictures.
+      // A file with under 200 characters of text has no usable text layer;
+      // its pages go as pictures. The others go as text — both in one request,
+      // the room shared out equally between the files (21.10.26).
+      const pdfs = (d.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
+      const scanned = pdfs.filter((a) => typeof a.chars === "number" ? a.chars < 200 : gathered.length < 200);
       let shots = [];
-      if (gathered.length < 200) {
+      if (scanned.length) {
         setAiMsg(L("readingAsImages"));
-        shots = await sbRenderSpecImages(d, SB_AI_IMAGE_PAGES);
-        if (!shots.length) {
+        shots = await sbRenderSpecImages(d, SB_AI_IMAGE_PAGES, scanned.map((a) => a.id));
+        if (!shots.length && gathered.length < 200) {
           setAiMsg(`${L("poorText")} (${gathered.length})`);
           setBusy(null);
           return;
         }
       }
+      const textFiles = pdfs.filter((a) => scanned.indexOf(a) < 0).map((a) => a.name);
+      const specForAi = sbBalancedSpecText(d.specText || "", textFiles.length ? textFiles : null);
       // Which file each page came from, so the model can say "this file does
       // not belong here" by name.
-      const manifest = shots.length
-        ? Object.values(
-            shots.reduce((acc, sh, i) => {
-              acc[sh.file] = acc[sh.file] || { name: sh.file, pages: [] };
-              acc[sh.file].pages.push(i + 1);
-              return acc;
-            }, {})
-          )
-        : (d.attachments || []).map((a) => ({ name: a.name }));
+      const manifest = (d.attachments || []).map((a) => {
+        const pages = [];
+        shots.forEach((sh, i) => { if (sh.file === a.name) pages.push(i + 1); });
+        return pages.length ? { name: a.name, pages } : { name: a.name };
+      });
       const { data, error } = await supabase.functions.invoke("submittal-ai", {
         body: {
-          specText: shots.length ? "" : d.specText,
+          kind: kind === "system" ? "system" : "product",
+          specText: specForAi,
           images: shots.map((sh) => sh.data),
           files: manifest,
           category: d.category,
@@ -18593,7 +18641,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       const unusedLine = unused.length
         ? unused.map((n) => `\u00AB${n}\u00BB \u2014 ${L("notRelevant")}`).join("\n")
         : "";
-      if (products.length > 1) {
+      if (products.length > 1 && kind !== "system") {
         // A worklist, not a batch: one product at a time, and it leaves the
         // list once its submittal has been sent.
         const queue = products.map((pr, i) => ({
@@ -18608,7 +18656,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         if (onQueueChange) onQueueChange(queue);
         setAiMsg([`${L("foundProducts")} (${products.length}). ${L("worklistHint")}`, unusedLine].filter(Boolean).join("\n"));
       } else {
-        applyProduct(products[0]);
+        applyProduct(products[0], kind);
         // A disagreement between two of the papers is said out loud, here and
         // on the record — it is never resolved quietly (30.8.26, §21).
         const clash = Array.isArray(products[0] && products[0].conflicts)
@@ -18718,7 +18766,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         ? null
         : sbH(
             "button",
-            { type: "button", className: `sbToolBtn ${busy === "ai" ? "busy" : ""}`.trim(), onClick: runAi, disabled: busy === "ai" },
+            { type: "button", className: `sbToolBtn ${busy === "ai" ? "busy" : ""}`.trim(), onClick: askAi, disabled: busy === "ai" },
             busy === "ai"
               ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
               : sbH(Sparkles, { size: 15, strokeWidth: 2 }),
@@ -18752,6 +18800,31 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       // 21.10.26 — printing is done from the board, not from in here.
       null
     ),
+    aiAsk
+      ? createPortal(
+          sbH(
+            "div",
+            { className: "printAskScrim", onClick: () => setAiAsk(false) },
+            sbH(
+              "div",
+              { className: "printAskBox", dir: isHe ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+              sbH("h3", null, isHe ? "\u05de\u05d9\u05dc\u05d5\u05d9 \u05d1\u05e2\u05d6\u05e8\u05ea AI" : "Fill with AI"),
+              sbH("p", null, isHe
+                ? `\u05d4\u05d5\u05e2\u05dc\u05d5 ${(d.attachments || []).length} \u05de\u05e4\u05e8\u05d8\u05d9\u05dd. \u05de\u05d4 \u05d4\u05dd \u05de\u05ea\u05d0\u05e8\u05d9\u05dd?`
+                : `${(d.attachments || []).length} specifications uploaded. What do they describe?`),
+              sbH("div", { className: "printAskBtns" },
+                sbH("button", { type: "button", className: "sgBtn", onClick: () => { setAiAsk(false); runAi("product"); } },
+                  isHe ? "\u05de\u05d5\u05e6\u05e8" : "A product"),
+                sbH("button", { type: "button", className: "sgBtn", onClick: () => { setAiAsk(false); runAi("system"); } },
+                  isHe ? "\u05de\u05e2\u05e8\u05db\u05ea" : "A system")),
+              sbH("p", { className: "printAskEn", style: { marginTop: 10 } }, isHe
+                ? "\u05de\u05e2\u05e8\u05db\u05ea: \u05db\u05dc \u05d4\u05de\u05e4\u05e8\u05d8\u05d9\u05dd \u05d4\u05dd \u05e8\u05db\u05d9\u05d1\u05d9\u05dd \u05e9\u05dc \u05de\u05e2\u05e8\u05db\u05ea \u05d0\u05d7\u05ea, \u05d5\u05d4\u05d8\u05d5\u05e4\u05e1 \u05d9\u05e4\u05e8\u05d8 \u05de\u05d4 \u05db\u05dc \u05de\u05e4\u05e8\u05d8 \u05de\u05e1\u05de\u05dc."
+                : "A system: every specification is a component of one system, and the form lists what each one stands for.")
+            )
+          ),
+          document.body
+        )
+      : null,
     typeof d.fromRev === "number" && !d.sent
       ? sbH("p", { className: "sbRevNote" }, `${L("newVersionNote")} Rev.${d.fromRev} → Rev.${d.rev}`)
       : null,
