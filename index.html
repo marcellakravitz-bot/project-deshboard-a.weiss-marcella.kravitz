@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "22.10.2026 · build 207";
+var APP_BUILD = "22.10.2026 · build 208";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2510,8 +2510,8 @@ var pdfViewer = `
         .sbThumbCell { width: 130px; }
         .sbTradeCell { min-width: 120px; max-width: 170px; }
         .sbThumb { display: block; margin: 0 auto; max-width: 122px; max-height: 80px; object-fit: contain; border-radius: 4px; }
-        .sbBoardTable thead th:nth-child(n+7):nth-child(-n+10),
-        .sbBoardTable tbody tr:not(.sbChkLine):not(.sbBandRow) td:nth-child(n+7):nth-child(-n+10) {
+        .sbBoardTable thead th:nth-child(n+8):nth-child(-n+11),
+        .sbBoardTable tbody tr:not(.sbChkLine):not(.sbBandRow) td:nth-child(n+8):nth-child(-n+11) {
           width: 1%; white-space: nowrap; padding-inline: 5px;
         }
         .sbSq.unsend { position: relative; color: #6b7280; }
@@ -19570,6 +19570,7 @@ function sbBoardRows(opts) {
     r.desc = r.ownDesc || (lead && lead.itemDescription) || (r.node ? boqText(r.node, lang) : "") || (lead && lead.boqText) || "";
     r.boq = r.kind === "line" ? (r.fromLli ? boqRefShown((lli[r.code] || {}).boqRef, lang) : r.code) : ((lead && lead.boqCode) || "");
     r.img = famVal(lead, (y) => y.image && y.image.thumb) || null;
+    r.model = String(famVal(lead, (y) => String(y.modelCode || "").trim()) || "").trim();
     r.disc = String(famVal(lead, (y) => String(y.disciplineText || "").trim()) || "").trim() || sbText(r.cat, lang);
     const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
     r.due = due;
@@ -19595,7 +19596,9 @@ var SB_BOARD_COLS = [
   { key: "submittalNo", label: (lg) => sbText(SB_L.submittalNo, lg), width: 15, kind: "text" },
   { key: "chkItem", label: (lg) => sbText(SB_L.chkItem, lg), width: 13, kind: "text" },
   { key: "typeCol", label: (lg) => sbText(SB_L.typeCol, lg), width: 12, kind: "text" },
-  { key: "chkDesc", label: (lg) => sbText(SB_L.chkDesc, lg), width: 38, kind: "text" },
+  { key: "chkDesc", label: (lg) => sbText(SB_L.chkDesc, lg), width: 34, kind: "text" },
+  // 22.10.26 — the model, right after the description.
+  { key: "modelCol", label: (lg) => sbText({ en: "Model", he: "\u05d3\u05d2\u05dd" }, lg), width: 16, kind: "text" },
   { key: "supplierCol", label: (lg) => sbText(SB_CONTRACTOR_L, lg), width: 18, kind: "text" },
   { key: "imgCol", label: (lg) => sbText(SB_PHOTO_L, lg), width: 20, kind: "text" },
   // Short titles, so the four narrow columns take as little room as they
@@ -19621,6 +19624,7 @@ function sbBoardGridRaw(opts) {
       chkItem: r.boq || "",
       typeCol: r.mark,
       chkDesc: r.desc,
+      modelCol: r.model,
       supplierCol: sbTradesLabel(lead),
       imgCol: "",
       sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
@@ -19947,6 +19951,7 @@ function SubmittalFolder({
           : null,
         warn ? sbH("span", { className: "sbChkWarn", title: warn }, "!") : null
       ),
+      sbH("td", { className: "sbItemCell", dir: "ltr" }, r.model || "\u2014"),
       // Which trades see this submittal in their app — the same list SD has
       // (21.10.26).
       sbH(
@@ -20005,7 +20010,8 @@ function SubmittalFolder({
           sbH("td", { dir: "ltr" }, s.boqCode || "—"),
           sbH("td", { className: "sbItemCell", dir: "auto" }, s.typeId || "—"),
           sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || "—"),
-          sbH("td", null, s.supplier || "—"),
+          sbH("td", { className: "sbItemCell", dir: "ltr" }, s.modelCode || "\u2014"),
+          sbH("td", null, sbTradesLabel(s) || "—"),
           sbH("td", { className: "sbThumbCell" }, s.image && s.image.thumb ? sbH("img", { className: "sbThumb", src: s.image.thumb, alt: "" }) : sbH("span", { className: "sbChkDash" }, "—")),
           sbH("td", { dir: "ltr" }, fmtSent(s)),
           sbH("td", { dir: "ltr" }, s.requiredApprovalDate ? sbFmtDate(String(s.requiredApprovalDate).slice(0, 10)) : "—"),
