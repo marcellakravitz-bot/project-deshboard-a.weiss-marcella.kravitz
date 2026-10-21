@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "21.10.2026 · build 204";
+var APP_BUILD = "21.10.2026 · build 205";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18487,7 +18487,21 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
   // A product's fields, with everything the material did not state written as
   // "no information" rather than left blank.
   const applyProduct = (pr, kind) => {
-    const o = pr || {};
+    // 21.10.26 — no dashes as punctuation in what the AI writes: a dash with
+    // spaces round it becomes a comma, a dash opening a line becomes a list
+    // point. A hyphen inside a model number (DS-2CD, FL-01) is left alone.
+    const undash = (v) => typeof v !== "string" ? v : v
+      .split("\n")
+      .map((line) => line
+        .replace(/^\s*[\u2014\u2013-]\s+/, "\u00b7 ")
+        .replace(/\s+[\u2014\u2013-]\s+/g, ", ")
+        .replace(/\s*[\u2014\u2013]\s*/g, ", ")
+        .replace(/,\s*,/g, ",")
+        .replace(/\s+$/, ""))
+      .join("\n");
+    const o0 = pr || {};
+    const o = {};
+    Object.keys(o0).forEach((k) => { o[k] = ["typeId", "itemDescription", "infoEn", "infoHe", "manufacturer"].indexOf(k) >= 0 ? undash(o0[k]) : o0[k]; });
     const sys = kind === "system";
     const pick = (k) => {
       const v = o[k];
