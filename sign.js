@@ -18,7 +18,7 @@ import React15, { useState as useState6, useRef as useRef5, useEffect as useEffe
 import {
   AirVent as AirVent2, Building2 as Building23, Cctv as Cctv2, Droplets as Droplets2,
   FileText as FileTextIcon, Grid3x3 as Grid3x32, Layers as Layers2,
-  Lightbulb as Lightbulb2, PanelTop as PanelTop2, Zap as Zap2,
+  Lightbulb as Lightbulb2, PanelTop as PanelTop2, Zap as Zap2, Tv as Tv2, Flame as Flame2,
   PenLine, Printer, Stamp, Upload as Upload3, X as X4, ArrowLeft, ArrowRight,
   // the drawing-signing screen keeps its own aliases (moved here 15.9.26)
   Download as DownloadSd, PenLine as PenLineSd, X as XSd, Move as MoveSd, Check as CheckSd, Stamp as StampSd, ArrowLeft as ArrowLeftSd, ArrowRight as ArrowRightSd
@@ -233,7 +233,10 @@ var SUBMITTAL_CATEGORIES = [
   // so it is an ordinary folder here, and a project where nothing is submitted
   // simply leaves it empty and puts the information in the electrician's
   // special-specifications folder instead. (8.9.26)
-  { key: "security", en: "Security, Controls & Communications", he: "ביטחון, בקרה ותקשורת", code: "Security", icon: Cctv2 }
+  { key: "security", en: "Security, Controls & Communications", he: "ביטחון, בקרה ותקשורת", code: "Security", icon: Cctv2 },
+  // 21.10.26 — two folders of their own, numbered AV-001 and FA-001.
+  { key: "av", en: "Multimedia", he: "מולטימדיה", code: "AV", icon: Tv2 },
+  { key: "fire", en: "Fire Detection", he: "גילוי אש", code: "FA", icon: Flame2 }
 ];
 // Joinery is a trade on the boards but not a submittal folder: carpentry is
 // approved by a shop drawing and chased as a delivery, and nobody submits a
