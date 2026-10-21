@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "21.10.2026 · build 206";
+var APP_BUILD = "22.10.2026 · build 207";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -10738,7 +10738,7 @@ window.__awPaged = false;
       cur.tb.appendChild(band);
       cur.tb.appendChild(rows[i]);
       cur.sec = sec;
-      if (room(cur) < rows[i].getBoundingClientRect().height) {
+      if (room(cur) < 0) {
         // No room for the band and a row under it: both go over, and the
         // page's own heading band names the discipline.
         band.remove();
@@ -10758,8 +10758,9 @@ window.__awPaged = false;
     // A page stops ONE ROW SHORT of full. Filled to the last millimetre the
     // rows sit on the frame's bottom line and the sheet reads as bottom-heavy;
     // a row's worth of air is what makes every page look the same.
-    var spare = rows[i].getBoundingClientRect().height;
-    if (cur.tb.children.length > 1 && room(cur) < spare) {
+    // 22.10.26 — filled to the frame now: a row moves over only when it does
+    // not fit, so every sheet carries as much of the table as it can.
+    if (cur.tb.children.length > 1 && room(cur) < 0) {
       var next = newPage();
       // The section runs on, so its heading is repeated over the next page.
       setSec(next, sec);
@@ -10774,11 +10775,9 @@ window.__awPaged = false;
   var rowH = rows.length ? rows[0].getBoundingClientRect().height : 18;
   var sheetH = pages.length ? pages[0].pg.clientHeight : 0;
   var SHORT = sheetH * 0.35;
-  pages.forEach(function (rec) {
-    var gap = room(rec);
-    if (gap <= 2 || gap > SHORT) return;
-    rec.body.style.paddingTop = Math.round(Math.min(gap / 2, rowH * 2.5)) + "px";
-  });
+  // 22.10.26 — no longer: the heading stays at the top of the frame, so the
+  // table starts as high as it can and more of it fits on the sheet.
+  void SHORT;
   src.remove();
 });
 <\/script>`;
@@ -10845,10 +10844,10 @@ function boardExportPdf(opts) {
   // ---------------------------------------------------------------------------
   const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(fileName || title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
-${printSheetCss({ landscape: true, accent: P.accent })}
+${printSheetCss({ landscape: true, accent: P.accent, marginMm: 7, framePad: "3mm 5mm" })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink}; direction: ${dir}; }
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
-  border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 10px; }
+  border-bottom: 2.5px solid #d5d9df; padding-bottom: 5px; margin-bottom: 7px; }
 .hdr img { max-height: 38px; max-width: 130px; object-fit: contain; justify-self: start; }
 .ttlWrap { grid-column: 2; text-align: center; }
 .ttlWrap .ttl { font-size: 17px; font-weight: 800; color: ${P.accent}; letter-spacing: .4px; }
@@ -10859,15 +10858,15 @@ body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink}; di
    occupies. Darker than the column titles so the two read as a heading and a
    sub-heading and not as two bands (15.10.26). */
 .pgSec {
-  background: ${P.dark}; color: #fff; font-weight: 800; font-size: 10.5px;
+  background: ${P.dark}; color: #fff; font-weight: 800; font-size: 12px;
   letter-spacing: .3px; text-align: center; padding: 5px 8px; border-radius: 4px 4px 0 0;
 }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 8px; padding: 5px 3px;
+th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 10px; padding: 5px 4px;
   border: 1px solid ${P.line}; text-align: center; vertical-align: middle; word-break: break-word; }
 /* A line break she typed into a cell is part of what the cell says, so the
    printed page keeps it (29.8.26). */
-td { font-size: 7.5px; padding: 4px 3px; border: 1px solid ${P.line}; text-align: center;
+td { font-size: 10px; padding: 4px 4px; border: 1px solid ${P.line}; text-align: center;
   vertical-align: middle; word-break: break-word; white-space: pre-wrap; }
 tbody tr:nth-child(even) td { background: ${P.zebra}; }
 /* Long lead, not yet ordered. A wash rather than a shout — it has to survive
@@ -10885,7 +10884,7 @@ ${imgCol != null && imgH ? `td.img { height: ${imgH + 4}px; }` : ""}
 /* A discipline that starts mid-page: its band runs across the table, the same
    band that heads a page (21.10.26). */
 tbody tr.secRow td, tbody tr.secRow:nth-child(even) td {
-  background: ${P.dark}; color: #fff; font-weight: 800; font-size: 10.5px;
+  background: ${P.dark}; color: #fff; font-weight: 800; font-size: 12px;
   letter-spacing: .3px; padding: 5px 8px; border: 1px solid ${P.dark}; }
 </style></head><body><div id="src"${secFlow ? ' data-flow="1"' : ""}>
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
