@@ -154,7 +154,7 @@ import {
   Download as DownloadSd,
   PenLine as PenLineSd
 } from "lucide-react";
-import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon } from "lucide-react";
+import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon, Archive as ArchiveIcon } from "lucide-react";
 import {
   PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
   Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2, Cctv as Cctv2,
@@ -317,17 +317,14 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
-      { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
-      { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
-      { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
-      { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
-      { key: "sd", icon: Ruler, title: "SD", sub: "Shop Drawings & Method", locked: true },
-      { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
-      { key: "changeInstructions", icon: Receipt, title: "\u05D4\u05D5\u05E8\u05D0\u05D5\u05EA \u05E9\u05D9\u05E0\u05D5\u05D9", sub: "Change Instructions", locked: true },
-      { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
-      { key: "contacts", icon: Users, title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
-      { key: "photos", icon: Camera, title: "Site Photos", sub: "Updated Weekly", locked: true }
+      { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
+      { key: "schedule", icon: CalendarClock, iconColor: "#2563EB", title: "Project Schedule", sub: "MS Project" },
+      { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Long Lead & Order Tracking" },
+      { key: "submittal", icon: FileCheck2, iconColor: "#1A7F4B", title: "Submittal", sub: "Material & Sample Approvals", locked: true },
+      { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
+      { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
+      { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "\u05D4\u05D5\u05E8\u05D0\u05D5\u05EA \u05E9\u05D9\u05E0\u05D5\u05D9", sub: "Change Instructions", locked: true },
+      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true }
     ],
     menuOptions: {
       mainContractor: "\u05DB\u05E0\u05D9\u05E1\u05D4 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9",
@@ -441,17 +438,14 @@ var COPY = {
     handoverValue: "30.11.2027",
     cards: [
       { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
-      { key: "look", icon: Palette, title: "Look & Feel", sub: "Architect Presentation" },
-      { key: "rooms", icon: DoorOpen, title: "By Room", sub: "Search by Room Number", locked: true },
-      { key: "schedule", icon: CalendarClock, title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, title: "LLI", sub: "Long Lead & Order Tracking" },
-      { key: "submittal", icon: FileCheck2, title: "Submittal", sub: "Material & Sample Approvals", locked: true },
-      { key: "sd", icon: Ruler, title: "SD", sub: "Shop Drawings & Method", locked: true },
-      { key: "rfi", icon: FileQuestion, title: "RFI", sub: "Request for Information", locked: true },
-      { key: "changeInstructions", icon: Receipt, title: "Change Instructions", sub: "Pricing & Approvals", locked: true },
-      { key: "leed", icon: Leaf, title: "LEED", sub: "EPD | Low VOC | SDS", locked: true },
-      { key: "contacts", icon: Users, title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
-      { key: "photos", icon: Camera, title: "Site Photos", sub: "Updated Weekly", locked: true }
+      { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
+      { key: "schedule", icon: CalendarClock, iconColor: "#2563EB", title: "Project Schedule", sub: "MS Project" },
+      { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Long Lead & Order Tracking" },
+      { key: "submittal", icon: FileCheck2, iconColor: "#1A7F4B", title: "Submittal", sub: "Material & Sample Approvals", locked: true },
+      { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
+      { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
+      { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "Change Instructions", sub: "Pricing & Approvals", locked: true },
+      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true }
     ],
     menuOptions: {
       mainContractor: "Main Contractor Login",
@@ -552,13 +546,13 @@ var DEFAULT_BRAND_NAME = "A. Weiss";
 // The seven cubes a client's board holds: the programme, the room search, the
 // architect's presentation, shop drawings, submittals, the ordering board and
 // the site photos. Everything else on the project is internal. (7.9.26)
-var CLIENT_CARDS = ["schedule", "rooms", "look", "sd", "submittal", "lli", "photos"];
+var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // The main contractor gets the client's seven plus the three that are the job
 // rather than the product: the contacts sheet, RFI, and change instructions —
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "21.10.2026 · build 197";
+var APP_BUILD = "21.10.2026 · build 203";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2257,7 +2251,8 @@ var pdfViewer = `
         .sdTable .cStat { width: 140px; }
         .sdTable .cDate { width: 112px; }
         .sdTable .cFile { width: 104px; }
-        .sdTable .cAct { width: 56px; }
+        .sdTable .cAct { width: 112px; }
+        .sdTable .cMark { width: 96px; }
         .sdDlBtn {
           border: none; background: none; color: var(--steel); cursor: pointer;
           padding: 2px; line-height: 0; border-radius: 5px;
@@ -2470,6 +2465,14 @@ var pdfViewer = `
         }
         .sbExportAll { margin: 16px 0 4px; }
         /* ---------- Submittal board, 21.10.26 ---------- */
+        .sdActs { display: inline-grid; grid-template-columns: repeat(3, 28px); gap: 4px; }
+        .sdHist { list-style: none; margin: 10px 0 0; padding: 0; max-height: 50vh; overflow: auto; text-align: start; }
+        .sdHist li { display: flex; gap: 12px; padding: 7px 4px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+        .sdHistAt { font-weight: 800; color: var(--steel); min-width: 70px; }
+        .lliThIn { display: inline-flex; align-items: center; gap: 4px; }
+        .lliColTick { width: 13px; height: 13px; margin: 0; flex: none; cursor: pointer; accent-color: var(--accent, #0F3460); }
+        th.lliColOff .lliThIn > span { opacity: .45; text-decoration: line-through; }
+        .lliFilter.sbCatBar { margin-bottom: 10px; }
         .sbTopCreate { display: flex; justify-content: center; margin: 4px 0 14px; }
         .sbCatBar {
           display: flex; flex-wrap: wrap; justify-content: center; gap: 4px;
@@ -2490,10 +2493,7 @@ var pdfViewer = `
           border: 1px solid var(--line); background: #fff; color: var(--steel); border-radius: 10px;
           padding: 9px 16px; font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer;
         }
-        .sbExpBtn.xls { color: #1d6f42; border-color: #b9dcc7; }
-        .sbExpBtn.xls:hover { background: #eaf6ef; }
-        .sbExpBtn.pdf { color: #b42318; border-color: #f0c6c0; }
-        .sbExpBtn.pdf:hover { background: #fdf1ef; }
+        .sbExpBtn:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
         .sbBoardTable th.sbColTh { white-space: nowrap; }
         .sbColThIn { display: inline-flex; align-items: center; gap: 5px; }
         .sbColTick { width: 13px; height: 13px; margin: 0; cursor: pointer; accent-color: var(--accent, #0F3460); }
@@ -2505,8 +2505,24 @@ var pdfViewer = `
         .sbBoardTable tbody tr.sbBandRow:hover td { background: var(--accent); }
         .sbBoardTable td.sbChkCode { white-space: nowrap; }
         .sbBoardTable td.sbChkCode .sbRevToggle { margin-inline-start: 4px; }
-        .sbThumbCell { width: 64px; }
-        .sbThumb { display: block; margin: 0 auto; max-width: 60px; max-height: 44px; object-fit: contain; border-radius: 4px; }
+        /* 21.10.26 — the photo gets the room; the four date and status
+           columns take only what they need. */
+        .sbThumbCell { width: 130px; }
+        .sbTradeCell { min-width: 120px; max-width: 170px; }
+        .sbThumb { display: block; margin: 0 auto; max-width: 122px; max-height: 80px; object-fit: contain; border-radius: 4px; }
+        .sbBoardTable thead th:nth-child(n+7):nth-child(-n+10),
+        .sbBoardTable tbody tr:not(.sbChkLine):not(.sbBandRow) td:nth-child(n+7):nth-child(-n+10) {
+          width: 1%; white-space: nowrap; padding-inline: 5px;
+        }
+        .sbSq.unsend { position: relative; color: #6b7280; }
+        .sbSq.unsend::after {
+          content: ""; position: absolute; left: 50%; top: 50%; width: 20px; height: 2px; border-radius: 2px;
+          background: #d02f2f; transform: translate(-50%, -50%) rotate(-45deg);
+        }
+        .sbSq.unsend:disabled::after { background: currentColor; }
+        .sbSq.ok { color: #1a7f4b; border-color: #b9dcc7; }
+        .sbSq.ok:hover:not(:disabled) { background: #e6f4ec; border-color: #1a7f4b; color: #1a7f4b; }
+        .sbSq.ok.on, .sbSq.ok.on:hover { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
         .sbBoardTable td.sbDescCell { min-width: 190px; }
         .sbBoardTable td.sbItemCell { min-width: 70px; }
         /* The row's buttons: a block of equal squares, the version across the
@@ -2530,6 +2546,7 @@ var pdfViewer = `
         }
         .sbRevLong:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
         .sbRevLong.sign { background: #14181f; border-color: #14181f; color: #fff; }
+        .sbSpecsTop { margin: 10px 0 14px; }
         .sbSaveNow { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 22px 0 6px; flex-wrap: wrap; }
         .sbSaveMsg { font-size: 12.5px; font-weight: 700; color: #1a7f4b; }
         .sbSaveMsg.err { color: #c0392b; }
@@ -5723,9 +5740,14 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, 
   // An electrician carries three folders. Thirty lines of three kinds in one
   // scroll is worse than three doors. The choice is held by the card so that
   // the browser's Back steps out of a folder and no further. (10.9.26)
-  const allCats = SUBS_TRADE_SUBMITTAL_CATS[trade] || [];
+  // 21.10.26 — a submittal goes to the trades ticked on it ("ניהול קבלן"),
+  // exactly as an SD row does. One never ticked falls back to the folders the
+  // trade has always seen.
+  const tradeCats = SUBS_TRADE_SUBMITTAL_CATS[trade] || [];
+  const ticked = (r) => (Array.isArray(r.subs) ? r.subs.indexOf(trade) >= 0 : tradeCats.indexOf(r.category) >= 0);
+  const allCats = Array.from(new Set(tradeCats.concat((submittals || []).filter((r) => r && r.sent && ticked(r)).map((r) => r.category))));
   const cats = allCats.length > 1 && pickedCat ? [pickedCat] : allCats;
-  const records = (submittals || []).filter((r) => r && !r.hidden && cats.indexOf(r.category) >= 0);
+  const records = (submittals || []).filter((r) => r && ticked(r) && cats.indexOf(r.category) >= 0);
   const decisionOf = (r) =>
     ((submittalApprovals || {})[r.id] || {}).review?.decision
     || ((r.reviews || [])[0] || {}).decision
@@ -5750,6 +5772,11 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, 
         products = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", cat);
       } catch (e) { products = []; }
       products.filter((pr) => !off[pr.code]).forEach((pr) => {
+        // A line whose submittal was sent to other trades only is not his.
+        const any = sbVisibleFor((submittals || []).filter((r) => r && r.boqCode === pr.code), "client")
+          .sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0];
+        if (any && Array.isArray(any.subs) && any.subs.indexOf(trade) < 0) return;
+        if (tradeCats.indexOf(cat) < 0 && !any) return;
         const rec = latestFor(pr.code);
         if (rec) seen[rec.id] = true;
         out.push({
@@ -11188,6 +11215,32 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   const [busyRow, setBusyRow] = useState6(null);
   const [poNote, setPoNote] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
+  // 21.10.26 — which columns go into the workbook and the PDF: a tick beside
+  // each column title. Kept in this browser.
+  const [lliHide, setLliHide] = useState6(() => {
+    try { const v = JSON.parse(window.localStorage.getItem("aw.lliHide") || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  });
+  const toggleLliCol = (k) => {
+    const next = lliHide.indexOf(k) >= 0 ? lliHide.filter((x) => x !== k) : lliHide.concat([k]);
+    if (next.length >= LLI_EXPORT_KEYS.length) return;
+    setLliHide(next);
+    try { window.localStorage.setItem("aw.lliHide", JSON.stringify(next)); } catch (e) {}
+  };
+  // A column title with its tick. Ticked: in the workbook and on the PDF.
+  const thT = (key, cls, label, title) => sbH(
+    "th",
+    { className: `${cls} ${canEdit && lliHide.indexOf(key) >= 0 ? "lliColOff" : ""}`.trim(), title },
+    canEdit
+      ? sbH("span", { className: "lliThIn" },
+          sbH("input", {
+            type: "checkbox", className: "lliColTick", checked: lliHide.indexOf(key) < 0,
+            title: lang === "he" ? "\u05de\u05e1\u05d5\u05de\u05df \u2014 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d0\u05e7\u05e1\u05dc \u05d5\u05d1-PDF" : "Ticked: in the workbook and the PDF",
+            onClick: (e) => e.stopPropagation(),
+            onChange: () => toggleLliCol(key)
+          }),
+          sbH("span", null, label))
+      : label
+  );
   // The O&M document is asked two questions on the way out: which file, and
   // then which language — one window after the other (15.10.26).
   const [oamAsk, setOamAsk] = useState6(false);
@@ -11870,6 +11923,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     let colTypes = g.types.slice(0, 4).concat(["text"], g.types.slice(4));
     let imgs = g.imgs;
     let imgCol = 4;
+    let keys = LLI_EXPORT_KEYS.slice();
     // The workbook carries the same columns the person taking it can see —
     // the supplier and the purchase order stay on her board (7.9.26).
     if (audience === "client" || audience === "contractor") {
@@ -11879,8 +11933,12 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       head = keep.map((i) => head[i]);
       widths = keep.map((i) => widths[i]);
       colTypes = keep.map((i) => colTypes[i]);
+      keys = keep.map((i) => keys[i]);
       body = body.map((row) => keep.map((i) => row[i]));
     }
+    // Then the columns she unticked in the table's titles (21.10.26).
+    ({ head, widths, types: colTypes, body, imgCol } = sbDropCols({ head, widths, types: colTypes, body, keys, imgCol }, lliHide));
+    if (imgCol < 0) imgCol = null;
     const res = await boardExportXlsx({
       title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
       fileName: boardFileName(projectName, "LLI", "xlsx"),
@@ -11902,6 +11960,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
 // is a long lead item; the dates the supplier committed to are the main
 // contractor's business, and the client sees them only when the contractor
 // chooses to say something. (7.9.26)
+// Every column the LLI sheets can carry, in their order (21.10.26).
+var LLI_EXPORT_KEYS = ["section", "category", "typeMark", "desc", "image", "supplier", "qtyBoq", "unit", "qtySurveyor",
+  "ordered", "poNo", "poDate", "eta", "etaActual", "status", "longLead"];
 var LLI_CLIENT_KEYS = ["section", "category", "typeMark", "desc", "image", "status", "longLead"];
 var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "supplier", "eta", "etaActual", "status", "longLead"];
   const onPdf = (printLang, audience) => {
@@ -11934,14 +11995,19 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       let body = g.body.map((r) => r.slice(0, 4).concat([""], r.slice(4)));
       let imgCol = 4;
       let imgs = g.imgs;
+      let keys = LLI_EXPORT_KEYS.slice();
       if (audience === "client" || audience === "contractor") {
         const want = (audience === "client" ? LLI_CLIENT_KEYS : LLI_CONTRACTOR_KEYS).map((k) => T(k));
         const keep = want.map((name) => head.indexOf(name)).filter((i) => i >= 0);
         imgCol = keep.indexOf(head.indexOf(T("image")));
         head = keep.map((i) => head[i]);
         widths = keep.map((i) => widths[i]);
+        keys = keep.map((i) => keys[i]);
         body = body.map((row) => keep.map((i) => row[i]));
       }
+      // Then the columns she unticked in the table's titles (21.10.26).
+      ({ head, widths, body, imgCol } = sbDropCols({ head, widths, types: head.map(() => "text"), body, keys, imgCol }, lliHide));
+      if (imgCol < 0) imgCol = null;
       boardExportPdf({
         title: exportTitle(),
         // The name the browser offers when she saves it.
@@ -12000,7 +12066,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
   const catChip = (key, label) =>
     sbH(
       "button",
-      { key, type: "button", className: `lliChip ${cat === key ? "on" : ""}`, onClick: () => setCat(key) },
+      { key, type: "button", className: `sbCatBtn ${cat === key ? "on" : ""} ${key === "all" ? "all" : ""}`.trim(), onClick: () => setCat(key) },
       label
     );
 
@@ -12067,7 +12133,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
     // The category filter is the first thing on the page, on purpose.
     sbH(
       "div",
-      { className: "lliFilter" },
+      { className: "lliFilter sbCatBar" },
       catChip("all", L("allCats")),
       // Only the disciplines that are actually on this board, so the row of
       // chips is a summary and not a wall of buttons. It follows the rows as
@@ -12250,10 +12316,10 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
         ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setOamAsk(true) },
             sbH(Download2, { size: 14, strokeWidth: 2 }), " ", L("oamDoc"))
         : null,
+      // 21.10.26 — only the language is asked; the columns are the ticks.
       printAsk
         ? sbH(PrintLangAsk, {
-            withAudience: true,
-            onPick: (lg, who) => { setPrintAsk(null); printAsk(lg, who); },
+            onPick: (lg) => { setPrintAsk(null); printAsk(lg, "admin"); },
             onClose: () => setPrintAsk(null)
           })
         : null,
@@ -12316,24 +12382,24 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 "tr",
                 null,
                 canEdit ? sbH("th", { className: "cGrip" }, "") : null,
-                sbH("th", { className: "cSec" }, L("section")),
-                sbH("th", { className: "cCat" }, L("category")),
-                sbH("th", { className: "cMark" }, L("typeMark")),
-                sbH("th", { className: "cDesc" }, L("desc")),
-                sbH("th", { className: "cSup" }, L("supplier")),
-                sbH("th", { className: "cQty" }, L("qtyBoq")),
-                sbH("th", { className: "cUnit" }, L("unit")),
-                sbH("th", { className: "cQty" }, L("qtySurveyor")),
-                sbH("th", { className: "cImg" }, L("image")),
-                sbH("th", { className: "cOrd" }, L("ordered")),
-                sbH("th", { className: "cPo" }, L("poNo")),
-                sbH("th", { className: "cPoD" }, L("poDate")),
-                sbH("th", { className: "cEta" }, L("eta")),
-                sbH("th", { className: "cEta" }, L("etaActual")),
-                sbH("th", { className: "cSt" }, L("status")),
+                thT("section", "cSec", L("section")),
+                thT("category", "cCat", L("category")),
+                thT("typeMark", "cMark", L("typeMark")),
+                thT("desc", "cDesc", L("desc")),
+                thT("supplier", "cSup", L("supplier")),
+                thT("qtyBoq", "cQty", L("qtyBoq")),
+                thT("unit", "cUnit", L("unit")),
+                thT("qtySurveyor", "cQty", L("qtySurveyor")),
+                thT("image", "cImg", L("image")),
+                thT("ordered", "cOrd", L("ordered")),
+                thT("poNo", "cPo", L("poNo")),
+                thT("poDate", "cPoD", L("poDate")),
+                thT("eta", "cEta", L("eta")),
+                thT("etaActual", "cEta", L("etaActual")),
+                thT("status", "cSt", L("status")),
                 canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
                 canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null,
-                canEdit ? sbH("th", { className: "cRoom", title: L("longLeadHint") }, L("longLeadCol")) : null,
+                canEdit ? thT("longLead", "cRoom", L("longLeadCol"), L("longLeadHint")) : null,
                 canEdit ? sbH("th", { className: "cRoom", title: L("oamHint") }, L("oamCol")) : null
               )
             ),
@@ -12916,8 +12982,33 @@ var SD_L = {
   pdf: { en: "PDF", he: "PDF" },
   nothingToExport: { en: "Nothing to export in this view.", he: "אין מה לייצא בתצוגה הזו." },
   exportNote: { en: "note", he: "הערה" },
-  allStatuses: { en: "All statuses", he: "כל הסטטוסים" }
+  allStatuses: { en: "All statuses", he: "כל הסטטוסים" },
+  typeMark: { en: "Type mark", he: "איפיון" },
+  history: { en: "History", he: "היסטוריה" },
+  histEmpty: { en: "Nothing recorded yet.", he: "\u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d0 \u05e0\u05e8\u05e9\u05dd \u05d3\u05d1\u05e8." },
+  histSent: { en: "Submitted to the client", he: "\u05d4\u05d5\u05d2\u05e9 \u05dc\u05dc\u05e7\u05d5\u05d7" },
+  histUnsent: { en: "Submission taken back", he: "\u05d4\u05d4\u05d2\u05e9\u05d4 \u05d1\u05d5\u05d8\u05dc\u05d4" },
+  histMail: { en: "E-mailed to the supervision", he: "\u05e0\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7" },
+  histStatus: { en: "Status", he: "\u05e1\u05d8\u05d8\u05d5\u05e1" },
+  sendMail: { en: "E-mail to the supervision", he: "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7" }
 };
+// 21.10.26 — what happened to a drawing, newest last: every submission to the
+// client and every change of status, each with its date.
+function sdHistAdd(v, entry) {
+  return (Array.isArray(v.history) ? v.history : []).concat([{ at: new Date().toISOString(), ...entry }]).slice(-80);
+}
+// The row's colour by its due date — the day she wants the drawing from the
+// supplier (21.10.26): orange from six days before it, red once it has passed.
+// Approved is green; a drawing already with the client is not chased.
+function sdDueTone(v, done) {
+  if (done) return "ok";
+  if (v.toClient || !v.dueAt) return "";
+  const today = new Date().toISOString().slice(0, 10);
+  if (v.dueAt < today) return "late";
+  const warn = new Date(v.dueAt + "T00:00:00");
+  warn.setDate(warn.getDate() - 6);
+  return warn.toISOString().slice(0, 10) <= today ? "wait" : "";
+}
 
 function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail, userPerms }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
@@ -12930,7 +13021,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // list says all of it, and says it by name: any status, one named status, or
   // the rows that were put aside.
   const [statusFilter, setStatusFilter] = useState6("all");
-  const [supOpen, setSupOpen] = useState6(false);
+  // The drawing whose history is open (21.10.26).
+  const [histFor, setHistFor] = useState6(null);
 
   const [busyRow, setBusyRow] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
@@ -13078,14 +13170,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const exportGrid = () => {
     const yn = (v, at) => (v ? `${L("yes")}${at ? ` · ${sbFmtDate(String(at).slice(0, 10))}` : ""}` : L("no"));
     const head = [
-      L("section"), L("category"), L("desc"), L("qty"),
-      L("dueAt"), L("file"), L("toClient"),
-      L("status"), L("submittedAt"), L("approvedAt")
+      L("section"), L("category"), L("typeMark"), L("desc"), L("qty"),
+      L("dueAt"), L("toClient"), L("status")
     ];
-    const widths = [15, 13, 38, 12, 13, 20, 17, 17, 13, 13];
-    const types = [
-      "text", "text", "text", "number", "date", "text", "text", "text", "date", "date"
-    ];
+    const widths = [15, 13, 12, 38, 12, 13, 17, 20];
+    const types = ["text", "text", "text", "text", "number", "date", "text", "text"];
     const cat2 = (k) => {
       const c = boardCategoryOf(k);
       return c ? sbText(c, lang) : "";
@@ -13106,25 +13195,20 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         const ap = sdApprovalOf(approvals, r.code);
         const done = !!ap || SD_DONE.indexOf(v.status) >= 0;
         const approvedOn = (ap && ap.approvedAt) || v.approvedAt || "";
-        tone.push(
-          done ? "ok"
-            : v.status === "submitted" ? "wait"
-            : (r.longLead || (v.dueAt && v.dueAt < today)) ? "late"
-            : ""
-        );
+        tone.push(sdDueTone(v, done));
+        const stAt = ap ? approvedOn : (v.statusAt || (done ? v.approvedAt : ""));
         body.push([
           r.source === "boq" ? r.code : L("manual"),
           cat2(r.category),
+          markOf(r, v),
           v.desc || r.title,
           // The number is wrapped in a directional isolate so that in a Hebrew
           // sheet it still comes before its unit and not after it.
           r.qty == null ? "" : `\u2066${r.qty}\u2069${r.unit ? ` ${boqUnit(r.unit, lang)}` : ""}`,
           v.dueAt ? sbFmtDate(v.dueAt) : "",
-          v.file ? v.file.name || "" : "",
           yn(v.toClient, v.toClientAt),
-          ap ? (lang === "he" ? "אושר" : "Approved") : sbText(sdStatus(v.status), lang),
-          v.submittedAt ? sbFmtDate(v.submittedAt) : "",
-          approvedOn ? sbFmtDate(String(approvedOn).slice(0, 10)) : ""
+          (ap ? (lang === "he" ? "אושר" : "Approved") : sbText(sdStatus(v.status), lang))
+            + (stAt ? ` \u00b7 ${sbFmtDate(String(stAt).slice(0, 10))}` : "")
         ]);
       });
     });
@@ -13147,7 +13231,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // The SD board's client copy, by name: what the drawing is, when it was due,
   // where it stands and when it was signed. Nothing about the file itself
   // (29.8.26).
-  const sdClientKeys = ["section", "category", "desc", "dueAt", "status", "submittedAt", "approvedAt"];
+  const sdClientKeys = ["section", "category", "typeMark", "desc", "dueAt", "toClient", "status"];
   const onPdf = (printLang, audience) => {
     const g = exportGrid();
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
@@ -13175,30 +13259,43 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const catChip = (key, label) =>
     sbH(
       "button",
-      { key, type: "button", className: `lliChip ${cat === key ? "on" : ""}`, onClick: () => setCat(key) },
+      { key, type: "button", className: `sbCatBtn ${cat === key ? "on" : ""} ${key === "all" ? "all" : ""}`.trim(), onClick: () => setCat(key) },
       label
     );
 
-  // Sending drawings out for approval. Only what has a drawing on it can go:
-  // a line with nothing attached has nothing to approve. (13.9.26)
-  if (supOpen && canEdit) {
-    const rows = Object.entries(data || {})
-      .filter(([, v]) => v && (v.file || {}).path)
-      .map(([code, v]) => ({
-        id: code,
-        no: "",
-        desc: v.desc || code,
-        due: v.dueDate || "",
-        cat: "",
-      }));
-    return sbH(SupervisionList, {
-      kind: "sd",
-      projectId,
-      projectName,
-      rows,
-      onBack: () => setSupOpen(false),
-    });
-  }
+  // The mark of a row: her own, or the one on the ordering board for a row
+  // that came from there.
+  const markOf = (r, v) => String(v.typeMark || "").trim() || (r.fromLli ? String(((lliRows || {})[r.code] || {}).typeMark || "").trim() : "");
+  // E-mail to the supervision (21.10.26): her standing message, in the new
+  // Outlook. Sending it is submitting it to the client, so the row says so.
+  const sendMail = (r, v) => {
+    const mark = markOf(r, v) || String(v.desc || r.title || "").trim();
+    const back = new Date();
+    back.setDate(back.getDate() + 7);
+    const to = (contacts || [])
+      .filter((c) => c && c.group === "supervision" && /\S+@\S+/.test(String(c.email || "")))
+      .map((c) => String(c.email).trim());
+    const subject = `פרויקט ${projectName || ""} - SD ${mark}`;
+    const body = [
+      "פיקוח שלום",
+      "",
+      `מצ"ב סבמיטל עבור - ${mark}`,
+      `נא להחזיר SD חתום / הערות להגשה מחדש לא יאוחר מתאריך ${sbFmtDate(back.toISOString().slice(0, 10))}`,
+      "",
+      "תודה על שיתוף הפעולה.",
+      "בברכה,"
+    ].join("\r\n");
+    const href = "https://outlook.office.com/mail/deeplink/compose?"
+      + (to.length ? `to=${encodeURIComponent(to.join(";"))}&` : "")
+      + `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const now = new Date().toISOString();
+    const p = { toClient: true, toClientAt: now, submittedAt: now.slice(0, 10), history: sdHistAdd(v, { kind: "mail" }) };
+    if (v.status === "required") { p.status = "submitted"; p.statusAt = now; }
+    patch(r.code, p);
+    const w = window.open(href, "_blank");
+    if (w) { try { w.opener = null; } catch (e) {} }
+    else { try { window.location.href = href; } catch (e) {} }
+  };
 
   return sbH(
     "div",
@@ -13211,7 +13308,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     ),
     sbH(
       "div",
-      { className: "lliFilter" },
+      { className: "lliFilter sbCatBar" },
       catChip("all", L("allCats")),
       // Only the disciplines that are actually on this board, so the row of
       // chips is a summary and not a wall of buttons. It follows the rows as
@@ -13261,15 +13358,6 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         SD_STATUSES.map((st) => sbH("option", { key: st.key, value: st.key }, sbText(st, lang))),
       ),
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
-      canEdit
-        ? sbH(
-            "button",
-            { type: "button", className: "ghostBtn small", onClick: () => setSupOpen(true) },
-            sbH(SendIcon2, { size: 14, strokeWidth: 2 }),
-            " ",
-            "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7"
-          )
-        : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
       exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
@@ -13298,22 +13386,20 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 null,
                 sbH("th", { className: "cSec" }, L("section")),
                 sbH("th", { className: "cCat" }, L("category")),
+                sbH("th", { className: "cMark" }, L("typeMark")),
                 sbH("th", { className: "cDesc" }, L("desc")),
-                sbH("th", { className: "cQty" }, isRTL ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4" : "Subcontractors"),
+                sbH("th", { className: "cQty" }, isRTL ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" : "Subcontractor"),
                 sbH("th", { className: "cDate" }, L("dueAt")),
-                sbH("th", { className: "cFile" }, L("file")),
                 sbH("th", { className: "cReq" }, L("toClient")),
                 sbH("th", { className: "cStat" }, L("status")),
-                sbH("th", { className: "cDate" }, L("submittedAt")),
-                sbH("th", { className: "cDate" }, L("approvedAt")),
-                canEdit ? sbH("th", { className: "cAct" }, L("removeCol")) : null
+                canEdit ? sbH("th", { className: "cAct" }, "") : null
               )
             ),
             groups.map((g) =>
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 11 : 10 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 9 : 8 }, g.title)),
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -13340,10 +13426,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                   // is long lead or past its date and still not in, orange
                   // while it is with somebody, green once it is signed
                   // (29.8.26).
-                  const tone = done ? "lliDone"
-                    : v.status === "submitted" ? "lliWait"
-                    : (r.longLead || (v.dueAt && v.dueAt < sbToday())) ? "lliLate"
-                    : "";
+                  const tone0 = sdDueTone(v, done);
+                  const tone = tone0 === "ok" ? "lliDone" : tone0 === "wait" ? "lliWait" : tone0 === "late" ? "lliLate" : "";
                   return sbH(
                     "tr",
                     { key: r.code, className: `${hidden ? "lliOff" : ""} ${tone}`.trim() },
@@ -13380,6 +13464,16 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         disabled: !canEdit,
                         noneLabel: L("noCat"),
                         onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory })
+                      })
+                    ),
+                    sbH(
+                      "td",
+                      { className: "cMark" },
+                      sbH("input", {
+                        type: "text", className: "lliIn", dir: "auto",
+                        value: v.typeMark != null && v.typeMark !== "" ? v.typeMark : markOf(r, v),
+                        readOnly: !canEdit,
+                        onChange: (e) => patch(r.code, { typeMark: e.target.value })
                       })
                     ),
                     sbH(
@@ -13422,57 +13516,6 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     ),
                     sbH(
                       "td",
-                      { className: "cFile" },
-                      shownFile
-                        ? sbH(
-                            "div",
-                            { className: "sdFileCell" },
-                            sbH(
-                              "button",
-                              { type: "button", className: "sbLinkBtn", title: shownFile.name || "", onClick: () => openFile(shownFile) },
-                              sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
-                              " ",
-                              L("open")
-                            ),
-                            sbH(
-                              "button",
-                              {
-                                type: "button", className: "sdDlBtn", title: L("download"),
-                                "aria-label": L("download"),
-                                // The same name the client and the contractor
-                                // get: project - description - the day it was
-                                // saved. The stored key is a UUID and nobody
-                                // should ever see it (7.9.26).
-                                onClick: () => sbDownloadAs(shownFile, projectName, `SD - ${sdFileLabel(v.desc || r.title || "")}`)
-                              },
-                              sbH(Download2, { size: 13, strokeWidth: 2 })
-                            ),
-                            // A signed drawing is not hers to remove: the bin
-                            // clears the drawing she issued, and after signing
-                            // there is a signed copy behind it.
-                            canEdit && !ap
-                              ? sbH("button", { type: "button", className: "lliImgClear", title: L("remove"), onClick: () => patch(r.code, { file: null }) }, "×")
-                              : null,
-                            ap
-                              ? sbH("span", { className: "sdSignedTag", title: `${L("approvedAt")} ${sbFmtDate(String(approvedOn).slice(0, 10))}` },
-                                  sbH(Check3, { size: 11, strokeWidth: 3 }))
-                              : null
-                          )
-                        : canEdit
-                          ? sbH(
-                              "label",
-                              { className: "sdUpBtn", title: L("upload") },
-                              // A file going up: the icon says it in less room
-                              // than the word did (29.8.26).
-                              busyRow === r.code
-                                ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
-                                : sbH(FileUp2, { size: 15, strokeWidth: 2 }),
-                              sbH("input", { type: "file", accept: "application/pdf,image/*", style: { display: "none" }, onChange: (e) => onFile(r.code, e) })
-                            )
-                          : sbH("span", { className: "lliDash" }, "—")
-                    ),
-                    sbH(
-                      "td",
                       { className: "cReq" },
                       sbH(
                         "button",
@@ -13482,14 +13525,18 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                           disabled: !canEdit,
                           onClick: () => {
                             const on = !v.toClient;
+                            const now = new Date().toISOString();
+                            // 21.10.26 — every submission carries its own day,
+                            // and every one of them is kept in the history.
                             const p = {
                               toClient: on,
-                              toClientAt: on && !v.toClientAt ? new Date().toISOString() : v.toClientAt
+                              toClientAt: on ? now : v.toClientAt,
+                              history: sdHistAdd(v, { kind: on ? "sent" : "unsent" })
                             };
                             // Sending it to the client IS the submission, so the
                             // board says so without being told twice.
-                            if (on && v.status === "required") p.status = "submitted";
-                            if (on && !v.submittedAt) p.submittedAt = new Date().toISOString().slice(0, 10);
+                            if (on && v.status === "required") { p.status = "submitted"; p.statusAt = now; }
+                            if (on) p.submittedAt = now.slice(0, 10);
                             patch(r.code, p);
                           }
                         },
@@ -13516,35 +13563,23 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                           style: { color: st.color },
                           onChange: (e) => {
                             const next = e.target.value;
-                            const p = { status: next };
-                            // Dates that write themselves are dates that are
-                            // actually there when someone comes looking.
-                            const today = new Date().toISOString().slice(0, 10);
+                            const now = new Date().toISOString();
+                            // 21.10.26 — the status carries the day it was set,
+                            // shown under it, and the change goes in the history.
+                            const p = { status: next, statusAt: now, history: sdHistAdd(v, { kind: "status", status: next }) };
+                            const today = now.slice(0, 10);
                             if (next === "submitted" && !v.submittedAt) p.submittedAt = today;
-                            if (SD_DONE.indexOf(next) >= 0 && !v.approvedAt) p.approvedAt = today;
+                            if (SD_DONE.indexOf(next) >= 0) p.approvedAt = today;
                             patch(r.code, p);
                           }
                         },
                         SD_STATUSES.map((s) => sbH("option", { key: s.key, value: s.key }, lang === "he" ? s.he : s.en))
-                      )
-                    ),
-                    sbH(
-                      "td",
-                      { className: "cDate" },
-                      sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.submittedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { submittedAt: e.target.value }) })
-                    ),
-                    sbH(
-                      "td",
-                      { className: "cDate" },
-                      // An approval date before there is an approval is a promise,
-                      // not a fact, so the box only opens once the status says so.
-                      ap
-                        // The client's own date. It is theirs to set, not hers
-                        // to edit.
-                        ? sbH("span", { className: "sdcNum", dir: "ltr" }, sbFmtDate(String(approvedOn).slice(0, 10)))
-                        : done
-                          ? sbH("input", { type: "date", className: "lliIn", dir: "ltr", value: v.approvedAt, readOnly: !canEdit, onChange: (e) => patch(r.code, { approvedAt: e.target.value }) })
-                          : sbH("span", { className: "lliDash" }, "—")
+                      ),
+                      ap && approvedOn
+                        ? sbH("span", { className: "lliStamp", dir: "ltr" }, sbFmtDate(String(approvedOn).slice(0, 10)))
+                        : !ap && (v.statusAt || (done && v.approvedAt))
+                          ? sbH("span", { className: "lliStamp", dir: "ltr" }, sbFmtDate(String(v.statusAt || v.approvedAt).slice(0, 10)))
+                          : null
                     ),
                     // One action, not two.
                     //
@@ -13560,15 +13595,14 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                           "td",
                           { className: "cAct" },
                           sbH(
-                            "button",
-                            {
-                              type: "button",
-                              className: "lliRowDel",
-                              title: L("removeRow"),
-                              "aria-label": L("removeRow"),
-                              onClick: () => patch(r.code, { removed: true })
-                            },
-                            sbH(Trash2, { size: 13, strokeWidth: 2 })
+                            "div",
+                            { className: "sdActs" },
+                            sbH("button", { type: "button", className: "sbSq send", title: L("sendMail"), "aria-label": L("sendMail"), onClick: () => sendMail(r, v) },
+                              sbH(SendIcon2, { size: 14, strokeWidth: 2.1 })),
+                            sbH("button", { type: "button", className: "sbSq", title: L("history"), "aria-label": L("history"), onClick: () => setHistFor(r.code) },
+                              sbH(ArchiveIcon, { size: 14, strokeWidth: 2.1 })),
+                            sbH("button", { type: "button", className: "sbSq del", title: L("removeRow"), "aria-label": L("removeRow"), onClick: () => patch(r.code, { removed: true }) },
+                              sbH(Trash2, { size: 14, strokeWidth: 2.1 }))
                           )
                         )
                       : null
@@ -13577,7 +13611,45 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               )
             )
           )
-        )
+        ),
+    // The history of one drawing: when it went to the client, and every status
+    // it was given, with the day (21.10.26).
+    histFor
+      ? (() => {
+          const v = sdRowOf(data, histFor);
+          const r = all.find((x) => x.code === histFor) || { code: histFor, title: "" };
+          const hist = (Array.isArray(v.history) ? v.history : []).slice();
+          // Older rows, from before the history was kept: what the row itself
+          // remembers.
+          if (!hist.length) {
+            if (v.toClientAt) hist.push({ at: v.toClientAt, kind: "sent" });
+            if (v.approvedAt) hist.push({ at: v.approvedAt, kind: "status", status: v.status });
+          }
+          const line = (h) => h.kind === "status"
+            ? `${L("histStatus")}: ${sbText(sdStatus(h.status), lang)}`
+            : L(h.kind === "sent" ? "histSent" : h.kind === "unsent" ? "histUnsent" : "histMail");
+          return createPortal(
+            sbH(
+              "div",
+              { className: "printAskScrim", onClick: () => setHistFor(null) },
+              sbH(
+                "div",
+                { className: "printAskBox", dir: isRTL ? "rtl" : "ltr", style: { maxWidth: 460, width: "calc(100vw - 32px)" }, onClick: (e) => e.stopPropagation() },
+                sbH("h3", null, `${L("history")} \u2014 ${markOf(r, v) || v.desc || r.title || ""}`),
+                hist.length
+                  ? sbH("ul", { className: "sdHist" },
+                      hist.slice().reverse().map((h, i) => sbH("li", { key: i },
+                        sbH("span", { className: "sdHistAt", dir: "ltr" }, sbFmtDate(String(h.at).slice(0, 10))),
+                        sbH("span", null, line(h)))))
+                  : sbH("p", null, L("histEmpty")),
+                sbH("div", { className: "printAskBtns" },
+                  sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setHistFor(null) }, isRTL ? "\u05e1\u05d2\u05d9\u05e8\u05d4" : "Close"))
+              )
+            ),
+            document.body
+          );
+        })()
+      : null
   );
 }
 
@@ -18168,11 +18240,53 @@ function sbPrintNoSpecs(rec, lang, brand, sigs) {
   };
   setTimeout(tick, 300);
 }
+// Sub-categories she typed that are not in the list, kept in this browser per
+// folder so the dropdown offers them next time (21.10.26).
+function sbRememberedSubcats(catKey) {
+  try {
+    const all = JSON.parse(window.localStorage.getItem("aw.sbSubcats") || "{}") || {};
+    return Array.isArray(all[catKey]) ? all[catKey] : [];
+  } catch (e) { return []; }
+}
+function sbRememberSubcat(catKey, v) {
+  try {
+    const all = JSON.parse(window.localStorage.getItem("aw.sbSubcats") || "{}") || {};
+    const cur = Array.isArray(all[catKey]) ? all[catKey] : [];
+    if (cur.indexOf(v) >= 0) return;
+    all[catKey] = cur.concat([v]).slice(-60);
+    window.localStorage.setItem("aw.sbSubcats", JSON.stringify(all));
+  } catch (e) {}
+}
+// Who "submitted by" names, and the address under it (21.10.26). She signs in
+// with a private address; on the paper she is herself, at her work address,
+// in the language of the form.
+var SB_WHO = [
+  {
+    users: ["marcella.kravitz", "marcellak"],
+    names: ["marcella.kravitz", "marcellak", "\u05de\u05e8\u05e1\u05dc\u05d4 \u05e7\u05e8\u05d1\u05d9\u05e5", "Marcella Kravitz"],
+    he: "\u05de\u05e8\u05e1\u05dc\u05d4 \u05e7\u05e8\u05d1\u05d9\u05e5",
+    en: "Marcella Kravitz",
+    email: "marcellak@a-weiss.co.il"
+  }
+];
+function sbWhoOf(email, submittedBy) {
+  const user = String(email || "").toLowerCase().split("@")[0];
+  const by = String(submittedBy || "").trim().toLowerCase();
+  return SB_WHO.find((w) => (user && w.users.indexOf(user) >= 0) || (by && w.names.some((n) => n.toLowerCase() === by))) || null;
+}
+function sbWhoFix(rec, lang) {
+  if (!rec) return rec;
+  const w = sbWhoOf(rec.email, rec.submittedBy);
+  if (!w) return rec;
+  return { ...rec, submittedBy: lang === "en" ? w.en : w.he, email: w.email };
+}
 function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
   const [busy, setBusy] = useState6(null);
   const [specsOpen, setSpecsOpen] = useState6(false);
+  // The sub-category exactly as typed, while the box has the focus.
+  const [subTxt, setSubTxt] = useState6(null);
   const [imgSel, setImgSel] = useState6(false);
   const [err, setErr] = useState6(null);
   const [aiMsg, setAiMsg] = useState6(null);
@@ -18635,33 +18749,96 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
               : sbH(Globe2, { size: 15, strokeWidth: 2 }),
             sbH("span", null, isHe ? "EN" : "HE")
           ),
-      sbH(
-        "button",
-        {
-          type: "button",
-          className: "sbToolBtn",
-          title: L("pdfHint"),
-          onClick: () => sbPrint(d, lang, printBrand, userSignatures)
-        },
-        sbH(Printer, { size: 15, strokeWidth: 2 }),
-        sbH("span", null, "PDF")
-      ),
-      sbH(
-        "button",
-        {
-          type: "button",
-          className: "sbToolBtn",
-          title: isHe ? "\u05d8\u05d5\u05e4\u05e1 \u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc \u05d1\u05dc\u05d1\u05d3, \u05d1\u05dc\u05d9 \u05d3\u05e4\u05d9 \u05d4\u05de\u05e4\u05e8\u05d8\u05d9\u05dd" : "The submittal form only, without the specification pages",
-          onClick: () => sbPrintNoSpecs(d, lang, printBrand, userSignatures)
-        },
-        sbH(Printer, { size: 15, strokeWidth: 2 }),
-        sbH("span", null, isHe ? "PDF \u05dc\u05dc\u05d0 \u05de\u05e4\u05e8\u05d8\u05d9\u05dd" : "PDF without specs")
-      )
+      // 21.10.26 — printing is done from the board, not from in here.
+      null
     ),
     typeof d.fromRev === "number" && !d.sent
       ? sbH("p", { className: "sbRevNote" }, `${L("newVersionNote")} Rev.${d.fromRev} → Rev.${d.rev}`)
       : null,
     err ? sbH("p", { className: "sbErr" }, err) : null,
+    // ------- specification files + AI
+    // 21.10.26 — right under the strip that uploads them, so what was just
+    // attached is seen where it was attached. Shown once there is something.
+    !((d.attachments || []).length || aiMsg || (d.conflicts || []).length || (d.specText || "").trim())
+      ? null
+      : sbH(
+      "div",
+      { className: "sbSpecs sbSpecsTop" },
+      sbH("div", { className: "sbSpecsHead" }, sbH(FileTextIcon, { size: 15, strokeWidth: 2 }), " ", L("specs")),
+      // Loading them and having them read are on the strip at the top of the
+      // screen now — they are things done to the document as a whole, and they
+      // were hard to find halfway down a form this long (7.9.26).
+      sbH("p", { className: "sbAiHint" }, L("aiHint")),
+      sbH("p", { className: "sbAiHint" }, L("pdfHint")),
+      (d.specText || "").trim()
+        ? sbH(
+            "button",
+            {
+              type: "button",
+              className: "sbLinkBtn",
+              style: { marginTop: 8 },
+              onClick: () => {
+                const w = window.open("", "_blank");
+                if (!w) return;
+                w.document.open();
+                w.document.write(
+                  `<html><head><meta charset="utf-8"><title>spec text</title></head><body style="font-family:monospace;white-space:pre-wrap;padding:24px;line-height:1.5"><p style="font-family:sans-serif;color:#6b7280">${(d.specText || "").length} characters \u2014 this is exactly what the AI receives.</p><hr>${sbEsc(d.specText || "")}</body></html>`
+                );
+                w.document.close();
+              }
+            },
+            L("showSpecText") + ` (${(d.specText || "").length.toLocaleString()})`
+          )
+        : null,
+      aiMsg ? sbH("p", { className: "sbAiMsg" }, aiMsg) : null,
+      // A disagreement between the attached papers stays on the record until
+      // somebody settles it — it does not vanish with the message (30.8.26).
+      (d.conflicts || []).length
+        ? sbH(
+            "div",
+            { className: "sbConflict" },
+            sbH("div", { className: "sbConflictTitle" },
+              sbH(AlertTriangle2, { size: 13, strokeWidth: 2.4 }), " ", L("conflictTitle")),
+            sbH("ul", null, (d.conflicts || []).map((c, i) =>
+              sbH("li", { key: i, dir: "auto" }, c)))
+          )
+        : null,
+      sbH(
+        "ul",
+        { className: "sbAttList" },
+        (d.attachments || []).map((att) =>
+          sbH(
+            "li",
+            { key: att.id },
+            sbH(
+              "button",
+              { type: "button", className: "sbLinkBtn", onClick: () => openAtt(att) },
+              sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
+              " ",
+              att.name
+            ),
+            typeof att.chars === "number"
+              ? sbH(
+                  "span",
+                  { className: `sbCharsTag ${att.chars < 200 ? "poor" : ""}` },
+                  att.chars < 200
+                    ? L("noTextTag")
+                    : lang === "he" ? `${att.chars.toLocaleString()} תווים` : `${att.chars.toLocaleString()} chars`
+                )
+              : null,
+            att.inline ? sbH("span", { className: "sbInlineTag" }, lang === "he" ? "לא באחסון" : "not in storage") : null,
+            ro
+              ? null
+              : sbH(
+                  "button",
+                  { type: "button", className: "sbIconBtn", title: L("remove"), onClick: () => removeAtt(att) },
+                  sbH(Trash2, { size: 13, strokeWidth: 2 })
+                )
+          )
+        )
+      )
+    ),
+
 
     // ------- PROJECT INFORMATION
     secBar("projectInfo"),
@@ -18713,11 +18890,23 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         "label",
         { className: "sbField" },
         sbH("span", { className: "sbFieldLbl" }, L("subCategory")),
+        // 21.10.26 — what she types is kept exactly as typed while she types
+        // (the label used to be trimmed on every key, which swallowed the
+        // space between two words), and is filed when she leaves the box. A
+        // sub-category that is not in the list is remembered for next time.
         sbH("input", {
           type: "text",
-          value: sbSubcatLabel(d.subCategory || d.scope, d.category, lang),
+          value: subTxt != null ? subTxt : sbSubcatLabel(d.subCategory || d.scope, d.category, lang),
           readOnly: ro,
-          onChange: (e) => set({ subCategory: sbSubcatCanon(e.target.value, d.category) }),
+          onFocus: () => setSubTxt(sbSubcatLabel(d.subCategory || d.scope, d.category, lang)),
+          onChange: (e) => { setSubTxt(e.target.value); set({ subCategory: e.target.value }); },
+          onBlur: (e) => {
+            const v = String(e.target.value || "").replace(/\s+/g, " ").trim();
+            const canon = sbSubcatCanon(v, d.category);
+            set({ subCategory: canon });
+            setSubTxt(null);
+            if (v && !sbSubcats(d.category).some((r) => r[0] === canon || r[1] === canon)) sbRememberSubcat(d.category, v);
+          },
           style: inS,
           list: "sb-list-subcat"
         }),
@@ -18725,7 +18914,9 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
           "datalist",
           { id: "sb-list-subcat" },
           sbSubcats(d.category).map((r) => sbH("option", { key: r[0], value: lang === "he" ? r[1] : r[0] })),
-          (scopeOptions || []).map((v) => sbH("option", { key: `x-${v}`, value: v }))
+          Array.from(new Set((scopeOptions || []).concat(sbRememberedSubcats(d.category))))
+            .filter((v) => !sbSubcats(d.category).some((r) => r[0] === v || r[1] === v))
+            .map((v) => sbH("option", { key: `x-${v}`, value: sbSubcatLabel(v, d.category, lang) }))
         )
       ),
       field("email", { type: "email", dir: "ltr" })
@@ -18871,162 +19062,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         )
       : null,
 
-    // ------- specification files + AI
-    sbH(
-      "div",
-      { className: "sbSpecs" },
-      sbH("div", { className: "sbSpecsHead" }, sbH(FileTextIcon, { size: 15, strokeWidth: 2 }), " ", L("specs")),
-      // Loading them and having them read are on the strip at the top of the
-      // screen now — they are things done to the document as a whole, and they
-      // were hard to find halfway down a form this long (7.9.26).
-      sbH("p", { className: "sbAiHint" }, L("aiHint")),
-      sbH("p", { className: "sbAiHint" }, L("pdfHint")),
-      (d.specText || "").trim()
-        ? sbH(
-            "button",
-            {
-              type: "button",
-              className: "sbLinkBtn",
-              style: { marginTop: 8 },
-              onClick: () => {
-                const w = window.open("", "_blank");
-                if (!w) return;
-                w.document.open();
-                w.document.write(
-                  `<html><head><meta charset="utf-8"><title>spec text</title></head><body style="font-family:monospace;white-space:pre-wrap;padding:24px;line-height:1.5"><p style="font-family:sans-serif;color:#6b7280">${(d.specText || "").length} characters \u2014 this is exactly what the AI receives.</p><hr>${sbEsc(d.specText || "")}</body></html>`
-                );
-                w.document.close();
-              }
-            },
-            L("showSpecText") + ` (${(d.specText || "").length.toLocaleString()})`
-          )
-        : null,
-      aiMsg ? sbH("p", { className: "sbAiMsg" }, aiMsg) : null,
-      // A disagreement between the attached papers stays on the record until
-      // somebody settles it — it does not vanish with the message (30.8.26).
-      (d.conflicts || []).length
-        ? sbH(
-            "div",
-            { className: "sbConflict" },
-            sbH("div", { className: "sbConflictTitle" },
-              sbH(AlertTriangle2, { size: 13, strokeWidth: 2.4 }), " ", L("conflictTitle")),
-            sbH("ul", null, (d.conflicts || []).map((c, i) =>
-              sbH("li", { key: i, dir: "auto" }, c)))
-          )
-        : null,
-      sbH(
-        "ul",
-        { className: "sbAttList" },
-        (d.attachments || []).map((att) =>
-          sbH(
-            "li",
-            { key: att.id },
-            sbH(
-              "button",
-              { type: "button", className: "sbLinkBtn", onClick: () => openAtt(att) },
-              sbH(FileTextIcon, { size: 13, strokeWidth: 2 }),
-              " ",
-              att.name
-            ),
-            typeof att.chars === "number"
-              ? sbH(
-                  "span",
-                  { className: `sbCharsTag ${att.chars < 200 ? "poor" : ""}` },
-                  att.chars < 200
-                    ? L("noTextTag")
-                    : lang === "he" ? `${att.chars.toLocaleString()} תווים` : `${att.chars.toLocaleString()} chars`
-                )
-              : null,
-            att.inline ? sbH("span", { className: "sbInlineTag" }, lang === "he" ? "לא באחסון" : "not in storage") : null,
-            ro
-              ? null
-              : sbH(
-                  "button",
-                  { type: "button", className: "sbIconBtn", title: L("remove"), onClick: () => removeAtt(att) },
-                  sbH(Trash2, { size: 13, strokeWidth: 2 })
-                )
-          )
-        )
-      )
-    ),
-
-    // ------- AI SUGGESTED DOCUMENTS
-    // Her instruction of 30.8.26 (§23–28): only AFTER the form has been filled
-    // and the package looked at. The model searches the web for the official
-    // documents this submittal is missing and shows where they are. NOTHING is
-    // downloaded and nothing is attached — a recommendation becomes part of the
-    // submittal only when she uploads it herself.
-    ro
-      ? null
-      : sbH(
-          "div",
-          { className: "sbSuggest" },
-          sbH("div", { className: "sbSpecsHead" },
-            sbH(Sparkles, { size: 15, strokeWidth: 2 }), " ", L("suggestTitle")),
-          sbH("p", { className: "sbAiHint" }, L("suggestHint")),
-          sbH(
-            "div",
-            { className: "sbSpecsRow" },
-            sbH(
-              "button",
-              {
-                type: "button",
-                className: `sbAiBtn ${busy === "suggest" ? "busy" : ""}`.trim(),
-                onClick: runSuggest,
-                disabled: busy === "suggest" || !d.aiFilledAt
-              },
-              busy === "suggest"
-                ? sbH("span", { className: "sbSpin", "aria-hidden": "true" })
-                : sbH(Globe2, { size: 14, strokeWidth: 2 }),
-              " ",
-              busy === "suggest" ? L("suggestWorking") : L("suggestRun")
-            )
-          ),
-          // The button waits for the fill: there is nothing to search FOR until
-          // the form knows what the product is.
-          !d.aiFilledAt ? sbH("p", { className: "sbAiHint" }, L("suggestAfterFill")) : null,
-          sugMsg ? sbH("p", { className: "sbAiMsg" }, sugMsg) : null,
-          (d.suggested || []).length
-            ? sbH(
-                "ul",
-                { className: "sbSugList" },
-                (d.suggested || []).map((r, i) => sbH(
-                  "li",
-                  { key: `${r.pageUrl}-${i}` },
-                  sbH(
-                    "div",
-                    { className: "sbSugHead" },
-                    sbH("span", { className: "sbSugType", dir: "auto" }, r.docType || "—"),
-                    sbH("span", { className: `sbSugMatch ${r.matchLevel}` },
-                      L(r.matchLevel === "exact" ? "matchExact"
-                        : r.matchLevel === "series" ? "matchSeries" : "matchMaker")),
-                    r.source ? sbH("span", { className: "sbSugSrc" }, r.source) : null
-                  ),
-                  r.name ? sbH("div", { className: "sbSugName", dir: "auto" }, r.name) : null,
-                  r.product ? sbH("div", { className: "sbSugProd", dir: "auto" }, r.product) : null,
-                  r.why ? sbH("div", { className: "sbSugWhy", dir: "auto" }, r.why) : null,
-                  sbH(
-                    "div",
-                    { className: "sbSugLinks" },
-                    sbH("a", {
-                      href: r.pageUrl, target: "_blank", rel: "noopener noreferrer",
-                      className: "sbSugLink"
-                    }, sbH(Globe2, { size: 12, strokeWidth: 2 }), " ", L("suggestPage")),
-                    r.fileUrl
-                      ? sbH("a", {
-                          href: r.fileUrl, target: "_blank", rel: "noopener noreferrer",
-                          className: "sbSugLink file"
-                        }, sbH(Download2, { size: 12, strokeWidth: 2 }), " ", L("suggestFile"))
-                      : null
-                  )
-                ))
-              )
-            : null,
-          (d.suggested || []).length
-            ? sbH("p", { className: "sbSugFoot" }, L("suggestNotAttached"))
-            : null
-        ),
-
+    // 21.10.26 — the web search for missing documents is gone, at her request.
     // ------- the worklist: several products found in one set of specifications
     (queue || []).length
       ? sbH(
@@ -19140,12 +19176,6 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
           // and it is the ICON and the word that say which is which: a diskette
           // for saving, a paper plane for sending, a bin for deleting. Anything
           // else and the eye starts ranking them (7.9.26).
-          sbH(
-            "button",
-            { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: true, sentAt: d.sentAt || new Date().toISOString() }) },
-            sbH(SendIcon2, { size: 15, strokeWidth: 2.2 }),
-            sbH("span", null, L("send"))
-          ),
           sbH(
             "button",
             { type: "button", className: "sbFormBtn", onClick: () => onSave({ ...d, sent: false }) },
@@ -19466,7 +19496,11 @@ function sbBoardRows(opts) {
   return out;
 }
 // The contractor column's name on this board (21.10.26).
-var SB_CONTRACTOR_L = { en: "Contractor", he: "קבלן" };
+var SB_CONTRACTOR_L = { en: "Subcontractor", he: "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" };
+// The trades a submittal is shown to in the subcontractor app (21.10.26).
+function sbTradesLabel(rec) {
+  return ((rec && rec.subs) || []).map((k) => (SUB_TRADES.find((t) => t.key === k) || {}).label || k).join(", ");
+}
 var SB_PHOTO_L = { en: "Photo", he: "תמונה" };
 // The columns of the board, in the order she reads them, shared by the screen,
 // the workbook and the PDF. The tick in each column title decides whether that
@@ -19477,11 +19511,13 @@ var SB_BOARD_COLS = [
   { key: "typeCol", label: (lg) => sbText(SB_L.typeCol, lg), width: 12, kind: "text" },
   { key: "chkDesc", label: (lg) => sbText(SB_L.chkDesc, lg), width: 38, kind: "text" },
   { key: "supplierCol", label: (lg) => sbText(SB_CONTRACTOR_L, lg), width: 18, kind: "text" },
-  { key: "imgCol", label: (lg) => sbText(SB_PHOTO_L, lg), width: 16, kind: "text" },
-  { key: "sentCol", label: (lg) => sbText(SB_L.sentCol, lg), width: 13, kind: "date" },
-  { key: "targetCol", label: (lg) => sbText(SB_L.targetCol, lg), width: 14, kind: "date" },
-  { key: "status", label: (lg) => sbText(SB_L.status, lg), width: 16, kind: "text" },
-  { key: "clientOkCol", label: (lg) => sbText(SB_L.clientOkCol, lg), width: 14, kind: "date" }
+  { key: "imgCol", label: (lg) => sbText(SB_PHOTO_L, lg), width: 20, kind: "text" },
+  // Short titles, so the four narrow columns take as little room as they
+  // can and the photo gets it (21.10.26).
+  { key: "sentCol", label: (lg) => sbText({ en: "Submitted", he: "\u05d4\u05d2\u05e9\u05d4" }, lg), width: 11, kind: "date" },
+  { key: "targetCol", label: (lg) => sbText({ en: "Due", he: "\u05d9\u05e2\u05d3" }, lg), width: 11, kind: "date" },
+  { key: "status", label: (lg) => sbText(SB_L.status, lg), width: 13, kind: "text" },
+  { key: "clientOkCol", label: (lg) => sbText({ en: "Client approval", he: "\u05d0\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d7" }, lg), width: 11, kind: "date" }
 ];
 function sbBoardGridRaw(opts) {
   const { lang, audience, tradeFor } = opts;
@@ -19499,7 +19535,7 @@ function sbBoardGridRaw(opts) {
       chkItem: r.boq || "",
       typeCol: r.mark,
       chkDesc: r.desc,
-      supplierCol: (lead && lead.supplier) || trade || "",
+      supplierCol: sbTradesLabel(lead),
       imgCol: "",
       sentCol: lead ? sbFmtDate((lead.sent ? (lead.sentAt || "").slice(0, 10) : "") || lead.date) : "",
       targetCol: r.due ? sbFmtDate(r.due) : "",
@@ -19669,7 +19705,9 @@ function SubmittalFolder({
   onPlaceReview,
   onDismissReview,
   colHide,
-  onToggleCol
+  onToggleCol,
+  onApprove,
+  onUnsend
 }) {
   const L = (k) => sbText(SB_L[k], lang);
   const he = lang === "he";
@@ -19745,7 +19783,13 @@ function SubmittalFolder({
       sq("send", he ? "שליחה במייל לפיקוח" : "E-mail to the supervision", SendIcon2, () => rec && onSend(rec), !rec),
       rec
         ? sq("del", L("remove"), Trash2, () => onDelete(rec))
-        : sq("del", L("removeRow"), Trash2, () => onRemoveChk && onRemoveChk(r.cat.key, r.code))
+        : sq("del", L("removeRow"), Trash2, () => onRemoveChk && onRemoveChk(r.cat.key, r.code)),
+      // Under send: taking the sending back. Under delete: the client's
+      // approval, which turns the row green (21.10.26).
+      sq("unsend", he ? "\u05d1\u05d9\u05d8\u05d5\u05dc \u05e9\u05dc\u05d9\u05d7\u05d4" : "Cancel sending", SendIcon2, () => rec && onUnsend && onUnsend(rec), !rec || !rec.sent),
+      sq(`ok ${r.approved ? "on" : ""}`, r.approved
+        ? (he ? "\u05de\u05d0\u05d5\u05e9\u05e8 \u2014 \u05dc\u05d7\u05d9\u05e6\u05d4 \u05de\u05d1\u05d8\u05dc\u05ea" : "Approved \u2014 press to take back")
+        : (he ? "\u05d4\u05dc\u05e7\u05d5\u05d7 \u05d0\u05d9\u05e9\u05e8" : "The client approved"), Check3, () => rec && onApprove && onApprove(r.approved || rec), !rec)
     );
   };
   const rowOf = (r) => {
@@ -19817,19 +19861,18 @@ function SubmittalFolder({
           : null,
         warn ? sbH("span", { className: "sbChkWarn", title: warn }, "!") : null
       ),
+      // Which trades see this submittal in their app — the same list SD has
+      // (21.10.26).
       sbH(
         "td",
-        null,
-        rec && canEdit
-          ? sbH("input", {
-              type: "text",
-              className: `sbCellIn ${!rec.supplier && tradeOf(r) ? "sbFromContacts" : ""}`.trim(),
-              value: rec.supplier || tradeOf(r),
-              title: !rec.supplier && tradeOf(r) ? L("fromContacts") : undefined,
-              placeholder: "—",
-              onChange: (e) => onPatch && onPatch(rec, { supplier: e.target.value })
+        { className: "sbTradeCell" },
+        rec
+          ? sbH(SubsTradePicker, {
+              value: rec.subs || [],
+              disabled: !canEdit,
+              onChange: (next) => onPatch && onPatch(rec, { subs: next })
             })
-          : (rec && (rec.supplier || tradeOf(r))) || "—"
+          : sbH("span", { className: "sbChkDash" }, "\u2014")
       ),
       sbH("td", { className: "sbThumbCell" }, r.img ? sbH("img", { className: "sbThumb", src: r.img, alt: "" }) : sbH("span", { className: "sbChkDash" }, "—")),
       sbH("td", { dir: "ltr" }, rec ? fmtSent(rec) : "—"),
@@ -20191,11 +20234,58 @@ function SubmittalCard({
       "\u05ea\u05d5\u05d3\u05d4 \u05e2\u05dc \u05e9\u05d9\u05ea\u05d5\u05e3 \u05d4\u05e4\u05e2\u05d5\u05dc\u05d4.",
       "\u05d1\u05d1\u05e8\u05db\u05d4,"
     ].join("\r\n");
-    const href = `mailto:${to.map(encodeURIComponent).join(",")}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    if (!s.sent) {
-      commit((list || []).map((x) => (x.id === s.id ? { ...x, sent: true, sentAt: x.sentAt || new Date().toISOString() } : x)));
+    // 21.10.26 — the new Outlook, not the old one: the compose page of
+    // Outlook on the web, which is what the new Outlook is. (A mailto: link
+    // opens whatever program Windows has as its mail app.)
+    const href = "https://outlook.office.com/mail/deeplink/compose?"
+      + (to.length ? `to=${encodeURIComponent(to.join(";"))}&` : "")
+      + `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    // Sent today: the board and the printed form both say so — the form
+    // prints its own date, which used to stay at the day it was opened.
+    const now = new Date().toISOString();
+    commit((list || []).map((x) => (x.id === s.id ? { ...x, sent: true, sentAt: now, date: now.slice(0, 10) } : x)));
+    // A new tab, so the board stays where it is. ("noopener" would make
+    // window.open return nothing and hide whether the tab opened.)
+    const w = window.open(href, "_blank");
+    if (w) { try { w.opener = null; } catch (e) {} }
+    else { try { window.location.href = href; } catch (e) {} }
+  };
+  // Back to a draft: sent by mistake, or not sent after all (21.10.26).
+  const unsend = (s) => {
+    if (!s.sent) return;
+    commit((list || []).map((x) => (x.id === s.id ? { ...x, sent: false, sentAt: null } : x)));
+  };
+  // The client approved it (21.10.26): green, with today's date as the
+  // approval date. Pressed again, the approval is taken back.
+  const approveQuick = (s) => {
+    const now = new Date().toISOString();
+    const signed = sbSignedAt(s);
+    if (signed) {
+      if (!window.confirm(lang === "he" ? "\u05dc\u05d1\u05d8\u05dc \u05d0\u05ea \u05d0\u05d9\u05e9\u05d5\u05e8 \u05d4\u05dc\u05e7\u05d5\u05d7?" : "Take back the client's approval?")) return;
+      const next = { ...(submittalApprovals || {}) };
+      delete next[s.id];
+      if (onChangeApprovals) onChangeApprovals(next);
+      const own = (submittals || []).find((x) => x.id === s.id);
+      if (own && ((own.reviews || [])[0] || {}).decision) {
+        commit((submittals || []).map((x) => (x.id === s.id
+          ? { ...x, closedAt: null, reviews: [{ ...((x.reviews || [])[0] || {}), decision: "", signedAt: null }].concat((x.reviews || []).slice(1)) }
+          : x)));
+      }
+      return;
     }
-    try { window.location.href = href; } catch (e) {}
+    const rv = (s.reviews || [])[0] || {};
+    if (onChangeApprovals) {
+      onChangeApprovals({
+        ...(submittalApprovals || {}),
+        [s.id]: {
+          review: { ...rv, decision: "approved", signedAt: now, signedByEmail: (currentEmail || "").toLowerCase() },
+          closedAt: now,
+          by: (currentEmail || "").toLowerCase(),
+          at: now
+        }
+      });
+    }
+    if (!s.sent) commit((list || []).map((x) => (x.id === s.id ? { ...x, sent: true, sentAt: now } : x)));
   };
   // The submittal used to carry its own EN/HE switch, because the document that
   // goes out to a client is not always in the language she is working in. That
@@ -20368,8 +20458,8 @@ function SubmittalCard({
       contractor: contractorName,
       disciplineEn: fold.en,
       disciplineHe: fold.he,
-      email: currentEmail || "",
-      submittedBy: (currentEmail || "").split("@")[0] || ""
+      email: (sbWhoOf(currentEmail) || {}).email || currentEmail || "",
+      submittedBy: (sbWhoOf(currentEmail) || {})[lang === "en" ? "en" : "he"] || (currentEmail || "").split("@")[0] || ""
     });
     if (trade && !rec.supplier) rec.supplier = trade;
     const withPreset = preset
@@ -20514,7 +20604,7 @@ function SubmittalCard({
       });
     }
     return sbH(SubmittalForm, {
-      rec: draft,
+      rec: sbWhoFix(draft, lang),
       onNewRevision: draft && draft.sent && canEdit ? () => startRevision(draft) : null,
       onSwitchLang: (lg) => setLang(lg),
       siteRTL: appIsRTL,
@@ -20631,10 +20721,10 @@ function SubmittalCard({
       ? sbH(
           "div",
           { className: "sbExportBar sbExportTwo" },
-          sbH("button", { type: "button", className: "sbExpBtn xls", onClick: runExcel, title: "Excel" },
+          sbH("button", { type: "button", className: "sbExpBtn", onClick: runExcel, title: "Excel" },
             sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
-          sbH("button", { type: "button", className: "sbExpBtn pdf", onClick: () => setAllAsk(() => runPdf), title: "PDF" },
-            sbH(Printer, { size: 15, strokeWidth: 2 }), " PDF"),
+          sbH("button", { type: "button", className: "sbExpBtn", onClick: () => setAllAsk(() => runPdf), title: "PDF" },
+            sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF"),
           allNote ? sbH("span", { className: "lliPoNote" }, allNote) : null,
           allAsk
             ? sbH(PrintLangAsk, {
@@ -20671,8 +20761,8 @@ function SubmittalCard({
             contractor: contractorName,
             disciplineEn: chosen.en,
             disciplineHe: chosen.he,
-            email: currentEmail || "",
-            submittedBy: (currentEmail || "").split("@")[0] || ""
+            email: (sbWhoOf(currentEmail) || {}).email || currentEmail || "",
+            submittedBy: (sbWhoOf(currentEmail) || {})[lang === "en" ? "en" : "he"] || (currentEmail || "").split("@")[0] || ""
           });
           const pr = q.product || {};
           const val = (v, fb) => v && String(v).trim() ? String(v).trim() : fb;
@@ -20704,7 +20794,9 @@ function SubmittalCard({
         onOpen: openExisting,
         // The printer prints the form we built, never the specification pages
         // behind it (21.10.26).
-        onPrint: (s) => setPrintAsk(() => (lg) => sbPrintNoSpecs(s, lg, printBrand, userSignatures)),
+        onPrint: (s) => setPrintAsk(() => (lg) => sbPrintNoSpecs(sbWhoFix(s, lg), lg, printBrand, userSignatures)),
+        onApprove: approveQuick,
+        onUnsend: unsend,
         // One field on one submittal, saved where it stands: the supplier
         // typed into the list, her private notes (29.8.26).
         onPatch: (s, next) => commit((list || []).map((x) => (x.id === s.id ? { ...x, ...next } : x))),
@@ -20737,8 +20829,8 @@ function SubmittalCard({
             contractor: contractorName,
             disciplineEn: chosen.en,
             disciplineHe: chosen.he,
-            email: currentEmail || "",
-            submittedBy: (currentEmail || "").split("@")[0] || ""
+            email: (sbWhoOf(currentEmail) || {}).email || currentEmail || "",
+            submittedBy: (sbWhoOf(currentEmail) || {})[lang === "en" ? "en" : "he"] || (currentEmail || "").split("@")[0] || ""
           });
           if (trade && !rec.supplier) rec.supplier = trade;
           rec.boqCode = code;
@@ -22872,12 +22964,14 @@ function ProjectDashboardApp() {
     if (isContractorHere && CONTRACTOR_CARDS.indexOf(key) < 0) return false;
     return !visibleCardKeys || visibleCardKeys.includes(key);
   };
-  // Named, and switched on — unless you are the system administrator, who has
-  // to be able to see a project in order to switch it back on.
+  // Named, and switched on — for everybody, the administrator included
+  // (21.10.26). A project switched off is gone from the dashboard and the
+  // project board; it is switched back on in System admin > Project settings,
+  // which lists every project whatever its switch says.
   const visibleProjects = (activeContractor.projects || []).filter(
-    (p) => p.name && p.name.trim() && (
+    (p) => p.name && p.name.trim() && p.published && (
       appRole === "admin" ||
-      (p.published && (allowedProjectIds || []).indexOf(String(p.id)) >= 0)
+      (allowedProjectIds || []).indexOf(String(p.id)) >= 0
     )
   );
   // The screen follows the data, not the other way round. Two things make this
@@ -22885,7 +22979,16 @@ function ProjectDashboardApp() {
   // does, and a project can be switched off while somebody is standing inside
   // it. In both cases the view is corrected the moment the list is known.
   useEffect5(() => {
-    if (!isAuthenticated || appRole === "admin") return;
+    if (!isAuthenticated) return;
+    // The administrator, standing in a project she has just switched off:
+    // moved to one that is on. Settings and the other admin screens stay put.
+    if (appRole === "admin") {
+      const ids = visibleProjects.map((p) => p.id);
+      if (ids.indexOf(selectedProjectId) >= 0) return;
+      if (ids.length) setSelectedProjectId(ids[0]);
+      else if (view === "dashboard") setView("projectPicker");
+      return;
+    }
     const ids = visibleProjects.map((p) => p.id);
     // Signing in before the project list arrived: take them in as soon as it does.
     if (wantAutoProject.current && ids.length) {
@@ -23171,7 +23274,13 @@ function ProjectDashboardApp() {
     }
     try {
       const entry = { awnav: JSON.parse(navKey) };
-      if (isFirstScreen || crossesLogin) window.history.replaceState(entry, "");
+      // A dashboard reached straight from signing in (or a reload) has the
+      // board of all projects put underneath it, so the browser's Back lands
+      // there and not off the site (21.10.26).
+      if ((isFirstScreen || crossesLogin) && view === "dashboard" && isAuthenticated) {
+        window.history.replaceState({ awnav: { view: "projectPicker", openCardKey: null, dataSourcesOpen: false, systemAdminSection: null, docViewerSourceId: null } }, "");
+        window.history.pushState(entry, "");
+      } else if (isFirstScreen || crossesLogin) window.history.replaceState(entry, "");
       else window.history.pushState(entry, "");
     } catch (e) {
     }
@@ -23912,7 +24021,9 @@ function ProjectDashboardApp() {
       onOpenCard: setOpenCardKey,
       onLockedCard: triggerAuthNotice,
       isRTL,
-      showBack: isAuthenticated && (appRole === "admin" || visibleProjects.length > 1),
+      // 21.10.26 — no button: the browser's Back takes the dashboard to the
+      // board of all projects.
+      showBack: false,
       onBack: goHome
     }
   ), view === "dashboard" && dataSourcesOpen && /* @__PURE__ */ React15.createElement("div", { className: "functionPage" }, /* @__PURE__ */ React15.createElement(
