@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "22.10.2026 · build 210";
+var APP_BUILD = "22.10.2026 · build 214";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2510,8 +2510,8 @@ var pdfViewer = `
         .sbThumbCell { width: 130px; }
         .sbTradeCell { min-width: 120px; max-width: 170px; }
         .sbThumb { display: block; margin: 0 auto; max-width: 122px; max-height: 80px; object-fit: contain; border-radius: 4px; }
-        .sbBoardTable thead th:nth-child(n+8):nth-child(-n+11),
-        .sbBoardTable tbody tr:not(.sbChkLine):not(.sbBandRow) td:nth-child(n+8):nth-child(-n+11) {
+        .sbBoardTable thead th:nth-child(n+9):nth-child(-n+12),
+        .sbBoardTable tbody tr:not(.sbChkLine):not(.sbBandRow) td:nth-child(n+9):nth-child(-n+12) {
           width: 1%; white-space: nowrap; padding-inline: 5px;
         }
         .sbSq.unsend { position: relative; color: #6b7280; }
@@ -2547,6 +2547,75 @@ var pdfViewer = `
         .sbRevLong:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
         .sbRevLong.sign { background: #14181f; border-color: #14181f; color: #fff; }
         .sbSpecsTop { margin: 10px 0 14px; }
+        /* The AI column and the BOQ check (22.10.26). */
+        .sbBoardTable .sbAiCell { width: 30px; padding-inline: 2px; }
+        .sbAiMark { width: 24px; height: 24px; border-radius: 999px; border: 1px solid; font-weight: 800; font-size: 13px; cursor: pointer; padding: 0; line-height: 1; }
+        .sbAiMark.ok { color: #1a7f4b; border-color: #b9dcc7; background: #eef6f0; }
+        .sbAiMark.warn { color: #b45309; border-color: #f2c48d; background: #fff4e5; }
+        .sbBqDot { font-weight: 800; margin-inline-start: 4px; }
+        .sbBqDot.ok { color: #1a7f4b; } .sbBqDot.warn { color: #b45309; }
+        .printAskBox.sbBq { max-width: 640px; width: calc(100vw - 32px); text-align: start; }
+        .sbBqLine { font-size: 13px; background: #f6f8fb; border-radius: 8px; padding: 7px 10px; margin: 4px 0 10px; }
+        .sbBqTableWrap { max-height: 46vh; overflow: auto; }
+        .sbBqTable { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .sbBqTable th { background: #f3f6fa; padding: 6px 8px; text-align: start; border-bottom: 1px solid var(--line); }
+        .sbBqTable td { padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+        .sbBqSt { font-weight: 800; white-space: nowrap; }
+        .sbBqSt.ok { color: #1a7f4b; } .sbBqSt.diff { color: #b45309; } .sbBqSt.missing { color: #6b7280; }
+        .sbBqSum { font-weight: 800; margin: 10px 0 4px; text-align: center; }
+        /* File name first, then what it is, then the rest (22.10.26). */
+        .sbAttList li { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+        .sbAttList li > * { order: 2; }
+        .sbAttList li > .sbLinkBtn { order: 0; }
+        .sbAttList li > .sbFileNote { order: 1; }
+        .sbFileNote { font-size: 12px; color: #374151; background: #eef2f7; border-radius: 6px; padding: 1px 7px; margin-inline-end: 6px; }
+        .sbFileNote.gone { color: #c0392b; background: #fdecec; font-weight: 800; }
+        .sbReadyList { list-style: none; margin: 6px 0 12px; padding: 0; display: flex; flex-direction: column; gap: 5px; font-size: 13.5px; }
+        .sbReadyList li { background: #fff4e5; border: 1px solid #f2c48d; border-radius: 8px; padding: 6px 10px; color: #7c4a03; }
+        .sbBqSum.ok { color: #1a7f4b; } .sbBqSum.warn { color: #b45309; }
+        /* A little wider, so the whole table fits without scrolling sideways. */
+        .submittalPanel { max-width: min(1400px, calc(100vw - 16px)); padding: 12px 10px; }
+        .sbBoardTable th, .sbBoardTable td { padding-inline: 6px; }
+        /* Past submittals like this one (22.10.26). */
+        .printAskBox.sbLib { max-width: 720px; width: calc(100vw - 32px); max-height: calc(100vh - 40px); display: flex; flex-direction: column; text-align: start; }
+        .sbLibList { flex: 1 1 auto; overflow: auto; max-height: 56vh; display: flex; flex-direction: column; gap: 6px; margin: 6px 0 10px; }
+        .sbLibRow { display: flex; align-items: center; gap: 10px; border: 1px solid var(--line); border-radius: 10px; padding: 8px; cursor: pointer; background: #fff; }
+        .sbLibRow.on { border-color: var(--accent, #1A559E); box-shadow: 0 0 0 2px var(--accent-soft, #dbe6f5); }
+        .sbLibImg { width: 84px; height: 64px; flex: none; display: flex; align-items: center; justify-content: center; background: #f6f8fb; border-radius: 6px; color: #9aa3af; overflow: hidden; }
+        .sbLibImg img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .sbLibTxt { flex: 1; min-width: 0; }
+        .sbLibMark { font-weight: 800; font-size: 13.5px; }
+        .sbLibDesc { font-size: 13px; color: #374151; }
+        .sbLibMeta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #6b7280; margin-top: 2px; }
+        .sbLibOk { color: #1a7f4b; font-weight: 800; }
+        .sbAiCompare { margin: 8px auto 0; max-width: 656px; border: 1px dashed #e3a0a0; border-radius: 8px; padding: 7px 10px; color: #c0392b; background: #fff8f8; font-size: 12.5px; }
+        .sbAiCompareHead { display: flex; justify-content: space-between; align-items: center; font-weight: 800; margin-bottom: 4px; }
+        .sbAiCompareX { border: none; background: transparent; color: #c0392b; font-size: 16px; cursor: pointer; line-height: 1; }
+        .sbAiCompareRow { white-space: pre-wrap; margin-top: 2px; }
+        /* Teaching the AI (22.10.26). */
+        .sbTopCreate { flex-direction: column; align-items: center; gap: 8px; }
+        .sbTeachBtn { display: inline-flex; align-items: center; gap: 6px; }
+        .printAskBox.sbTeach { max-width: 640px; width: calc(100vw - 32px); max-height: calc(100vh - 40px); display: flex; flex-direction: column; text-align: start; }
+        .sbTeachHint { font-size: 12.5px; color: #6b7280; margin: 0 0 8px; text-align: center; }
+        .sbTeachRulesHead { font-weight: 800; font-size: 13px; margin: 6px 0 4px; }
+        .sbTeachRules { list-style: none; margin: 0; padding: 0; max-height: 24vh; overflow: auto; display: flex; flex-direction: column; gap: 4px; }
+        .sbTeachRules li { display: flex; align-items: center; gap: 6px; }
+        .sbTeachRules li.off .sbTeachRuleText { opacity: .45; text-decoration: line-through; }
+        .sbTeachRuleText { flex: 1; font: inherit; font-size: 13px; border: 1px solid var(--line); border-radius: 7px; padding: 5px 8px; resize: vertical; min-height: 30px; }
+        .sbTeachEmpty { font-size: 12.5px; color: #9aa3af; margin: 0; }
+        .sbTeachChat { flex: 1 1 auto; min-height: 140px; max-height: 38vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin-top: 10px; background: #f8fafc; display: flex; flex-direction: column; gap: 8px; }
+        .sbTeachMsg { display: flex; flex-direction: column; }
+        .sbTeachMsg.me { align-items: flex-start; }
+        .sbTeachMsg.ai { align-items: flex-end; }
+        .sbTeachBubble { max-width: 85%; padding: 7px 11px; border-radius: 12px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; }
+        .sbTeachMsg.me .sbTeachBubble { background: var(--accent, #1A559E); color: #fff; }
+        .sbTeachMsg.ai .sbTeachBubble { background: #fff; border: 1px solid var(--line); }
+        .sbTeachProps { display: flex; flex-direction: column; gap: 4px; margin-top: 5px; max-width: 85%; }
+        .sbTeachProp { display: flex; align-items: center; gap: 8px; background: #eef6f0; border: 1px solid #b9dcc7; border-radius: 8px; padding: 5px 8px; font-size: 13px; }
+        .sbTeachProp span:first-child { flex: 1; }
+        .sbTeachKept { color: #1a7f4b; font-weight: 800; white-space: nowrap; }
+        .sbTeachInput { display: flex; gap: 8px; margin-top: 8px; align-items: flex-end; }
+        .sbTeachInput textarea { flex: 1; font: inherit; font-size: 13.5px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; resize: none; }
         /* The printed box, on screen (22.10.26). */
         .sbInfoBox { display: block; margin: 4px auto 0; max-width: 100%; box-sizing: border-box; padding: 6px 8px;
           border: 1px solid #cfd6e0; border-radius: 0; background: #fff; resize: none; overflow: auto;
@@ -18326,6 +18395,256 @@ function sbWhoFix(rec, lang) {
   if (!w) return rec;
   return { ...rec, submittedBy: lang === "en" ? w.en : w.he, email: w.email };
 }
+// 22.10.26 — the rules she teaches the AI. One list for every project, kept in
+// its own row ("submittal-ai-rules"); the app loads it and saves it, and the
+// form sends the rules that are switched on with every fill.
+var SB_AI_RULES = { list: [], set: null };
+// 22.10.26 — every submittal ever sent, in every project: the library a new
+// one is compared against after the AI fills it. The app keeps it current.
+var SB_LIBRARY = { extras: {}, projects: [] };
+function sbNormTxt(v) {
+  return String(v || "").toLowerCase().replace(/["'\u05f3\u05f4`]/g, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+}
+function sbNormCode(v) {
+  return String(v || "").toLowerCase().replace(/[^a-z0-9\u0590-\u05ff]/g, "");
+}
+function sbWords(v) {
+  return sbNormTxt(v).split(" ").filter((w) => w.length >= 2);
+}
+// How alike two products are, from what the form says about them: the model
+// decides it, the wording and the mark and the maker support it.
+function sbLikeness(a, b) {
+  let score = 0;
+  const ma = sbNormCode(a.modelCode), mb = sbNormCode(b.modelCode);
+  if (ma.length >= 3 && mb.length >= 3) {
+    if (ma === mb) score += 100;
+    else if (ma.indexOf(mb) >= 0 || mb.indexOf(ma) >= 0) score += 70;
+  }
+  const wa = sbWords(`${a.itemDescription || ""} ${a.typeId || ""}`), wb = sbWords(`${b.itemDescription || ""} ${b.typeId || ""}`);
+  if (wa.length && wb.length) {
+    const sb = new Set(wb);
+    const common = Array.from(new Set(wa)).filter((w) => sb.has(w)).length;
+    score += Math.round(60 * common / Math.max(new Set(wa).size, sb.size));
+  }
+  const ta = sbNormCode(a.typeId), tb = sbNormCode(b.typeId);
+  if (ta.length >= 2 && ta === tb) score += 25;
+  const fa = sbNormCode(a.manufacturer), fb = sbNormCode(b.manufacturer);
+  if (fa.length >= 2 && fa === fb) score += 15;
+  return score;
+}
+function sbLibraryMatches(probe, self) {
+  const out = [];
+  const names = {};
+  (SB_LIBRARY.projects || []).forEach((p) => { if (p && p.id) names[p.id] = p.name || ""; });
+  Object.keys(SB_LIBRARY.extras || {}).forEach((pid) => {
+    const ex = (SB_LIBRARY.extras || {})[pid] || {};
+    const fam = {};
+    (ex.submittals || []).forEach((r0) => {
+      if (!r0 || (!r0.sent && !sbSignedAt(r0))) return;
+      const r = sbMergeApproval(r0, ex.submittalApprovals);
+      if (self && r.id === self.id) return;
+      if (self && pid === self.projectId && r.category === self.category && String(r.seq) === String(self.seq)) return;
+      const k = `${r.category}#${r.seq}`;
+      const st = sbStatusOf(r);
+      const ok = st === "approved" || st === "approvedNoted";
+      const cur = fam[k];
+      // The approved version of a submittal stands for it; otherwise its newest.
+      if (!cur || (ok && !cur.ok) || (ok === cur.ok && (Number(r.rev) || 0) > (Number(cur.r.rev) || 0))) fam[k] = { r, ok };
+    });
+    Object.keys(fam).forEach((k) => {
+      const { r, ok } = fam[k];
+      const score = sbLikeness(probe, r);
+      if (score >= 45) out.push({ rec: r, ok, score, project: names[pid] || r.projectName || "" });
+    });
+  });
+  return out.sort((x, y) => y.score - x.score || (y.ok - x.ok)).slice(0, 12);
+}
+function sbRulesOn() {
+  return (SB_AI_RULES.list || []).filter((r) => r && r.on !== false && String(r.text || "").trim()).map((r) => String(r.text).trim());
+}
+function SbTeachAi({ onClose }) {
+  const [rules, setRulesLocal] = useState6(() => (SB_AI_RULES.list || []).slice());
+  const [msgs, setMsgs] = useState6([]);
+  const [draft, setDraft] = useState6("");
+  const [busy, setBusy] = useState6(false);
+  const [err, setErr] = useState6(null);
+  const [kept, setKept] = useState6({});
+  const listRef = useRef5(null);
+  const save = (next) => {
+    setRulesLocal(next);
+    if (SB_AI_RULES.set) SB_AI_RULES.set(next);
+  };
+  const addRule = (text, key) => {
+    const t = String(text || "").trim();
+    if (!t) return;
+    save(rules.concat([{ id: `r-${Date.now()}-${Math.round(Math.random() * 1e4)}`, text: t, on: true, at: new Date().toISOString() }]));
+    if (key) setKept((k) => ({ ...k, [key]: true }));
+  };
+  useEffect5(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [msgs.length, busy]);
+  const send = async () => {
+    const text = draft.trim();
+    if (!text || busy) return;
+    const next = msgs.concat([{ role: "user", text }]);
+    setMsgs(next);
+    setDraft("");
+    setBusy(true);
+    setErr(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("submittal-ai", {
+        body: { mode: "teach", messages: next.map((m) => ({ role: m.role, text: m.text })), rules: rules.map((r) => r.text) }
+      });
+      if (error) throw error;
+      const out = data || {};
+      setMsgs(next.concat([{ role: "assistant", text: String(out.reply || ""), rules: Array.isArray(out.rules) ? out.rules.filter(Boolean) : [] }]));
+    } catch (e) {
+      console.warn("[awdash] teach failed", e);
+      setErr("\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05d2\u05d9\u05e2 \u05dc\u05beAI. \u05e0\u05e1\u05d9 \u05e9\u05d5\u05d1.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return createPortal(
+    sbH(
+      "div",
+      { className: "printAskScrim", onClick: onClose },
+      sbH(
+        "div",
+        { className: "printAskBox sbTeach", dir: "rtl", onClick: (e) => e.stopPropagation() },
+        sbH("h3", null, "\u05dc\u05dc\u05de\u05d3 \u05d0\u05ea \u05d4\u05beAI"),
+        sbH("p", { className: "sbTeachHint" }, "\u05db\u05ea\u05d1\u05d9 \u05dc\u05d5 \u05d0\u05d9\u05da \u05dc\u05de\u05dc\u05d0 \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd. \u05db\u05dc \u05db\u05dc\u05dc \u05e9\u05ea\u05e9\u05de\u05e8\u05d9 \u05d9\u05e0\u05ea\u05df \u05dc\u05d5 \u05d1\u05db\u05dc \u05de\u05d9\u05dc\u05d5\u05d9 \u05de\u05e2\u05db\u05e9\u05d9\u05d5, \u05d1\u05db\u05dc \u05d4\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd."),
+        // The rules she keeps.
+        sbH("div", { className: "sbTeachRulesHead" }, `\u05d4\u05db\u05dc\u05dc\u05d9\u05dd \u05e9\u05dc\u05d9 (${rules.length})`),
+        rules.length
+          ? sbH("ul", { className: "sbTeachRules" }, rules.map((r, i) => sbH(
+              "li",
+              { key: r.id || i, className: r.on === false ? "off" : "" },
+              sbH("input", {
+                type: "checkbox", checked: r.on !== false,
+                title: r.on === false ? "\u05db\u05d1\u05d5\u05d9 \u2014 \u05dc\u05d0 \u05e0\u05e9\u05dc\u05d7" : "\u05e4\u05e2\u05d9\u05dc",
+                onChange: () => save(rules.map((x) => (x === r ? { ...x, on: x.on === false } : x)))
+              }),
+              sbH("textarea", {
+                className: "sbTeachRuleText", rows: 1, value: r.text,
+                onChange: (e) => setRulesLocal(rules.map((x) => (x === r ? { ...x, text: e.target.value } : x))),
+                onBlur: () => save(rules.map((x) => (x === r ? { ...x, text: String(x.text || "").trim() } : x)).filter((x) => String(x.text || "").trim()))
+              }),
+              sbH("button", {
+                type: "button", className: "sbSq del", title: "\u05de\u05d7\u05d9\u05e7\u05d4",
+                onClick: () => { if (window.confirm("\u05dc\u05de\u05d7\u05d5\u05e7 \u05d0\u05ea \u05d4\u05db\u05dc\u05dc?")) save(rules.filter((x) => x !== r)); }
+              }, sbH(Trash2, { size: 13, strokeWidth: 2.1 }))
+            )))
+          : sbH("p", { className: "sbTeachEmpty" }, "\u05e2\u05d3\u05d9\u05d9\u05df \u05d0\u05d9\u05df \u05db\u05dc\u05dc\u05d9\u05dd."),
+        // The conversation.
+        sbH(
+          "div",
+          { className: "sbTeachChat", ref: listRef },
+          msgs.map((m, i) => sbH(
+            "div",
+            { key: i, className: `sbTeachMsg ${m.role === "assistant" ? "ai" : "me"}` },
+            sbH("div", { className: "sbTeachBubble" }, m.text),
+            m.role === "assistant" && (m.rules || []).length
+              ? sbH("div", { className: "sbTeachProps" }, m.rules.map((t, j) => {
+                  const k = `${i}:${j}`;
+                  return sbH("div", { key: k, className: "sbTeachProp" },
+                    sbH("span", null, t),
+                    kept[k]
+                      ? sbH("span", { className: "sbTeachKept" }, "\u05e0\u05e9\u05de\u05e8 \u2713")
+                      : sbH("button", { type: "button", className: "sgBtn", onClick: () => addRule(t, k) }, "\u05e9\u05de\u05d5\u05e8 \u05db\u05db\u05dc\u05dc"));
+                }))
+              : null
+          )),
+          busy ? sbH("div", { className: "sbTeachMsg ai" }, sbH("div", { className: "sbTeachBubble" }, sbH("span", { className: "sbSpin" }))) : null
+        ),
+        err ? sbH("p", { className: "sbErr" }, err) : null,
+        sbH(
+          "div",
+          { className: "sbTeachInput" },
+          sbH("textarea", {
+            rows: 2, value: draft, placeholder: "\u05dc\u05de\u05e9\u05dc: \u05d1\u05ea\u05d9\u05d0\u05d5\u05e8 \u05d4\u05e4\u05e8\u05d9\u05d8 \u05d0\u05dc \u05ea\u05db\u05ea\u05d5\u05d1 \u05de\u05ea\u05d7, \u05e8\u05e7 \u05e1\u05d5\u05d2 \u05d5\u05d2\u05d9\u05de\u05d5\u05e8",
+            onChange: (e) => setDraft(e.target.value),
+            onKeyDown: (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }
+          }),
+          sbH("button", { type: "button", className: "sgBtn", disabled: busy || !draft.trim(), onClick: send }, "\u05e9\u05dc\u05d9\u05d7\u05d4")
+        ),
+        sbH("div", { className: "printAskBtns" },
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: onClose }, "\u05e1\u05d2\u05d9\u05e8\u05d4"))
+      )
+    ),
+    document.body
+  );
+}
+// 22.10.26 — the check against the bill-of-quantities line, as a window: the
+// line, then each requirement against what the specification says.
+// 22.10.26 — before a submittal goes out by e-mail: what is still missing.
+function sbReadyIssues(rec, lang) {
+  const he = lang !== "en";
+  const out = [];
+  const none = (v) => {
+    const t = String(v || "").trim();
+    return !t || t === SB_NO_INFO.he || t === SB_NO_INFO.en;
+  };
+  const lbl = (k) => sbText(SB_L[k] || { en: k, he: k }, lang);
+  ["typeId", "itemDescription", "modelCode", "manufacturer"].forEach((k) => {
+    if (none(rec[k])) out.push(`${lbl(k)}: ${he ? "\u05e8\u05d9\u05e7 \u05d0\u05d5 \"\u05d0\u05d9\u05df \u05de\u05d9\u05d3\u05e2\"" : "empty or \"No information\""}`);
+  });
+  if (none(he ? rec.infoHe : rec.infoEn)) out.push(he ? "\u05de\u05d9\u05d3\u05e2 \u05e0\u05d5\u05e1\u05e3: \u05e8\u05d9\u05e7" : "Additional information: empty");
+  if (rec.infoOverflow) out.push(he ? "\u05de\u05d9\u05d3\u05e2 \u05e0\u05d5\u05e1\u05e3: \u05d4\u05d8\u05e7\u05e1\u05d8 \u05d7\u05d5\u05e8\u05d2 \u05de\u05d4\u05ea\u05d9\u05d1\u05d4 \u05d5\u05d9\u05d9\u05d7\u05ea\u05da \u05d1\u05d4\u05d3\u05e4\u05e1\u05d4" : "Additional information runs past the box and will be cut off");
+  if (!(rec.image && rec.image.thumb)) out.push(he ? "\u05d0\u05d9\u05df \u05ea\u05de\u05d5\u05e0\u05d4" : "No picture");
+  const ticked = Object.keys(rec.docs || {}).filter((k) => rec.docs[k]);
+  if (ticked.length && !(rec.attachments || []).length) out.push(he ? "\u05de\u05e1\u05de\u05db\u05d9\u05dd \u05de\u05e1\u05d5\u05de\u05e0\u05d9\u05dd \u05db\u05de\u05e6\u05d5\u05e8\u05e4\u05d9\u05dd, \u05d0\u05d1\u05dc \u05dc\u05d0 \u05d4\u05d5\u05e2\u05dc\u05d4 \u05d0\u05e3 \u05e7\u05d5\u05d1\u05e5" : "Documents are ticked but no file was uploaded");
+  if (!ticked.length) out.push(he ? "\u05dc\u05d0 \u05e1\u05d5\u05de\u05df \u05d0\u05e3 \u05de\u05e1\u05de\u05da \u05de\u05e6\u05d5\u05e8\u05e3" : "No attached document is ticked");
+  const chk = rec.checks || {};
+  if (chk.expired && chk.expires) out.push(`${he ? "\u05ea\u05e2\u05d5\u05d3\u05d4 \u05e9\u05e4\u05d2 \u05ea\u05d5\u05e7\u05e4\u05d4" : "A certificate has expired"}: ${sbFmtDate(chk.expires)}`);
+  if (!rec.requiredApprovalDate) out.push(he ? "\u05d0\u05d9\u05df \u05ea\u05d0\u05e8\u05d9\u05da \u05e0\u05d3\u05e8\u05e9 \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8" : "No required approval date");
+  return out;
+}
+function SbBoqCheckDialog({ check, onClose, onRerun, busy }) {
+  const c = check || {};
+  const items = Array.isArray(c.items) ? c.items : [];
+  const issues = items.filter((x) => x && x.status !== "ok").length;
+  const mark = (st) => st === "ok"
+    ? sbH("span", { className: "sbBqSt ok" }, "\u2713 \u05ea\u05d5\u05d0\u05dd")
+    : st === "diff"
+      ? sbH("span", { className: "sbBqSt diff" }, "\u26a0 \u05e9\u05d5\u05e0\u05d4")
+      : sbH("span", { className: "sbBqSt missing" }, "? \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0");
+  return createPortal(
+    sbH(
+      "div",
+      { className: "printAskScrim", onClick: onClose },
+      sbH(
+        "div",
+        { className: "printAskBox sbBq", dir: "rtl", onClick: (e) => e.stopPropagation() },
+        sbH("h3", null, "\u05d1\u05d3\u05d9\u05e7\u05d4 \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea"),
+        sbH("p", { className: "sbBqLine" }, sbH("b", { dir: "ltr" }, c.code ? `${c.code} ` : ""), c.line || ""),
+        items.length && issues
+          ? sbH("div", { className: "sbBqTableWrap" }, sbH("table", { className: "sbBqTable" },
+              sbH("thead", null, sbH("tr", null,
+                sbH("th", null, "\u05d3\u05e8\u05d9\u05e9\u05d4 \u05d1\u05e1\u05e2\u05d9\u05e3"),
+                sbH("th", null, "\u05de\u05d4 \u05db\u05ea\u05d5\u05d1 \u05d1\u05de\u05e4\u05e8\u05d8"),
+                sbH("th", null, ""))),
+              sbH("tbody", null, items.map((x, i) => sbH("tr", { key: i, className: x.status || "" },
+                sbH("td", { dir: "auto" }, x.req || ""),
+                sbH("td", { dir: "auto" }, x.spec || "\u2014"),
+                sbH("td", null, mark(x.status)))))))
+          : null,
+        sbH("p", { className: `sbBqSum ${issues ? "warn" : "ok"}` },
+          !items.length
+            ? (c.summary || "\u05d1\u05e1\u05e2\u05d9\u05e3 \u05dc\u05d0 \u05e0\u05de\u05e6\u05d0\u05d5 \u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05de\u05d5\u05d2\u05d3\u05e8\u05d5\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4.")
+            : issues
+              ? `\u05e0\u05de\u05e6\u05d0\u05d5 ${issues} \u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4`
+              : "\u2713 \u05d4\u05de\u05d5\u05e6\u05e8 \u05ea\u05d5\u05d0\u05dd \u05dc\u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4\u05e1\u05e2\u05d9\u05e3"),
+        c.at ? sbH("p", { className: "sbTeachHint" }, `\u05e0\u05d1\u05d3\u05e7 ${sbFmtDate(String(c.at).slice(0, 10))}`) : null,
+        sbH("div", { className: "printAskBtns" },
+          onRerun ? sbH("button", { type: "button", className: "sgBtn", disabled: !!busy, onClick: onRerun }, busy ? "\u05d1\u05d5\u05d3\u05e7\u2026" : "\u05dc\u05d1\u05d3\u05d5\u05e7 \u05e9\u05d5\u05d1") : null,
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: onClose }, "\u05e1\u05d2\u05d9\u05e8\u05d4"))
+      )
+    ),
+    document.body
+  );
+}
 // 22.10.26 — the "additional information" box on screen is the box on the
 // printed form: the same width, the same height, the same type, shrinking
 // with the text exactly as the print does. What fits here fits on paper.
@@ -18366,6 +18685,12 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
   const [busy, setBusy] = useState6(null);
   const [specsOpen, setSpecsOpen] = useState6(false);
   // The sub-category exactly as typed, while the box has the focus.
+  // The check against the BOQ line (22.10.26).
+  const [boqPop, setBoqPop] = useState6(null);
+  const [boqBusy, setBoqBusy] = useState6(false);
+  // Past submittals like the one just filled, offered after the fill (22.10.26).
+  const [libAsk, setLibAsk] = useState6(null);
+  const [libPick, setLibPick] = useState6(null);
   // The question asked before a fill: one product, or one system (21.10.26).
   const [aiAsk, setAiAsk] = useState6(false);
   // The printed size of the additional-information box (22.10.26).
@@ -18382,6 +18707,8 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
     if (!el) return;
     const over = el.scrollHeight > el.clientHeight + 2;
     if (over !== infoOver) setInfoOver(over);
+    // Kept on the record, so the check before sending knows it (22.10.26).
+    if (!ro && !!d.infoOverflow !== over) set({ infoOverflow: over });
   });
   const [subTxt, setSubTxt] = useState6(null);
   const [imgSel, setImgSel] = useState6(false);
@@ -18575,7 +18902,13 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       return v && String(v).trim() ? String(v).trim() : sbText(SB_NO_INFO, lang);
     };
     const said = (k) => (o[k] && String(o[k]).trim() ? String(o[k]).trim() : "");
+    // What the AI wrote, kept so her corrections can teach it (22.10.26).
     set({
+      aiOriginal: {
+        typeId: d.typeId || said("typeId"), itemDescription: said("itemDescription"), modelCode: said("modelCode"),
+        manufacturer: said("manufacturer"), infoHe: said("infoHe"), infoEn: said("infoEn")
+      },
+      aiLearnedAt: null,
       typeId: d.typeId || pick("typeId"),
       itemDescription: pick("itemDescription"),
       // A system has no single model: its models are listed component by
@@ -18603,6 +18936,80 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       // Every specification of a system stays on it, whole.
       attachments: sys ? d.attachments : sbScopeAttachments(d.attachments, o.pages),
       aiFilledAt: new Date().toISOString()
+    });
+  };
+  const runBoqCheck = async (pre) => {
+    if (!String(d.boqText || "").trim() || boqBusy) return;
+    setBoqBusy(true);
+    try {
+      let shots = pre && pre.shots;
+      let specForAi = pre && pre.specForAi;
+      if (!pre) {
+        const gathered = (d.specText || "").trim();
+        const pdfs = (d.attachments || []).filter((a) => !a.type || String(a.type).indexOf("pdf") >= 0);
+        const scanned = pdfs.filter((a) => typeof a.chars === "number" ? a.chars < 200 : gathered.length < 200);
+        shots = scanned.length ? await sbRenderSpecImages(d, SB_AI_IMAGE_PAGES, scanned.map((a) => a.id)) : [];
+        const textFiles = pdfs.filter((a) => scanned.indexOf(a) < 0).map((a) => a.name);
+        specForAi = sbBalancedSpecText(d.specText || "", textFiles.length ? textFiles : null);
+      }
+      if (!String(specForAi || "").trim() && !(shots || []).length) {
+        setAiMsg(isHe ? "\u05d0\u05d9\u05df \u05de\u05e4\u05e8\u05d8 \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 \u2014 \u05e6\u05e8\u05d9\u05da \u05dc\u05d4\u05e2\u05dc\u05d5\u05ea \u05de\u05e4\u05e8\u05d8 \u05e7\u05d5\u05d3\u05dd." : "No specification to check against.");
+        return;
+      }
+      const f = (pre && pre.form) || d;
+      const { data, error } = await supabase.functions.invoke("submittal-ai", {
+        body: {
+          mode: "boqcheck",
+          boqText: d.boqText, boqCode: d.boqCode || "",
+          specText: specForAi || "", images: (shots || []).map((sh) => sh.data),
+          form: { typeId: f.typeId || "", itemDescription: f.itemDescription || "", modelCode: f.modelCode || "", manufacturer: f.manufacturer || "" }
+        }
+      });
+      if (error) throw error;
+      const out = data || {};
+      const items = (Array.isArray(out.items) ? out.items : []).filter((x) => x && x.req);
+      const check = {
+        at: new Date().toISOString(), code: d.boqCode || "", line: d.boqText || "",
+        items, summary: String(out.summary || ""),
+        issues: items.filter((x) => x.status !== "ok").length
+      };
+      set({ boqCheck: check });
+      setBoqPop(check);
+    } catch (e) {
+      console.warn("[awdash] boq check failed", e);
+      setAiMsg(isHe ? "\u05d4\u05d1\u05d3\u05d9\u05e7\u05d4 \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea \u05dc\u05d0 \u05d4\u05e6\u05dc\u05d9\u05d7\u05d4. \u05e0\u05e1\u05d9 \u05e9\u05d5\u05d1." : "The BOQ check did not go through. Try again.");
+    } finally {
+      setBoqBusy(false);
+    }
+  };
+  // Fill from a submittal sent before (22.10.26). What the AI read from the new
+  // specification is kept beside it, in red, to compare; the number, the dates
+  // and the project's own details stay this submittal's.
+  const fillFromLibrary = (prev, ai) => {
+    const sameCat = prev.category === d.category;
+    set({
+      typeId: prev.typeId || d.typeId,
+      itemDescription: prev.itemDescription || d.itemDescription,
+      modelCode: prev.modelCode || d.modelCode,
+      manufacturer: prev.manufacturer || d.manufacturer,
+      infoHe: prev.infoHe || d.infoHe,
+      infoEn: prev.infoEn || d.infoEn,
+      docs: prev.docs && typeof prev.docs === "object" ? { ...prev.docs } : d.docs,
+      // The picture comes too. Its own copy: removing the old submittal must
+      // not take the picture away from this one.
+      image: prev.image && prev.image.thumb ? { ...prev.image, path: null } : d.image,
+      subCategory: sameCat && prev.subCategory ? prev.subCategory : d.subCategory,
+      aiCompare: {
+        typeId: String((ai && ai.typeId) || ""),
+        itemDescription: String((ai && ai.itemDescription) || ""),
+        modelCode: String((ai && ai.modelCode) || ""),
+        manufacturer: String((ai && ai.manufacturer) || ""),
+        info: String((ai && (lang === "he" ? ai.infoHe : ai.infoEn)) || "")
+      },
+      filledFrom: { project: prev.projectName || "", at: new Date().toISOString() },
+      // Filled from an earlier submittal: there is nothing of the AI's here
+      // to learn from.
+      aiOriginal: null
     });
   };
   // --------------------------------------------------------- suggested documents
@@ -18693,6 +19100,8 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       const { data, error } = await supabase.functions.invoke("submittal-ai", {
         body: {
           kind: kind === "system" ? "system" : "product",
+          // The rules she taught it (22.10.26).
+          rules: sbRulesOn(),
           specText: specForAi,
           images: shots.map((sh) => sh.data),
           files: manifest,
@@ -18715,6 +19124,13 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       const out = data || {};
       // One submittal covers one product. If the material describes several,
       // the list comes back and nothing is filled until it is confirmed.
+      // 22.10.26 — what each uploaded file turned out to be, and whether a
+      // certificate in it has run out. Shown with the files at the top.
+      if (Array.isArray(out.fileNotes)) {
+        set({ fileNotes: out.fileNotes.filter((n) => n && n.file).map((n) => ({
+          file: String(n.file), content: String(n.content || ""), validUntil: String(n.validUntil || "").slice(0, 10), expired: !!n.expired
+        })) });
+      }
       const products = Array.isArray(out.products) && out.products.length ? out.products : [out];
       // Anything the material carried that belongs to none of these products is
       // named, not silently dropped.
@@ -18738,6 +19154,15 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         setAiMsg([`${L("foundProducts")} (${products.length}). ${L("worklistHint")}`, unusedLine].filter(Boolean).join("\n"));
       } else {
         applyProduct(products[0], kind);
+        // On a submittal tied to a BOQ line, the product is checked against
+        // what that line asks for (22.10.26).
+        if (String(d.boqText || "").trim()) runBoqCheck({ shots, specForAi, form: products[0] || {} });
+        // Has this product been submitted before, in any project? Then offer
+        // those submittals, and fill from the one she picks (22.10.26).
+        try {
+          const found = sbLibraryMatches(products[0] || {}, { id: d.id, projectId, category: d.category, seq: d.seq });
+          if (found.length) { setLibPick(null); setLibAsk({ ai: products[0] || {}, list: found }); }
+        } catch (e) { console.warn("[awdash] library lookup failed", e); }
         // A disagreement between two of the papers is said out loud, here and
         // on the record — it is never resolved quietly (30.8.26, §21).
         const clash = Array.isArray(products[0] && products[0].conflicts)
@@ -18862,6 +19287,21 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
             sbH("span", { className: "sbSpecsCount" }, specViewCount)
           )
         : null,
+      !ro && String(d.boqText || "").trim()
+        ? sbH(
+            "button",
+            {
+              type: "button",
+              className: `sbToolBtn ${boqBusy ? "busy" : ""}`.trim(),
+              disabled: boqBusy,
+              title: isHe ? "\u05d1\u05d3\u05d9\u05e7\u05ea \u05d4\u05de\u05d5\u05e6\u05e8 \u05de\u05d5\u05dc \u05d3\u05e8\u05d9\u05e9\u05d5\u05ea \u05d4\u05e1\u05e2\u05d9\u05e3" : "Check the product against the BOQ line",
+              onClick: () => (d.boqCheck && !boqBusy ? setBoqPop(d.boqCheck) : runBoqCheck())
+            },
+            boqBusy ? sbH("span", { className: "sbSpin", "aria-hidden": "true" }) : sbH(Sparkles, { size: 15, strokeWidth: 2 }),
+            sbH("span", null, isHe ? "\u05d1\u05d3\u05d9\u05e7\u05d4 \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05db\u05de\u05d5\u05d9\u05d5\u05ea" : "BOQ check"),
+            d.boqCheck ? sbH("span", { className: `sbBqDot ${d.boqCheck.issues ? "warn" : "ok"}` }, d.boqCheck.issues ? "\u26a0" : "\u2713") : null
+          )
+        : null,
       ro
         ? null
         : sbH(
@@ -18881,6 +19321,54 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       // 21.10.26 — printing is done from the board, not from in here.
       null
     ),
+    libAsk
+      ? createPortal(
+          sbH(
+            "div",
+            { className: "printAskScrim", onClick: () => setLibAsk(null) },
+            sbH(
+              "div",
+              { className: "printAskBox sbLib", dir: isHe ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+              sbH("h3", null, isHe ? "\u05e0\u05de\u05e6\u05d0\u05d5 \u05e1\u05d1\u05de\u05d9\u05d8\u05dc\u05d9\u05dd \u05d3\u05d5\u05de\u05d9\u05dd \u05e9\u05d4\u05d5\u05d2\u05e9\u05d5 \u05d1\u05e2\u05d1\u05e8" : "Similar submittals sent before"),
+              sbH("p", { className: "sbTeachHint" }, isHe
+                ? "\u05e1\u05de\u05e0\u05d9 \u05d0\u05d7\u05d3, \u05d5\u05d4\u05e9\u05d3\u05d5\u05ea \u05d5\u05d4\u05ea\u05de\u05d5\u05e0\u05d4 \u05d9\u05ea\u05de\u05dc\u05d0\u05d5 \u05de\u05de\u05e0\u05d5. \u05de\u05d4 \u05e9\u05d4\u05beAI \u05de\u05d9\u05dc\u05d0 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d0\u05d3\u05d5\u05dd \u05de\u05ea\u05d7\u05ea \u05dc\u05de\u05d9\u05d3\u05e2 \u05d4\u05e0\u05d5\u05e1\u05e3, \u05dc\u05d4\u05e9\u05d5\u05d5\u05d0\u05d4."
+                : "Pick one and the fields and picture are filled from it. What the AI filled is shown in red under the additional information, to compare."),
+              sbH("div", { className: "sbLibList" }, libAsk.list.map((m, i) => {
+                const r = m.rec;
+                const on = libPick === i;
+                return sbH(
+                  "label",
+                  { key: `${r.id}-${i}`, className: `sbLibRow ${on ? "on" : ""}` },
+                  sbH("input", { type: "radio", name: "sbLibPick", checked: on, onChange: () => setLibPick(i) }),
+                  sbH("div", { className: "sbLibImg" }, r.image && r.image.thumb ? sbH("img", { src: r.image.thumb, alt: "" }) : sbH(ImagePlus, { size: 20, strokeWidth: 1.5 })),
+                  sbH(
+                    "div",
+                    { className: "sbLibTxt" },
+                    sbH("div", { className: "sbLibMark", dir: "auto" }, r.typeId || "\u2014"),
+                    sbH("div", { className: "sbLibDesc", dir: "auto" }, r.itemDescription || ""),
+                    sbH("div", { className: "sbLibMeta" },
+                      sbH("span", { dir: "ltr" }, [r.modelCode, r.manufacturer].filter(Boolean).join(" \u00b7 ")),
+                      m.project ? sbH("span", null, m.project) : null,
+                      m.ok ? sbH("span", { className: "sbLibOk" }, isHe ? "\u05de\u05d0\u05d5\u05e9\u05e8" : "Approved") : null)
+                  )
+                );
+              })),
+              sbH("div", { className: "printAskBtns" },
+                sbH("button", {
+                  type: "button", className: "sgBtn", disabled: libPick == null,
+                  style: libPick == null ? { opacity: 0.45 } : null,
+                  onClick: () => { const m = libAsk.list[libPick]; const ai = libAsk.ai; setLibAsk(null); if (m) fillFromLibrary(m.rec, ai); }
+                }, isHe ? "\u05de\u05dc\u05d0 \u05de\u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc \u05e9\u05e0\u05d1\u05d7\u05e8" : "Fill from the one selected"),
+                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setLibAsk(null) },
+                  isHe ? "\u05dc\u05d4\u05e9\u05d0\u05d9\u05e8 \u05d0\u05ea \u05de\u05d9\u05dc\u05d5\u05d9 \u05d4\u05beAI" : "Keep the AI fill"))
+            )
+          ),
+          document.body
+        )
+      : null,
+    boqPop && !libAsk && !aiAsk
+      ? sbH(SbBoqCheckDialog, { check: boqPop, busy: boqBusy, onClose: () => setBoqPop(null), onRerun: () => { setBoqPop(null); runBoqCheck(); } })
+      : null,
     aiAsk
       ? createPortal(
           sbH(
@@ -18913,7 +19401,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
     // ------- specification files + AI
     // 21.10.26 — right under the strip that uploads them, so what was just
     // attached is seen where it was attached. Shown once there is something.
-    !((d.attachments || []).length || aiMsg || (d.conflicts || []).length || (d.specText || "").trim())
+    !((d.attachments || []).length || aiMsg || (d.conflicts || []).length || (d.specText || "").trim() || (d.fileNotes || []).length)
       ? null
       : sbH(
       "div",
@@ -18964,6 +19452,21 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
           sbH(
             "li",
             { key: att.id },
+            // What the file is, read by the AI, and red when its validity has
+            // run out (22.10.26).
+            (() => {
+              const n = (d.fileNotes || []).find((x) => x.file === att.name);
+              if (!n || !(n.content || n.validUntil)) return null;
+              const today = new Date().toISOString().slice(0, 10);
+              const gone = n.expired || (n.validUntil && n.validUntil < today);
+              return sbH("span", { className: `sbFileNote ${gone ? "gone" : ""}`.trim() },
+                n.content || "",
+                n.validUntil
+                  ? (gone
+                      ? (isHe ? ` \u00b7 \u05dc\u05d0 \u05d1\u05ea\u05d5\u05e7\u05e3 (\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ${sbFmtDate(n.validUntil)})` : ` \u00b7 expired (valid until ${sbFmtDate(n.validUntil)})`)
+                      : (isHe ? ` \u00b7 \u05d1\u05ea\u05d5\u05e7\u05e3 \u05e2\u05d3 ${sbFmtDate(n.validUntil)}` : ` \u00b7 valid until ${sbFmtDate(n.validUntil)}`))
+                  : "");
+            })(),
             sbH(
               "button",
               { type: "button", className: "sbLinkBtn", onClick: () => openAtt(att) },
@@ -19205,6 +19708,20 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
           }
         });
       })(),
+      // What the AI read from the new specification, in red, when the fields
+      // came from an earlier submittal — on screen only, never printed.
+      d.aiCompare && !ro
+        ? sbH(
+            "div",
+            { className: "sbAiCompare" },
+            sbH("div", { className: "sbAiCompareHead" },
+              sbH("span", null, isHe ? "\u05de\u05d4 \u05e9\u05d4\u05beAI \u05de\u05d9\u05dc\u05d0 \u05de\u05d4\u05de\u05e4\u05e8\u05d8 \u05d4\u05d7\u05d3\u05e9 (\u05dc\u05d4\u05e9\u05d5\u05d5\u05d0\u05d4, \u05dc\u05d0 \u05de\u05d5\u05d3\u05e4\u05e1)" : "What the AI filled from the new specification (to compare, not printed)"),
+              sbH("button", { type: "button", className: "sbAiCompareX", title: isHe ? "\u05d4\u05e1\u05ea\u05e8\u05d4" : "Hide", onClick: () => set({ aiCompare: null }) }, "\u00d7")),
+            [["typeId", L("typeId")], ["itemDescription", L("itemDescription")], ["modelCode", L("modelCode")], ["manufacturer", L("manufacturer")], ["info", L(isHe ? "additionalHe" : "additionalEn")]]
+              .filter(([k]) => String(d.aiCompare[k] || "").trim())
+              .map(([k, lbl]) => sbH("div", { key: k, className: "sbAiCompareRow" }, sbH("b", null, `${lbl}: `), sbH("span", { dir: "auto" }, d.aiCompare[k])))
+          )
+        : null,
       infoOver
         ? sbH("span", { className: "sbInfoOver" }, isHe
             ? "\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d7\u05d5\u05e8\u05d2 \u05de\u05d4\u05ea\u05d9\u05d1\u05d4, \u05d1\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d4\u05e1\u05d5\u05e3 \u05e9\u05dc\u05d5 \u05d9\u05d9\u05d7\u05ea\u05da."
@@ -19904,7 +20421,7 @@ function SubmittalFolder({
     bySec[r.disc].push(r);
   });
   const showBands = allMode || order.length > 1;
-  const ncols = SB_BOARD_COLS.length + 1;
+  const ncols = SB_BOARD_COLS.length + 2;
   const hidden = colHide || [];
   // Lines she took off the board, across what is on screen.
   const offCount = scope.reduce((n, c) => {
@@ -19912,6 +20429,8 @@ function SubmittalFolder({
     return n + boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", c.key).filter((p) => off[p.code]).length;
   }, 0);
   const tradeOf = (r) => (tradeFor ? tradeFor(r.cat.key) : "") || "";
+  // The BOQ check of the row's submittal, opened from its icon (22.10.26).
+  const [bqShow, setBqShow] = useState6(null);
   const fmtSent = (s) => sbFmtDate((s.sent ? (s.sentAt || "").slice(0, 10) : "") || s.date);
   const chip = (st, rec) => sbH("span", { className: "sbStatus", style: { background: sbStatusColor(st) } }, sbStatusLabel(st, lang));
   // The buttons of a row, as a block of equal squares (21.10.26): the version
@@ -19984,6 +20503,19 @@ function SubmittalFolder({
     const main = sbH(
       "tr",
       { key: r.key, className: `${isNew ? "sbRowNew" : ""} ${tone}`.trim() },
+      // AI: the check against the BOQ line, as an icon (22.10.26).
+      sbH(
+        "td",
+        { className: "sbAiCell" },
+        rec && rec.boqCheck
+          ? sbH("button", {
+              type: "button",
+              className: `sbAiMark ${rec.boqCheck.issues ? "warn" : "ok"}`,
+              title: rec.boqCheck.issues ? `${rec.boqCheck.issues} \u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4 \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea` : "\u05ea\u05d5\u05d0\u05dd \u05dc\u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea",
+              onClick: () => setBqShow(rec.boqCheck)
+            }, rec.boqCheck.issues ? "\u26a0" : "\u2713")
+          : null
+      ),
       // The submittal's number and version; the arrow opens the others filed
       // on the same row.
       sbH(
@@ -20071,12 +20603,13 @@ function SubmittalFolder({
         kids.push(sbH(
           "tr",
           { key: `${r.key}:l:${l.item.code}`, className: "sbChkLine" },
+          sbH("td", { className: "sbAiCell" }),
           sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
           sbH("td", { dir: "ltr", className: "sbChkCode" }, l.label),
           sbH("td", { className: "sbChkDesc", colSpan: 2, title: boqText(l.node, lang) },
             sbH("span", { className: "sbChkDescText" }, boqText(l.node, lang)),
             sbH("span", { className: `sbChkSpec ${eq ? "eq" : ""}` }, eq ? L("chkEquiv") : L("chkSpecific"))),
-          sbH("td", { colSpan: ncols - 4 })
+          sbH("td", { colSpan: ncols - 5 })
         ));
       });
     }
@@ -20087,6 +20620,7 @@ function SubmittalFolder({
         kids.push(sbH(
           "tr",
           { key: `${r.key}:v:${s.id}`, className: "sbRowOlder" },
+          sbH("td", { className: "sbAiCell" }),
           sbH("td", { className: "sbNoCell" },
             sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
             sbH("span", { className: "sbNoRev" }, `Rev.${s.rev || 0}`)),
@@ -20245,6 +20779,7 @@ function SubmittalFolder({
             "table",
             { className: "sbTable sbBoardTable" },
             sbH("thead", null, sbH("tr", null,
+              sbH("th", { className: "sbAiCell", title: "\u05d1\u05d3\u05d9\u05e7\u05ea AI \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea" }, "AI"),
               SB_BOARD_COLS.map((c) => sbH(
                 "th",
                 { key: c.key, className: `sbColTh ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim() },
@@ -20269,7 +20804,8 @@ function SubmittalFolder({
               return band.concat(bySec[sec].flatMap(rowOf));
             }))
           )
-        )
+        ),
+    bqShow ? sbH(SbBoqCheckDialog, { check: bqShow, onClose: () => setBqShow(null) }) : null
   );
 }
 // --------------------------------------------------------------- the card
@@ -20366,6 +20902,7 @@ function SubmittalCard({
   };
   // The manual save under the board (21.10.26).
   const [saveMsg, setSaveMsg] = useState6(null);
+  const [teachOpen, setTeachOpen] = useState6(false);
   const saveNow = async () => {
     if (!window.__awSaveNow) return;
     setSaveMsg({ busy: true, text: lang === "he" ? "\u05e9\u05d5\u05de\u05e8\u2026" : "Saving\u2026" });
@@ -20391,7 +20928,39 @@ function SubmittalCard({
   // the submittal, opened in the mail program on this computer. The supervision
   // contacts' addresses go in the "to" line when the contacts have them. A
   // draft that goes out this way is marked as sent.
+  // 22.10.26 — a quick look before it goes out; nothing missing, it goes.
+  const [sendAsk, setSendAsk] = useState6(null);
   const sendMail = (s) => {
+    const issues = sbReadyIssues(s, lang);
+    if (issues.length) { setSendAsk({ s, issues }); return; }
+    sendMailNow(s);
+  };
+  // 22.10.26 — once a submittal the AI filled goes out, her corrections are
+  // read: anything that says how she wants forms written comes back as a rule
+  // for her to keep.
+  const [learnPop, setLearnPop] = useState6(null);
+  const learnFrom = async (s) => {
+    const o = s && s.aiOriginal;
+    if (!o || s.aiLearnedAt) return;
+    const norm = (v) => String(v || "").replace(/\s+/g, " ").trim();
+    const pairs = ["typeId", "itemDescription", "modelCode", "manufacturer", lang === "he" ? "infoHe" : "infoEn"]
+      .filter((k) => norm(o[k]) && norm(s[k]) && norm(o[k]) !== norm(s[k]))
+      .map((k) => ({ field: k, ai: o[k], final: s[k] }));
+    // Marked as read by the send itself (one write, so nothing is overwritten).
+    if (!pairs.length) return;
+    try {
+      const { data, error } = await supabase.functions.invoke("submittal-ai", {
+        body: { mode: "learn", pairs, rules: sbRulesOn(), category: s.category }
+      });
+      if (error) throw error;
+      const rules = (data && Array.isArray(data.rules) ? data.rules : []).map((r) => String(r || "").trim()).filter(Boolean);
+      if (rules.length) setLearnPop({ rules, why: String((data && data.why) || ""), kept: {} });
+    } catch (e) {
+      console.warn("[awdash] learning from the corrections failed", e);
+    }
+  };
+  const sendMailNow = (s) => {
+    learnFrom(s);
     const no = sbNumber(s.category, s.seq) + (Number(s.rev) ? ` Rev.${s.rev}` : "");
     const mark = String(s.typeId || "").trim();
     const due = s.requiredApprovalDate ? sbFmtDate(String(s.requiredApprovalDate).slice(0, 10)) : "";
@@ -20418,7 +20987,9 @@ function SubmittalCard({
     // Sent today: the board and the printed form both say so — the form
     // prints its own date, which used to stay at the day it was opened.
     const now = new Date().toISOString();
-    commit((list || []).map((x) => (x.id === s.id ? { ...x, sent: true, sentAt: now, date: now.slice(0, 10) } : x)));
+    commit((list || []).map((x) => (x.id === s.id
+      ? { ...x, sent: true, sentAt: now, date: now.slice(0, 10), aiLearnedAt: x.aiOriginal && !x.aiLearnedAt ? now : x.aiLearnedAt }
+      : x)));
     // A new tab, so the board stays where it is. ("noopener" would make
     // window.open return nothing and hide whether the tab opened.)
     const w = window.open(href, "_blank");
@@ -20829,9 +21400,18 @@ function SubmittalCard({
             sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 10 } },
               sbH(Plus2, { size: 15, strokeWidth: 2.4 }),
               sbH("span", null, L("create")))
+          ),
+          // 22.10.26 — a conversation that teaches the AI how she wants it done.
+          sbH(
+            "button",
+            { type: "button", className: "ghostBtn small sbTeachBtn", onClick: () => setTeachOpen(true) },
+            sbH(Sparkles, { size: 14, strokeWidth: 2 }),
+            " ",
+            lang === "he" ? "\u05dc\u05dc\u05de\u05d3 \u05d0\u05ea \u05d4\u05beAI" : "Teach the AI"
           )
         )
       : null,
+    teachOpen ? sbH(SbTeachAi, { onClose: () => setTeachOpen(false) }) : null,
     newAsk && canEdit ? (() => {
       const fold = SUBMITTAL_CATEGORIES.find((c) => c.key === newAsk.cat) || null;
       const he = lang === "he";
@@ -21038,6 +21618,54 @@ function SubmittalCard({
               sbH("span", null, lang === "he" ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "Save"))
           ),
           saveMsg ? sbH("span", { className: `sbSaveMsg ${saveMsg.err ? "err" : ""}`.trim() }, saveMsg.text) : null
+        )
+      : null,
+    learnPop
+      ? createPortal(
+          sbH(
+            "div",
+            { className: "printAskScrim", onClick: () => setLearnPop(null) },
+            sbH(
+              "div",
+              { className: "printAskBox sbBq", dir: "rtl", onClick: (e) => e.stopPropagation() },
+              sbH("h3", null, "\u05dc\u05de\u05d3\u05ea\u05d9 \u05de\u05d4\u05ea\u05d9\u05e7\u05d5\u05e0\u05d9\u05dd \u05e9\u05dc\u05da"),
+              learnPop.why ? sbH("p", { className: "sbTeachHint" }, learnPop.why) : null,
+              sbH("div", { className: "sbTeachProps", style: { maxWidth: "100%" } }, learnPop.rules.map((t, j) => sbH("div", { key: j, className: "sbTeachProp" },
+                sbH("span", null, t),
+                learnPop.kept[j]
+                  ? sbH("span", { className: "sbTeachKept" }, "\u05e0\u05e9\u05de\u05e8 \u2713")
+                  : sbH("button", { type: "button", className: "sgBtn", onClick: () => {
+                      const next = (SB_AI_RULES.list || []).concat([{ id: `r-${Date.now()}-${j}`, text: t, on: true, at: new Date().toISOString() }]);
+                      if (SB_AI_RULES.set) SB_AI_RULES.set(next);
+                      setLearnPop({ ...learnPop, kept: { ...learnPop.kept, [j]: true } });
+                    } }, "\u05e9\u05de\u05d5\u05e8 \u05db\u05db\u05dc\u05dc")))),
+              sbH("p", { className: "sbTeachHint", style: { marginTop: 10 } }, "\u05db\u05dc \u05db\u05dc\u05dc \u05e9\u05e0\u05e9\u05de\u05e8 \u05de\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d7\u05dc\u05d5\u05df \"\u05dc\u05dc\u05de\u05d3 \u05d0\u05ea \u05d4\u05beAI\", \u05d5\u05e9\u05dd \u05d0\u05e4\u05e9\u05e8 \u05dc\u05e2\u05e8\u05d5\u05da \u05d0\u05d5 \u05dc\u05de\u05d7\u05d5\u05e7."),
+              sbH("div", { className: "printAskBtns" },
+                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setLearnPop(null) }, "\u05e1\u05d2\u05d9\u05e8\u05d4"))
+            )
+          ),
+          document.body
+        )
+      : null,
+    sendAsk
+      ? createPortal(
+          sbH(
+            "div",
+            { className: "printAskScrim", onClick: () => setSendAsk(null) },
+            sbH(
+              "div",
+              { className: "printAskBox sbBq", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+              sbH("h3", null, `${lang === "he" ? "\u05dc\u05e4\u05e0\u05d9 \u05e9\u05dc\u05d9\u05d7\u05d4" : "Before sending"} \u00b7 ${sbNumber(sendAsk.s.category, sendAsk.s.seq)}`),
+              sbH("p", { className: "sbBqSum warn" }, lang === "he" ? `\u05e0\u05de\u05e6\u05d0\u05d5 ${sendAsk.issues.length} \u05e0\u05e7\u05d5\u05d3\u05d5\u05ea \u05dc\u05d1\u05d3\u05d9\u05e7\u05d4` : `${sendAsk.issues.length} things to look at`),
+              sbH("ul", { className: "sbReadyList" }, sendAsk.issues.map((t, i) => sbH("li", { key: i }, "\u26a0 ", t))),
+              sbH("div", { className: "printAskBtns" },
+                sbH("button", { type: "button", className: "ghostBtn small", onClick: () => { const x = sendAsk.s; setSendAsk(null); sendMailNow(x); } },
+                  lang === "he" ? "\u05dc\u05e9\u05dc\u05d5\u05d7 \u05d1\u05db\u05dc \u05d6\u05d0\u05ea" : "Send anyway"),
+                sbH("button", { type: "button", className: "sgBtn", onClick: () => { const x = sendAsk.s; setSendAsk(null); openExisting(x); } },
+                  lang === "he" ? "\u05dc\u05ea\u05e7\u05df \u05d1\u05d8\u05d5\u05e4\u05e1" : "Fix it in the form"))
+            )
+          ),
+          document.body
         )
       : null,
     printAsk ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); printAsk(lg); }, onClose: () => setPrintAsk(null) }) : null
@@ -22632,6 +23260,11 @@ function ProjectDashboardApp() {
   }, [contractors, stateLoaded, isAuthenticated]);
   // Global contacts catalog — one per account, shared by every project.
   const [contactsCatalog, setContactsCatalog] = useState6(() => buildContactCatalogSeed());
+  // 22.10.26 — the rules she teaches the submittal AI. One list, every project.
+  const [sbAiRules, setSbAiRules] = useState6([]);
+  const [sbAiRulesLoaded, setSbAiRulesLoaded] = useState6(false);
+  SB_AI_RULES.list = sbAiRules;
+  SB_AI_RULES.set = setSbAiRules;
   const [catalogLoaded, setCatalogLoaded] = useState6(false);
   // Her own board categories join the list before anything renders with it.
   boardSetCustomCats(contactsCatalog && contactsCatalog.boardCats);
@@ -22662,6 +23295,29 @@ function ProjectDashboardApp() {
       }
     })();
   }, [contactsCatalog, catalogLoaded, isAuthenticated]);
+  useEffect5(() => {
+    if (!isAuthenticated || appRole !== "admin") return;
+    (async () => {
+      try {
+        const value = await loadAppState("submittal-ai-rules");
+        rememberLoaded("submittal-ai-rules", value);
+        if (Array.isArray(value)) setSbAiRules(value);
+        setSbAiRulesLoaded(true);
+      } catch (e) {
+        console.error("[awdash] load submittal-ai-rules failed", e);
+      }
+    })();
+  }, [isAuthenticated, appRole]);
+  useEffect5(() => {
+    if (!isAuthenticated || appRole !== "admin" || !sbAiRulesLoaded) return;
+    (async () => {
+      try {
+        await saveAppState("submittal-ai-rules", sbAiRules);
+      } catch (e) {
+        console.error("[awdash] save submittal-ai-rules failed", e);
+      }
+    })();
+  }, [sbAiRules, sbAiRulesLoaded, isAuthenticated, appRole]);
   // One scanned signature (stamp + pen) per user, keyed by e-mail. Its own row
   // so it is not rewritten every time a project changes.
   const [userSignatures, setUserSignatures] = useState6({});
@@ -23013,6 +23669,9 @@ function ProjectDashboardApp() {
     }));
   };
   const activeExtras = projectExtras[activeProject.id] || { dataSources: [], scheduleData: null };
+  // The library of past submittals is read from every project (22.10.26).
+  SB_LIBRARY.extras = projectExtras || {};
+  SB_LIBRARY.projects = (activeContractor && activeContractor.projects) || [];
   const setProjectContacts = (projectId, contacts) => {
     console.log("[awdash] contacts reached the app state:", projectId, (contacts || []).length, "rows");
     updateProjectExtras(projectId, { contacts });
