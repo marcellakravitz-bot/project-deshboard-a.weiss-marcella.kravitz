@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "22.10.2026 · build 216";
+var APP_BUILD = "22.10.2026 · build 217";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18452,6 +18452,16 @@ function sbSpecPrints(specText) {
     .map((x) => sbNormTxt(x.text).replace(/\s+/g, " ").slice(0, 1500))
     .filter((t) => t.length >= 200);
 }
+function sbSpecWhole(specText) {
+  return sbNormTxt(String(specText || "").replace(/^=+ .* =+$/gm, "")).replace(/\s+/g, " ").trim();
+}
+function sbLibSelf(d, projectId) {
+  return {
+    id: d.id, projectId, category: d.category, seq: d.seq,
+    prints: sbSpecPrints(d.specText), whole: sbSpecWhole(d.specText),
+    files: (d.attachments || []).map((a) => ({ name: a && a.name, size: a && a.size }))
+  };
+}
 function sbLibraryMatches(probe, self) {
   const out = [];
   const names = {};
@@ -18476,10 +18486,23 @@ function sbLibraryMatches(probe, self) {
       let score = probe && (probe.typeId || probe.itemDescription || probe.modelCode) ? sbLikeness(probe, r) : 0;
       // The same specification document is the strongest sign of all.
       const prints = (self && self.prints) || [];
+      let same = false;
       if (prints.length && r.specText) {
         const theirs = sbSpecPrints(r.specText);
-        if (theirs.some((t) => prints.indexOf(t) >= 0)) score += 150;
+        if (theirs.some((t) => prints.indexOf(t) >= 0)) same = true;
       }
+      // 22.10.26 — the same file uploaded again: same size to the byte. Short
+      // presentations hold too little text to fingerprint, so this catches
+      // what the text cannot.
+      const files = (self && self.files) || [];
+      if (!same && files.length && Array.isArray(r.attachments)) {
+        same = r.attachments.some((a) => a && Number(a.size) > 0 && files.some((f) => Number(f.size) === Number(a.size)));
+      }
+      // Very short text, identical word for word.
+      if (!same && self && self.whole && self.whole.length >= 60 && r.specText) {
+        same = sbSpecWhole(r.specText) === self.whole;
+      }
+      if (same) score += 150;
       if (score >= 45) out.push({ rec: r, ok, score, project: names[pid] || r.projectName || "" });
     });
   });
@@ -19193,7 +19216,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         }));
         if (onQueueChange) onQueueChange(queue);
         try {
-          const found = sbLibraryMatches(products[0] || {}, { id: d.id, projectId, category: d.category, seq: d.seq, prints: sbSpecPrints(d.specText) });
+          const found = sbLibraryMatches(products[0] || {}, sbLibSelf(d, projectId));
           if (found.length) { setLibPick(null); setLibAsk({ ai: products[0] || {}, list: found }); }
         } catch (e) { console.warn("[awdash] library lookup failed", e); }
         setAiMsg([`${L("foundProducts")} (${products.length}). ${L("worklistHint")}`, unusedLine].filter(Boolean).join("\n"));
@@ -19205,7 +19228,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         // Has this product been submitted before, in any project? Then offer
         // those submittals, and fill from the one she picks (22.10.26).
         try {
-          const found = sbLibraryMatches(products[0] || {}, { id: d.id, projectId, category: d.category, seq: d.seq, prints: sbSpecPrints(d.specText) });
+          const found = sbLibraryMatches(products[0] || {}, sbLibSelf(d, projectId));
           if (found.length) { setLibPick(null); setLibAsk({ ai: products[0] || {}, list: found }); }
         } catch (e) { console.warn("[awdash] library lookup failed", e); }
         // A disagreement between two of the papers is said out loud, here and
