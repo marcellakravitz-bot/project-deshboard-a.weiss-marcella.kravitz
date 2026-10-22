@@ -856,7 +856,9 @@ th, td { border: 1px solid #cfd6e0; padding: 0 6px; vertical-align: middle; }
 .docName { text-align: ${isHe ? "right" : "left"}; font-size: var(--val); }
 .docBox { width: 34px; text-align: center; font-size: 12px; }
 .addWrap { flex: 1; display: flex; flex-direction: column; min-height: 96px; }
-.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; max-height: 150px; overflow: hidden;
+/* 22.10.26 — the box takes all the room down to the review block, so what
+   she writes is not cut off. The form on screen shows the same box. */
+.txtBox { flex: 1; border: 1px solid #cfd6e0; padding: 6px 8px; min-height: 96px; overflow: hidden;
   white-space: pre-wrap; font-size: ${infoSize}px; line-height: ${infoLead}; }
 .miniLbl { font-size: 10px; color: #6b7280; font-weight: 700; margin-bottom: 3px; }
 .rev td { vertical-align: top; height: 112px; padding: 7px 9px; font-size: var(--val); }

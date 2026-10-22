@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "22.10.2026 · build 208";
+var APP_BUILD = "22.10.2026 · build 210";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2547,6 +2547,13 @@ var pdfViewer = `
         .sbRevLong:hover { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
         .sbRevLong.sign { background: #14181f; border-color: #14181f; color: #fff; }
         .sbSpecsTop { margin: 10px 0 14px; }
+        /* The printed box, on screen (22.10.26). */
+        .sbInfoBox { display: block; margin: 4px auto 0; max-width: 100%; box-sizing: border-box; padding: 6px 8px;
+          border: 1px solid #cfd6e0; border-radius: 0; background: #fff; resize: none; overflow: auto;
+          font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #1f2a37; white-space: pre-wrap; }
+        .sbInfoBox:focus { outline: 2px solid var(--accent-soft, #dbe6f5); border-color: var(--accent, #1A559E); }
+        .sbInfoBox.over { border-color: #c0392b; box-shadow: 0 0 0 2px #fbe3e3; }
+        .sbInfoOver { display: block; text-align: center; color: #c0392b; font-size: 12.5px; font-weight: 700; margin-top: 6px; }
         .sbSaveNow { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 22px 0 6px; flex-wrap: wrap; }
         .sbSaveMsg { font-size: 12.5px; font-weight: 700; color: #1a7f4b; }
         .sbSaveMsg.err { color: #c0392b; }
@@ -10735,13 +10742,25 @@ window.__awPaged = false;
       bc.colSpan = NCOLS;
       bc.textContent = sec;
       band.appendChild(bc);
+      // 22.10.26 — every discipline gets the column titles under its band,
+      // wherever on the page it starts.
+      var hrow = null;
+      var htr = thead ? thead.querySelector("tr") : null;
+      if (htr) { hrow = htr.cloneNode(true); hrow.className = "secHead"; }
       cur.tb.appendChild(band);
+      if (hrow) cur.tb.appendChild(hrow);
       cur.tb.appendChild(rows[i]);
+      // A discipline does not open at the foot of a page with a single row
+      // under its titles when more of it follows: then it starts on the next
+      // page instead. Its second row is tried here only to measure.
+      var nextSame = rows[i + 1] && (rows[i + 1].getAttribute("data-sec") || "") === sec ? rows[i + 1] : null;
+      if (nextSame) cur.tb.appendChild(nextSame);
+      var fits = room(cur) >= 0;
+      if (nextSame) cur.tb.removeChild(nextSame);
       cur.sec = sec;
-      if (room(cur) < 0) {
-        // No room for the band and a row under it: both go over, and the
-        // page's own heading band names the discipline.
+      if (!fits) {
         band.remove();
+        if (hrow) hrow.remove();
         var nx = newPage();
         setSec(nx, sec);
         nx.tb.appendChild(rows[i]);
@@ -18307,6 +18326,40 @@ function sbWhoFix(rec, lang) {
   if (!w) return rec;
   return { ...rec, submittedBy: lang === "en" ? w.en : w.he, email: w.email };
 }
+// 22.10.26 — the "additional information" box on screen is the box on the
+// printed form: the same width, the same height, the same type, shrinking
+// with the text exactly as the print does. What fits here fits on paper.
+function sbInfoFontFor(len) {
+  const size = len > 2200 ? 6.5 : len > 1800 ? 7 : len > 1400 ? 7.5 : len > 1100 ? 8 : len > 900 ? 9 : len > 500 ? 10 : 11;
+  const lead = len > 1400 ? 1.25 : len > 900 ? 1.32 : 1.45;
+  return { size, lead };
+}
+// The box's real size, measured on the printed form itself — with her logo,
+// her footer and everything else that takes room on the sheet.
+function sbMeasureInfoBox(rec, lang, brand, sigs) {
+  return new Promise((resolve) => {
+    let done = false;
+    const fr = document.createElement("iframe");
+    fr.setAttribute("aria-hidden", "true");
+    fr.style.cssText = "position:fixed;left:-3000px;top:0;width:1200px;height:1600px;border:0;visibility:hidden;";
+    const finish = (v) => { if (done) return; done = true; try { fr.remove(); } catch (e) {} resolve(v); };
+    fr.onload = () => {
+      setTimeout(() => {
+        try {
+          const box = fr.contentDocument.querySelector(".page .txtBox") || fr.contentDocument.querySelector(".txtBox");
+          const r = box ? box.getBoundingClientRect() : null;
+          finish(r && r.width > 50 && r.height > 30 ? { w: Math.round(r.width), h: Math.round(r.height) } : null);
+        } catch (e) { finish(null); }
+      }, 450);
+    };
+    try {
+      const html = sbBuildPrintHtml({ ...rec, infoHe: "", infoEn: "" }, lang, brand, [], sigs).replace(/window\.print\(\)/g, "void 0");
+      fr.srcdoc = html;
+      document.body.appendChild(fr);
+    } catch (e) { finish(null); }
+    setTimeout(() => finish(null), 6000);
+  });
+}
 function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, rec, lang, isRTL, langSwitch, canEdit, canSign, projectId, scopeOptions, onSave, onCancel, onDelete, queue, onQueueChange, printBrand, userSignatures, currentEmail }) {
   const [printAsk, setPrintAsk] = useState6(null);
   const [d, setD] = useState6(rec);
@@ -18315,6 +18368,21 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
   // The sub-category exactly as typed, while the box has the focus.
   // The question asked before a fill: one product, or one system (21.10.26).
   const [aiAsk, setAiAsk] = useState6(false);
+  // The printed size of the additional-information box (22.10.26).
+  const [infoBox, setInfoBox] = useState6(null);
+  const [infoOver, setInfoOver] = useState6(false);
+  const infoRef = useRef5(null);
+  useEffect5(() => {
+    let live = true;
+    sbMeasureInfoBox(d, lang, printBrand, userSignatures).then((b) => { if (live && b) setInfoBox(b); });
+    return () => { live = false; };
+  }, [d.id, lang]);
+  useEffect5(() => {
+    const el = infoRef.current;
+    if (!el) return;
+    const over = el.scrollHeight > el.clientHeight + 2;
+    if (over !== infoOver) setInfoOver(over);
+  });
   const [subTxt, setSubTxt] = useState6(null);
   const [imgSel, setImgSel] = useState6(false);
   const [err, setErr] = useState6(null);
@@ -19119,14 +19187,29 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       "label",
       { className: "sbField" },
       sbH("span", { className: "sbFieldLbl" }, L(isHe ? "additionalHe" : "additionalEn")),
-      sbH("textarea", {
-        value: (isHe ? d.infoHe : d.infoEn) || "",
-        readOnly: ro,
-        dir: isHe ? "rtl" : "ltr",
-        rows: 6,
-        onChange: (e) => set(isHe ? { infoHe: e.target.value } : { infoEn: e.target.value }),
-        style: { ...inS, resize: "vertical" }
-      })
+      (() => {
+        const txt = (isHe ? d.infoHe : d.infoEn) || "";
+        const f = sbInfoFontFor(txt.length);
+        return sbH("textarea", {
+          ref: infoRef,
+          className: `sbInfoBox ${infoOver ? "over" : ""}`.trim(),
+          value: txt,
+          readOnly: ro,
+          dir: isHe ? "rtl" : "ltr",
+          onChange: (e) => set(isHe ? { infoHe: e.target.value } : { infoEn: e.target.value }),
+          style: {
+            width: infoBox ? infoBox.w : "100%",
+            height: infoBox ? infoBox.h : 300,
+            fontSize: f.size,
+            lineHeight: f.lead
+          }
+        });
+      })(),
+      infoOver
+        ? sbH("span", { className: "sbInfoOver" }, isHe
+            ? "\u05d4\u05d8\u05e7\u05e1\u05d8 \u05d7\u05d5\u05e8\u05d2 \u05de\u05d4\u05ea\u05d9\u05d1\u05d4, \u05d1\u05d4\u05d3\u05e4\u05e1\u05d4 \u05d4\u05e1\u05d5\u05e3 \u05e9\u05dc\u05d5 \u05d9\u05d9\u05d7\u05ea\u05da."
+            : "The text runs past the box, so its end will be cut off on the printed form.")
+        : null
     ),
 
     // ------- REVIEW & APPROVAL
