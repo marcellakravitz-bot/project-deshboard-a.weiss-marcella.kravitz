@@ -5,11 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>A. Weiss · By Room</title>
-<!-- By Room — the page a QR code opens. View only, no sign-in: the project key in the link is the key.
-     byroom build 1 · 24.10.2026 -->
+<!-- By Room — the page a QR code or a link opens. View only, no sign-in: the project key in the link is the key.
+     Shows only what the administrator published. byroom build 3 · 25.10.2026 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
 <style>
-  html, body, #root { margin: 0; height: 100%; background: #f4f5f7; }
-  #boot { font-family: system-ui, "Segoe UI", Arial, sans-serif; color: #5b6170; padding: 32px; text-align: center; }
+  :root { --ink: #17181c; --accent: #17181c; --accent-ink: #000000; --accent-soft: #eceef1; }
+  html, body, #root { margin: 0; height: 100%; background: #f6f6f7; }
+  #boot { font-family: 'Assistant', system-ui, sans-serif; color: #5b5e66; padding: 40px 20px; text-align: center; font-size: 17px; }
 </style>
 <script type="importmap">
 {
@@ -25,48 +28,17 @@
 <script type="module">
 import React from "react";
 import { createRoot } from "react-dom/client";
-import { RoomViewer } from "./view.js";
+import { ByRoomViewer, publicApi } from "./view.js";
 import { BYROOM_FUNCTIONS } from "./config.js";
 
 const p = new URLSearchParams(location.search);
 const k = p.get("k") || "";
-const api = (q) => fetch(`${BYROOM_FUNCTIONS}/byroom-public?${new URLSearchParams({ k, ...q })}`).then(async (r) => {
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(j.error || "לא ניתן לטעון");
-  return j;
-});
-
-async function start() {
-  const root = createRoot(document.getElementById("root"));
-  let floors = [], project = "";
-  try {
-    const f = await api({});
-    floors = f.floors || []; project = f.project || "";
-  } catch (e) {
-    document.getElementById("boot").textContent = e.message === "this link is no longer valid" ? "הקישור אינו בתוקף" : e.message;
-    return;
-  }
-  const floor = p.get("f") && floors.includes(p.get("f")) ? p.get("f") : floors[0];
-  root.render(React.createElement(RoomViewer, {
-    title: project,
-    floors,
-    initialFloor: floor,
-    initialRoom: p.get("r"),
-    lang: "he",
-    load: (fl, room) => {
-      const q = new URLSearchParams(location.search);
-      q.set("f", fl); room ? q.set("r", room) : q.delete("r");
-      history.replaceState(null, "", "?" + q);
-      return api(room ? { f: fl, r: room } : { f: fl });
-    },
-    openSheet: async (fl, kind) => {
-      const w = window.open("", "_blank");
-      try { const j = await api({ f: fl, pdf: kind }); if (w) w.location = j.url; else location.href = j.url; }
-      catch (e) { if (w) w.close(); alert(e.message); }
-    },
-  }));
-}
-start();
+if (!k) document.getElementById("boot").textContent = "חסר מפתח פרויקט בקישור.";
+else createRoot(document.getElementById("root")).render(React.createElement(ByRoomViewer, {
+  api: publicApi(BYROOM_FUNCTIONS, k),
+  initialFloor: p.get("f") || null,      // a room QR opens straight on its floor plan with the room open
+  initialRoom: p.get("r") || null,
+}));
 </script>
 </body>
 </html>

@@ -1,1 +1,1 @@
-VERSION = "byroom-worker 1 · 24.10.2026"
+VERSION = "byroom-worker 2 · 25.10.2026"

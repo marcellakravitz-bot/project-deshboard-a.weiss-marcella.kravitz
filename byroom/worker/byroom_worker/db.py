@@ -91,6 +91,10 @@ class DB:
             out[r["room_no"]] = d
         return out
 
+    def defined_marks(self, project_id):
+        """The project's marks, as the dashboard copied them from LLI: {code: category}."""
+        return {r["code"]: r["category"] for r in self.q("select code, category from byroom_marks where project_id = %s", project_id)}
+
     # ---------------------------------------------------------------- write the cross-check
     def write_crosscheck(self, s, res, job):
         sid = s["id"]

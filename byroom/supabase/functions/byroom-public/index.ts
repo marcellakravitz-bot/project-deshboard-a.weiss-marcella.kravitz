@@ -1,12 +1,11 @@
 // byroom-public — what a QR code or a room link opens. No sign-in; the project key in the link is the key.
-// Returns only APPROVED data of one project: the floor map, the room list, one room's details.
+// Returns only what the administrator PUBLISHED (byroom_published), never the approved layer in progress.
 //
-// GET ?k=<project key>&f=<floor>                 floor map + rooms of the floor
-// GET ?k=<project key>&f=<floor>&r=<room>        + that room's details
-// GET ?k=<project key>&f=<floor>&pdf=<FL|FN|CL>  a one-hour link to the approved PDF sheet
-// GET ?k=<project key>                           list of floors
+// GET ?k=<key>                     the project (name, colours, logos, category names) + every floor's room list (for search)
+// GET ?k=<key>&f=<floor>           one floor: the map and its rooms with their marks (names only — light)
+// GET ?k=<key>&f=<floor>&r=<room>  one room: every mark with its description, photo, supplier, status
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
-import { cors, env, json, signedUrl } from "../_shared/gcp.ts";
+import { cors, json } from "../_shared/gcp.ts";
 
 const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
 
@@ -14,43 +13,38 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const u = new URL(req.url);
-    const k = u.searchParams.get("k") ?? "", floor = u.searchParams.get("f"), room = u.searchParams.get("r"), pdf = u.searchParams.get("pdf");
+    const k = u.searchParams.get("k") ?? "", floor = u.searchParams.get("f"), room = u.searchParams.get("r");
     const { data: link } = await sb.from("byroom_room_links").select("project_id, project_name").eq("token", k).is("revoked_at", null).maybeSingle();
     if (!link) return json({ error: "this link is no longer valid" }, 404);
     const pid = link.project_id;
 
     if (!floor) {
-      const { data } = await sb.from("byroom_floor_maps").select("floor").eq("project_id", pid).eq("approved", true);
-      return json({ project: link.project_name, floors: [...new Set((data ?? []).map((r) => r.floor))].sort() });
+      const { data: proj } = await sb.from("byroom_projects").select("name, meta, published_at").eq("project_id", pid).maybeSingle();
+      const { data: pubs } = await sb.from("byroom_published").select("floor, data").eq("project_id", pid).eq("current", true);
+      const floors = (pubs ?? []).map((p) => ({ floor: p.floor, rooms: (p.data?.rooms ?? []).map((r: { n: string; name: string }) => ({ n: r.n, name: r.name })) }))
+        .sort((a, b) => Number(a.floor) - Number(b.floor) || a.floor.localeCompare(b.floor));
+      return json({ project: { name: proj?.name ?? link.project_name, ...(proj?.meta ?? {}), published_at: proj?.published_at ?? null }, floors });
     }
 
-    const { data: map } = await sb.from("byroom_floor_maps").select("set_id, data").eq("project_id", pid).eq("floor", floor).eq("approved", true)
-      .order("created_at", { ascending: false }).limit(1).maybeSingle();
+    const { data: pub } = await sb.from("byroom_published").select("data").eq("project_id", pid).eq("floor", floor).eq("current", true).maybeSingle();
+    if (!pub) return json({ error: "nothing published for this floor" }, 404);
+    const rooms = (pub.data?.rooms ?? []) as { n: string; name: string; area: number; items: { kind: string; code: string }[] }[];
+    const codes = [...new Set(rooms.flatMap((r) => r.items.map((i) => i.code.toUpperCase())))];
+    const { data: marks } = codes.length
+      ? await sb.from("byroom_marks").select("code, category, name, description, image, supplier, status").eq("project_id", pid).in("code", codes)
+      : { data: [] };
+    const by = new Map((marks ?? []).map((m) => [m.code, m]));
 
-    if (pdf) {
-      if (!map) return json({ error: "no approved plans for this floor" }, 404);
-      const { data: f } = await sb.from("byroom_plan_files").select("archive_path, original_name").eq("set_id", map.set_id)
-        .eq("format", "pdf").eq("plan_type", pdf).not("archive_path", "is", null).limit(1).maybeSingle();
-      if (!f) return json({ error: "no sheet of this kind" }, 404);
-      return json({ url: await signedUrl(env.archive(), f.archive_path, 3600, f.original_name) });
-    }
-
-    const { data: rooms } = await sb.from("byroom_rooms").select("id, room_no, name, area, x, y").eq("project_id", pid).eq("floor", floor).eq("status", "active");
-    const out: Record<string, unknown> = {
-      project: link.project_name, floor, map: map?.data ?? null,
-      rooms: (rooms ?? []).map((r) => ({ n: r.room_no, name: r.name })),
-    };
-    if (map) {
-      const { data: sheets } = await sb.from("byroom_plan_files").select("plan_type").eq("set_id", map.set_id).eq("format", "pdf").not("archive_path", "is", null);
-      out.sheets = [...new Set((sheets ?? []).map((s) => s.plan_type))];
-    }
     if (room) {
-      const r = (rooms ?? []).find((x) => x.room_no.toLowerCase() === room.toLowerCase());
-      if (!r) return json({ ...out, room: null, error: "room not found on this floor" }, 200);
-      const { data: fin } = await sb.from("byroom_room_finishes").select("kind, code").eq("room_id", r.id).order("kind").order("code");
-      out.room = { n: r.room_no, name: r.name, area: r.area, finishes: fin ?? [] };
+      const r = rooms.find((x) => x.n.toLowerCase() === room.toLowerCase());
+      if (!r) return json({ room: null, error: "room not found on this floor" });
+      return json({ floor, room: { n: r.n, name: r.name, area: r.area,
+        items: r.items.map((i) => { const m = by.get(i.code.toUpperCase()); return { kind: i.kind, code: i.code, name: m?.name ?? null,
+          description: m?.description ?? null, image: m?.image ?? null, supplier: m?.supplier ?? null, status: m?.status ?? null }; }) } });
     }
-    return json(out);
+    return json({ floor, map: pub.data?.map ?? null,
+      rooms: rooms.map((r) => ({ n: r.n, name: r.name, area: r.area,
+        items: r.items.map((i) => ({ kind: i.kind, code: i.code, name: by.get(i.code.toUpperCase())?.name ?? null })) })) });
   } catch (e) {
     return json({ error: String((e as Error)?.message ?? e) }, 500);
   }

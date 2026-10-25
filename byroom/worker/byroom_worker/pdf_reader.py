@@ -23,6 +23,7 @@ def _pages(path):
 
 ROOM_NO = re.compile(r"^\d{3}[A-Za-z]?$")
 CODE_RE = re.compile(r"^(FL|FN|CL)-?\d+[A-Za-z]?$", re.I)
+MARK_RE = re.compile(r"^[A-Za-z]{1,4}[-.]?\d{1,3}[A-Za-z]?$")
 LETTER = re.compile(r"^[A-Za-z]$")
 DATE_RE = re.compile(r"\b(\d{1,2})[./](\d{1,2})[./](\d{2,4})\b")
 REV_RE = re.compile(r"^(REV|REVISION|גרסה|מהדורה)\.?:?$", re.I)
@@ -57,6 +58,9 @@ def read(path):
         nums = [{"room": w["text"].strip(), "x": (w["x0"] + w["x1"]) / 2, "y": (w["top"] + w["bottom"]) / 2}
                 for w in words if ROOM_NO.match(w["text"].strip())]
         codes = _codes(words)
+        # every other code-like word; the cross-check keeps only the project's defined marks
+        marks = [{"code": w["text"].strip(), "x": (w["x0"] + w["x1"]) / 2, "y": (w["top"] + w["bottom"]) / 2}
+                 for w in words if MARK_RE.match(w["text"].strip()) and not CODE_RE.match(w["text"].strip())][:20000]
         dates = [m.group(0) for w in words for m in [DATE_RE.search(w["text"])] if m]
         rev = []
         for j, w in enumerate(words):
@@ -65,7 +69,7 @@ def read(path):
                 if any(c.isalnum() for c in nxt):
                     rev.append(nxt)
         pages.append({"page": i + 1, "width": pw, "height": ph, "n_words": len(words),
-                      "numbers": nums, "codes": codes, "dates": dates[:40], "revisions": rev[:10]})
+                      "numbers": nums, "codes": codes, "marks": marks, "dates": dates[:40], "revisions": rev[:10]})
     if not pages:
         warnings.append("אין עמודים בקובץ ה-PDF")
     elif all(p["n_words"] == 0 for p in pages):

@@ -18,6 +18,12 @@ from shapely.geometry import Point, Polygon
 from . import align
 
 KINDS = ("FL", "FN", "CL")
+BASE_FIELDS = ("room", "name", "area", "boundary")
+
+
+def canon(code):
+    """J-01, J01, j.01 -> J01: how a printed code is compared with the defined marks."""
+    return re.sub(r"[^A-Z0-9]", "", (code or "").upper())
 CONF = {"certain": "certain", "estimated": "estimated", "review": "review", "unassigned": "unassigned"}
 
 
@@ -108,9 +114,12 @@ def leader_target(leaders, x, y):
     return best[:2] if best else None
 
 
-def run(files, current=None, set_meta=None):
-    """files: [{"id","plan_type","format","name","data"}]; current: approved rooms {room_no: {...}}."""
+def run(files, current=None, set_meta=None, defined=None):
+    """files: [{"id","plan_type","format","name","data"}]; current: approved rooms {room_no: {...}};
+    defined: the project's marks {code: kind} (FL / FN / CL or a category key such as joinery) — every code on the
+    plans that is one of them is read as a mark of that kind. Codes that are not defined are ignored."""
     current = current or {}
+    defined = {canon(c): (c, k) for c, k in (defined or {}).items() if canon(c)}
     warnings, sources, views = [], [], []
     dxfs = [f for f in files if f["format"] == "dxf"]
     pdfs = [f for f in files if f["format"] == "pdf"]
@@ -183,6 +192,34 @@ def run(files, current=None, set_meta=None):
                 how += "; " + c["flag"]
             inst.append({"file": f, "src": "PDF", "kind": c["kind"], "code": c["code"], "room": n, "conf": conf, "how": how,
                          "x": round(x, 1), "y": round(y, 1)})
+    # ---------------------------------------------------------------- every other defined mark (joinery, lighting...)
+    if defined:
+        for f in dxfs:
+            for c in f["data"].get("marks", []):
+                d = defined.get(canon(c["code"]))
+                if not d:
+                    continue
+                n, conf, how = F.place(c["x"], c["y"], d[1] if d[1] != "FN" else "mark")
+                inst.append({"file": f, "src": "DXF", "kind": d[1], "code": d[0], "room": n, "conf": conf, "how": how,
+                             "x": c["x"], "y": c["y"], "generic": True})
+        for f in pdfs:
+            fit = placed.get(f["id"])
+            if not fit:
+                continue
+            inv = align.invert(fit["M"])
+            tol = max(30.0, 2 * fit["fit_error_cm"]) if fit["method"] != "room numbers" else 0.0
+            for c in f["data"]["page"].get("marks", []):
+                d = defined.get(canon(c["code"]))
+                if not d:
+                    continue
+                x, y = inv(c["x"], c["y"])
+                if not F.in_bbox(x, y):
+                    continue                    # the legend / schedule, not a tag on the plan
+                n, conf, how = F.place(x, y, d[1] if d[1] != "FN" else "mark", edge_tol=tol)
+                inst.append({"file": f, "src": "PDF", "kind": d[1], "code": d[0], "room": n, "conf": conf, "how": how,
+                             "x": round(x, 1), "y": round(y, 1), "generic": True})
+    mkinds = sorted({i["kind"] for i in inst if i["kind"] not in KINDS})
+
     # same tag, two files: what does the PDF print where the DXF has a tag?
     for i in inst:
         if i["src"] != "DXF":
@@ -354,6 +391,28 @@ def run(files, current=None, set_meta=None):
             if k == "FN" and st == "certain" and any(c == "estimated" for c in confs):
                 st = "estimated"
             item(no, k, {"codes": codes, "alternatives": {"DXF": ds, "PDF": ps}}, st, srcs_k, note)
+        # -- every other defined mark found in this set (a category with nothing in the set is not touched)
+        for k in mkinds:
+            d_i = [i for i in inst if i["room"] == no and i["kind"] == k and i["src"] == "DXF"]
+            p_i = [i for i in inst if i["room"] == no and i["kind"] == k and i["src"] == "PDF"]
+            ds, ps = sorted({i["code"] for i in d_i}), sorted({i["code"] for i in p_i})
+            srcs_k = [{"src": i["src"], "file": i["file"]["name"], "value": i["code"], "how": i["how"], "confidence": i["conf"]} for i in d_i + p_i]
+            confs = [i["conf"] for i in d_i + p_i]
+            had = (_current_value(current.get(no), k) or {}).get("codes") or []
+            if not ds and not ps:
+                if had:
+                    item(no, k, {"codes": [], "alternatives": {"DXF": [], "PDF": []}}, "missing", [], "אושר בעבר, ולא נמצא בתוכניות של הגרסה הזו")
+                continue
+            note = None
+            if ds and ps and ds != ps:
+                st, codes = "conflict", ps
+                note = "DXF: " + ", ".join(ds) + " · PDF: " + ", ".join(ps)
+            else:
+                st = "certain" if all(c == "certain" for c in confs) else "estimated"
+                codes = ds or ps
+                if not (ds and ps) and any(i["src"] != (d_i + p_i)[0]["src"] for i in inst if i["kind"] == k):
+                    note = "רק ב-DXF" if ds else "רק ב-PDF"
+            item(no, k, {"codes": codes, "alternatives": {"DXF": ds, "PDF": ps}}, st, srcs_k, note)
 
     # rooms approved before and missing from this set
     for no, cur in current.items():
@@ -363,7 +422,7 @@ def run(files, current=None, set_meta=None):
                           "note": "אושר בעבר, ולא נמצא באף קובץ בגרסה הזו", "decision": "pending"})
 
     floor_map = _map(base, F, rvt_rooms)
-    summary = {"rooms": len(all_numbers), "items": len(items), "status": dict(Counter(i["status"] for i in items)),
+    summary = {"rooms": len(all_numbers), "items": len(items), "mark_kinds": mkinds, "status": dict(Counter(i["status"] for i in items)),
                "changes": dict(Counter(i["change_type"] for i in items)), "placed_pdfs": len(placed), "rvt_rooms": len(rvt_rooms),
                "boundaries": dict(Counter(r["grade"] for r in F.rooms.values()))}
     return {"items": items, "sources": sources, "views": views, "map": floor_map, "warnings": warnings, "summary": summary}
@@ -391,7 +450,7 @@ def _current_value(cur, field):
 def _same(field, cur, prop):
     if cur is None:
         return False
-    if field in ("FL", "FN", "CL"):
+    if field not in BASE_FIELDS:
         return sorted(cur.get("codes") or []) == sorted(prop.get("codes") or [])
     if field == "boundary":
         a, b = cur.get("poly"), prop.get("poly")

@@ -22,6 +22,11 @@ ROOM_NO = re.compile(r"^\d{3}[A-Za-z]?$")          # 421, 404b  — not 420.1 (e
 NUMBER = re.compile(r"^\d+(\.\d+)?$")
 CODE_PREFIXES = ("FL", "FN", "CL")
 CODE_RE = re.compile(r"^(FL|FN|CL)-?\d+[A-Za-z]?$", re.I)
+# any other mark (J-01, LT3, WD-2A...): letters, an optional separator, a number, an optional letter.
+# Which of these are marks is decided later, against the project's defined marks — never here.
+MARK_START = re.compile(r"^[A-Za-z]{1,4}[-. ]?(\d{1,3}[A-Za-z]?)?$")
+MARK_PART = re.compile(r"^[-. ]?\d{0,3}[A-Za-z]?$")
+MARK_RE = re.compile(r"^[A-Za-z]{1,4}[-. ]?\d{1,3}[A-Za-z]?$")
 
 WALL_LAYERS = {"A-WALL", "I-WALL", "A-GLAZ-CWMG", "A-GLAZ-CURT", "A-DOOR-OPNG", "A-DOOR", "S-STRS"}
 BOUNDARY_EXTRA_LAYERS = {"0", "A-AREA"}             # linked models + room separation lines
@@ -220,6 +225,40 @@ def code_tags(d, gap=35.0):
             code = text.replace(" ", "")
             if CODE_RE.match(code):
                 out.append({"code": code, "kind": code[:2].upper(), "x": f["x"], "y": f["y"], "layer": L, "parts": parts})
+    return out
+
+
+def mark_tags(d, gap=35.0, limit=20000):
+    """Every other code-like tag on the plan ("J-" "01" -> "J-01"), with its position. FL / FN / CL are left to
+    code_tags. The cross-check keeps only the codes the project defines as marks."""
+    by_layer = defaultdict(list)
+    for t in d["texts"]:
+        if t["t"] and "AREA-IDEN" not in t["layer"].upper():
+            by_layer[t["layer"]].append(t)
+    out = []
+    for L, frags in by_layer.items():
+        frags.sort(key=lambda t: (round(t["y"]), t["x"]))
+        used = [False] * len(frags)
+        for i, f in enumerate(frags):
+            s = f["t"].strip()
+            if used[i] or not MARK_START.match(s) or s.upper().startswith(CODE_PREFIXES):
+                continue
+            used[i] = True
+            text, x_end = s, f["x"]
+            if not MARK_RE.match(text):
+                for j, g in enumerate(frags):
+                    if used[j] or abs(g["y"] - f["y"]) > 1.0 or g["x"] <= f["x"] or g["x"] - x_end > gap:
+                        continue
+                    if not MARK_PART.match(g["t"].strip()) or not g["t"].strip():
+                        continue
+                    used[j] = True
+                    text += g["t"].strip(); x_end = g["x"]
+                    if MARK_RE.match(text):
+                        break
+            if MARK_RE.match(text):
+                out.append({"code": text.replace(" ", ""), "x": f["x"], "y": f["y"], "layer": L})
+                if len(out) >= limit:
+                    return out
     return out
 
 

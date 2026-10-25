@@ -43,7 +43,8 @@ def local(args):
             json.dump(data, open(cache, "w"), ensure_ascii=False)
             log("  ", data["integrity"], data["warnings"])
         files.append({"id": name, "plan_type": ptype, "format": fmt, "name": name, "data": data})
-    res = crosscheck.run(files, current={})
+    defined = json.load(open(args.marks)) if getattr(args, "marks", None) else None
+    res = crosscheck.run(files, current={}, defined=defined)
     json.dump(res, open(os.path.join(args.out, "result.json"), "w"), ensure_ascii=False, indent=1)
     log("summary", json.dumps(res["summary"], ensure_ascii=False))
     for w in res["warnings"]:
@@ -140,7 +141,7 @@ def _run_crosscheck(db, storage, set_id):
             files.append({"id": f["id"], "plan_type": f["plan_type"], "format": f["format"], "name": f["original_name"],
                           "file_date": (f["detected"] or {}).get("file_date"), "data": data})
         current = db.current_rooms(s["project_id"], s["floor"])
-        res = crosscheck.run(files, current, s)
+        res = crosscheck.run(files, current, s, defined=db.defined_marks(s["project_id"]))
         db.write_crosscheck(s, res, job)
         db.job_done(job, res["summary"], res["warnings"], None)
         log("cross-check", json.dumps(res["summary"], ensure_ascii=False))
@@ -156,6 +157,7 @@ def main(argv=None):
     lp = sub.add_parser("local")
     lp.add_argument("--out", required=True)
     lp.add_argument("--fresh", action="store_true")
+    lp.add_argument("--marks", help="JSON {code: category} — the project's defined marks")
     lp.add_argument("files", nargs="+")
     a = ap.parse_args(argv)
     if a.cmd == "local":

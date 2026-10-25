@@ -334,3 +334,27 @@ end $$;
 
 revoke all on function public.byroom_approve_items(uuid, bigint[]) from public, anon;
 grant execute on function public.byroom_approve_items(uuid, bigint[]) to authenticated;
+
+-- ---------------------------------------------------------------- table rights (25.10.2026)
+-- This project does not give new tables to the API roles by default, so RLS alone is not enough:
+-- the signed-in user (filtered by the policies above) and the functions' service role need these.
+do $$
+declare t text;
+begin
+  foreach t in array array['byroom_plan_sets','byroom_plan_files','byroom_parse_jobs','byroom_room_sources',
+    'byroom_room_review','byroom_plan_views','byroom_floor_maps','byroom_rooms','byroom_room_finishes',
+    'byroom_room_versions','byroom_room_approvals','byroom_room_links']
+  loop
+    execute format('grant select, insert, update, delete on public.%I to authenticated', t);
+    execute format('grant all on public.%I to service_role', t);
+  end loop;
+end $$;
+do $$
+declare s text;
+begin
+  for s in select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+           where n.nspname = 'public' and c.relkind = 'S' and c.relname like 'byroom\_%'
+  loop
+    execute format('grant usage, select on sequence public.%I to authenticated, service_role', s);
+  end loop;
+end $$;

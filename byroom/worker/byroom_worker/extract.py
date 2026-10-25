@@ -35,7 +35,7 @@ def extract(path, fmt):
         hint, kinds = dxf_reader.content_hint(d)
         bounds = rooms.rebuild(d, tags) if tags else {}
         out = {"kind": "dxf", "tags": tags, "loose_names": [{"t": f["t"], "x": f["x"], "y": f["y"]} for f in loose],
-               "codes": codes, "leaders": dxf_reader.leader_lines(d), "boundaries": bounds,
+               "codes": codes, "marks": dxf_reader.mark_tags(d), "leaders": dxf_reader.leader_lines(d), "boundaries": bounds,
                "walls": walls_outline(d) if tags else None,
                "content_hint": hint, "code_kinds": kinds, "integrity": d["integrity"], "warnings": d["warnings"]}
         if not tags:

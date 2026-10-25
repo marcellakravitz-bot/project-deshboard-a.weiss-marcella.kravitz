@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "25.10.2026 · build 220";
+var APP_BUILD = "25.10.2026 · build 222";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -7950,6 +7950,29 @@ function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRT
 // the administrator gets the management screen, a signed-in client or contractor the approved-room viewer.
 var ByRoomAdminLazy = React14.lazy(() => import("./byroom/admin.js").then((m) => ({ default: m.ByRoomAdmin })));
 var ByRoomMemberLazy = React14.lazy(() => import("./byroom/admin.js").then((m) => ({ default: m.ByRoomMember })));
+// What each mark IS, for By Room (25.10.2026, builds 221-222): the LLI rows ticked BY ROOM, under what she corrected
+// on the room list — the same merge the old room screen made — plus the LLI supplier and status (222).
+// Read only; LLI stays the place it is maintained.
+function byRoomMarks(roomsData, boqData, boqFlags, lliRows, lang) {
+  const base = roomsData || roomsBlank();
+  const fromLli = lliRoomMarks(boqData, boqFlags, lliRows, lang);
+  const extra = {};
+  Object.keys(lliRows || {}).forEach((code) => {
+    const v = (lliRows || {})[code];
+    const mk = String((v && v.typeMark) || "").trim().toUpperCase();
+    if (!v || !v.byRoom || !mk) return;
+    extra[mk] = { supplier: String(v.supplier || "").trim(), status: v.status ? lliStatusLabel(v.status, lang) : "" };
+  });
+  const m = { ...(base.marks || {}) };
+  Object.keys(fromLli).forEach((k) => {
+    const own = m[k] || {};
+    const lli = fromLli[k];
+    const x = extra[String(lli.mark || "").trim().toUpperCase()] || {};
+    m[k] = { ...own, cat: own.cat || lli.cat, mark: own.mark || lli.mark, name: own.name || lli.name, desc: own.desc || lli.desc, image: own.image || lli.image,
+      supplier: own.supplier || x.supplier || "", status: x.status || "", fromLli: true };
+  });
+  return m;
+}
 function CardView({
   card,
   cardKey,
@@ -8063,7 +8086,9 @@ function CardView({
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL })), showSchedule && /* @__PURE__ */ React14.createElement(
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
+    categories: BOARD_CATEGORIES.map((c) => ({ key: c.key, he: c.he, en: c.en })),
+    brand: { accent: project.accent || null, clientLogo: project.clientLogoUrl || null, brandLogo: DEFAULT_BRAND_LOGO_URL || null } })), showSchedule && /* @__PURE__ */ React14.createElement(
     ProjectScheduleCard,
     {
       scheduleData,
