@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "22.10.2026 · build 217";
+var APP_BUILD = "25.10.2026 · build 219";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2488,6 +2488,18 @@ var pdfViewer = `
         .sbCatBtn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
         .sbCatBtn.all { font-weight: 800; }
         .sbExportTwo { margin: 12px 0 0; }
+        /* 25.10.26 — the summary above the board. */
+        .sbSumBar {
+          display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+          max-width: 1180px; margin: 12px auto 0;
+        }
+        .sbSumBox {
+          display: inline-flex; align-items: baseline; justify-content: center; gap: 8px;
+          min-width: 120px; padding: 8px 16px; border-radius: 10px;
+          border: 1px solid rgba(0, 0, 0, .06); font-size: 13px; font-weight: 700;
+        }
+        .sbSumBox b { font-size: 20px; font-weight: 800; line-height: 1; }
+        .sbSumBox.total { border-color: var(--accent); }
         .sbExpBtn {
           display: inline-flex; align-items: center; gap: 7px; min-width: 120px; justify-content: center;
           border: 1px solid var(--line); background: #fff; color: var(--steel); border-radius: 10px;
@@ -9510,9 +9522,20 @@ function boqIsHebrew(v) {
   return /[֐-׿]/.test(String(v || ""));
 }
 function boqCode(v) {
-  const m = String(v == null ? "" : v).trim().match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,4})$/);
-  if (!m) return null;
-  return { c: Number(m[1]), s: Number(m[2]), i: Number(m[3]) };
+  const str = String(v == null ? "" : v).trim();
+  let m = str.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,4})$/);
+  if (m) return { c: Number(m[1]), s: Number(m[2]), i: Number(m[3]) };
+  // 25.10.26 — four levels, structure.chapter.sub-chapter.item, the way a
+  // Dekel export numbers it (01.08.01.0010; the Roche BOQ). The first level is
+  // the building or part of the project; the three after it are the same
+  // CC.SS.IIII the rest of the system reads. Structure 00 is the title line of
+  // the whole project and is not a chapter.
+  m = str.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,4})$/);
+  if (m) {
+    if (Number(m[1]) === 0) return null;
+    return { c: Number(m[2]), s: Number(m[3]), i: Number(m[4]), b: Number(m[1]) };
+  }
+  return null;
 }
 function boqKey(c, s, i) {
   return `${c}.${s}.${i}`;
@@ -9529,27 +9552,56 @@ function boqNum(v) {
   return isFinite(n) ? n : 0;
 }
 
-// Pull the four columns out of a sheet given as an array of arrays. The code
-// column is found from the data itself, so a stray title row above the header
-// changes nothing.
+// Pull the four columns out of a sheet given as an array of arrays.
+//
+// 25.10.26 — a new project's bill of quantities came back as "no items in the
+// file". Three things in the old reader could do that, and each is fixed here:
+//   • the code column was the FIRST cell anywhere that looked like a code, so a
+//     date written as text above the header ("25.10.2026" fits the pattern)
+//     sent the reader to the wrong column. It is now the column that holds the
+//     MOST codes;
+//   • only the first sheet was read, so a workbook that opens on a summary
+//     sheet (ריכוז) or splits the chapters over several sheets gave nothing.
+//     Every sheet is read now;
+//   • a code cell carrying an invisible direction mark or a non-breaking space
+//     — common in files exported from Hebrew software — did not match. Those
+//     characters are stripped before the code is read.
+// The description is the column right of the code that carries the most text,
+// so an empty spacer column between them changes nothing.
+function boqCleanCode(v) {
+  return String(v == null ? "" : v).replace(/[‎‏‪-‮⁦-⁩ \s]/g, "").replace(/\.$/, "");
+}
+function boqCodeLoose(v) {
+  return boqCode(boqCleanCode(v));
+}
 function boqRowsFromAoa(aoa) {
-  let codeCol = -1;
-  for (const row of aoa || []) {
-    for (let c = 0; c < (row || []).length; c++) {
-      if (boqCode(row[c])) { codeCol = c; break; }
-    }
-    if (codeCol >= 0) break;
+  const rows = aoa || [];
+  const hits = {};
+  rows.forEach((row) => {
+    (row || []).forEach((cell, c) => { if (boqCodeLoose(cell)) hits[c] = (hits[c] || 0) + 1; });
+  });
+  const cols = Object.keys(hits).map(Number);
+  if (!cols.length) return [];
+  const codeCol = cols.sort((x, y) => hits[y] - hits[x] || x - y)[0];
+  const coded = rows.filter((row) => boqCodeLoose((row || [])[codeCol]));
+  // The description: of the next few columns, the one with the most text.
+  let descCol = codeCol + 1;
+  let best = -1;
+  for (let c = codeCol + 1; c <= codeCol + 4; c++) {
+    const score = coded.reduce((sum, row) => {
+      const v = row[c];
+      return sum + (typeof v === "string" && /[A-Za-z֐-׿]{2}/.test(v) ? 1 : 0);
+    }, 0);
+    if (score > best) { best = score; descCol = c; }
   }
-  if (codeCol < 0) return [];
   const out = [];
-  for (const row of aoa || []) {
-    const code = boqCode((row || [])[codeCol]);
-    if (!code) continue;
+  for (const row of coded) {
+    const code = boqCodeLoose(row[codeCol]);
     out.push({
       ...code,
-      desc: String((row[codeCol + 1] == null ? "" : row[codeCol + 1])).trim().replace(/\s+/g, " "),
-      unit: String((row[codeCol + 2] == null ? "" : row[codeCol + 2])).trim(),
-      qty: row[codeCol + 3] == null || row[codeCol + 3] === "" ? null : boqNum(row[codeCol + 3])
+      desc: String((row[descCol] == null ? "" : row[descCol])).trim().replace(/\s+/g, " "),
+      unit: String((row[descCol + 1] == null ? "" : row[descCol + 1])).trim(),
+      qty: row[descCol + 2] == null || row[descCol + 2] === "" ? null : boqNum(row[descCol + 2])
     });
   }
   return out;
@@ -9558,13 +9610,34 @@ function boqRowsFromAoa(aoa) {
 async function boqReadFile(file) {
   const buf = await file.arrayBuffer();
   const wb = XLSX3.read(buf, { type: "array" });
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const aoa = XLSX3.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: "" });
-  const rows = boqRowsFromAoa(aoa);
+  // Every sheet, the richest first, so its descriptions win where a summary
+  // sheet repeats a chapter code; a code already read is not read twice.
+  const perSheet = wb.SheetNames.map((name) => {
+    const aoa = XLSX3.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: true, defval: "" });
+    return { name, rows: boqRowsFromAoa(aoa) };
+  }).sort((x, y) => y.rows.length - x.rows.length);
+  const seen = {};
+  const rows = [];
+  perSheet.forEach((sh) => sh.rows.forEach((r) => {
+    const k = boqKey(r.c, r.s, r.i);
+    if (seen[k]) return;
+    seen[k] = true;
+    rows.push(r);
+  }));
+  console.info("[awdash] BOQ read", file.name, perSheet.map((sh) => `${sh.name}: ${sh.rows.length}`).join(" | "));
+  // Two buildings in one file would share their chapter numbers. The system
+  // keeps one, so it says so rather than merging them quietly.
+  const structures = Array.from(new Set(rows.filter((r) => r.b != null).map((r) => r.b)));
+  if (structures.length > 1) console.warn("[awdash] BOQ has several structures; only the first copy of each code is kept", structures);
   // The language of the file is decided by the descriptions, not by the file
   // name — either workbook may be uploaded first.
   const hebrew = rows.filter((r) => boqIsHebrew(r.desc)).length;
-  return { lang: hebrew > rows.length / 2 ? "he" : "en", rows, sheetName: wb.SheetNames[0] };
+  return {
+    lang: hebrew > rows.length / 2 ? "he" : "en",
+    rows,
+    sheetName: (perSheet[0] || {}).name || wb.SheetNames[0],
+    sheetNames: wb.SheetNames.slice()
+  };
 }
 
 // One tree from one or two workbooks. Whatever language is missing simply falls
@@ -10463,7 +10536,7 @@ function boardImageKind(dataUrl) {
 
 async function boardXlsxStyled(ExcelJS, opts) {
   const { title, subtitle, sheetName, head, body, widths, accent, isRTL, alertRows, toneRows,
-          imgCol, imgs, colTypes, sections, orientation } = opts;
+          imgCol, imgs, colTypes, sections, orientation, summary } = opts;
   const P = boardExportPalette(accent);
   const wb = new ExcelJS.Workbook();
   wb.creator = "A. Weiss";
@@ -10551,8 +10624,41 @@ async function boardXlsxStyled(ExcelJS, opts) {
   // contractor, supervision, consultants, suppliers — and the workbook is laid
   // out the way the PDF is: a dark band with the group's name, the column
   // titles under it, its rows, a blank line, the next group (14.10.26).
+  // 25.10.26 — the summary row under the title: each count in its own coloured
+  // block across the width of the sheet, then a blank line before the table.
+  const placeSummary = (ri) => {
+    const k = summary.length;
+    const base = Math.floor(n / k);
+    if (base < 1) {
+      ws.mergeCells(ri, 1, ri, n);
+      const c = ws.getCell(ri, 1);
+      c.value = sbSummaryText(summary);
+      c.font = { bold: true, size: 11, name: "Arial", color: { argb: "FF" + boardHexNoHash(P.ink) } };
+      c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+    } else {
+      let extra = n - base * k;
+      let col = 1;
+      summary.forEach((x) => {
+        const span = base + (extra > 0 ? 1 : 0);
+        if (extra > 0) extra--;
+        const c1 = col + span - 1;
+        if (c1 > col) ws.mergeCells(ri, col, ri, c1);
+        const c = ws.getCell(ri, col);
+        c.value = `${x.label}: ${x.n}`;
+        c.font = { bold: true, size: 11, name: "Arial", color: { argb: "FF" + boardHexNoHash(x.ink) } };
+        c.fill = fill(x.bg);
+        c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
+        c.border = { top: thin, left: thin, bottom: thin, right: thin };
+        col = c1 + 1;
+      });
+    }
+    ws.getRow(ri).height = 24;
+  };
+  const hasSum = !!(summary && summary.length);
+
   if (sections) {
     let at = 3;
+    if (hasSum) { placeSummary(3); at = 5; }
     for (const sec of sections) {
       ws.mergeCells(at, 1, at, n);
       const band = ws.getCell(at, 1);
@@ -10679,7 +10785,7 @@ async function boardXlsxStyled(ExcelJS, opts) {
 // The fallback. A real workbook, correct data, right column widths, and the
 // sheet opens the right way round in Hebrew — it simply has no colour.
 function boardXlsxPlain(opts) {
-  const { title, subtitle, sheetName, head, body, widths, isRTL, sections } = opts;
+  const { title, subtitle, sheetName, head, body, widths, isRTL, sections, summary } = opts;
   const blank = head.map(() => "");
   const secAoa = [];
   if (sections) {
@@ -10690,13 +10796,15 @@ function boardXlsxPlain(opts) {
       secAoa.push(blank);
     });
   }
-  const aoa = sections ? [[title], [subtitle]].concat(secAoa) : [[title], [subtitle], head].concat(body);
+  // 25.10.26 — the summary as one line under the title, then a blank line.
+  const sumAoa = summary && summary.length ? [[sbSummaryText(summary)], blank] : [];
+  const aoa = sections ? [[title], [subtitle]].concat(sumAoa, secAoa) : [[title], [subtitle]].concat(sumAoa, [head], body);
   const ws = XLSX3.utils.aoa_to_sheet(aoa);
   ws["!cols"] = widths.map((w) => ({ wch: w }));
   ws["!merges"] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: Math.max(0, head.length - 1) } },
     { s: { r: 1, c: 0 }, e: { r: 1, c: Math.max(0, head.length - 1) } }
-  ];
+  ].concat(sumAoa.length ? [{ s: { r: 2, c: 0 }, e: { r: 2, c: Math.max(0, head.length - 1) } }] : []);
   const wb = XLSX3.utils.book_new();
   XLSX3.utils.book_append_sheet(wb, ws, sheetName || "Sheet1");
   wb.Workbook = { Views: [{ RTL: !!isRTL }] };
@@ -10757,7 +10865,12 @@ window.__awPaged = false;
     fr.className = "frame";
     var body = document.createElement("div");
     body.className = "pgBody";
-    if (hdr) body.appendChild(hdr.cloneNode(true));
+    if (hdr) {
+      var hc = hdr.cloneNode(true);
+      // The summary belongs to the first page only (25.10.26).
+      if (pages.length) { var sr = hc.querySelector(".sumRow"); if (sr) sr.remove(); }
+      body.appendChild(hc);
+    }
     var t = document.createElement("table");
     if (colg) t.appendChild(colg.cloneNode(true));
     if (thead) t.appendChild(thead.cloneNode(true));
@@ -10899,7 +11012,7 @@ function awPrintWhenPaged(w, minDelay) {
 }
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections, imgH, secFlow } = opts;
+          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections, imgH, secFlow, summary } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -10931,6 +11044,11 @@ function boardExportPdf(opts) {
   // the contractor's.
   const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
   const footImg = b.footerImg ? `<div class="footImg" id="footimg"><img src="${b.footerImg}" alt="footer"></div>` : "";
+  // 25.10.26 — the summary under the title, before the table. Part of the
+  // header so the paginator measures it; it is printed on the first page only.
+  const sumHtml = summary && summary.length
+    ? `<div class="sumRow">${summary.map((x) => `<div class="sumBox" style="background:${x.bg};color:${x.ink}"><b>${esc(x.n)}</b><span>${esc(x.label)}</span></div>`).join("")}</div>`
+    : "";
 
   // ---------------------------------------------------------------------------
   // The pages are cut here, not left to the browser.
@@ -10955,6 +11073,10 @@ body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink}; di
 .ttlWrap .sub { font-size: 10px; font-weight: 600; color: ${P.accent}; margin-top: 2px; }
 .ttlWrap .issued { font-size: 9.5px; font-weight: 700; color: ${P.ink}; margin-top: 3px; }
 .hdr img.clientLogo { justify-self: end; }
+.hdr .sumRow { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; margin-top: 4px; }
+.hdr .sumBox { display: inline-flex; align-items: baseline; gap: 5px; border: 1px solid ${P.line}; border-radius: 5px;
+  padding: 2px 10px; font-size: 9.5px; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.hdr .sumBox b { font-size: 13px; font-weight: 800; }
 /* The section's own heading, over the column titles, on every page the section
    occupies. Darker than the column titles so the two read as a heading and a
    sub-heading and not as two bands (15.10.26). */
@@ -10988,7 +11110,7 @@ tbody tr.secRow td, tbody tr.secRow:nth-child(even) td {
   background: ${P.dark}; color: #fff; font-weight: 800; font-size: 12px;
   letter-spacing: .3px; padding: 5px 8px; border: 1px solid ${P.dark}; }
 </style></head><body><div id="src"${secFlow ? ' data-flow="1"' : ""}>
-<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}</div>
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(title)}</div><div class="sub">${esc(subtitle)}</div>${issuedLabel ? `<div class="issued">${esc(issuedLabel)}</div>` : ""}</div>${clientLogo}${sumHtml}</div>
 <table><colgroup>${cols}</colgroup><thead><tr>${th}</tr></thead><tbody>${tr}</tbody></table>
 ${footImg}</div><div id="pages"></div>${printPaginateJs(noStamp ? "" : printedStampText(isRTL ? "he" : "en"))}</body></html>`;
 
@@ -20315,6 +20437,40 @@ function sbBoardRows(opts) {
   });
   return out;
 }
+// 25.10.26 — the summary she reads before the table: what is approved, what is
+// still waiting, and the total. Shown on the screen and printed under the title
+// of the workbook and the PDF. Counted off the very rows the board shows, so
+// the three can never disagree.
+var SB_SUM_L = {
+  approved: { en: "Approved", he: "\u05de\u05d0\u05d5\u05e9\u05e8\u05d9\u05dd" },
+  waiting: { en: "Awaiting approval", he: "\u05de\u05de\u05ea\u05d9\u05e0\u05d9\u05dd \u05dc\u05d0\u05d9\u05e9\u05d5\u05e8" },
+  returned: { en: "Returned for revision", he: "\u05d4\u05d5\u05d7\u05d6\u05e8\u05d5 \u05dc\u05ea\u05d9\u05e7\u05d5\u05df" },
+  draft: { en: "In preparation", he: "\u05d1\u05d4\u05db\u05e0\u05d4" },
+  missing: { en: "Not submitted", he: "\u05d8\u05e8\u05dd \u05d4\u05d5\u05d2\u05e9\u05d5" },
+  total: { en: "Total", he: "\u05e1\u05d4\u05f4\u05db" }
+};
+var SB_SUM_BG = { approved: "#e3f3e6", waiting: "#fdeed8", returned: "#fbe3e3", draft: "#eef0f3", missing: "#f3f0ea", total: "#e8eef7" };
+var SB_SUM_INK = { approved: "#1a7f4b", waiting: "#9a5b0c", returned: "#b3261e", draft: "#5b6472", missing: "#6f6a61", total: "#1A559E" };
+// Approved and awaiting are always shown, so the reader learns where to look;
+// the other three only when there is something in them.
+function sbBoardSummary(rows, lang) {
+  const c = { approved: 0, waiting: 0, returned: 0, draft: 0, missing: 0 };
+  (rows || []).forEach((r) => {
+    const lead = r.lead;
+    if (r.approved) c.approved++;
+    else if (!lead) c.missing++;
+    else if (!lead.sent) c.draft++;
+    else if (r.status === "revise" || r.status === "rejected") c.returned++;
+    else c.waiting++;
+  });
+  const keys = ["approved", "waiting"].concat(["returned", "draft", "missing"].filter((k) => c[k] > 0));
+  return keys
+    .map((k) => ({ key: k, n: c[k], label: sbText(SB_SUM_L[k], lang), bg: SB_SUM_BG[k], ink: SB_SUM_INK[k] }))
+    .concat([{ key: "total", n: (rows || []).length, label: sbText(SB_SUM_L.total, lang), bg: SB_SUM_BG.total, ink: SB_SUM_INK.total }]);
+}
+function sbSummaryText(sum) {
+  return (sum || []).map((x) => `${x.label}: ${x.n}`).join("   \u00b7   ");
+}
 // The contractor column's name on this board (21.10.26).
 var SB_CONTRACTOR_L = { en: "Subcontractor", he: "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" };
 // The trades a submittal is shown to in the subcontractor app (21.10.26).
@@ -21257,6 +21413,12 @@ function SubmittalCard({
     tradeFor: (key) => boardTradeCompany(contacts, contactsCatalog, key, lg)
   });
   const today2 = () => sbFmtDate(new Date().toISOString().slice(0, 10));
+  // The same rows the board and the exports are built from (25.10.26).
+  const summaryOf = (lg) => sbBoardSummary(sbBoardRows({
+    list: visibleList, boqData, boqFlags, lliRows,
+    chkOff: submittalChkOff || {}, lang: lg,
+    categories: chosen ? [chosen] : SUBMITTAL_CATEGORIES
+  }), lg);
   const runExcel = async () => {
     const g = gridOf(lang, "admin");
     if (!g.body.length) { setAllNote(L("nothingToExport")); return; }
@@ -21271,6 +21433,7 @@ function SubmittalCard({
       head: g.head, widths: g.widths, colTypes: g.types,
       sections: grouped.sections, body: grouped.body,
       toneRows: g.tone, imgCol: g.imgCol, imgs: g.imgs,
+      summary: summaryOf(lang),
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setAllNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -21290,6 +21453,7 @@ function SubmittalCard({
       head: g.head, widths: g.widths,
       body: grouped.body, toneRows: grouped.tone, sections: grouped.secs,
       imgCol: g.imgCol, imgs: grouped.imgs, imgH: 48, secFlow: true,
+      summary: summaryOf(lg),
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
   };
@@ -21594,6 +21758,18 @@ function SubmittalCard({
           onClick: () => setSelected(c.key)
         },
         sbText(c, lang)
+      ))
+    ),
+    // 25.10.26 — the summary, between the disciplines and the table: the same
+    // numbers the workbook and the PDF print under their title.
+    sbH(
+      "div",
+      { className: "sbSumBar", role: "status" },
+      summaryOf(lang).map((x) => sbH(
+        "div",
+        { key: x.key, className: `sbSumBox ${x.key}`, style: { background: x.bg, color: x.ink } },
+        sbH("b", null, x.n),
+        sbH("span", null, x.label)
       ))
     ),
     // What the toolbar has open is what is exported.
@@ -22714,7 +22890,12 @@ function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, o
       const parsed = [];
       for (const f of picked) {
         const read = await boqReadFile(f);
-        if (!read.rows.length) throw new Error(t(`לא נמצאו סעיפים ב‑${f.name}`, `No priced items found in ${f.name}`));
+        // 25.10.26 — say what was looked at and what was looked for, so a file in
+        // another layout is recognised at once instead of reading as a fault.
+        if (!read.rows.length) throw new Error(t(
+          `לא נמצאו סעיפים ב‑${f.name}. נבדקו הגיליונות: ${(read.sheetNames || []).join(", ")}. המערכת מחפשת עמודה עם מספרי סעיפים בתבנית 08.01.0010 (פרק.תת־פרק.סעיף), ומימין לה תיאור, יחידה וכמות.`,
+          `No priced items found in ${f.name}. Sheets checked: ${(read.sheetNames || []).join(", ")}. The reader looks for a column of item numbers shaped 08.01.0010 (chapter.sub-chapter.item), followed by description, unit and quantity.`
+        ));
         const stored = await sbUploadFile(projectId, "boq", f);
         files.push({
           name: f.name,
