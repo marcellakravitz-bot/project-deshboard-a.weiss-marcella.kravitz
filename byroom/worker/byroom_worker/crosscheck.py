@@ -249,8 +249,8 @@ def run(files, current=None, set_meta=None, defined=None):
     # ---------------------------------------------------------------- PDF room numbers
     pdf_numbers = defaultdict(list)
     for f in pdfs:
-        if f["plan_type"] == "CL":
-            continue          # ceiling sheets also print heights (280, 460...) — not used to say a room exists
+        if f["plan_type"] in ("CL", "LIGHT"):
+            continue          # ceiling and lighting sheets also print heights (280, 460...) — not used to say a room exists
         fit = placed.get(f["id"])
         if not fit:
             continue

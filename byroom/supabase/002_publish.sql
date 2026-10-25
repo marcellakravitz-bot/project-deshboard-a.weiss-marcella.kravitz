@@ -259,3 +259,7 @@ begin
 end $$;
 revoke all on function public.byroom_publish(text, jsonb) from public, anon;
 grant execute on function public.byroom_publish(text, jsonb) to authenticated;
+
+-- ---------------------------------------------------------------- plan types: sanitary, joinery, lighting (build 223)
+alter table public.byroom_plan_files drop constraint if exists byroom_plan_files_plan_type_check;
+alter table public.byroom_plan_files add constraint byroom_plan_files_plan_type_check check (plan_type in ('FL','FN','CL','SAN','JOIN','LIGHT','MODEL','OTHER'));

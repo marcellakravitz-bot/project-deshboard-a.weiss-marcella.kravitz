@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 3 · 25.10.2026
+//  byroom build 4 · 25.10.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 3 · 25.10.2026";
+export const BYROOM_BUILD = "byroom build 4 · 25.10.2026";
 
 // ----------------------------------------------------------------------------- words
 const W = {
@@ -57,7 +57,7 @@ const STATUS = {
 const CHANGE = { new: "חדש", changed: "שונה", removed: "נמחק", same: "ללא שינוי" };
 const FILE_ST = { pending: "ממתין", uploading: "מעלה", uploaded: "הועלה", processing: "מעבד", ready: "מוכן", failed: "נכשל", removed: "הוסר" };
 const SET_ST = { draft: "טיוטה", uploading: "בהעלאה", processing: "בעיבוד", review: "לבדיקה", partly_approved: "אושרה חלקית", approved: "אושרה", failed: "נכשלה", archived: "בארכיון" };
-const TYPES = { FL: "ריצוף", FN: "חיפויים", CL: "תקרה", MODEL: "מודל Revit", OTHER: "אחר" };
+const TYPES = { FL: "ריצוף", FN: "חיפויים", CL: "תקרה", SAN: "סניטריה", JOIN: "נגרות", LIGHT: "תאורה", MODEL: "מודל Revit", OTHER: "אחר" };
 const FIELDS = ["name", "boundary", "area", "FL", "FN", "CL", "other"];
 const BASE_FIELDS = ["room", "name", "boundary", "area", "FL", "FN", "CL"];
 const FIELD_HE = { room: "חדר", name: "שם", boundary: "גבול", area: "שטח", FL: "ריצוף", FN: "חיפויים", CL: "תקרה", other: "איפיונים נוספים", lighting: "תאורה" };
@@ -94,6 +94,13 @@ const css = `
 .bra-qrgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:12px}
 .bra-qr{border:1px solid #e6e6e9;border-radius:10px;padding:10px;text-align:center;background:#fff}
 .bra-qr img{width:140px;height:140px}
+.bra{width:100%}
+.bra-panel{background:#fff;border:1px solid var(--line,#e6e6e9);border-radius:14px;padding:16px 18px;min-height:calc(var(--appvh, 760px) - 250px);width:100%;box-sizing:border-box}
+.bra-panel table{table-layout:auto}
+.bra-foot{display:flex;justify-content:center;margin:16px 0 4px}
+.bra-foot .ghostBtn{background:#14181f;color:#fff;border-color:#14181f;padding:10px 22px;font-size:13.5px}
+.bra-stamp{text-align:center;font-size:10.5px;color:#9a9da5;margin-top:6px}
+.bra-phone{width:390px;max-width:94vw;height:min(800px,86vh);border-radius:34px;border:10px solid #101114;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(0,0,0,.35)}
 .bra-menu{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 16px}
 .bra-menu button{font:inherit;font-size:15px;padding:12px 18px;border-radius:12px;border:1px solid #d8dbe2;background:#fff;color:#17181c;cursor:pointer;min-width:150px;font-weight:600}
 .bra-menu button.on{background:var(--accent,#17181c);border-color:var(--accent,#17181c);color:#fff}
@@ -137,6 +144,9 @@ export function detectFile(name) {
     else if (/CEIL|תקר/.test(n)) { type = "CL"; why.push("תקרה בשם"); }
     else if (/FLOOR FINISH|ריצוף/.test(n)) { type = "FL"; why.push("ריצוף בשם"); }
     else if (/FINISH|חיפוי/.test(n)) { type = "FN"; why.push("גמר בשם"); }
+    else if (/SANIT|PLUMB|סניטר|אינסטלצ/.test(n)) { type = "SAN"; why.push("סניטריה בשם"); }
+    else if (/JOINER|CARPENT|MILLWORK|נגר/.test(n)) { type = "JOIN"; why.push("נגרות בשם"); }
+    else if (/LIGHT|LIGHTING|תאור/.test(n)) { type = "LIGHT"; why.push("תאורה בשם"); }
   }
   let floor = null;
   const f1 = n.match(/(?:^|[-_\s])L(\d{1,3})(?=[-_\s.])/) || n.match(/(\d{1,3})(?:ST|ND|RD|TH)?[\s_-]*FLOOR/) || n.match(/קומה[\s_-]*(\d{1,3})/);
@@ -377,10 +387,10 @@ function UploadForm({ projectId, onDone, onCancel, L }) {
   </div>`;
 }
 
-function UploadTab({ projectId, projectName, L }) {
+function UploadTab({ projectId, projectName, L, openId, onOpened }) {
   const [sets, setSets] = useState(null);
-  const [adding, setAdding] = useState(false);
-  const [open, setOpen] = useState(null);
+  const [open, setOpen] = useState(openId ?? null);
+  useEffect(() => { if (openId) { setOpen(openId); onOpened?.(); } }, [openId]);
   const load = async () => {
     const s = must(await supabase.from("byroom_plan_sets").select("*").eq("project_id", projectId).order("created_at", { ascending: false }));
     const ids = s.map((x) => x.id);
@@ -392,16 +402,14 @@ function UploadTab({ projectId, projectName, L }) {
   if (open) return html`<${SetScreen} setId=${open} projectName=${projectName} L=${L} onBack=${() => { setOpen(null); load(); }} />`;
   if (!sets) return html`<p>…</p>`;
   return html`<div>
-    ${adding ? html`<${UploadForm} projectId=${projectId} L=${L} onCancel=${() => setAdding(false)} onDone=${(id) => { setAdding(false); setOpen(id); }} />`
-             : html`<div className="bra-row" style=${{ marginBottom: "12px" }}><button className="bra-btn primary" style=${{ padding: "10px 18px", fontSize: "15px" }} onClick=${() => setAdding(true)}>＋ ${L.newVersion}</button></div>`}
-    <h3>${L.versions}</h3>
+    <h3 style=${{ marginTop: 0 }}>${L.versions}</h3>
     ${!sets.length ? html`<p>${L.noSets}</p>` : html`<table>
       <thead><tr><th>${L.name}</th><th>${L.floor}</th><th>${L.revision}</th><th>${L.date}</th><th>${L.remarks}</th><th>${L.files}</th><th>${L.status}</th><th>הועלה</th><th></th></tr></thead>
       <tbody>${sets.map((s) => html`<tr key=${s.id}>
         <td><b>${s.name}</b></td><td>${s.floor}</td><td>${s.revision ?? ""}</td><td>${fmtDay(s.revision_date)}</td>
         <td style=${{ maxWidth: "260px", whiteSpace: "pre-wrap", fontSize: "13px" }}>${s.remarks ?? ""}</td>
         <td>${s.nfiles}${s.formats ? html`<div style=${{ fontSize: "11px", color: "#5b5e66" }}>${s.formats}</div>` : null}</td>
-        <td>${SET_ST[s.status] ?? s.status}${s.published_at ? html`<div style=${{ fontSize: "11px", color: "#1a7f4b" }}>פורסם</div>` : ["approved", "partly_approved"].includes(s.status) ? html`<div style=${{ fontSize: "11px", color: "#b45309" }}>ממתין לפרסום</div>` : null}</td>
+        <td>${SET_ST[s.status] ?? s.status}</td>
         <td style=${{ fontSize: "12px" }}>${fmtDate(s.created_at)}${s.created_email ? html`<div>${s.created_email}</div>` : null}</td>
         <td><button className="bra-btn small" onClick=${() => setOpen(s.id)}>${s.status === "review" || s.status === "partly_approved" ? "בדיקה ואישור" : L.open}</button></td></tr>`)}</tbody></table>`}
   </div>`;
@@ -442,7 +450,7 @@ function SetScreen({ setId, projectName, onBack, L }) {
   return html`<div>
     <div className="bra-row" style=${{ justifyContent: "space-between" }}>
       <div><h2>${set.name || `${L.floor} ${set.floor}`}</h2>
-        <div style=${{ color: "#5b5e66" }}>${projectName} · ${L.floor} ${set.floor}${set.revision ? ` · ${L.revision} ${set.revision}` : ""}${set.revision_date ? ` · ${fmtDay(set.revision_date)}` : ""} · ${SET_ST[set.status]}${set.published_at ? ` · פורסם ${fmtDate(set.published_at)}` : ""}</div>
+        <div style=${{ color: "#5b5e66" }}>${projectName} · ${L.floor} ${set.floor}${set.revision ? ` · ${L.revision} ${set.revision}` : ""}${set.revision_date ? ` · ${fmtDay(set.revision_date)}` : ""} · ${SET_ST[set.status]}</div>
         ${set.remarks ? html`<div style=${{ whiteSpace: "pre-wrap", marginTop: "4px" }}>${set.remarks}</div>` : null}</div>
       <button className="bra-btn" onClick=${onBack}>${L.back}</button>
     </div>
@@ -796,7 +804,7 @@ function RoomsTab({ projectId, projectName, marks, L }) {
       <tbody>${list.map((r) => html`<${React.Fragment} key=${r.id}>
         <tr style=${{ cursor: "pointer", background: open === r.id ? "var(--accent-soft,#eceef1)" : undefined }} onClick=${() => setOpen(open === r.id ? null : r.id)}>
           <td>${r.floor}</td><td><b dir="ltr">${r.room_no}</b> <span style=${{ fontSize: "11px", color: "#5b5e66" }}>${open === r.id ? "▲" : "▼"}</span>
-            ${unpublished(r) ? html`<div><span className="bra-tag" style=${{ color: "#8a3f07", background: "#f7efe3", marginInlineStart: 0 }}>לא פורסם</span></div>` : null}</td>
+</td>
           <td>${r.name ?? ""}</td><td>${r.area ? `${Number(r.area)} מ"ר` : ""}</td>
           ${cell(r, "FL")}${cell(r, "FN")}${cell(r, "CL")}<td>${others(r).map(chip)}</td></tr>
         ${open === r.id ? html`<tr><td colSpan="8" style=${{ background: "#fafafa" }}>
@@ -810,7 +818,7 @@ function RoomsTab({ projectId, projectName, marks, L }) {
           <div style=${{ marginTop: "10px" }}><button className="bra-btn small" onClick=${() => setMapFloor(r.floor)}>הצגה על מפת הקומה</button></div>
         </td></tr>` : null}
       </${React.Fragment}>`)}</tbody></table></div>
-    <p style=${{ fontSize: "12px", color: "#5b5e66" }}>השם, התיאור, התמונה והספק של כל איפיון נמשכים מה-LLI (שורות BY ROOM). * = נוסף ידנית. "לא פורסם" = אושר אחרי הפרסום האחרון, והלקוח עוד לא רואה אותו.</p>
+    <p style=${{ fontSize: "12px", color: "#5b5e66" }}>השם, התיאור, התמונה והספק של כל איפיון נמשכים מה-LLI (שורות BY ROOM). * = נוסף ידנית.</p>
   </div>`;
 }
 
@@ -942,68 +950,81 @@ function QrLinks({ projectId, projectName, L }) {
   </div>`;
 }
 
-// ============================================================================= publish
-/** "פרסום": approved changes reach the client and the QR page only when she presses it. */
-function PublishBar({ projectId, projectName, marks, brand, onPreview }) {
-  const [st, setSt] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const load = async () => {
-    const p = must(await supabase.from("byroom_projects").select("published_at, published_email").eq("project_id", projectId).limit(1)).at(0) ?? null;
-    let q = supabase.from("byroom_rooms").select("id", { count: "exact", head: true }).eq("project_id", projectId);
-    if (p?.published_at) q = q.gt("updated_at", p.published_at);
-    const { count } = await q;
-    setSt({ ...p, pending: count ?? 0 });
+// ============================================================================= preview + publish
+/** What the link WILL show once published: the approved layer as it is now, with the dashboard's own marks. */
+function previewApi(projectId, projectName, marks, brand) {
+  const lookup = markIndex(marks);
+  const roomsOf = async (f) => {
+    const rooms = must(await supabase.from("byroom_rooms").select("id, floor, room_no, name, area").eq("project_id", projectId).eq("status", "active").eq("floor", f));
+    const ids = rooms.map((r) => r.id), fin = [];
+    for (let i = 0; i < ids.length; i += 300) fin.push(...must(await supabase.from("byroom_room_finishes").select("room_id, kind, code").in("room_id", ids.slice(i, i + 300))));
+    return rooms.map((r) => ({ n: r.room_no, name: r.name, area: r.area, items: fin.filter((x) => x.room_id === r.id).map((x) => ({ kind: x.kind, code: x.code })) }));
   };
-  useEffect(() => { load(); const t = setInterval(load, 20000); return () => clearInterval(t); }, [projectId]);
-  const publish = async () => {
-    if (!confirm(`לפרסם ללקוח את כל מה שאושר בפרויקט ${projectName}?\nמהרגע הזה הקישורים וקודי ה-QR יציגו את הנתונים המעודכנים.`)) return;
-    setBusy(true);
-    try {
-      await syncMarks(projectId, marks);
-      const r = must(await supabase.rpc("byroom_publish", { p_project: projectId, p_meta: {
-        name: projectName, accent: brand?.accent ?? null, clientLogo: brand?.clientLogo ?? null, brandLogo: brand?.brandLogo ?? null,
-        categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he, en: c.en })) } }));
-      alert(`פורסם: ${r.rooms} חדרים ב-${r.floors} קומות.`);
-      load();
-    } catch (e) { alert(e.message); }
-    setBusy(false);
+  const full = (i) => { const m = lookup(i.kind, i.code); return { ...i, name: m?.name && m.name !== i.code ? m.name : null, description: m?.desc ?? null, image: m?.image ?? null, supplier: m?.supplier ?? null, status: m?.status ?? null }; };
+  return {
+    home: async () => {
+      const r = must(await supabase.from("byroom_rooms").select("floor, room_no, name").eq("project_id", projectId).eq("status", "active"));
+      const floors = [...new Set(r.map((x) => x.floor))].sort((a, b) => Number(a) - Number(b));
+      return { project: { name: projectName, clientLogo: brand?.clientLogo, supervisionLogo: brand?.supervisionLogo, categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he })) },
+        floors: floors.map((f) => ({ floor: f, rooms: r.filter((x) => x.floor === f).map((x) => ({ n: x.room_no, name: x.name })) })) };
+    },
+    floor: async (f) => {
+      const map = must(await supabase.from("byroom_floor_maps").select("data").eq("project_id", projectId).eq("floor", f).eq("approved", true).order("created_at", { ascending: false }).limit(1)).at(0)?.data ?? null;
+      return { map, rooms: (await roomsOf(f)).map((r) => ({ ...r, items: r.items.map(full) })) };
+    },
+    room: async (f, n) => {
+      const r = (await roomsOf(f)).find((x) => x.n.toLowerCase() === String(n).toLowerCase());
+      return { room: r ? { ...r, items: r.items.map(full) } : null };
+    },
   };
-  if (!st) return null;
-  return html`<div className="bra-card bra-row bra-noprint" style=${{ justifyContent: "space-between", padding: "10px 14px" }}>
-    <div style=${{ fontSize: "14px" }}>
-      ${st.published_at ? html`<span>פורסם ללקוח: <b>${fmtDate(st.published_at)}</b></span>` : html`<b>עדיין לא פורסם ללקוח</b>`}
-      ${st.pending ? html`<span style=${{ color: "#b45309", marginInlineStart: "10px" }}>· ${st.pending} חדרים עם שינויים מאושרים שעוד לא פורסמו</span>`
-                   : st.published_at ? html`<span style=${{ color: "#1a7f4b", marginInlineStart: "10px" }}>· הלקוח רואה את המצב המעודכן</span>` : null}
-    </div>
-    <div className="bra-row">
-      ${st.published_at ? html`<button className="bra-btn" onClick=${onPreview}>תצוגת לקוח</button>` : null}
-      <button className="bra-btn primary" disabled=${busy} onClick=${publish}>${busy ? "מפרסם…" : "פרסום ללקוח"}</button>
-    </div>
-  </div>`;
+}
+
+async function publishNow(projectId, projectName, marks, brand) {
+  if (!confirm(`לפרסם ללקוח את כל מה שאושר בפרויקט ${projectName}?\nמהרגע הזה הקישורים וקודי ה-QR יציגו את הנתונים המעודכנים.`)) return;
+  try {
+    await syncMarks(projectId, marks);
+    const r = must(await supabase.rpc("byroom_publish", { p_project: projectId, p_meta: {
+      name: projectName, clientLogo: brand?.clientLogo ?? null, supervisionLogo: brand?.supervisionLogo ?? null,
+      categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he, en: c.en })) } }));
+    alert(`פורסם: ${r.rooms} חדרים ב-${r.floors} קומות.`);
+  } catch (e) { alert(e.message); }
 }
 
 // ============================================================================= the screen
+// One toolbar, like the other boards: upload · versions · rooms · links / QR · preview. Publish sits at the bottom:
+// upload, check the rooms, look at the preview, then publish (her order, 25.10.26).
 export function ByRoomAdmin({ projectId, projectName, marks, categories, brand, isRTL = true }) {
   const L = W.he;
   CATS = categories || [];
   syncMarksNow = () => syncMarks(projectId, marks);
-  const [tab, setTab] = useState("upload");
+  const [tab, setTab] = useState("versions");
+  const [openSet, setOpenSet] = useState(null);
   const [preview, setPreview] = useState(false);
-  const api = useMemo(() => tablesApi(projectId, projectName), [projectId, projectName]);
-  const tabs = [["upload", L.upload], ["rooms", L.roomsList], ["qr", L.qr]];
+  const [busy, setBusy] = useState(false);
+  const api = useMemo(() => previewApi(projectId, projectName, marks, brand), [projectId, projectName, marks, brand]);
+  const tabs = [["upload", L.upload], ["versions", "גרסאות"], ["rooms", L.roomsList], ["qr", L.qr]];
+  const on = { background: "#14181f", color: "#fff", borderColor: "#14181f" };
   return html`<div className="bra" dir="rtl">
     <style>${css}${viewCss}</style>
-    <div className="bra-row" style=${{ justifyContent: "space-between" }}><h2>${L.title} · ${projectName}</h2><span style=${{ fontSize: "11px", color: "#9a9da5" }}>${BYROOM_BUILD}</span></div>
-    <${PublishBar} projectId=${projectId} projectName=${projectName} marks=${marks} brand=${brand} onPreview=${() => setPreview(true)} />
-    <div className="bra-menu bra-noprint">${tabs.map(([k, t]) => html`<button key=${k} className=${tab === k ? "on" : ""} onClick=${() => setTab(k)}>${t}</button>`)}</div>
-    ${tab === "upload" && html`<${UploadTab} projectId=${projectId} projectName=${projectName} L=${L} />`}
-    ${tab === "rooms" && html`<${RoomsTab} projectId=${projectId} projectName=${projectName} marks=${marks} L=${L} />`}
-    ${tab === "qr" && html`<${QrLinks} projectId=${projectId} projectName=${projectName} L=${L} />`}
-    ${preview ? html`<div style=${{ position: "fixed", inset: 0, zIndex: 1000, background: "#fff", display: "flex", flexDirection: "column" }}>
-      <div className="bra-row" style=${{ padding: "8px 12px", background: "#17181c", color: "#fff", justifyContent: "space-between" }}>
-        <span>תצוגת לקוח — כך נראה הקישור בטלפון (מה שפורסם בלבד)</span><button className="bra-btn small" onClick=${() => setPreview(false)}>סגירה</button></div>
-      <div style=${{ flex: 1, minHeight: 0, display: "flex", justifyContent: "center", background: "#e6e6e9" }}>
-        <div style=${{ width: "100%", maxWidth: "430px", height: "100%", background: "#fff" }}><${ByRoomViewer} api=${api} /></div></div></div>` : null}
+    <div className="lliBar bra-noprint" style=${{ marginBottom: "12px" }}>
+      ${tabs.map(([k, t]) => html`<button key=${k} type="button" className="ghostBtn small" style=${tab === k ? on : undefined} onClick=${() => { setTab(k); setOpenSet(null); }}>${t}</button>`)}
+      <button type="button" className="ghostBtn small" onClick=${() => setPreview(true)}>תצוגה מקדימה</button>
+    </div>
+    <div className="bra-panel">
+      ${tab === "upload" && html`<${UploadForm} projectId=${projectId} L=${L} onCancel=${() => setTab("versions")} onDone=${(id) => { setOpenSet(id); setTab("versions"); }} />`}
+      ${tab === "versions" && html`<${UploadTab} projectId=${projectId} projectName=${projectName} L=${L} openId=${openSet} onOpened=${() => setOpenSet(null)} />`}
+      ${tab === "rooms" && html`<${RoomsTab} projectId=${projectId} projectName=${projectName} marks=${marks} L=${L} />`}
+      ${tab === "qr" && html`<${QrLinks} projectId=${projectId} projectName=${projectName} L=${L} />`}
+    </div>
+    <div className="bra-foot bra-noprint"><button type="button" className="ghostBtn" disabled=${busy}
+      onClick=${async () => { setBusy(true); await publishNow(projectId, projectName, marks, brand); setBusy(false); }}>${busy ? "מפרסם…" : "פרסום ללקוח"}</button></div>
+    <div className="bra-stamp">${BYROOM_BUILD}</div>
+    ${preview ? html`<div style=${{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(16,17,20,.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px" }}
+        onClick=${(e) => e.target === e.currentTarget && setPreview(false)}>
+      <div style=${{ color: "#fff", fontSize: "13px", fontWeight: 700 }}>תצוגה מקדימה — כך יראו הלקוח, האדריכל והפיקוח את הקישור (כולל מה שאושר ועוד לא פורסם)</div>
+      <div className="bra-phone"><${ByRoomViewer} api=${api} /></div>
+      <button type="button" className="ghostBtn small" onClick=${() => setPreview(false)}>סגירה</button>
+    </div>` : null}
   </div>`;
 }
 

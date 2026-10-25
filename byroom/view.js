@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/view.js — the client's By Room: view only, mobile first. A. Weiss · By Room
-//  byroom build 3 · 25.10.2026
+//  byroom build 4 · 25.10.2026
 //
 //  One copy, used by the phone page opened from a QR code or a link (byroom/index.html)
 //  and by the By Room cube for a signed-in client inside the dashboard.
@@ -13,7 +13,8 @@
 //    api.home()            -> { project: {name, accent, clientLogo, brandLogo, categories}, floors: [{floor, rooms:[{n,name}]}] }
 //    api.floor(f)          -> { map, rooms: [{n, name, area, items:[{kind, code, name}]}] }
 //    api.room(f, n)        -> { room: {n, name, area, items:[{kind, code, name, description, image, supplier, status}]} }
-//  Colours are the site's own: --accent / --accent-ink / --accent-soft (the project's colour) and the grey scale.
+//  Look: the subcontractor app's (her decision, 25.10.26) — the dark bar with the A. Weiss logo, navy accents,
+//  pill buttons — with the client's and the supervision company's logos on the opening screen.
 // =============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
@@ -36,20 +37,22 @@ const T = {
 };
 
 export const viewCss = `
-.brv{--a:var(--accent,#17181c);--ai:var(--accent-ink,#000);--as:var(--accent-soft,#eceef1);--ink:var(--ink,#17181c);--steel:#5b5e66;--mist:#9a9da5;--ln:#e6e6e9;--bg2:#f6f6f7;
+.brv{--a:#101114;--ai:#103460;--as:#e9eef6;--ink:#17181c;--steel:#5b5e66;--mist:#9a9da5;--ln:#e6e6e9;--bg2:#f6f6f7;
   font-family:'Assistant','Inter',system-ui,sans-serif;color:var(--ink);background:var(--bg2);min-height:100%;height:100%;display:flex;flex-direction:column;position:relative}
 .brv *{box-sizing:border-box}
 .brv button{font-family:inherit}
-.brv-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fff;border-bottom:1px solid var(--ln);min-height:56px}
-.brv-bar .t{flex:1;min-width:0;font-weight:700;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.brv-icon{width:40px;height:40px;border-radius:12px;border:1px solid var(--ln);background:#fff;font-size:18px;color:var(--ink);cursor:pointer;flex:none}
-.brv-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:32px 20px 40px;text-align:center}
-.brv-logos{display:flex;align-items:center;justify-content:center;gap:22px;flex-wrap:wrap}
-.brv-logos img{max-height:56px;max-width:160px;object-fit:contain}
-.brv-home h1{font-size:28px;font-weight:800;margin:0;line-height:1.2}
-.brv-home .sub{color:var(--steel);font-size:16px;margin-top:-12px}
-.brv-big{width:100%;max-width:360px;display:flex;flex-direction:column;gap:12px}
-.brv-big button{padding:18px 20px;border-radius:16px;border:1px solid var(--ln);background:#fff;font-size:18px;font-weight:700;color:var(--ink);cursor:pointer;display:flex;align-items:center;gap:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.brv-bar{display:flex;align-items:center;gap:10px;padding:calc(env(safe-area-inset-top) + 10px) 14px 10px;background:#101114;color:#fff;min-height:54px;position:sticky;top:0;z-index:4}
+.brv-bar .t{flex:1;min-width:0;font-weight:800;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.brv-bar .logo{height:28px;width:auto;display:block;flex:none}
+.brv-bar .sp{width:40px;flex:none}
+.brv-icon{width:40px;height:40px;border-radius:999px;border:0;background:transparent;font-size:18px;color:#b9bcc4;cursor:pointer;flex:none}
+.brv-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:28px 18px 40px;text-align:center}
+.brv-logos{display:flex;align-items:center;justify-content:center;gap:26px;flex-wrap:wrap}
+.brv-logos img{max-height:56px;max-width:150px;object-fit:contain}
+.brv-home h1{font-size:24px;font-weight:800;margin:0;line-height:1.25}
+.brv-home .sub{color:var(--ai);font-size:14.5px;font-weight:800;margin-top:-12px}
+.brv-big{width:100%;max-width:380px;display:flex;flex-direction:column;gap:12px}
+.brv-big button{padding:16px 20px;border-radius:999px;border:1px solid var(--ln);background:#fff;font-size:16px;font-weight:800;color:var(--ai);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
 .brv-big button.p{background:var(--a);border-color:var(--a);color:#fff}
 .brv-big button span.i{font-size:22px;width:28px;text-align:center}
 .brv-search{padding:14px;background:#fff;border-bottom:1px solid var(--ln)}
@@ -63,14 +66,14 @@ export const viewCss = `
 .brv-msg{padding:28px 18px;text-align:center;color:var(--steel)}
 .brv-chips{display:flex;gap:8px;overflow:auto;padding:10px 14px;background:#fff;border-bottom:1px solid var(--ln)}
 .brv-chip{flex:none;padding:9px 16px;border-radius:999px;border:1px solid var(--ln);background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
-.brv-chip.on{background:var(--a);border-color:var(--a);color:#fff}
+.brv-chip.on{background:var(--ai);border-color:var(--ai);color:#fff}
 .brv-planwrap{flex:1;display:flex;min-height:0}
 .brv-map{flex:1;position:relative;overflow:hidden;touch-action:none;background:#fff;min-height:55vh}
 .brv-map svg{position:absolute;inset:0;width:100%;height:100%;display:block;user-select:none}
 .brv-zoom{position:absolute;bottom:14px;inset-inline-start:14px;display:flex;flex-direction:column;gap:8px}
 .brv-zoom button{width:46px;height:46px;border-radius:14px;border:1px solid var(--ln);background:#fff;font-size:22px;color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .brv-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(23,24,28,.78);color:#fff;font-size:14px;padding:6px 14px;border-radius:999px;pointer-events:none;white-space:nowrap}
-.brv-shade{position:fixed;inset:0;background:rgba(23,24,28,.45);z-index:20;display:flex;align-items:center;justify-content:center;padding:14px}
+.brv-shade{position:absolute;inset:0;background:rgba(23,24,28,.45);z-index:20;display:flex;align-items:center;justify-content:center;padding:14px}
 .brv-modal{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:88vh;overflow:auto;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.25)}
 .brv-side{width:min(440px,42%);border-inline-start:1px solid var(--ln);background:#fff;overflow:auto;position:relative}
 .brv-x{position:absolute;top:12px;inset-inline-end:12px;width:40px;height:40px;border-radius:50%;border:0;background:var(--bg2);font-size:18px;cursor:pointer;color:var(--ink);z-index:2}
@@ -85,7 +88,7 @@ export const viewCss = `
 .brv-item .n{font-size:15px}
 .brv-item .d{font-size:13px;color:var(--steel);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .brv-btn{font:inherit;font-size:15px;font-weight:600;padding:11px 16px;border-radius:12px;border:1px solid var(--ln);background:#fff;color:var(--ink);cursor:pointer}
-.brv-btn.p{background:var(--a);border-color:var(--a);color:#fff}
+.brv-btn.p{background:var(--a);border-color:var(--a);color:#fff;border-radius:999px;padding:12px 20px}
 .brv-full{padding:0 0 20px}
 .brv-full img{width:100%;max-height:52vh;object-fit:contain;background:var(--bg2);display:block;border-radius:20px 20px 0 0}
 .brv-full .b{padding:16px 18px}
@@ -99,6 +102,7 @@ export const viewCss = `
 const catLabel = (k, cats) => KIND[k]?.he ?? (k === "lighting" ? T.lighting : cats?.find((c) => c.key === k)?.he ?? k);
 const catOrder = (a, b) => { const x = ORDER.indexOf(a), y = ORDER.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.localeCompare(b); };
 const roomSort = (a, b) => { const x = /^(\d+)(.*)$/.exec(a.n), y = /^(\d+)(.*)$/.exec(b.n); return x && y ? Number(x[1]) - Number(y[1]) || x[2].localeCompare(y[2]) : a.n.localeCompare(b.n); };
+const AW_LOGO = new URL("../sub/logo.png", import.meta.url).href;   // the same logo the subcontractor app shows
 const wide = () => typeof window !== "undefined" && !!window.matchMedia?.("(min-width: 900px)").matches;
 
 // ----------------------------------------------------------------------------- plan
@@ -170,9 +174,9 @@ export function FloorMap({ map, selected, onPick }) {
         const pick = () => { if (!moved.current) onPick(r.n); };
         const rad = fs * (String(r.n).length > 3 ? 1.25 : 1.05);
         return html`<g key=${r.n} onClick=${pick} style=${{ cursor: "pointer" }}>
-          ${r.d ? html`<path d=${r.d} style=${{ fill: on ? "var(--accent-soft,#eceef1)" : "rgba(255,255,255,.01)", stroke: on ? "var(--accent,#17181c)" : "transparent", strokeWidth: on ? 10 : 0 }} />` : null}
-          <circle cx=${r.x} cy=${r.y} r=${rad} style=${{ fill: on ? "var(--accent,#17181c)" : "#fff", stroke: "var(--accent,#17181c)", strokeWidth: fs / 7 }} />
-          <text x=${r.x} y=${r.y + fs / 3} fontSize=${fs * 0.9} textAnchor="middle" fontWeight="800" style=${{ fill: on ? "#fff" : "var(--accent-ink,#000)", fontFamily: "Assistant, Inter, sans-serif" }}>${r.n}</text>
+          ${r.d ? html`<path d=${r.d} style=${{ fill: on ? "#e9eef6" : "rgba(255,255,255,.01)", stroke: on ? "#103460" : "transparent", strokeWidth: on ? 10 : 0 }} />` : null}
+          <circle cx=${r.x} cy=${r.y} r=${rad} style=${{ fill: on ? "#103460" : "#fff", stroke: "#103460", strokeWidth: fs / 7 }} />
+          <text x=${r.x} y=${r.y + fs / 3} fontSize=${fs * 0.9} textAnchor="middle" fontWeight="800" style=${{ fill: on ? "#fff" : "#103460", fontFamily: "Assistant, Inter, sans-serif" }}>${r.n}</text>
         </g>`;
       })}
     </svg>
@@ -217,7 +221,7 @@ function ItemCard({ it, cats }) {
   return html`<div className="brv-full">
     ${it.image ? html`<img src=${it.image} alt="" />` : html`<div style=${{ height: "56px" }} />`}
     <div className="b">
-      <div style=${{ fontSize: "13px", color: "var(--accent-ink,#000)", fontWeight: 800 }}>${catLabel(it.kind, cats)}</div>
+      <div style=${{ fontSize: "13px", color: "#103460", fontWeight: 800 }}>${catLabel(it.kind, cats)}</div>
       <h3 dir="ltr" style=${{ textAlign: "start" }}>${it.code}</h3>
       ${it.name && it.name !== it.code ? html`<div className="n">${it.name}</div>` : null}
       ${it.description ? html`<div className="d">${it.description}</div>` : null}
@@ -258,7 +262,7 @@ export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false 
 
   const p = home?.project ?? {};
   const cats = p.categories;
-  const style = p.accent?.accent && !embedded ? { "--accent": p.accent.accent, "--accent-ink": p.accent.accentInk ?? p.accent.accent, "--accent-soft": p.accent.accentSoft ?? "#eceef1" } : undefined;
+  const style = undefined;
   const all = useMemo(() => (home?.floors ?? []).flatMap((f) => f.rooms.map((r) => ({ ...r, floor: f.floor }))), [home]);
   const qq = q.trim().toLowerCase();
   const results = qq ? all.filter((r) => r.n.toLowerCase().includes(qq) || (r.name ?? "").toLowerCase().includes(qq)).sort(roomSort) : all.slice().sort((a, b) => Number(a.floor) - Number(b.floor) || roomSort(a, b));
@@ -266,8 +270,9 @@ export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false 
   const toPlan = () => { const c = card; setScreen("plan"); setFloor(c.floor); setCard({ ...c, from: "plan" }); };
 
   const bar = (title, onBack) => html`<div className="brv-bar">
-    ${onBack ? html`<button className="brv-icon" onClick=${onBack} aria-label=${T.back}>→</button>` : null}
+    ${onBack ? html`<button className="brv-icon" onClick=${onBack} aria-label=${T.back}>→</button>` : html`<span className="sp" />`}
     <div className="t">${title}</div>
+    <img className="logo" src=${AW_LOGO} alt="A. Weiss" />
   </div>`;
 
   if (err) return html`<div className="brv" dir="rtl" style=${style}><style>${viewCss}</style><div className="brv-msg">${err}</div></div>`;
@@ -277,8 +282,8 @@ export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false 
   const fd = floorData[floor];
   return html`<div className="brv" dir="rtl" style=${style}>
     <style>${viewCss}</style>
-    ${screen === "home" ? html`<div className="brv-home">
-        <div className="brv-logos">${p.brandLogo ? html`<img src=${p.brandLogo} alt="A. Weiss" />` : null}${p.clientLogo ? html`<img src=${p.clientLogo} alt="" />` : null}</div>
+    ${screen === "home" ? html`${bar("By Room", null)}<div className="brv-home">
+        ${p.clientLogo || p.supervisionLogo ? html`<div className="brv-logos">${p.clientLogo ? html`<img src=${p.clientLogo} alt="" />` : null}${p.supervisionLogo ? html`<img src=${p.supervisionLogo} alt="" />` : null}</div>` : null}
         <h1>${p.name ?? ""}</h1>
         <div className="sub">חומרי גמר ואיפיונים לפי חדר</div>
         ${!home.floors.length ? html`<div className="brv-msg">${T.notYet}</div>` : html`<div className="brv-big">
