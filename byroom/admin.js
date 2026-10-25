@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 4 · 25.10.2026
+//  byroom build 5 · 25.10.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 4 · 25.10.2026";
+export const BYROOM_BUILD = "byroom build 5 · 25.10.2026";
 
 // ----------------------------------------------------------------------------- words
 const W = {
@@ -95,12 +95,20 @@ const css = `
 .bra-qr{border:1px solid #e6e6e9;border-radius:10px;padding:10px;text-align:center;background:#fff}
 .bra-qr img{width:140px;height:140px}
 .bra{width:100%}
+table.bra-files{table-layout:fixed}
+table.bra-files td{overflow-wrap:anywhere}
+.bra-err.clamp{font-size:12px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:2px}
+.bra-acts{display:flex;gap:6px;flex-wrap:nowrap;justify-content:flex-end}
+.bra-acts .bra-btn{white-space:nowrap}
+.bra-trash{border:0;background:none;cursor:pointer;color:#9a9da5;padding:4px;border-radius:6px;display:inline-flex}
+.bra-trash:hover:not(:disabled){color:#c0392b;background:#fbe4e6}
+.bra-trash:disabled{opacity:.35;cursor:default}
 .bra-panel{background:#fff;border:1px solid var(--line,#e6e6e9);border-radius:14px;padding:16px 18px;min-height:calc(var(--appvh, 760px) - 250px);width:100%;box-sizing:border-box}
 .bra-panel table{table-layout:auto}
 .bra-foot{display:flex;justify-content:center;margin:16px 0 4px}
 .bra-foot .ghostBtn{background:#14181f;color:#fff;border-color:#14181f;padding:10px 22px;font-size:13.5px}
 .bra-stamp{text-align:center;font-size:10.5px;color:#9a9da5;margin-top:6px}
-.bra-phone{width:390px;max-width:94vw;height:min(800px,86vh);border-radius:34px;border:10px solid #101114;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.bra-phone{height:calc(100vh - 96px);max-height:740px;aspect-ratio:9/19;width:auto;max-width:94vw;border-radius:30px;border:8px solid #101114;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(0,0,0,.35)}
 .bra-menu{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 16px}
 .bra-menu button{font:inherit;font-size:15px;padding:12px 18px;border-radius:12px;border:1px solid #d8dbe2;background:#fff;color:#17181c;cursor:pointer;min-width:150px;font-weight:600}
 .bra-menu button.on{background:var(--accent,#17181c);border-color:var(--accent,#17181c);color:#fff}
@@ -404,14 +412,19 @@ function UploadTab({ projectId, projectName, L, openId, onOpened }) {
   return html`<div>
     <h3 style=${{ marginTop: 0 }}>${L.versions}</h3>
     ${!sets.length ? html`<p>${L.noSets}</p>` : html`<table>
-      <thead><tr><th>${L.name}</th><th>${L.floor}</th><th>${L.revision}</th><th>${L.date}</th><th>${L.remarks}</th><th>${L.files}</th><th>${L.status}</th><th>הועלה</th><th></th></tr></thead>
+      <thead><tr><th>${L.name}</th><th>${L.floor}</th><th>${L.revision}</th><th>${L.date}</th><th>${L.remarks}</th><th>${L.files}</th><th>${L.status}</th><th>הועלה</th><th></th><th></th></tr></thead>
       <tbody>${sets.map((s) => html`<tr key=${s.id}>
         <td><b>${s.name}</b></td><td>${s.floor}</td><td>${s.revision ?? ""}</td><td>${fmtDay(s.revision_date)}</td>
         <td style=${{ maxWidth: "260px", whiteSpace: "pre-wrap", fontSize: "13px" }}>${s.remarks ?? ""}</td>
         <td>${s.nfiles}${s.formats ? html`<div style=${{ fontSize: "11px", color: "#5b5e66" }}>${s.formats}</div>` : null}</td>
         <td>${SET_ST[s.status] ?? s.status}</td>
         <td style=${{ fontSize: "12px" }}>${fmtDate(s.created_at)}${s.created_email ? html`<div>${s.created_email}</div>` : null}</td>
-        <td><button className="bra-btn small" onClick=${() => setOpen(s.id)}>${s.status === "review" || s.status === "partly_approved" ? "בדיקה ואישור" : L.open}</button></td></tr>`)}</tbody></table>`}
+        <td><button className="bra-btn small" onClick=${() => setOpen(s.id)}>${s.status === "review" || s.status === "partly_approved" ? "בדיקה ואישור" : L.open}</button></td>
+        <td>${(() => { const kept = ["approved", "partly_approved"].includes(s.status); return html`<button className="bra-trash" disabled=${kept}
+          title=${kept ? "גרסה שאושרו ממנה שינויים נשמרת לתיעוד ואי אפשר למחוק אותה" : "מחיקת הגרסה"} aria-label="מחיקת הגרסה"
+          onClick=${async () => { if (!confirm(`למחוק את הגרסה "${s.name}" (קומה ${s.floor}) עם כל ${s.nfiles} הקבצים שלה?\nהקבצים יימחקו גם מהאחסון. אי אפשר לבטל.`)) return;
+            try { await fn({ action: "delete_set", set_id: s.id }); load(); } catch (e) { alert(e.message); } }}>
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg></button>`; })()}</td></tr>`)}</tbody></table>`}
   </div>`;
 }
 
@@ -456,18 +469,19 @@ function SetScreen({ setId, projectName, onBack, L }) {
     </div>
 
     <h3>${L.files}</h3>
-    ${files.length ? html`<table><thead><tr><th>קובץ</th><th>${L.type}</th><th>${L.floor}</th><th>${L.size}</th><th>${L.status}</th><th>זוהה בתוכן</th><th></th></tr></thead>
+    ${files.length ? html`<table className="bra-files"><colgroup><col style=${{ width: "34%" }} /><col style=${{ width: "9%" }} /><col style=${{ width: "6%" }} /><col style=${{ width: "8%" }} /><col style=${{ width: "9%" }} /><col style=${{ width: "12%" }} /><col style=${{ width: "22%" }} /></colgroup>
+      <thead><tr><th>קובץ</th><th>${L.type}</th><th>${L.floor}</th><th>${L.size}</th><th>${L.status}</th><th>זוהה בתוכן</th><th></th></tr></thead>
       <tbody>${files.map((f) => html`<tr key=${f.id}>
-        <td>${f.original_name}${f.error ? html`<div className="bra-err">${f.error}</div>` : null}</td>
+        <td className="nm"><bdi dir="auto">${f.original_name}</bdi>${f.error ? html`<div className="bra-err clamp" dir="auto" title=${f.error}>${f.error}</div>` : null}</td>
         <td>${TYPES[f.plan_type]}</td><td>${f.floor}</td><td>${fmtSize(f.size_bytes)}</td>
         <td>${FILE_ST[f.status]}${f.status === "uploading" ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>${L.resumeHint}</div>` : null}</td>
         <td style=${{ fontSize: "12px" }}>${f.detected?.content_hint ? `${TYPES[f.detected.content_hint] ?? f.detected.content_hint}${f.detected.content_hint !== f.plan_type && f.detected.content_hint !== "MODEL" ? " ⚠" : ""}` : ""}
           ${f.detected?.dates?.length ? html`<div>תאריכים: ${f.detected.dates.slice(0, 3).join(", ")}</div>` : null}</td>
-        <td className="bra-row">
+        <td><div className="bra-acts">
           ${f.format === "pdf" && f.archive_path ? html`<button className="bra-btn small" onClick=${async () => window.open((await fn({ action: "pdf_url", file_id: f.id })).url)}>${L.pdf}</button>` : null}
           ${["failed", "ready"].includes(f.status) ? html`<button className="bra-btn small" onClick=${async () => { await fn({ action: "reprocess", file_id: f.id }); load(); }}>${L.reprocess}</button>` : null}
           <button className="bra-btn small" onClick=${async () => { if (confirm(`להסיר את ${f.original_name} מהגרסה?`)) { await fn({ action: "remove_file", file_id: f.id }); load(); } }}>${L.remove}</button>
-        </td></tr>`)}</tbody></table>` : html`<p>עדיין אין קבצים בגרסה הזו.</p>`}
+        </div></td></tr>`)}</tbody></table>` : html`<p>עדיין אין קבצים בגרסה הזו.</p>`}
 
     ${adding || files.some((f) => ["pending", "uploading", "failed"].includes(f.status)) ? html`
       <${DropZone} onFiles=${(l) => { setStaged((s) => [...s, ...stageRows(l, set.floor, files)]); setConfirmed(false); }} L=${L} />
@@ -1019,11 +1033,12 @@ export function ByRoomAdmin({ projectId, projectName, marks, categories, brand, 
     <div className="bra-foot bra-noprint"><button type="button" className="ghostBtn" disabled=${busy}
       onClick=${async () => { setBusy(true); await publishNow(projectId, projectName, marks, brand); setBusy(false); }}>${busy ? "מפרסם…" : "פרסום ללקוח"}</button></div>
     <div className="bra-stamp">${BYROOM_BUILD}</div>
-    ${preview ? html`<div style=${{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(16,17,20,.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "12px" }}
+    ${preview ? html`<div style=${{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(16,17,20,.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "16px 0" }}
         onClick=${(e) => e.target === e.currentTarget && setPreview(false)}>
-      <div style=${{ color: "#fff", fontSize: "13px", fontWeight: 700 }}>תצוגה מקדימה — כך יראו הלקוח, האדריכל והפיקוח את הקישור (כולל מה שאושר ועוד לא פורסם)</div>
+      <div style=${{ display: "flex", alignItems: "center", gap: "12px", color: "#fff", fontSize: "12.5px", fontWeight: 700 }}>
+        <span>תצוגה מקדימה — כך יראו הלקוח, האדריכל והפיקוח את הקישור</span>
+        <button type="button" className="ghostBtn small" onClick=${() => setPreview(false)}>סגירה</button></div>
       <div className="bra-phone"><${ByRoomViewer} api=${api} /></div>
-      <button type="button" className="ghostBtn small" onClick=${() => setPreview(false)}>סגירה</button>
     </div>` : null}
   </div>`;
 }

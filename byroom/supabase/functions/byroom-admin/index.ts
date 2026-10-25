@@ -9,6 +9,7 @@
 //   remove_file   {file_id}           take a file out of its set (its work object is deleted)
 //   purge         {file_ids: [...]}   delete work files (DXF/RVT) the administrator chose to clean
 //   pdf_url       {file_id}           a one-hour link to view an archived PDF
+//   delete_set    {set_id}            delete a version and its files (refused once anything from it was approved)
 import { createClient } from "npm:@supabase/supabase-js@2.49.4";
 import { cors, deleteObject, env, json, objectMeta, resumableSession, runJob, signedUrl } from "../_shared/gcp.ts";
 
@@ -92,6 +93,23 @@ Deno.serve(async (req) => {
         done.push(id);
       }
       return json({ purged: done });
+    }
+
+    // a whole version, with its files in storage. A version some changes were approved from stays, as the record.
+    if (a === "delete_set") {
+      const { data: set } = await sb.from("byroom_plan_sets").select("id, status").eq("id", body.set_id).single();
+      if (!set) return json({ error: "version not found" }, 404);
+      const { count } = await sb.from("byroom_room_review").select("id", { count: "exact", head: true }).eq("set_id", set.id).eq("decision", "approved");
+      if (count || ["approved", "partly_approved"].includes(set.status)) return json({ error: "שינויים מהגרסה הזו כבר אושרו — היא נשמרת לתיעוד ואי אפשר למחוק אותה" }, 409);
+      const { data: files } = await sb.from("byroom_plan_files").select("object_path, archive_path, derived_path").eq("set_id", set.id);
+      for (const f of files ?? []) {
+        if (f.object_path) await deleteObject(env.work(), f.object_path);
+        if (f.derived_path) await deleteObject(env.work(), f.derived_path);
+        if (f.archive_path) await deleteObject(env.archive(), f.archive_path);
+      }
+      const { error } = await sb.from("byroom_plan_sets").delete().eq("id", set.id);
+      if (error) throw new Error(error.message);
+      return json({ ok: true, files: (files ?? []).length });
     }
 
     if (a === "pdf_url") {
