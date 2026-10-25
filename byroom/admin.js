@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 5 · 25.10.2026
+//  byroom build 7 · 25.10.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,8 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 5 · 25.10.2026";
+export const BYROOM_BUILD = "byroom build 7 · 25.10.2026";
+if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
 const W = {
@@ -108,7 +109,7 @@ table.bra-files td{overflow-wrap:anywhere}
 .bra-foot{display:flex;justify-content:center;margin:16px 0 4px}
 .bra-foot .ghostBtn{background:#14181f;color:#fff;border-color:#14181f;padding:10px 22px;font-size:13.5px}
 .bra-stamp{text-align:center;font-size:10.5px;color:#9a9da5;margin-top:6px}
-.bra-phone{height:calc(100vh - 96px);max-height:740px;aspect-ratio:9/19;width:auto;max-width:94vw;border-radius:30px;border:8px solid #101114;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+.bra-phone{height:min(660px,calc(100vh - 140px));height:min(660px,calc(100dvh - 140px));aspect-ratio:9/19;width:auto;max-width:94vw;border-radius:30px;border:8px solid #101114;overflow:hidden;background:#fff;box-shadow:0 24px 60px rgba(0,0,0,.35)}
 .bra-menu{display:flex;gap:10px;flex-wrap:wrap;margin:12px 0 16px}
 .bra-menu button{font:inherit;font-size:15px;padding:12px 18px;border-radius:12px;border:1px solid #d8dbe2;background:#fff;color:#17181c;cursor:pointer;min-width:150px;font-weight:600}
 .bra-menu button.on{background:var(--accent,#17181c);border-color:var(--accent,#17181c);color:#fff}
@@ -494,8 +495,11 @@ function SetScreen({ setId, projectName, onBack, L }) {
 
     ${note.warnings?.length ? html`<div className="bra-warn"><b>${L.warnings}</b><ul>${note.warnings.map((w, i) => html`<li key=${i}>${w}</li>`)}</ul></div>` : null}
     ${jobs.filter((j) => j.status === "failed").slice(0, 3).map((j) => html`<div className="bra-warn bra-err" key=${j.id}>${j.kind === "crosscheck" ? "הצלבה" : "עיבוד"} נכשל: ${j.error}</div>`)}
-    ${files.some((f) => f.status === "ready") ? html`<div className="bra-row" style=${{ margin: "8px 0" }}>
-      <button className="bra-btn small" onClick=${async () => { await fn({ action: "crosscheck", set_id: setId }); load(); }}>${L.crosscheck}</button></div>` : null}
+    ${files.some((f) => ["ready", "failed"].includes(f.status)) ? html`<div className="bra-row" style=${{ margin: "8px 0" }}>
+      ${files.some((f) => f.status === "ready") ? html`<button className="bra-btn small" onClick=${async () => { await fn({ action: "crosscheck", set_id: setId }); load(); }}>${L.crosscheck}</button>` : null}
+      <button className="bra-btn small" title="קורא שוב את כל קבצי הגרסה (אחרי עדכון של שרת העיבוד), ובסוף מצליב"
+        onClick=${async () => { const all = files.filter((f) => ["ready", "failed"].includes(f.status)); if (!confirm(`לעבד מחדש את כל ${all.length} הקבצים בגרסה?`)) return;
+          try { for (const f of all) await fn({ action: "reprocess", file_id: f.id }); } catch (e) { alert(e.message); } load(); }}>עיבוד מחדש לכל הקבצים</button></div>` : null}
 
     ${reviewable ? html`<${Review} set=${set} files=${files} L=${L} onApproved=${load} />` : null}
     <div className="bra-sec"><h3>${L.history}</h3><${History} setId=${setId} L=${L} /></div>
@@ -1032,7 +1036,6 @@ export function ByRoomAdmin({ projectId, projectName, marks, categories, brand, 
     </div>
     <div className="bra-foot bra-noprint"><button type="button" className="ghostBtn" disabled=${busy}
       onClick=${async () => { setBusy(true); await publishNow(projectId, projectName, marks, brand); setBusy(false); }}>${busy ? "מפרסם…" : "פרסום ללקוח"}</button></div>
-    <div className="bra-stamp">${BYROOM_BUILD}</div>
     ${preview ? html`<div style=${{ position: "fixed", inset: 0, zIndex: 1000, background: "rgba(16,17,20,.55)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "10px", padding: "16px 0" }}
         onClick=${(e) => e.target === e.currentTarget && setPreview(false)}>
       <div style=${{ display: "flex", alignItems: "center", gap: "12px", color: "#fff", fontSize: "12.5px", fontWeight: 700 }}>

@@ -1,6 +1,6 @@
 # By Room — מודול נפרד באתר A. Weiss
 
-byroom build 5 · 25.10.2026 (אתר: build 223)
+byroom build 7 · 25.10.2026 (אתר: build 223)
 
 כל הקוד של By Room נמצא בתיקייה הזו. הדשבורד (`index.html` בשורש) רק טוען את המודול ומפנה אליו מהקובייה.
 כל הנתונים נשמרים ב-Supabase, בטבלאות שמתחילות ב-`byroom_`. המודול לא כותב ל-`app_state`.
@@ -19,7 +19,7 @@ byroom build 5 · 25.10.2026 (אתר: build 223)
 | `supabase/functions/byroom-admin` | צד השרת של המנהל: העלאה ל-Google Cloud, הפעלת עיבוד, ניקוי, קישור PDF | Supabase › Edge Functions |
 | `supabase/functions/byroom-public` | מה שהקישור / QR קורא: רק הנתונים שפורסמו | Supabase › Edge Functions (בלי אימות JWT) |
 | `supabase/functions/_shared/gcp.ts` | גישה ל-Google Cloud משותפת לשתי הפונקציות | עם הפונקציות |
-| `worker/` | קוד העיבוד (Python): DXF, PDF, RVT, הצלבה, מפת קומה; קורא כל איפיון שמוגדר בפרויקט | Google Cloud Run, דרך GitHub Actions |
+| `worker/` | קוד העיבוד (Python): DXF, PDF, RVT, הצלבה, מפת קומה; קורא כל איפיון שמוגדר בפרויקט. בלי DXF עם תוויות חדרים — מצב PDF בלבד (`pdfmode.py`): חדרים מתוויות הגיליון (מספר, שם, שטח), איפיונים לפי קרבה, מפה = תמונת הגיליון. DXF שהומר מ-PDF מזוהה ומדולג | Google Cloud Run, דרך GitHub Actions |
 | `cloud/setup.sh` | הקמה חד-פעמית של Google Cloud (ב-Cloud Shell) | הורץ 25.10.2026 |
 
 מחוץ לתיקייה:
