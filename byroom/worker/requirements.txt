@@ -1,0 +1,6 @@
+ezdxf==1.4.5
+shapely==2.2.0
+numpy==2.5.3
+olefile==0.47
+psycopg[binary]==3.2.12
+google-cloud-storage==3.4.1

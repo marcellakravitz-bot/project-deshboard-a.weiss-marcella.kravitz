@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>A. Weiss · By Room</title>
+<!-- By Room — the page a QR code opens. View only, no sign-in: the project key in the link is the key.
+     byroom build 1 · 24.10.2026 -->
+<style>
+  html, body, #root { margin: 0; height: 100%; background: #f4f5f7; }
+  #boot { font-family: system-ui, "Segoe UI", Arial, sans-serif; color: #5b6170; padding: 32px; text-align: center; }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client?external=react"
+  }
+}
+</script>
+</head>
+<body>
+<div id="root"><div id="boot">טוען…</div></div>
+<script type="module">
+import React from "react";
+import { createRoot } from "react-dom/client";
+import { RoomViewer } from "./view.js";
+import { BYROOM_FUNCTIONS } from "./config.js";
+
+const p = new URLSearchParams(location.search);
+const k = p.get("k") || "";
+const api = (q) => fetch(`${BYROOM_FUNCTIONS}/byroom-public?${new URLSearchParams({ k, ...q })}`).then(async (r) => {
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || "לא ניתן לטעון");
+  return j;
+});
+
+async function start() {
+  const root = createRoot(document.getElementById("root"));
+  let floors = [], project = "";
+  try {
+    const f = await api({});
+    floors = f.floors || []; project = f.project || "";
+  } catch (e) {
+    document.getElementById("boot").textContent = e.message === "this link is no longer valid" ? "הקישור אינו בתוקף" : e.message;
+    return;
+  }
+  const floor = p.get("f") && floors.includes(p.get("f")) ? p.get("f") : floors[0];
+  root.render(React.createElement(RoomViewer, {
+    title: project,
+    floors,
+    initialFloor: floor,
+    initialRoom: p.get("r"),
+    lang: "he",
+    load: (fl, room) => {
+      const q = new URLSearchParams(location.search);
+      q.set("f", fl); room ? q.set("r", room) : q.delete("r");
+      history.replaceState(null, "", "?" + q);
+      return api(room ? { f: fl, r: room } : { f: fl });
+    },
+    openSheet: async (fl, kind) => {
+      const w = window.open("", "_blank");
+      try { const j = await api({ f: fl, pdf: kind }); if (w) w.location = j.url; else location.href = j.url; }
+      catch (e) { if (w) w.close(); alert(e.message); }
+    },
+  }));
+}
+start();
+</script>
+</body>
+</html>
