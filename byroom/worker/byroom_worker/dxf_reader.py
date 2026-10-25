@@ -70,13 +70,44 @@ def _hatch_rings(h):
     return [r for r in rings if len(r) >= 2]
 
 
+def _resync(path):
+    """A DXF is pairs of lines: group code, value. Some exports break a text value across two lines, which shifts
+    every pair after it ("Invalid group code" — even recover mode stops there). Where a code line is not a number,
+    the line is joined back onto the value before it. Returns the cleaned copy and how many lines were joined."""
+    out, fixed = path + ".resync.dxf", 0
+    with open(path, "rb") as src, open(out, "wb") as dst:
+        prev = None
+        while True:
+            code = src.readline()
+            if not code:
+                break
+            if not code.strip().lstrip(b"-").isdigit():
+                if prev is not None:                       # a stray line of the previous value
+                    prev = prev.rstrip(b"\r\n") + b" " + code.strip() + b"\r\n"
+                    fixed += 1
+                continue
+            if prev is not None:
+                dst.write(prev)
+            value = src.readline()
+            dst.write(code)
+            prev = value
+        if prev is not None:
+            dst.write(prev)
+    return out, fixed
+
+
 def load(path):
     """Open a DXF. A damaged file is opened in recover mode and the damage is reported, not hidden."""
     warnings = []
     try:
         doc = ezdxf.readfile(path)
     except ezdxf.DXFStructureError as ex:
-        doc, auditor = recover.readfile(path)
+        try:
+            doc, auditor = recover.readfile(path)
+        except ezdxf.DXFStructureError:
+            clean, fixed = _resync(path)
+            doc, auditor = recover.readfile(clean)
+            warnings.append(f"בקובץ היו {fixed} שורות טקסט שבורות (ערך שנחתך לשתי שורות) — חוברו בחזרה")
         warnings.append(f"קובץ ה-DXF פגום ונפתח במצב שחזור: {ex}")
         if auditor.has_errors:
             warnings.append(f"שחזור: {len(auditor.errors)} שגיאות, {len(auditor.fixes)} תיקונים")
