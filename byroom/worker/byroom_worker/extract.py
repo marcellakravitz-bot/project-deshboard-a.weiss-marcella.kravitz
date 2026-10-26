@@ -36,10 +36,16 @@ def extract(path, fmt):
         bounds = rooms.rebuild(d, tags) if tags else {}
         out = {"kind": "dxf", "tags": tags, "loose_names": [{"t": f["t"], "x": f["x"], "y": f["y"]} for f in loose],
                "codes": codes, "marks": dxf_reader.mark_tags(d), "leaders": dxf_reader.leader_lines(d), "boundaries": bounds,
-               "walls": walls_outline(d) if tags else None,
+               "walls": walls_outline(d) if tags else None, "converted_from_pdf": False,
                "content_hint": hint, "code_kinds": kinds, "integrity": d["integrity"], "warnings": d["warnings"]}
         if not tags:
-            out["warnings"].append("אין תוויות חדרים ב-DXF הזה")
+            # a PDF converted to DXF: one layer, the text broken into single letters — nothing a PDF does not already say
+            single = sum(1 for t in d["texts"] if len(t["t"].strip()) <= 1)
+            if d["texts"] and single > 0.8 * len(d["texts"]) and len(d["layers"]) <= 2:
+                out["converted_from_pdf"] = True
+                out["warnings"].append("ה-DXF הזה הומר מ-PDF (הטקסט מפורק לאותיות) — אין בו מידע שאין ב-PDF; הקריאה תיעשה מקובצי ה-PDF")
+            else:
+                out["warnings"].append("אין תוויות חדרים ב-DXF הזה")
     elif fmt == "pdf":
         d = pdf_reader.read(path)
         hint, kinds = pdf_reader.content_hint(d)

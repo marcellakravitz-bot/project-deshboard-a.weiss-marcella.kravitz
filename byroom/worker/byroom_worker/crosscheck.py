@@ -129,7 +129,12 @@ def run(files, current=None, set_meta=None, defined=None):
     base = next((f for f in with_tags if f["plan_type"] == "FL"), None) or next((f for f in with_tags if f["plan_type"] == "FN"), None) \
         or (with_tags[0] if with_tags else None)
     if base is None:
-        return {"items": [], "sources": [], "views": [], "map": None, "warnings": ["אין בגרסה DXF עם תוויות חדרים — אין על מה להצליב"],
+        # no DXF with room tags: read the rooms from the PDF sheets alone
+        from . import pdfmode
+        res = pdfmode.run(files, current, set_meta, defined, (_current_value, _same))
+        if res is not None:
+            return res
+        return {"items": [], "sources": [], "views": [], "map": None, "warnings": ["אין בגרסה DXF עם תוויות חדרים ואין גיליונות PDF — אין על מה להצליב"],
                 "summary": {}}
     F = Floor(base["data"])
     pattern = _floor_pattern(list(F.tags))
