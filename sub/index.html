@@ -118,6 +118,22 @@
   .shots img{width:74px;height:74px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
   .shots label{width:74px;height:74px;border:1px dashed var(--line);border-radius:10px;
     display:flex;align-items:center;justify-content:center;font-size:24px;color:var(--mist);cursor:pointer}
+  /* 03.11.26 — rejects */
+  .rjBtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin:0 0 14px;
+    border:1px solid var(--line);background:var(--surface);border-radius:var(--radius);padding:14px;
+    font:inherit;font-weight:800;font-size:15px;color:var(--navy);cursor:pointer}
+  .rjRow{display:block;width:100%;text-align:right;font:inherit;background:var(--surface);border:1px solid var(--line);
+    border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;cursor:pointer;color:inherit}
+  .rjRow.ok{background:#e3f3e6;border-color:#9fd3ae}
+  .rjRow .n{font-weight:800;color:var(--steel);margin-left:6px}
+  .rjRow .meta{font-size:12px;color:var(--mist);margin-top:4px}
+  .rjInfo{font-size:12.5px;color:var(--steel);text-align:center;margin:-6px 0 12px}
+  .rjField{font-size:12px;font-weight:800;color:var(--steel);margin:10px 0 2px}
+  .rjVal{font-size:14.5px;line-height:1.6;white-space:pre-wrap}
+  .rjNote{font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line)}
+  .rjNote b{color:var(--steel);direction:ltr;unicode-bidi:isolate;margin-left:6px}
+  .rjDone{display:flex;align-items:center;gap:10px;font-weight:800;font-size:15px}
+  .rjDone input{width:22px;height:22px;accent-color:#1f7a3e}
   .files{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
   .file{display:flex;align-items:center;justify-content:center;width:88px;height:88px;
     border:1px solid var(--line);border-radius:10px;background:#f7f8fa;overflow:hidden;
@@ -203,7 +219,7 @@
 </div>
 
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">13.9.2026 · build 33</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">03.11.2026 · build 34</span></footer>
 
 <script>
 
@@ -215,6 +231,7 @@
 // ---------------------------------------------------------------------------
 var API = "https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/sub-portal";
 var TOKEN_KEY = "awsub.token";
+var RJ_API = "https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/sub-rejects";
 var SEEN_KEY = "awsub.seen";
 // What this phone has already looked at, per project, per trade, per cube.
 // Notifications. Asked for once, after the code is set — never on the very
@@ -492,6 +509,7 @@ function loadBoard(){
   call({action:"board", token:state.token, projectId:state.project, trade:state.trade}).then(function(r){
     if(r.ok){
       state.board=r.data;
+      rjCount();
       // The first time this phone opens this trade there is nothing to call
       // new. Take it all as read, and let the dots mean something from here.
       var fk="awsub.first|"+(state.project||"")+"|"+(state.trade||state.board.trade||"");
@@ -517,13 +535,14 @@ var TRADES=[
 function tradePicker(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
-  app.innerHTML=navBar()+projHead(false)+
+  app.innerHTML=navBar()+projHead(false)+rjEntry()+
     '<p class="lead">בחרו תחום</p><div class="grid">'+TRADES.map(function(t){
       return '<button class="pcube" data-t="'+t.k+'"><span class="t">'+esc(t.t)+'</span></button>';
     }).join("")+'</div>';
   Array.prototype.forEach.call(app.querySelectorAll(".pcube"), function(b){
     b.onclick=function(){ state.trade=b.getAttribute("data-t"); history.pushState({s:1},""); loadBoard(); };
   });
+  rjWire();
   wireNav();
 }
 function wireNav(){
@@ -557,7 +576,7 @@ function navBar(){
 function board(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
-  var head=navBar()+projHead(true);
+  var head=navBar()+projHead(true)+rjEntry();
   app.innerHTML = head+'<div class="grid">'+CUBES.map(function(c){
     return '<button class="cube'+(isNew(c.key)?" fresh":"")+'" data-k="'+c.key+'">'+
            (isNew(c.key)?'<span class="dot" aria-label="עדכון חדש"></span>':'')+
@@ -573,7 +592,199 @@ function board(){
       render();
     };
   });
+  rjWire();
   wireNav();
+}
+
+// ---------------------------------------------------------------- rejects (03.11.26)
+// Lists made on the dashboard (or here, by a project manager). A project
+// manager sees every list and adds rows, photos and notes; a subcontractor sees
+// only the lists shared with him, and reads them. sub-rejects decides which.
+function rjCall(body){
+  body.token=state.token; body.projectId=state.project;
+  return fetch(RJ_API,{ method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body) })
+    .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, data:j }; },
+      function(){ return { ok:false, status:r.status, data:{} }; }); });
+}
+function rjCount(){
+  state.rjN=null;
+  rjCall({action:"lists"}).then(function(r){
+    if(!r.ok) return;
+    state.rjN=(r.data.lists||[]).length; state.rjPm=!!r.data.isPm;
+    if(!state.rj && !state.screen && !state.doc) render();
+  }).catch(function(){});
+}
+function rjEntry(){
+  var pm=state.board&&state.board.isPm;
+  if(!pm && !state.rjN) return "";
+  return '<button class="rjBtn" id="rjGo">'+icon("M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9")+
+    'ריג\'קטים'+(state.rjN?' ('+state.rjN+')':'')+'</button>';
+}
+function rjWire(){
+  var g=document.getElementById("rjGo");
+  if(g) g.onclick=function(){ history.pushState({s:1},""); state.rj={view:"lists"}; rjLoadLists(); };
+}
+function rjLoadLists(){
+  busy("טוען רשימות…");
+  rjCall({action:"lists"}).then(function(r){
+    if(!r.ok){ retry("טעינת הרשימות נכשלה."); return; }
+    state.rj={view:"lists", lists:r.data.lists||[], isPm:!!r.data.isPm};
+    render();
+  }).catch(function(){ retry("אין חיבור לרשת."); });
+}
+function rjLoadList(id, then){
+  busy("טוען את הרשימה…");
+  rjCall({action:"list", listId:id}).then(function(r){
+    if(!r.ok){ retry("טעינת הרשימה נכשלה."); return; }
+    var keep=state.rj||{};
+    state.rj={view:keep.view==="card"?"card":"list", list:r.data.list, isPm:!!r.data.isPm, rowId:keep.rowId, edit:false};
+    if(then) then();
+    render();
+  }).catch(function(){ retry("אין חיבור לרשת."); });
+}
+function rjThumb(file){
+  return new Promise(function(res){
+    var url=URL.createObjectURL(file), img=new Image();
+    img.onload=function(){
+      var sc=Math.min(1,480/Math.max(img.width,img.height)), c=document.createElement("canvas");
+      c.width=Math.max(1,Math.round(img.width*sc)); c.height=Math.max(1,Math.round(img.height*sc));
+      var g=c.getContext("2d"); g.fillStyle="#fff"; g.fillRect(0,0,c.width,c.height); g.drawImage(img,0,0,c.width,c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL("image/jpeg",0.72));
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); res(""); };
+    img.src=url;
+  });
+}
+function rjShots(arr){
+  if(!arr||!arr.length) return "";
+  return '<div class="files">'+arr.map(function(p){
+    return p.url ? '<a class="file img" href="'+esc(p.url)+'" target="_blank" rel="noopener"><img src="'+esc(p.thumb)+'" alt=""></a>'
+                 : '<span class="file img"><img src="'+esc(p.thumb)+'" alt=""></span>';
+  }).join("")+'</div>';
+}
+var rjDraft=null;
+function rjView(){
+  var rj=state.rj;
+  out.hidden=false;
+  document.querySelector(".bar").classList.remove("guest");
+  var head=projHead(false);
+  if(rj.view==="lists"){
+    var add=rj.isPm ? (rjDraft&&rjDraft.newList
+      ? '<div class="form"><input id="rjName" placeholder="שם הרשימה" value="">'+
+        '<input id="rjDate" type="date" value="'+esc(new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10))+'">'+
+        '<input id="rjAtt" placeholder="נוכחים בסיור"><div class="row"><button id="rjMk">יצירה</button><button id="rjNo" class="ghost">ביטול</button></div></div>'
+      : '<div class="writeBar"><button id="rjNew">+ רשימה חדשה</button></div>') : "";
+    app.innerHTML=head+'<div class="head"><button class="back" id="b">→ חזרה</button><h2>ריג\'קטים</h2></div>'+add+
+      (rj.lists.length ? rj.lists.map(function(l){
+        return '<button class="rjRow'+(l.count&&l.done===l.count?" ok":"")+'" data-l="'+esc(l.id)+'"><b>'+esc(l.name||"ללא שם")+'</b>'+
+          '<div class="meta">'+(l.list_date?'<span dir="ltr">'+esc(fmt(l.list_date))+'</span> · ':'')+l.done+'/'+l.count+' טופלו</div></button>';
+      }).join("") : empty("אין רשימות."));
+    document.getElementById("b").onclick=function(){ history.back(); };
+    Array.prototype.forEach.call(app.querySelectorAll("[data-l]"), function(el){
+      el.onclick=function(){ history.pushState({s:1},""); state.rj={view:"list"}; rjLoadList(el.getAttribute("data-l")); };
+    });
+    var nw=document.getElementById("rjNew"); if(nw) nw.onclick=function(){ rjDraft={newList:true}; render(); };
+    var no=document.getElementById("rjNo"); if(no) no.onclick=function(){ rjDraft=null; render(); };
+    var mk=document.getElementById("rjMk");
+    if(mk) mk.onclick=function(){
+      var nm=document.getElementById("rjName").value.trim();
+      if(!nm){ alert("צריך שם לרשימה."); return; }
+      mk.disabled=true; mk.textContent="שומר…";
+      rjCall({action:"new-list", name:nm, list_date:document.getElementById("rjDate").value, attendees:document.getElementById("rjAtt").value})
+        .then(function(r){
+          rjDraft=null;
+          if(!r.ok){ alert("היצירה נכשלה."); rjLoadLists(); return; }
+          history.pushState({s:1},""); state.rj={view:"list"}; rjLoadList(r.data.id);
+        }).catch(function(){ mk.disabled=false; mk.textContent="יצירה"; alert("אין חיבור."); });
+    };
+    return;
+  }
+  var l=rj.list||{rows:[]};
+  if(rj.view==="list"){
+    var info=[l.list_date?'<span dir="ltr">'+esc(fmt(l.list_date))+'</span>':"", l.attendees?"נוכחים: "+esc(l.attendees):""].filter(Boolean).join(" · ");
+    app.innerHTML=head+'<div class="head"><button class="back" id="b">→ חזרה</button><h2>'+esc(l.name||"ללא שם")+'</h2></div>'+
+      (info?'<p class="rjInfo">'+info+'</p>':'')+
+      (rj.isPm?'<div class="writeBar"><button id="rjAdd">+ שורה</button></div>':'')+
+      (l.rows.length ? l.rows.map(function(r,i){
+        return '<button class="rjRow'+(r.done?" ok":"")+'" data-r="'+esc(r.id)+'"><span class="n">'+(i+1)+'</span>'+
+          (r.floor?'<b>קומה '+esc(r.floor)+'</b> · ':'')+esc((r.desc||"").slice(0,90))+
+          '<div class="meta">'+[r.owner?esc(r.owner):"", r.due?'<span dir="ltr">'+esc(fmt(r.due))+'</span>':"",
+            r.photos.length?r.photos.length+" תמונות":"", r.done?"טופל ✓":""].filter(Boolean).join(" · ")+'</div></button>';
+      }).join("") : empty("אין שורות ברשימה."));
+    document.getElementById("b").onclick=function(){ history.back(); };
+    Array.prototype.forEach.call(app.querySelectorAll("[data-r]"), function(el){
+      el.onclick=function(){ history.pushState({s:1},""); state.rj.view="card"; state.rj.rowId=el.getAttribute("data-r"); state.rj.edit=false; render(); };
+    });
+    var ad=document.getElementById("rjAdd");
+    if(ad) ad.onclick=function(){ history.pushState({s:1},""); state.rj.view="card"; state.rj.rowId=null; state.rj.edit=true;
+      rjDraft={row:{floor:"",desc:"",owner:"",due:"",done:false},photos:[],note:""}; render(); };
+    return;
+  }
+  // the card: one row with everything on it
+  var idx=-1, row=null;
+  l.rows.forEach(function(r,i){ if(r.id===rj.rowId){ row=r; idx=i; } });
+  if(rj.edit){
+    var d=rjDraft||{row:{},photos:[],note:""};
+    var v=function(k){ return esc(d.row[k]!=null?d.row[k]:(row?row[k]:"")); };
+    app.innerHTML=head+'<div class="head"><button class="back" id="b">→ חזרה</button><h2>'+(row?'שורה '+(idx+1):'שורה חדשה')+'</h2></div>'+
+      '<div class="form">'+
+      '<label class="rjDone"><input type="checkbox" id="rjD"'+((d.row.done!=null?d.row.done:(row&&row.done))?" checked":"")+'> טופל</label>'+
+      '<input id="rjF" placeholder="קומה" value="'+v("floor")+'">'+
+      '<textarea id="rjT" placeholder="תיאור">'+v("desc")+'</textarea>'+
+      '<input id="rjO" placeholder="אחריות" value="'+v("owner")+'">'+
+      '<div class="rjField">מועד לביצוע</div><input id="rjU" type="date" value="'+v("due")+'">'+
+      '<div class="rjField">תמונות</div><div class="shots">'+
+        (row?row.photos:[]).map(function(p){return '<img src="'+esc(p.thumb)+'" alt="">'}).join("")+
+        d.photos.map(function(p){return '<img src="'+p.thumb+'" alt="">'}).join("")+
+        '<label title="צילום">📷<input id="rjCam" type="file" accept="image/*" capture="environment" style="display:none"></label>'+
+        '<label title="מהגלריה">+<input id="rjGal" type="file" accept="image/*" multiple style="display:none"></label></div>'+
+      (row&&row.notes.length?'<div class="rjField">הערות</div>'+row.notes.map(function(n){return '<div class="rjNote"><b>'+esc(fmt(n.at))+'</b>'+esc(n.text)+'</div>'}).join(""):"")+
+      '<textarea id="rjN" placeholder="הערה חדשה (תישמר עם התאריך של היום)" style="min-height:70px">'+esc(d.note||"")+'</textarea>'+
+      '<div class="row"><button id="rjS">שמירה</button><button id="rjC" class="ghost">ביטול</button></div></div>';
+    var keep=function(){
+      d.row.floor=document.getElementById("rjF").value; d.row.desc=document.getElementById("rjT").value;
+      d.row.owner=document.getElementById("rjO").value; d.row.due=document.getElementById("rjU").value;
+      d.row.done=document.getElementById("rjD").checked; d.note=document.getElementById("rjN").value; rjDraft=d;
+    };
+    var addFiles=function(fl){
+      keep();
+      var list=Array.prototype.slice.call(fl||[]);
+      Promise.all(list.map(function(f){ return Promise.all([shrink(f), rjThumb(f)]); })).then(function(got){
+        got.forEach(function(g){ if(g[0]) d.photos.push({data:g[0].data, thumb:g[1]}); });
+        rjDraft=d; render();
+      });
+    };
+    document.getElementById("rjCam").onchange=function(e){ addFiles(e.target.files); };
+    document.getElementById("rjGal").onchange=function(e){ addFiles(e.target.files); };
+    document.getElementById("b").onclick=function(){ history.back(); };
+    document.getElementById("rjC").onclick=function(){ rjDraft=null; history.back(); };
+    document.getElementById("rjS").onclick=function(){
+      keep();
+      var btn=document.getElementById("rjS"); btn.disabled=true; btn.textContent="שומר…";
+      var r=d.row; if(row) r.id=row.id;
+      rjCall({action:"save-row", listId:l.id, row:r, photos:d.photos, note:d.note}).then(function(res){
+        if(!res.ok){ btn.disabled=false; btn.textContent="שמירה"; alert(res.status===409?"מישהו אחר שמר בדיוק עכשיו. נסו שוב.":"השמירה נכשלה."); return; }
+        rjDraft=null; state.rj.edit=false; state.rj.rowId=res.data.rowId;
+        rjLoadList(l.id);
+      }).catch(function(){ btn.disabled=false; btn.textContent="שמירה"; alert("אין חיבור."); });
+    };
+    return;
+  }
+  if(!row){ state.rj.view="list"; render(); return; }
+  app.innerHTML=head+'<div class="head"><button class="back" id="b">→ חזרה</button><h2>שורה '+(idx+1)+'</h2></div>'+
+    '<article class="rec'+(row.done?'" style="background:#e3f3e6;border-color:#9fd3ae':'')+'">'+
+    (row.done?'<div class="rjDone" style="color:#1f7a3e">טופל ✓</div>':'')+
+    (row.floor?'<div class="rjField">קומה</div><div class="rjVal">'+esc(row.floor)+'</div>':'')+
+    (row.desc?'<div class="rjField">תיאור</div><div class="rjVal">'+esc(row.desc)+'</div>':'')+
+    (row.owner?'<div class="rjField">אחריות</div><div class="rjVal">'+esc(row.owner)+'</div>':'')+
+    (row.due?'<div class="rjField">מועד לביצוע</div><div class="rjVal" dir="ltr" style="text-align:right">'+esc(fmt(row.due))+'</div>':'')+
+    (row.photos.length?'<div class="rjField">תמונות</div>'+rjShots(row.photos):'')+
+    (row.plans.length?'<div class="rjField">תוכנית</div>'+rjShots(row.plans):'')+
+    (row.notes.length?'<div class="rjField">הערות</div>'+row.notes.map(function(n){return '<div class="rjNote"><b>'+esc(fmt(n.at))+'</b>'+esc(n.text)+'</div>'}).join(""):'')+
+    '</article>'+(rj.isPm?'<div class="writeBar"><button id="rjE">עריכה / הערה / תמונה</button></div>':'');
+  document.getElementById("b").onclick=function(){ history.back(); };
+  var ed=document.getElementById("rjE");
+  if(ed) ed.onclick=function(){ rjDraft={row:{},photos:[],note:""}; state.rj.edit=true; history.pushState({s:1},""); render(); };
 }
 
 // ---------------------------------------------------------------- sections
@@ -901,6 +1112,7 @@ function render(){
   // The signed document, opened inside the app rather than handed to the
   // phone as a file.
   if(state.doc){ viewDoc(); return; }
+  if(state.rj){ rjView(); window.scrollTo(0,0); return; }
   // A project manager sees every trade, so he says which one first.
   if(state.board.isPm && !state.trade){ tradePicker(); return; }
   if(state.screen) screen(); else board();
@@ -914,6 +1126,12 @@ function signOut(msg){
 out.onclick=function(){ signOut(); };
 window.addEventListener("popstate", function(){
   if(state.doc){ state.doc=null; render(); return; }
+  if(state.rj){
+    if(state.rj.view==="card"&&state.rj.edit&&state.rj.rowId){ state.rj.edit=false; rjDraft=null; render(); return; }
+    if(state.rj.view==="card"){ state.rj.view="list"; state.rj.edit=false; rjDraft=null; render(); return; }
+    if(state.rj.view==="list"){ rjLoadLists(); return; }
+    state.rj=null; rjDraft=null; render(); return;
+  }
   if(state.cat){ state.cat=null; render(); return; }
   if(state.screen){ state.screen=null; render(); return; }
   if(state.board&&state.board.isPm&&state.trade){ state.trade=null; state.board.trade=null; render(); return; }

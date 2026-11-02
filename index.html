@@ -155,7 +155,7 @@ import {
   Download as DownloadSd,
   PenLine as PenLineSd
 } from "lucide-react";
-import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon, Archive as ArchiveIcon } from "lucide-react";
+import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon, Archive as ArchiveIcon, ClipboardX as RejectsIcon } from "lucide-react";
 import {
   PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
   Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2, Cctv as Cctv2,
@@ -325,7 +325,8 @@ var COPY = {
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
       { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "\u05D4\u05D5\u05E8\u05D0\u05D5\u05EA \u05E9\u05D9\u05E0\u05D5\u05D9", sub: "Change Instructions", locked: true },
-      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true }
+      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
+      { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "\u05e8\u05d9\u05d2'\u05e7\u05d8\u05d9\u05dd", sub: "Rejects \u00b7 Punch Lists", locked: true }
     ],
     menuOptions: {
       mainContractor: "\u05DB\u05E0\u05D9\u05E1\u05D4 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9",
@@ -446,7 +447,8 @@ var COPY = {
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
       { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "Change Instructions", sub: "Pricing & Approvals", locked: true },
-      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true }
+      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
+      { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "\u05e8\u05d9\u05d2'\u05e7\u05d8\u05d9\u05dd", sub: "Rejects \u00b7 Punch Lists", locked: true }
     ],
     menuOptions: {
       mainContractor: "Main Contractor Login",
@@ -553,7 +555,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "02.11.2026 · build 232";
+var APP_BUILD = "03.11.2026 · build 233";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -7960,6 +7962,7 @@ var ByRoomMemberLazy = React14.lazy(() => import("./byroom/admin.js").then((m) =
 // Facility File / תיק מתקן (28.10.2026, build 224): its own folder, facility/. For the administrator the
 // Contacts cube becomes "תיק מתקן" and the contacts table is chapter 1 inside it. Everyone else still gets
 // the contacts table exactly as before.
+var RejectsLazy = React14.lazy(() => import("./rejects/admin.js").then((m) => ({ default: m.RejectsBoard })));
 var FacilityLazy = React14.lazy(() => import("./facility/admin.js").then((m) => ({ default: m.FacilityFile })));
 
 // What each mark IS, for By Room (25.10.2026, builds 221-222): the LLI rows ticked BY ROOM, under what she corrected
@@ -8080,6 +8083,7 @@ function CardView({
   const isCi = cardKey === "changeInstructions";
   const isMarcella = cardKey === "marcella";
   const isSubs = cardKey === "subs";
+  const isRejects = cardKey === "rejects";
   // Only the system administrator writes here. A main contractor who is
   // allowed to edit everything else on the project still reads this one.
   const ciCanEdit = canEdit && appRole === "admin";
@@ -8097,8 +8101,11 @@ function CardView({
   // Contacts are maintained in System Admin, not through the upload modal.
   // RFI carries its own screens, so it does not want the generic "upload a
   // file" modal that the plain cards get.
-  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs;
-  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || showRooms ? "wide" : ""}` }, isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
+  const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs && !isRejects;
+  return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || isRejects || showRooms ? "wide" : ""}` }, isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
+    projectId: project.id, projectName: project.name, currentEmail,
+    subs: ((subsData || {}).list) || [],
+    printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
     categories: BOARD_CATEGORIES.map((c) => ({ key: c.key, he: c.he, en: c.en })),
     brand: { accent: project.accent || null, clientLogo: project.clientLogoUrl || null, supervisionLogo: project.supervisionLogoUrl || null, brandLogo: DEFAULT_BRAND_LOGO_URL || null } })), showSchedule && /* @__PURE__ */ React14.createElement(
     ProjectScheduleCard,
@@ -8116,7 +8123,7 @@ function CardView({
       projectEnd: project.endDate,
       projectName: project.name
     }
-  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs && /* @__PURE__ */ React14.createElement(
+  ), !showRooms && !showSchedule && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs && !isRejects && /* @__PURE__ */ React14.createElement(
     DocumentCard,
     {
       card,
@@ -24303,6 +24310,9 @@ function ProjectDashboardApp() {
     if (key === "changeInstructions" && appRole !== "admin" && authRole !== "contractor") return false;
     if (key === "marcella" && !canSeeMarcella) return false;
     if (key === "subs" && appRole !== "admin") return false;
+    // 03.11.26 — Rejects: the administrator here; project managers and the
+    // subcontractors she shares a list with see it in the subcontractor app.
+    if (key === "rejects" && appRole !== "admin") return false;
     if (isClientHere && CLIENT_CARDS.indexOf(key) < 0) return false;
     if (isContractorHere && CONTRACTOR_CARDS.indexOf(key) < 0) return false;
     return !visibleCardKeys || visibleCardKeys.includes(key);
