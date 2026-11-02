@@ -553,7 +553,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "02.11.2026 · build 226";
+var APP_BUILD = "02.11.2026 · build 227";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2307,6 +2307,12 @@ var pdfViewer = `
           background: transparent; text-align: center; outline: none;
         }
         .sbChkCodeIn:hover { border-color: var(--line); background: #fff; }
+        /* 02.11.26 — the LLI tick on a submittal row */
+        .sbLliChip { display: block; margin: 4px auto 0; font: inherit; font-size: 10.5px; font-weight: 800; letter-spacing: .2px;
+          padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); background: #fff; color: var(--steel); cursor: pointer; white-space: nowrap; }
+        .sbLliChip.on { background: #e3f3e6; border-color: #9fd3ae; color: #1f7a3e; }
+        .sbLliChip:disabled { cursor: default; opacity: .85; }
+        .sbLliChip:not(:disabled):hover { border-color: #1f7a3e; }
         .sbChkCodeIn:focus { border-color: var(--accent); background: #fff; }
         .sbChkCodeIn::placeholder { color: var(--mist); font-weight: 500; }
         .sbChkTable th.cChkNo { width: 74px; }
@@ -8121,7 +8127,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
     projectId: project.id, project, projectName: project.name, currentEmail,
     contactsNode: React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }),
     contactsCount: (contacts || []).length,
@@ -20748,6 +20754,7 @@ function SubmittalFolder({
   boqFlags,
   lliRows,
   onChangeLliRows,
+  onChangeBoqFlags,
   chkOff,
   onRemoveChk,
   onRestoreChk,
@@ -20783,6 +20790,37 @@ function SubmittalFolder({
   });
   const showBands = allMode || order.length > 1;
   const ncols = SB_BOARD_COLS.length + 2;
+  // 02.11.26 — a V on the row puts the product on the LLI list. It writes the
+  // routing (the same table the LLI board's own ticks write), so ticking here
+  // IS ticking there. A row she made by hand on LLI is on LLI already.
+  const lliOn = (r) => (r.fromLli ? true : !!(r.product && r.product.flags && r.product.flags.lli));
+  const toggleLli = (r) => {
+    if (r.fromLli || !r.product || !onChangeBoqFlags) return;
+    const auto = (boqData || {}).flags || {};
+    const next = { ...(boqFlags || {}) };
+    const write = (code, val) => {
+      const cur = boqFlagsOf(auto, next, code);
+      next[code] = {
+        submittal: cur.submittal, sd: cur.sd, lli: val, longLead: val ? cur.longLead : false,
+        group: cur.group, category: cur.category, main: cur.main, accessory: cur.accessory
+      };
+    };
+    if (!lliOn(r)) write((r.product.lead && r.product.lead.code) || r.product.code, true);
+    else (r.product.items || []).forEach((it) => { if (boqFlagsOf(auto, next, it.code).lli) write(it.code, false); });
+    onChangeBoqFlags(next);
+  };
+  const lliChip = (r) => {
+    if (r.kind !== "line") return null;
+    const on = lliOn(r);
+    const can = canEdit && !r.fromLli && !!onChangeBoqFlags;
+    return sbH("button", {
+      type: "button", className: `sbLliChip${on ? " on" : ""}`, disabled: !can,
+      title: r.fromLli ? (he ? "שורה מלוח LLI" : "A row from the LLI board")
+        : on ? (he ? "מופיע ברשימת LLI — לחיצה מסירה" : "On the LLI list — click to remove")
+        : (he ? "לחיצה מוסיפה לרשימת LLI" : "Click to add to the LLI list"),
+      onClick: () => toggleLli(r)
+    }, on ? "\u2713 LLI" : "+ LLI");
+  };
   const hidden = colHide || [];
   // Lines she took off the board, across what is on screen.
   const offCount = scope.reduce((n, c) => {
@@ -20915,7 +20953,8 @@ function SubmittalFolder({
               type: "button", className: `sbRevToggle ${chkOpen ? "open" : ""}`, title: L("chkLines"),
               onClick: () => setOpenChk(chkOpen ? null : r.key)
             }, sbH(ChevronDown2, { size: 13, strokeWidth: 2.4 }), r.lines.length)
-          : null
+          : null,
+        lliChip(r)
       ),
       sbH("td", { className: "sbItemCell", dir: "auto" }, r.mark || "—"),
       sbH(
@@ -21235,7 +21274,8 @@ function SubmittalCard({
   // description she typed there are the ones shown here, and a row she added by
   // hand and ticked SUB is a line of this checklist like any other.
   lliRows,
-  onChangeLliRows
+  onChangeLliRows,
+  onChangeBoqFlags
 }) {
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
@@ -21884,6 +21924,7 @@ function SubmittalCard({
         boqFlags,
         lliRows,
         onChangeLliRows,
+        onChangeBoqFlags,
         list: visibleList,
         canEdit,
         canSign,
