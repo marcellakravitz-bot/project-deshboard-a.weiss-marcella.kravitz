@@ -553,7 +553,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "02.11.2026 · build 230";
+var APP_BUILD = "02.11.2026 · build 231";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -20518,7 +20518,8 @@ function sbBoardRows(opts) {
     r.mark = r.ownMark || famVal(lead, (y) => y.typeId) || "";
     r.desc = r.ownDesc || (lead && lead.itemDescription) || (r.node ? boqText(r.node, lang) : "") || (lead && lead.boqText) || "";
     r.boq = r.kind === "line" ? (r.fromLli ? boqRefShown((lli[r.code] || {}).boqRef, lang) : r.code) : ((lead && lead.boqCode) || "");
-    r.img = famVal(lead, (y) => y.image && y.image.thumb) || null;
+    // 02.11.26 — no submittal picture yet: the one on the LLI row.
+    r.img = famVal(lead, (y) => y.image && y.image.thumb) || (r.kind === "line" ? (lli[r.code] || {}).image : null) || null;
     r.model = String(famVal(lead, (y) => String(y.modelCode || "").trim()) || "").trim();
     r.disc = String(famVal(lead, (y) => String(y.disciplineText || "").trim()) || "").trim() || sbText(r.cat, lang);
     const due = lead ? String(lead.requiredApprovalDate || "").slice(0, 10) : "";
@@ -20930,7 +20931,7 @@ function SubmittalFolder({
         ? sbH("button", { type: "button", className: "sbRevLong", title: L("newRevision"), onClick: () => onNewRevision(rec) },
             sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${sbNextRev(list, rec)}`)
         : sbH("button", { type: "button", className: "sbRevLong", title: L("chkAdd"),
-            onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "", lliMark: r.ownMark || "", lliDesc: r.ownDesc || "" }, r.cat) },
+            onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "", lliMark: r.ownMark || "", lliDesc: r.ownDesc || "", lliImage: (lli[r.code] || {}).image || null }, r.cat) },
             sbH(Plus2, { size: 13, strokeWidth: 2.4 }), " ", L("chkAdd")),
       sq("", he ? "פתיחה ועריכה" : "Open and edit", Pencil, () => rec && onOpen(rec), !rec),
       sq("", he ? "הדפסת הטופס" : "Print the form", Printer, () => rec && onPrint(rec), !rec),
@@ -21695,6 +21696,8 @@ function SubmittalCard({
           // 02.11.26 — opened from a row that LLI keeps: the mark and the description
           // come from there. A submittal opened from the folder itself has no
           // preset and starts as it always did; one already sent is never rewritten.
+          // 02.11.26 — and the picture the LLI row has.
+          ...(preset.lliImage && !(rec.image && rec.image.thumb) ? { image: { name: "LLI", thumb: preset.lliImage, path: null, inline: true } } : {}),
           ...(preset.lliMark || preset.lliDesc ? {
             typeId: preset.lliMark || preset.text || rec.typeId,
             itemDescription: preset.lliDesc && preset.lliDesc !== (preset.lliMark || preset.text) ? preset.lliDesc : (rec.itemDescription || "")
