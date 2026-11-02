@@ -553,7 +553,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "02.11.2026 · build 227";
+var APP_BUILD = "02.11.2026 · build 228";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -20433,6 +20433,8 @@ function sbBoardRows(opts) {
     const attached = (code, node) => {
       const names = node ? [norm(boqText(node, "en")), norm(boqText(node, "he"))].filter(Boolean) : [];
       return mine.filter((s) => {
+        // A submittal that was put on LLI from this board answers that LLI row (02.11.26).
+        if (s.lliKey) return s.lliKey === code;
         if (s.boqCode) return s.boqCode === code;
         if (!names.length) return false;
         const picked = [
@@ -20755,6 +20757,7 @@ function SubmittalFolder({
   lliRows,
   onChangeLliRows,
   onChangeBoqFlags,
+  onPatchMany,
   chkOff,
   onRemoveChk,
   onRestoreChk,
@@ -20809,7 +20812,33 @@ function SubmittalFolder({
     else (r.product.items || []).forEach((it) => { if (boqFlagsOf(auto, next, it.code).lli) write(it.code, false); });
     onChangeBoqFlags(next);
   };
+  // A submittal with no line in the bill of quantities: "+ LLI" opens a row for it
+  // on the LLI board (mark, description, discipline, supplier from the newest
+  // revision), ticked SUB, and ties every revision to that row — so from then on
+  // it is one row on both boards, kept on LLI like any row made there.
+  const addFreeToLli = (r) => {
+    if (!onChangeLliRows || !onPatchMany || !r.lead) return;
+    const lead = r.lead;
+    const code = `m-${Date.now()}`;
+    const n = Object.keys(lli).filter((k) => k.indexOf("m-") === 0).length + 1;
+    const mark = String(lead.typeId || "").trim();
+    const desc = String(lead.itemDescription || "").trim() || mark;
+    onChangeLliRows({
+      ...lli,
+      [code]: { ...lliBlankRow(), typeMark: mark, desc, category: r.cat.key, supplier: String(lead.supplier || "").trim(),
+        alsoSubmittal: true, manualIndex: n }
+    });
+    onPatchMany(r.hits.map((x) => x.id), { lliKey: code });
+  };
   const lliChip = (r) => {
+    if (r.kind === "free") {
+      const can = canEdit && !!onChangeLliRows && !!onPatchMany && !!r.lead;
+      return can ? sbH("button", {
+        type: "button", className: "sbLliChip",
+        title: he ? "לחיצה פותחת שורה בלוח LLI לסבמיטל הזה" : "Click to open an LLI row for this submittal",
+        onClick: () => addFreeToLli(r)
+      }, "+ LLI") : null;
+    }
     if (r.kind !== "line") return null;
     const on = lliOn(r);
     const can = canEdit && !r.fromLli && !!onChangeBoqFlags;
@@ -21977,6 +22006,8 @@ function SubmittalCard({
         // One field on one submittal, saved where it stands: the supplier
         // typed into the list, her private notes (29.8.26).
         onPatch: (s, next) => commit((list || []).map((x) => (x.id === s.id ? { ...x, ...next } : x))),
+        // Several records at once — every revision of one submittal (02.11.26).
+        onPatchMany: (ids, next) => commit((list || []).map((x) => (ids.indexOf(x.id) >= 0 ? { ...x, ...next } : x))),
         onNewRevision: startRevision,
         onDelete: deleteOne,
         // Removing a checklist line from this folder, and putting them back.
