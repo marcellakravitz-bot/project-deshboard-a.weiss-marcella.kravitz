@@ -553,7 +553,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "02.11.2026 · build 228";
+var APP_BUILD = "02.11.2026 · build 229";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -20474,6 +20474,7 @@ function sbBoardRows(opts) {
         });
       });
     // The rows she added by hand on the ordering board and ticked SUB.
+    const anchored = [];
     Object.keys(lli)
       .filter((k) => k.indexOf("m-") === 0 && lli[k] && lli[k].alsoSubmittal && (lli[k].category || null) === cat.key && !off[k])
       .forEach((k) => {
@@ -20481,12 +20482,22 @@ function sbBoardRows(opts) {
         const text = v.desc || "";
         const node = { he: text, en: text };
         const ref = boqRefCode(v.boqRef);
-        finish({
+        const row = {
           key: `${cat.key}:${k}`, cat, kind: "line", code: k, node, fromLli: true,
           product: { code: k, he: text, en: text, items: [], flags: {} }, lines: [],
           hits: uniq(attached(k, node).concat(ref ? attached(ref, node) : [])),
           ownMark: String(v.typeMark || "").trim(), ownDesc: String(text).trim()
-        });
+        };
+        // 02.11.26 — a row that was opened on LLI FROM a submittal (its records carry
+        // lliKey) keeps the place that submittal had: among the folder's submittals,
+        // by number. Pressing "+ LLI" must not move the row.
+        const anchor = row.hits.filter((x) => x.lliKey === k);
+        if (anchor.length) {
+          row.hits.forEach((x) => { used[x.id] = true; });
+          anchored.push({ seq: Math.min(...anchor.map((x) => Number(x.seq) || 0)), row });
+          return;
+        }
+        finish(row);
       });
     // Every other submittal in this folder, one row per serial.
     const fam = {};
@@ -20495,9 +20506,12 @@ function sbBoardRows(opts) {
       const k = String(x.seq);
       (fam[k] = fam[k] || []).push(x);
     });
+    // The free submittals and the rows anchored to a submittal, together, by number.
     Object.keys(fam)
-      .sort((a, b) => (Number(a) || 0) - (Number(b) || 0))
-      .forEach((k) => finish({ key: `${cat.key}:#${k}`, cat, kind: "free", code: null, node: null, lines: [], hits: fam[k], ownMark: "", ownDesc: "" }));
+      .map((k) => ({ seq: Number(k) || 0, row: { key: `${cat.key}:#${k}`, cat, kind: "free", code: null, node: null, lines: [], hits: fam[k], ownMark: "", ownDesc: "" } }))
+      .concat(anchored)
+      .sort((a, b) => a.seq - b.seq)
+      .forEach((x) => finish(x.row));
   });
   out.forEach((r) => {
     const lead = r.lead;
