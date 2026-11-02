@@ -91,6 +91,7 @@ import {
   SB_L,
   SB_SUBCATS,
   SUBMITTAL_CATEGORIES,
+  SB_EXTRA_FOLDERS,
   SubmittalReview,
   printSheetCss,
   printStaticPage,
@@ -552,7 +553,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "02.11.2026 · build 225";
+var APP_BUILD = "02.11.2026 · build 226";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5900,7 +5901,7 @@ function SubsSubmittalList({ trade, tradeLabel, submittals, submittalApprovals, 
   })();
 
   const catLabel = (k) => {
-    const c = SUBMITTAL_CATEGORIES.find((x) => x.key === k);
+    const c = SB_ALL_FOLDERS.find((x) => x.key === k);
     return c ? c.he : k;
   };
   const countIn = (k) => {
@@ -17764,6 +17765,19 @@ var BOARD_ONLY_CATEGORIES = [
 ];
 // What the two boards offer. The submittal screen keeps SUBMITTAL_CATEGORIES.
 var BOARD_CATEGORIES = SUBMITTAL_CATEGORIES.concat(BOARD_ONLY_CATEGORIES);
+// 02.11.26 — joinery is approved by a shop drawing, so it has no standing
+// submittal folder. But a joinery product she marks SUB in the bill of
+// quantities (or a joinery row ticked SUB on LLI, or a submittal already filed
+// there) opens a "נגרות" folder on the submittal screen, numbered Joinery-001.
+var SB_JOINERY_FOLDER = { ...SB_EXTRA_FOLDERS[0], icon: Hammer2 };
+var SB_ALL_FOLDERS = SUBMITTAL_CATEGORIES.concat([SB_JOINERY_FOLDER]);
+function sbFoldersFor(boqData, boqFlags, lliRows, list) {
+  let need = false;
+  try { need = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", "joinery").length > 0; } catch (e) { need = false; }
+  if (!need) need = Object.keys(lliRows || {}).some((k) => k.indexOf("m-") === 0 && lliRows[k] && lliRows[k].alsoSubmittal && lliRows[k].category === "joinery");
+  if (!need) need = (list || []).some((x) => x && x.category === "joinery");
+  return need ? SB_ALL_FOLDERS : SUBMITTAL_CATEGORIES;
+}
 // 20.10.26 — categories she adds herself, from the top of the LLI table. They
 // live in the global catalogue (one list for every project) and are appended
 // to the two boards' list here, so every dropdown, chip, print and lookup that
@@ -19829,7 +19843,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         // The folder and the number do not move — only the word printed in
         // this box. Clearing the box puts the folder's name back.
         (() => {
-          const c = SUBMITTAL_CATEGORIES.find((x) => x.key === d.category);
+          const c = SB_ALL_FOLDERS.find((x) => x.key === d.category);
           const folderName = c ? sbText(c, lang) : d.discipline || "";
           const own = String(d.disciplineText || "");
           const free = !ro && !d.boqCode;
@@ -21269,7 +21283,8 @@ function SubmittalCard({
   // The records, with each one's filed decision merged over it.
   const list = (submittals || []).map((s) => sbMergeApproval(s, submittalApprovals));
   const label = (c) => sbText(c, lang);
-  const chosen = SUBMITTAL_CATEGORIES.find((c) => c.key === selected) || null;
+  const FOLDERS = sbFoldersFor(boqData, boqFlags, lliRows, submittals);
+  const chosen = FOLDERS.find((c) => c.key === selected) || null;
   const L = (k) => sbText(SB_L[k], lang);
   // E-mail to the supervision (21.10.26): her standing message, filled in from
   // the submittal, opened in the mail program on this computer. The supervision
@@ -21467,7 +21482,7 @@ function SubmittalCard({
     list: visibleList, boqData, boqFlags, lliRows,
     chkOff: submittalChkOff || {},
     lang: lg, audience: who,
-    categories: chosen ? [chosen] : SUBMITTAL_CATEGORIES,
+    categories: chosen ? [chosen] : FOLDERS,
     tradeFor: (key) => boardTradeCompany(contacts, contactsCatalog, key, lg)
   });
   const today2 = () => sbFmtDate(new Date().toISOString().slice(0, 10));
@@ -21475,7 +21490,7 @@ function SubmittalCard({
   const summaryOf = (lg) => sbBoardSummary(sbBoardRows({
     list: visibleList, boqData, boqFlags, lliRows,
     chkOff: submittalChkOff || {}, lang: lg,
-    categories: chosen ? [chosen] : SUBMITTAL_CATEGORIES
+    categories: chosen ? [chosen] : FOLDERS
   }), lg);
   const runExcel = async () => {
     const g = gridOf(lang, "admin");
@@ -21767,7 +21782,7 @@ function SubmittalCard({
       : null,
 
     newAsk && canEdit ? (() => {
-      const fold = SUBMITTAL_CATEGORIES.find((c) => c.key === newAsk.cat) || null;
+      const fold = FOLDERS.find((c) => c.key === newAsk.cat) || null;
       const he = lang === "he";
       const go = () => {
         if (!fold) return;
@@ -21793,7 +21808,7 @@ function SubmittalCard({
             sbH("label", { style: lbl }, he ? "\u05ea\u05d9\u05e7\u05d9\u05d9\u05d4 (\u05e7\u05d5\u05d1\u05e2\u05ea \u05d0\u05ea \u05de\u05e1\u05e4\u05e8 \u05d4\u05e1\u05d1\u05de\u05d9\u05d8\u05dc)" : "Folder (sets the submittal number)"),
             sbH("select", { style: inp, value: newAsk.cat, onChange: (e) => setNewAsk({ ...newAsk, cat: e.target.value }) },
               sbH("option", { value: "" }, he ? "\u05d1\u05d7\u05e8\u05d9 \u05ea\u05d9\u05e7\u05d9\u05d9\u05d4" : "Choose a folder"),
-              SUBMITTAL_CATEGORIES.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))),
+              FOLDERS.map((c) => sbH("option", { key: c.key, value: c.key }, sbText(c, lang)))),
             sbH("label", { style: lbl }, L("discipline")),
             // Free text, no list (20.10.26). Left empty, the folder's name is used.
             sbH("input", { style: inp, type: "text", value: newAsk.disc, autoComplete: "off",
@@ -21812,7 +21827,7 @@ function SubmittalCard({
     sbH(
       "div",
       { className: "sbCatBar", role: "tablist" },
-      [{ key: "all", he: "כל הקטגוריות", en: "All categories" }].concat(SUBMITTAL_CATEGORIES).map((c) => sbH(
+      [{ key: "all", he: "כל הקטגוריות", en: "All categories" }].concat(FOLDERS).map((c) => sbH(
         "button",
         {
           key: c.key,
@@ -21858,7 +21873,7 @@ function SubmittalCard({
       : null,
     sbH(SubmittalFolder, {
         category: chosen,
-        categories: chosen ? [chosen] : SUBMITTAL_CATEGORIES,
+        categories: chosen ? [chosen] : FOLDERS,
         colHide,
         onToggleCol: toggleCol,
         onSend: sendMail,

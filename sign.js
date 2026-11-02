@@ -218,6 +218,13 @@ var sbH = React15.createElement;
 // site goes through here. The question itself is written in both languages,
 // because at that moment we do not yet know which one the reader wants.
 // -----------------------------------------------------------------------------
+// 02.11.26 — joinery is not a standing folder, but a joinery product she marks
+// SUB in the bill of quantities gets a submittal like any other: the dashboard
+// opens a "נגרות" folder for it. Its number prefix and name live here so the
+// form and its print read them like any other folder's.
+var SB_EXTRA_FOLDERS = [
+  { key: "joinery", en: "Joinery", he: "נגרות", code: "Joinery" }
+];
 var SUBMITTAL_CATEGORIES = [
   { key: "architecture", en: "Architecture", he: "אדריכלות", icon: Building23 },
   { key: "flooring", en: "Flooring", he: "ריצוף", icon: Grid3x32 },
@@ -701,7 +708,7 @@ function sbFmtDate(iso) {
 // The serial is per category per project, exactly like the workbook:
 // Plumbing-001, Plumbing-002 ... and the revision sits underneath it.
 function sbCatCode(categoryKey) {
-  const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === categoryKey);
+  const cat = SUBMITTAL_CATEGORIES.concat(SB_EXTRA_FOLDERS).find((c) => c.key === categoryKey);
   // `code` exists so a folder can be renamed without renumbering documents that
   // already went out: the label may change, the serial prefix may not.
   return (cat ? cat.code || cat.en : categoryKey || "General").replace(/[^A-Za-z0-9]/g, "");
@@ -754,7 +761,7 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
   // The same footer the contacts and user-list documents print with.
   const footImg = brand && brand.footerImg ? `<div class="footImg"><img src="${brand.footerImg}" alt=""></div>` : "";
   const footTxt = brand && brand.footerText ? `<div class="footTxt">${sbEsc(brand.footerText)}</div>` : "";
-  const cat = SUBMITTAL_CATEGORIES.find((c) => c.key === rec.category);
+  const cat = SUBMITTAL_CATEGORIES.concat(SB_EXTRA_FOLDERS).find((c) => c.key === rec.category);
   const val = (v) => sbEsc(v || "");
   const infoRow = (l1, v1, l2, v2) =>
     `<tr><th>${l1}</th><td>${v1}</td><th>${l2}</th><td>${v2}</td></tr>`;
@@ -3022,6 +3029,7 @@ export {
   printStaticPage,
   sbH,
   SUBMITTAL_CATEGORIES,
+  SB_EXTRA_FOLDERS,
   SB_SUBCATS,
   sbSubcats,
   sbSubcatLabel,
