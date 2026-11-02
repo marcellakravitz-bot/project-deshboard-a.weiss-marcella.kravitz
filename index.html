@@ -553,7 +553,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "02.11.2026 · build 229";
+var APP_BUILD = "02.11.2026 · build 230";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2542,7 +2542,7 @@ var pdfViewer = `
         .sbSq.ok { color: #1a7f4b; border-color: #b9dcc7; }
         .sbSq.ok:hover:not(:disabled) { background: #e6f4ec; border-color: #1a7f4b; color: #1a7f4b; }
         .sbSq.ok.on, .sbSq.ok.on:hover { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
-        .sbBoardTable td.sbDescCell { min-width: 190px; }
+        .sbBoardTable td.sbDescCell { min-width: 190px; white-space: pre-line; }
         .sbBoardTable td.sbItemCell { min-width: 70px; }
         /* The row's buttons: a block of equal squares, the version across the
            top (21.10.26). */
@@ -20822,7 +20822,19 @@ function SubmittalFolder({
         group: cur.group, category: cur.category, main: cur.main, accessory: cur.accessory
       };
     };
-    if (!lliOn(r)) write((r.product.lead && r.product.lead.code) || r.product.code, true);
+    if (!lliOn(r)) {
+      write((r.product.lead && r.product.lead.code) || r.product.code, true);
+      // Whatever the LLI row does not have yet comes from the submittal (02.11.26).
+      if (r.lead && onChangeLliRows) {
+        const got = fromSubmittal(r);
+        const cur = lli[r.code] || {};
+        const fill = {};
+        if (!String(cur.typeMark || "").trim() && got.mark) fill.typeMark = got.mark;
+        if (!String(cur.desc || "").trim() && got.desc) fill.desc = got.desc;
+        if (!cur.image && got.image) fill.image = got.image;
+        if (Object.keys(fill).length) onChangeLliRows({ ...lli, [r.code]: { ...lliBlankRow(), ...cur, ...fill } });
+      }
+    }
     else (r.product.items || []).forEach((it) => { if (boqFlagsOf(auto, next, it.code).lli) write(it.code, false); });
     onChangeBoqFlags(next);
   };
@@ -20830,16 +20842,24 @@ function SubmittalFolder({
   // on the LLI board (mark, description, discipline, supplier from the newest
   // revision), ticked SUB, and ties every revision to that row — so from then on
   // it is one row on both boards, kept on LLI like any row made there.
+  // 02.11.26 — what a submittal hands to LLI: its picture, and a description in
+  // three lines — the type mark, the description, the model — as she reads it.
+  const fromSubmittal = (r) => {
+    const lead = r.lead || {};
+    const lines = [lead.typeId, lead.itemDescription, lead.modelCode]
+      .map((x) => String(x || "").trim()).filter(Boolean)
+      .filter((x, i, a) => a.indexOf(x) === i);
+    return { mark: String(lead.typeId || "").trim(), desc: lines.join("\n"), image: r.img || (lead.image && lead.image.thumb) || null };
+  };
   const addFreeToLli = (r) => {
     if (!onChangeLliRows || !onPatchMany || !r.lead) return;
     const lead = r.lead;
     const code = `m-${Date.now()}`;
     const n = Object.keys(lli).filter((k) => k.indexOf("m-") === 0).length + 1;
-    const mark = String(lead.typeId || "").trim();
-    const desc = String(lead.itemDescription || "").trim() || mark;
+    const got = fromSubmittal(r);
     onChangeLliRows({
       ...lli,
-      [code]: { ...lliBlankRow(), typeMark: mark, desc, category: r.cat.key, supplier: String(lead.supplier || "").trim(),
+      [code]: { ...lliBlankRow(), typeMark: got.mark, desc: got.desc, image: got.image, category: r.cat.key, supplier: String(lead.supplier || "").trim(),
         alsoSubmittal: true, manualIndex: n }
     });
     onPatchMany(r.hits.map((x) => x.id), { lliKey: code });
