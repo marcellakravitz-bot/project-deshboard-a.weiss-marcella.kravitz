@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 1 · 03.11.2026";
+export const REJECTS_BUILD = "rejects build 2 · 03.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -124,6 +124,42 @@ const css = `
 .rj .rjSaved{font-size:12.5px;color:#1f7a3e;font-weight:700}
 .rj .rjEmpty{padding:20px;text-align:center;color:var(--mist,#9a9da5)}
 .rj .rjToast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#101114;color:#fff;padding:9px 16px;border-radius:10px;font-weight:600;font-size:13px;z-index:900}
+/* 03.11.26 — the boards' own look: the LLI table (lliTable / lliIn / sbColTick,
+   defined by the dashboard), every box on one middle line. */
+.rj .lliTable td{vertical-align:middle}
+.rj .lliTable tbody tr.ok td{background:#e3f3e6}
+.rj .lliTable tbody tr.rjList td{cursor:pointer}
+.rj .lliTable tbody tr.rjList:hover td{background:#f7f8fa}
+.rj .lliTable tbody tr.rjList.open td{background:#eef1f5;font-weight:800}
+.rj .lliTable .lliIn{box-sizing:border-box}
+.rj .lliTable input[type=date].lliIn{text-align:center}
+.rj .rjTableWrap{max-height:none}
+/* an open list never widens the list of lists: it scrolls inside itself */
+.rj .rjOpenIn{width:0;min-width:100%}
+.rj .rjOpenIn .lliTableWrap{max-width:100%}
+.rj .rjRows th.sbColTh{white-space:nowrap}
+.rj .rjRows th.sbColTh.off>.sbColThIn>span{opacity:.45;text-decoration:line-through}
+/* the LLI board is 1520px wide by its own rule; these tables are not */
+.rj .lliTable{min-width:0}
+.rj .rjRows{min-width:1290px}
+.rj input.sbColTick{width:13px;height:13px;accent-color:var(--accent,#0F3460)}
+/* photo boxes: half the LLI picture box; one empty box is always the next one */
+.rj .rjBoxes{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;align-items:center}
+.rj .rjBox{position:relative;width:92px;height:80px;border:1px dashed var(--line,#e6e6e9);border-radius:8px;background:#fff;
+  display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;color:var(--mist,#9a9da5);outline:none}
+.rj .rjBox img{width:100%;height:100%;object-fit:contain}
+.rj .rjBox:hover{border-color:var(--accent,#17181c)}
+.rj .rjBox.sel,.rj .rjBox:focus{border-style:solid;border-color:var(--accent,#0F3460);box-shadow:0 0 0 2px var(--accent-soft,#e6ecf5)}
+.rj .rjBox .x{position:absolute;top:2px;inset-inline-end:2px;border:0;border-radius:99px;background:rgba(0,0,0,.55);color:#fff;
+  width:17px;height:17px;line-height:15px;font-size:12px;cursor:pointer;padding:0}
+.rj .rjBox .acts{position:absolute;bottom:2px;inset-inline:2px;display:flex;justify-content:center;gap:3px}
+.rj .rjBox .acts button{width:22px;height:20px;border:1px solid var(--line,#e6e6e9);border-radius:4px;background:#fff;color:var(--steel,#5b5e66);
+  padding:0;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.rj .rjBox .hint{font-size:10px;line-height:1.2;text-align:center;padding:0 4px 18px}
+.rj .rjView{display:flex;align-items:flex-start;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:8px 12px;margin-bottom:10px}
+.rj .rjView .who{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;border:1px solid var(--line,#e6e6e9);border-radius:99px;padding:3px 10px;background:#fff;cursor:pointer}
+.rj .rjView .who.on{background:#e3f3e6;border-color:#9fd3ae}
+.rj .rjView .who.pm{background:#f4f6f9;color:var(--steel,#5b5e66);cursor:default}
 @media (max-width:760px){.rj .rjHead{grid-template-columns:1fr}.rj .rjBtn .lbl{display:none}}
 `;
 
@@ -255,9 +291,10 @@ export function RejectsBoard({ projectId, projectName, printParts, currentEmail,
       ${saveState === "saved" && html`<span className="rjSaved">נשמר ✓</span>`}
     </div>
     ${err && html`<p className="rjErr">${err}</p>`}
-    <div className="rjWin"><table>
+    <div className="lliTableWrap rjTableWrap"><table className="lliTable">
+      <colgroup><col style=${{ width: 44 }} /><col /><col style=${{ width: 130 }} /><col style=${{ width: 90 }} /><col style=${{ width: 90 }} /><col style=${{ width: 60 }} /></colgroup>
       <thead><tr>
-        <th style=${{ width: 36 }}><input type="checkbox" title="סימון הכול" checked=${allPicked}
+        <th><input type="checkbox" title="סימון הכול" checked=${allPicked}
           onChange=${(e) => setPicked(e.target.checked ? Object.fromEntries(lists.map((l) => [l.id, true])) : {})} /></th>
         <th style=${{ textAlign: "start" }}>שם הרשימה</th><th>תאריך</th><th>שורות</th><th>טופלו</th><th style=${{ width: 70 }}></th>
       </tr></thead>
@@ -278,8 +315,8 @@ export function RejectsBoard({ projectId, projectName, printParts, currentEmail,
               <td onClick=${(e) => e.stopPropagation()}><button type="button" className="rjBtn icon" title="מחיקת הרשימה" onClick=${() => removeList(l)}><${Trash2} size=${14} color="#b02a37" /></button></td>
             </tr>
             ${open && html`<tr><td colSpan="6" className="rjOpen">
-              <${ListEditor} list=${l} projectId=${projectId} subs=${subs || []} edit=${(fn) => editList(l.id, fn)} flash=${flash}
-                onPrint=${(rowPick) => doPrint([l], rowPick)} onExcel=${(rowPick) => doExcel([l], rowPick)} />
+              <div className="rjOpenIn"><${ListEditor} list=${l} projectId=${projectId} subs=${subs || []} edit=${(fn) => editList(l.id, fn)} flash=${flash}
+                onPrint=${(rowPick) => doPrint([l], rowPick)} onExcel=${(rowPick) => doExcel([l], rowPick)} /></div>
             </td></tr>`}
           <//>`;
         })}
@@ -305,15 +342,17 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
   const setCol = (k, v) => edit((l) => { l.cols = { ...(l.cols || {}), [k]: v }; return l; });
   const picked = rows.filter((r) => pick[r.id]).map((r) => r.id);
   const rowPick = picked.length ? picked : null;
-  const thV = (k, label) => html`<th key=${k}><div className="thV">${label}
-    <input type="checkbox" title="להדפסה" checked=${cols[k] !== false} onChange=${(e) => setCol(k, e.target.checked)} /></div></th>`;
+  // The column titles as on the submittal board: the name, and beside it the
+  // tick that decides whether the column prints.
+  const thV = (k, label) => html`<th key=${k} className=${`sbColTh ${cols[k] === false ? "off" : ""}`}><span className="sbColThIn"><span>${label}</span>
+    <input type="checkbox" className="sbColTick" title="מסומן — יופיע בהדפסה ובאקסל" checked=${cols[k] !== false} onChange=${(e) => setCol(k, e.target.checked)} /></span></th>`;
 
   return html`<${F}>
     <div className="rjHead">
-      <label>שם הרשימה<input className="rjIn" value=${list.name || ""} placeholder="למשל: ריג'קטים חשמל קומה 7"
+      <label>שם הרשימה<input className="lliIn" style=${{ textAlign: "start", fontSize: 13 }} value=${list.name || ""} placeholder="למשל: ריג'קטים חשמל קומה 7"
         autoFocus=${!list.name} onChange=${(e) => edit((l) => ({ ...l, name: e.target.value }))} /></label>
-      <label>תאריך<input className="rjIn" type="date" value=${list.list_date || ""} onChange=${(e) => edit((l) => ({ ...l, list_date: e.target.value }))} /></label>
-      <label>נוכחים בסיור<input className="rjIn" value=${list.attendees || ""} onChange=${(e) => edit((l) => ({ ...l, attendees: e.target.value }))} /></label>
+      <label>תאריך<input className="lliIn" style=${{ fontSize: 13 }} type="date" value=${list.list_date || ""} onChange=${(e) => edit((l) => ({ ...l, list_date: e.target.value }))} /></label>
+      <label>נוכחים בסיור<input className="lliIn" style=${{ textAlign: "start", fontSize: 13 }} value=${list.attendees || ""} onChange=${(e) => edit((l) => ({ ...l, attendees: e.target.value }))} /></label>
     </div>
     <${Viewers} subs=${subs} value=${list.viewers || []} onChange=${(v) => edit((l) => ({ ...l, viewers: v }))} />
     <div className="rjBar">
@@ -324,7 +363,10 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
       <button type="button" className="rjBtn" onClick=${() => onExcel(rowPick)} title=${rowPick ? "אקסל לשורות המסומנות" : "אקסל לכל הרשימה"}>
         <${FileSpreadsheet} size=${15} /> אקסל${rowPick ? ` (${rowPick.length})` : ""}</button>
     </div>
-    <div className="rjWin"><table>
+    <div className="lliTableWrap rjTableWrap"><table className="lliTable rjRows">
+      <colgroup><col style=${{ width: 62 }} /><col style=${{ width: 62 }} /><col style=${{ width: 70 }} /><col style=${{ width: 230 }} />
+        <col style=${{ width: 130 }} /><col style=${{ width: 140 }} /><col style=${{ width: 210 }} /><col style=${{ width: 120 }} />
+        <col style=${{ width: 220 }} /><col style=${{ width: 40 }} /><col style=${{ width: 44 }} /></colgroup>
       <thead><tr>
         ${thV("done", "טופל")}
         ${thV("n", "מס\"ד")}
@@ -344,15 +386,15 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
         ${rows.map((r, i) => html`<tr key=${r.id} className=${r.done ? "ok" : ""}>
           <td><input type="checkbox" title="טופל" checked=${!!r.done} onChange=${(e) => setRow(r.id, { done: e.target.checked })} /></td>
           <td style=${{ fontWeight: 800, color: "#5b5e66" }}>${i + 1}</td>
-          <td style=${{ width: 80 }}><input className="rjIn" value=${r.floor || ""} onChange=${(e) => setRow(r.id, { floor: e.target.value })} /></td>
-          <td><textarea className="rjIn" dir="auto" value=${r.desc || ""} onChange=${(e) => setRow(r.id, { desc: e.target.value })} /></td>
-          <td style=${{ width: 130 }}><input className="rjIn" value=${r.owner || ""} onChange=${(e) => setRow(r.id, { owner: e.target.value })} /></td>
-          <td style=${{ width: 130 }}><input className="rjIn" type="date" value=${r.due || ""} onChange=${(e) => setRow(r.id, { due: e.target.value })} /></td>
-          <td style=${{ minWidth: 150 }}><${Shots} items=${r.photos || []} projectId=${projectId} listId=${list.id} flash=${flash}
+          <td><input className="lliIn" value=${r.floor || ""} onChange=${(e) => setRow(r.id, { floor: e.target.value })} /></td>
+          <td><textarea className="lliIn lliDesc" rows="2" dir="auto" value=${r.desc || ""} onChange=${(e) => setRow(r.id, { desc: e.target.value })} /></td>
+          <td><input className="lliIn" value=${r.owner || ""} onChange=${(e) => setRow(r.id, { owner: e.target.value })} /></td>
+          <td><input className="lliIn" type="date" value=${r.due || ""} onChange=${(e) => setRow(r.id, { due: e.target.value })} /></td>
+          <td><${Shots} items=${r.photos || []} projectId=${projectId} listId=${list.id} flash=${flash}
             onChange=${(next) => setRow(r.id, { photos: typeof next === "function" ? next(r.photos || []) : next })} rowEdit=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, photos: fn(x.photos || []) } : x)); return l; })} /></td>
-          <td style=${{ minWidth: 120 }}><${Shots} items=${r.plans || []} projectId=${projectId} listId=${list.id} flash=${flash} noCamera=${true}
+          <td><${Shots} items=${r.plans || []} projectId=${projectId} listId=${list.id} flash=${flash} noCamera=${true}
             rowEdit=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, plans: fn(x.plans || []) } : x)); return l; })} /></td>
-          <td style=${{ minWidth: 220 }}><${Notes} notes=${r.notes || []}
+          <td><${Notes} notes=${r.notes || []}
             onChange=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, notes: fn(x.notes || []) } : x)); return l; })} /></td>
           <td><input type="checkbox" title="להדפסה" checked=${!!pick[r.id]} onChange=${(e) => setPick({ ...pick, [r.id]: e.target.checked })} /></td>
           <td><button type="button" className="rjBtn icon" title="מחיקת השורה" onClick=${() => delRow(r)}><${Trash2} size=${14} color="#b02a37" /></button></td>
@@ -371,20 +413,20 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
 // see every list anyway, and can edit.
 function Viewers({ subs, value, onChange }) {
   const [open, setOpen] = useState(false);
-  const people = (subs || []).filter((s) => s && !s.pm && s.active !== false);
+  // Every user of the subcontractor app on this project. A project manager sees
+  // every list in any case, so he is shown, ticked and fixed.
+  const people = (subs || []).filter((s) => s && s.active !== false);
   const on = (id) => value.indexOf(id) >= 0;
   const label = (s) => [s.name, s.company].filter(Boolean).join(" · ") || s.phone || "";
-  const names = people.filter((s) => on(s.id)).map(label);
-  return html`<div className="rjBar" style=${{ flexDirection: "column", alignItems: "stretch", gap: 6 }}>
-    <div style=${{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-      <button type="button" className="rjBtn" onClick=${() => setOpen((o) => !o)}>הרשאות צפייה ${open ? "▴" : "▾"}</button>
-      <span style=${{ fontSize: 12.5, color: "#5b5e66" }}>${names.length ? names.join(", ") : "רק מנהלי פרויקט (באפליקציה) ואת"}</span>
-    </div>
-    ${open && html`<div style=${{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-      ${people.length === 0 && html`<span style=${{ fontSize: 12.5, color: "#9a9da5" }}>אין קבלני משנה פעילים בפרויקט — מוסיפים ב"ניהול קבלני משנה"</span>`}
-      ${people.map((s) => html`<label key=${s.id} style=${{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 13, border: "1px solid #e6e6e9", borderRadius: 99, padding: "3px 10px", background: on(s.id) ? "#e3f3e6" : "#fff", cursor: "pointer" }}>
-        <input type="checkbox" checked=${on(s.id)} onChange=${(e) => onChange(e.target.checked ? value.concat([s.id]) : value.filter((x) => x !== s.id))} />${label(s)}</label>`)}
-    </div>`}
+  const chosen = people.filter((s) => !s.pm && on(s.id)).map(label);
+  return html`<div className="rjView">
+    <button type="button" className="rjBtn" onClick=${() => setOpen((o) => !o)}>הרשאות צפייה ${open ? "▴" : "▾"}</button>
+    ${!open && html`<span style=${{ fontSize: 12.5, color: "#5b5e66", alignSelf: "center" }}>${chosen.length ? chosen.join(", ") : "לא ניתנה הרשאה לקבלני משנה"}</span>`}
+    ${open && people.length === 0 && html`<span style=${{ fontSize: 12.5, color: "#9a9da5", alignSelf: "center" }}>אין עדיין משתמשים באפליקציה לפרויקט הזה — מוסיפים ב"ניהול קבלני משנה"</span>`}
+    ${open && people.map((s) => s.pm
+      ? html`<span key=${s.id} className="who pm" title="מנהל פרויקט רואה ועורך את כל הרשימות"><input type="checkbox" checked disabled />${label(s)} · מנהל פרויקט</span>`
+      : html`<label key=${s.id} className=${`who ${on(s.id) ? "on" : ""}`}>
+          <input type="checkbox" checked=${on(s.id)} onChange=${(e) => onChange(e.target.checked ? value.concat([s.id]) : value.filter((x) => x !== s.id))} />${label(s)}</label>`)}
   </div>`;
 }
 
@@ -411,16 +453,22 @@ function Shots({ items, projectId, listId, flash, rowEdit, noCamera }) {
     if (files.length) { e.preventDefault(); add(files); }
   };
   const remove = (p) => {
+    if (!confirm("להסיר את התמונה?")) return;
     if (p.path) supabase.storage.from(BUCKET).remove([p.path]).catch(() => {});
     rowEdit((cur) => cur.filter((x) => x.id !== p.id));
   };
-  return html`<div className="shots" tabIndex="0" onPaste=${onPaste} title="לחיצה כאן ואז Ctrl+V להדבקת תמונה">
-    ${items.map((p) => html`<div key=${p.id} className="shot" onClick=${() => openPhoto(p)}>
-      <img src=${p.thumb} alt="" /><button type="button" title="הסרה" onClick=${(e) => { e.stopPropagation(); remove(p); }}>×</button></div>`)}
-    ${busy > 0 && html`<span style=${{ fontSize: 12, color: "#5b5e66" }}>מעלה…</span>`}
-    <div className="shotAdd">
-      ${!noCamera && html`<button type="button" className="rjBtn icon" title="צילום" onClick=${() => camRef.current && camRef.current.click()}><${Camera} size=${14} /></button>`}
-      <button type="button" className="rjBtn icon" title="העלאת תמונה" onClick=${() => fileRef.current && fileRef.current.click()}><${Upload} size=${14} /></button>
+  // A box per picture, and always one empty box after them: click it, then
+  // Ctrl+V — or the two small buttons inside it. A filled box opens the picture.
+  return html`<div className="rjBoxes">
+    ${items.map((p) => html`<div key=${p.id} className="rjBox" title="פתיחה בגודל מלא" onClick=${() => openPhoto(p)}>
+      <img src=${p.thumb} alt="" /><button type="button" className="x" title="הסרה" onClick=${(e) => { e.stopPropagation(); remove(p); }}>×</button></div>`)}
+    <div className="rjBox" tabIndex="0" onPaste=${onPaste} title="לחיצה על הריבוע ואז Ctrl+V — או העלאה/צילום"
+      onClick=${(e) => e.currentTarget.focus()}>
+      <span className="hint">${busy > 0 ? "מעלה…" : items.length ? "+ תמונה נוספת" : "הדבקה / העלאה"}</span>
+      <div className="acts">
+        <button type="button" title="העלאת תמונה" onClick=${(e) => { e.stopPropagation(); fileRef.current && fileRef.current.click(); }}><${Upload} size=${12} /></button>
+        ${!noCamera && html`<button type="button" title="צילום" onClick=${(e) => { e.stopPropagation(); camRef.current && camRef.current.click(); }}><${Camera} size=${12} /></button>`}
+      </div>
     </div>
     <input ref=${fileRef} type="file" accept="image/*" multiple style=${{ display: "none" }} onChange=${(e) => { add(e.target.files); e.target.value = ""; }} />
     ${!noCamera && html`<input ref=${camRef} type="file" accept="image/*" capture="environment" style=${{ display: "none" }} onChange=${(e) => { add(e.target.files); e.target.value = ""; }} />`}
@@ -440,7 +488,7 @@ function Notes({ notes, onChange }) {
     ${notes.map((n) => html`<div key=${n.id} className="note"><b>${fmt(n.at)}</b><span>${n.text}</span>
       <button type="button" title="מחיקת ההערה" onClick=${() => { if (confirm("למחוק את ההערה?")) onChange((cur) => cur.filter((x) => x.id !== n.id)); }}>×</button></div>`)}
     <div className="noteAdd">
-      <input className="rjIn" placeholder="הערה חדשה" value=${text} onChange=${(e) => setText(e.target.value)}
+      <input className="lliIn" placeholder="הערה חדשה" value=${text} onChange=${(e) => setText(e.target.value)}
         onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }} />
       <button type="button" className="rjBtn icon" title="הוספת הערה" disabled=${!text.trim()} onClick=${add}><${Plus} size=${14} strokeWidth=${2.4} /></button>
     </div>
@@ -470,8 +518,8 @@ export function printLists({ lists, rowPick, projectName, brand, accent, paginat
   if (on.desc) cols.push(["desc", "תיאור", 26]);
   if (on.owner) cols.push(["owner", "אחריות", 10]);
   if (on.due) cols.push(["due", "מועד לביצוע", 8]);
-  if (on.photos) cols.push(["photos", "תמונות", 18]);
-  if (on.plans) cols.push(["plans", "תוכנית", 12]);
+  if (on.photos) cols.push(["photos", "תמונות", 29]);
+  if (on.plans) cols.push(["plans", "תוכנית", 18]);
   if (on.notes) cols.push(["notes", "הערות", 18]);
   if (on.done) cols.push(["done", "טופל", 5]);
   const total = cols.reduce((a, c) => a + c[2], 0);
@@ -508,7 +556,8 @@ th { background: ${acc}; color: #fff; font-size: 9.5px; font-weight: 800; paddin
 td { font-size: 9px; padding: 4px; border-bottom: 1px solid #e6e8ec; text-align: center; vertical-align: top; word-break: break-word; }
 td.c-desc, td.c-notes { text-align: right; }
 tr.ok td { background: #e3f3e6; }
-img.ph { width: 70px; height: 52px; object-fit: cover; border-radius: 3px; margin: 1px; border: 1px solid #e6e8ec; }
+/* 03.11.26 — big enough to read on paper: four times the first size */
+img.ph { width: 46%; height: 105px; object-fit: contain; border-radius: 3px; margin: 1px 1%; border: 1px solid #e6e8ec; display: inline-block; vertical-align: top; background: #fff; }
 .nt { margin-bottom: 2px; } .nt b { color: #5b5e66; direction: ltr; unicode-bidi: isolate; }
 </style></head><body><div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div></div>${clientLogo}</div>
