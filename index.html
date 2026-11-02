@@ -552,7 +552,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "28.10.2026 · build 224";
+var APP_BUILD = "02.11.2026 · build 225";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -11619,6 +11619,21 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     if (key === "lli" && !value) f.longLead = false;
     into[code] = f;
   };
+  // 02.11.26 — a discipline picked on LLI for a BOQ product goes into the routing
+  // too, on every line of the product, so the submittal folders and the SD board
+  // file it where LLI does. Until now it stayed on this board alone.
+  const writeCategory = (r, category) => {
+    if (r.source !== "boq" || !onChangeBoqFlags || !r.product) return;
+    const next = { ...(boqFlags || {}) };
+    (r.product.items || []).forEach((it) => {
+      const cur = boqFlagsOf(auto, next, it.code);
+      next[it.code] = {
+        submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+        group: cur.group, category: category || null, main: cur.main, accessory: cur.accessory
+      };
+    });
+    onChangeBoqFlags(next);
+  };
   const toggleFlag = (r, key) => {
     const now = flagOf(r, key);
     if (r.source !== "boq") {
@@ -12802,7 +12817,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                         lang,
                         disabled: !canEdit,
                         noneLabel: L("noCat"),
-                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory })
+                        onPick: (pick) => { patch(r.code, { category: pick.category, subCategory: pick.subCategory }); writeCategory(r, pick.category); }
                       })
                     ),
                     sbH(
@@ -13332,6 +13347,14 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       defaultHidden: false
     }));
   const all = boqRows.concat(manualRows, fromLli);
+  // 02.11.26 — the mark and the description are kept on the LLI board. Where the
+  // LLI row has them they win here too, for BOQ lines as well (until now only the
+  // rows made by hand on LLI followed it). Without an LLI value: what was typed
+  // on SD, then the bill of quantities, as before.
+  const lliMarkOf = (r) => String(((lliRows || {})[r.code] || {}).typeMark || "").trim();
+  const lliDescOf = (r) => String(((lliRows || {})[r.code] || {}).desc || "").trim();
+  const markOf = (r, v) => lliMarkOf(r) || String(v.typeMark || "").trim();
+  const descOf = (r, v) => lliDescOf(r) || v.desc || r.title;
   const isHidden = (r) => {
     const saved = (data[r.code] || {}).hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
@@ -13380,7 +13403,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const forClient = viewerRole === "client";
     const clientRows = all
       .filter((r) => !isRemoved(r) && !isHidden(r) && (!forClient || sdRowOf(data, r.code).toClient))
-      .sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, { numeric: true }));
+      .sort((a, b) => String(a.code).localeCompare(String(b.code), undefined, { numeric: true }))
+      // the client's sheet reads r.title first: give it the description LLI keeps (02.11.26)
+      .map((r) => (lliDescOf(r) ? { ...r, title: lliDescOf(r) } : r));
     // Signing is the client's act, and only for the person switched on for it
     // in user settings. The switch was there and nothing read it; a permission
     // nothing reads is a promise the system does not keep. (7.9.26)
@@ -13454,7 +13479,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
           r.source === "boq" ? r.code : L("manual"),
           cat2(r.category),
           markOf(r, v),
-          v.desc || r.title,
+          descOf(r, v),
           // The number is wrapped in a directional isolate so that in a Hebrew
           // sheet it still comes before its unit and not after it.
           r.qty == null ? "" : `\u2066${r.qty}\u2069${r.unit ? ` ${boqUnit(r.unit, lang)}` : ""}`,
@@ -13518,11 +13543,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
 
   // The mark of a row: her own, or the one on the ordering board for a row
   // that came from there.
-  const markOf = (r, v) => String(v.typeMark || "").trim() || (r.fromLli ? String(((lliRows || {})[r.code] || {}).typeMark || "").trim() : "");
+  // markOf / descOf: defined with the rows, above (02.11.26).
   // E-mail to the supervision (21.10.26): her standing message, in the new
   // Outlook. Sending it is submitting it to the client, so the row says so.
   const sendMail = (r, v) => {
-    const mark = markOf(r, v) || String(v.desc || r.title || "").trim();
+    const mark = markOf(r, v) || String(descOf(r, v) || "").trim();
     const back = new Date();
     back.setDate(back.getDate() + 7);
     const to = (contacts || [])
@@ -13724,8 +13749,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                       { className: "cMark" },
                       sbH("input", {
                         type: "text", className: "lliIn", dir: "auto",
-                        value: v.typeMark != null && v.typeMark !== "" ? v.typeMark : markOf(r, v),
-                        readOnly: !canEdit,
+                        value: markOf(r, v),
+                        readOnly: !canEdit || !!lliMarkOf(r),
+                        title: lliMarkOf(r) ? (lang === "he" ? "מתעדכן מ-LLI — עריכה בלוח LLI" : "Kept on the LLI board") : undefined,
                         onChange: (e) => patch(r.code, { typeMark: e.target.value })
                       })
                     ),
@@ -13737,8 +13763,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         rows: 3,
                         ref: autoGrow,
                         onInput: (e) => autoGrow(e.target),
-                        value: v.desc || r.title,
-                        readOnly: !canEdit,
+                        value: descOf(r, v),
+                        readOnly: !canEdit || !!lliDescOf(r),
+                        title: lliDescOf(r) ? (lang === "he" ? "מתעדכן מ-LLI — עריכה בלוח LLI" : "Kept on the LLI board") : undefined,
                         onChange: (e) => patch(r.code, { desc: e.target.value })
                       })
                     ),
@@ -13888,7 +13915,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "div",
                 { className: "printAskBox", dir: isRTL ? "rtl" : "ltr", style: { maxWidth: 460, width: "calc(100vw - 32px)" }, onClick: (e) => e.stopPropagation() },
-                sbH("h3", null, `${L("history")} \u2014 ${markOf(r, v) || v.desc || r.title || ""}`),
+                sbH("h3", null, `${L("history")} \u2014 ${markOf(r, v) || descOf(r, v) || ""}`),
                 hist.length
                   ? sbH("ul", { className: "sdHist" },
                       hist.slice().reverse().map((h, i) => sbH("li", { key: i },
@@ -20788,7 +20815,7 @@ function SubmittalFolder({
         ? sbH("button", { type: "button", className: "sbRevLong", title: L("newRevision"), onClick: () => onNewRevision(rec) },
             sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${sbNextRev(list, rec)}`)
         : sbH("button", { type: "button", className: "sbRevLong", title: L("chkAdd"),
-            onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "" }, r.cat) },
+            onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "", lliMark: r.ownMark || "", lliDesc: r.ownDesc || "" }, r.cat) },
             sbH(Plus2, { size: 13, strokeWidth: 2.4 }), " ", L("chkAdd")),
       sq("", he ? "פתיחה ועריכה" : "Open and edit", Pencil, () => rec && onOpen(rec), !rec),
       sq("", he ? "הדפסת הטופס" : "Print the form", Printer, () => rec && onPrint(rec), !rec),
@@ -21546,7 +21573,14 @@ function SubmittalCard({
           // says goes in Type ID; the description is for the thing that is
           // actually being offered, and only the person filling it in knows it.
           typeId: preset.text || rec.typeId,
-          disciplineText: preset.disciplineText || ""
+          disciplineText: preset.disciplineText || "",
+          // 02.11.26 — opened from a row that LLI keeps: the mark and the description
+          // come from there. A submittal opened from the folder itself has no
+          // preset and starts as it always did; one already sent is never rewritten.
+          ...(preset.lliMark || preset.lliDesc ? {
+            typeId: preset.lliMark || preset.text || rec.typeId,
+            itemDescription: preset.lliDesc && preset.lliDesc !== (preset.lliMark || preset.text) ? preset.lliDesc : (rec.itemDescription || "")
+          } : {})
         }
       : rec;
     setDraft(withPreset);
