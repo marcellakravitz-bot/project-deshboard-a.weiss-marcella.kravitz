@@ -21,13 +21,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
 import {
-  Plus, Printer, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save,
+  Plus, Printer, FileDown, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save,
 } from "lucide-react";
 import { supabase, printSheetCss, printedStampText } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 3 · 03.11.2026";
+export const REJECTS_BUILD = "rejects build 4 · 03.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -282,8 +282,8 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
     <div className="rjBar">
       <span className="rjTitle">ריג'קטים${projectName ? ` · ${projectName}` : ""}</span>
       <button type="button" className="rjBtn primary" onClick=${addList}><${Plus} size=${15} strokeWidth=${2.4} /><span className="lbl">רשימה חדשה</span></button>
-      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${() => doPrint(forOut)} title=${chosen.length ? "הדפסת הרשימות המסומנות" : "הדפסת כל הרשימות"}>
-        <${Printer} size=${15} /><span className="lbl">הדפסה${chosen.length ? ` (${chosen.length})` : ""}</span></button>
+      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${() => doPrint(forOut)} title=${chosen.length ? "PDF לרוחב לרשימות המסומנות" : "PDF לרוחב לכל הרשימות"}>
+        <${FileDown} size=${15} /><span className="lbl">PDF${chosen.length ? ` (${chosen.length})` : ""}</span></button>
       <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${() => doExcel(forOut)} title=${chosen.length ? "אקסל לרשימות המסומנות" : "אקסל לכל הרשימות"}>
         <${FileSpreadsheet} size=${15} /><span className="lbl">אקסל${chosen.length ? ` (${chosen.length})` : ""}</span></button>
       <button type="button" className="rjBtn" onClick=${saveAll}><${Save} size=${15} /><span className="lbl">שמירה</span></button>
@@ -358,8 +358,8 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
     <div className="rjBar">
       <button type="button" className="rjBtn primary" onClick=${addRow}><${Plus} size=${15} strokeWidth=${2.4} /> שורה</button>
       <span style=${{ marginInlineEnd: "auto" }}></span>
-      <button type="button" className="rjBtn" onClick=${() => onPrint(rowPick)} title=${rowPick ? "הדפסת השורות המסומנות" : "הדפסת כל הרשימה"}>
-        <${Printer} size=${15} /> הדפסה${rowPick ? ` (${rowPick.length})` : ""}</button>
+      <button type="button" className="rjBtn" onClick=${() => onPrint(rowPick)} title=${rowPick ? "PDF לרוחב לשורות המסומנות" : "PDF לרוחב לכל הרשימה"}>
+        <${FileDown} size=${15} /> PDF${rowPick ? ` (${rowPick.length})` : ""}</button>
       <button type="button" className="rjBtn" onClick=${() => onExcel(rowPick)} title=${rowPick ? "אקסל לשורות המסומנות" : "אקסל לכל הרשימה"}>
         <${FileSpreadsheet} size=${15} /> אקסל${rowPick ? ` (${rowPick.length})` : ""}</button>
     </div>
@@ -558,7 +558,7 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
   // The window opens on the click itself; a window opened after an await is one
   // the browser blocks as a pop-up.
   const w = printLists.docOnly ? null : window.open("", "_blank");
-  if (w) { try { w.document.write('<p dir="rtl" style="font-family:Arial;padding:24px">מכין את ההדפסה…</p>'); } catch (e) {} }
+  if (w) { try { w.document.write('<p dir="rtl" style="font-family:Arial;padding:24px">מכין את ה-PDF…</p>'); } catch (e) {} }
   const links = printLists.docOnly ? {} : await signedLinks(lists, rowPick, projectEnd);
   const b = brand || {};
   const acc = WEISS_NAVY;
