@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 4 · 03.11.2026";
+export const REJECTS_BUILD = "rejects build 5 · 03.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -85,6 +85,8 @@ async function openPhoto(p) {
 const css = `
 .rj{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;max-width:1400px;margin:0 auto;padding:0 12px 28px}
 .rj .rjBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:8px 12px;margin-bottom:10px}
+.rj .rjTop{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 12px}
+.rj input.rjPick{accent-color:var(--accent,#0F3460)}
 .rj .rjTitle{font-weight:800;font-size:16px;margin-inline-end:auto}
 .rj .rjBtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:9px;border:1px solid var(--line,#e6e6e9);background:#fff;color:var(--ink,#17181c);cursor:pointer;white-space:nowrap}
 .rj .rjBtn:hover{border-color:var(--accent,#17181c)}
@@ -169,6 +171,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   const [err, setErr] = useState("");
   const [openId, setOpenId] = useState(null);
   const [picked, setPicked] = useState({});           // lists ticked for print / export
+  const [rowPicks, setRowPicks] = useState({});       // listId -> { rowId: true }: rows ticked inside a list
   const [saveState, setSaveState] = useState("");
   const [toast, setToast] = useState("");
   const dirty = useRef({});                           // listId -> true
@@ -272,30 +275,35 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
 
   if (!lists) return html`<div className="rj" dir="rtl"><style>${css}</style><p className="rjEmpty">טוען…</p></div>`;
 
-  const chosen = lists.filter((l) => picked[l.id]);
-  const forOut = chosen.length ? chosen : lists;
-  const doPrint = (ls, rowPick) => printLists({ lists: ls, rowPick, projectName, projectEnd, ...(printParts || {}) });
-  const doExcel = (ls, rowPick) => excelLists({ lists: ls, rowPick, projectName }).catch((e) => flash("הייצוא נכשל: " + (e.message || e)));
-  const allPicked = lists.length > 0 && chosen.length === lists.length;
+  // 03.11.26 — one PDF and one Excel button, at the top. A list ticked prints
+  // whole; rows ticked inside a list print just those rows of it; nothing
+  // ticked prints every list.
+  const rowsTicked = (l) => (l.rows || []).filter((r) => (rowPicks[l.id] || {})[r.id]).map((r) => r.id);
+  const targets = lists.filter((l) => picked[l.id] || rowsTicked(l).length);
+  const forOut = targets.length ? targets : lists;
+  const pickMap = {};
+  forOut.forEach((l) => { const ids = rowsTicked(l); if (ids.length) pickMap[l.id] = ids; });
+  const nOut = targets.length;
+  const doPrint = () => printLists({ lists: forOut, rowPick: pickMap, projectName, projectEnd, ...(printParts || {}) });
+  const doExcel = () => excelLists({ lists: forOut, rowPick: pickMap, projectName }).catch((e) => flash("הייצוא נכשל: " + (e.message || e)));
+  const allPicked = lists.length > 0 && lists.every((l) => picked[l.id]);
 
   return html`<div className="rj" dir="rtl"><style>${css}</style>
-    <div className="rjBar">
-      <span className="rjTitle">ריג'קטים${projectName ? ` · ${projectName}` : ""}</span>
+    <div className="rjTop">
       <button type="button" className="rjBtn primary" onClick=${addList}><${Plus} size=${15} strokeWidth=${2.4} /><span className="lbl">רשימה חדשה</span></button>
-      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${() => doPrint(forOut)} title=${chosen.length ? "PDF לרוחב לרשימות המסומנות" : "PDF לרוחב לכל הרשימות"}>
-        <${FileDown} size=${15} /><span className="lbl">PDF${chosen.length ? ` (${chosen.length})` : ""}</span></button>
-      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${() => doExcel(forOut)} title=${chosen.length ? "אקסל לרשימות המסומנות" : "אקסל לכל הרשימות"}>
-        <${FileSpreadsheet} size=${15} /><span className="lbl">אקסל${chosen.length ? ` (${chosen.length})` : ""}</span></button>
-      <button type="button" className="rjBtn" onClick=${saveAll}><${Save} size=${15} /><span className="lbl">שמירה</span></button>
-      ${saveState === "saving" && html`<span className="rjSaved" style=${{ color: "#5b5e66" }}>שומר…</span>`}
-      ${saveState === "saved" && html`<span className="rjSaved">נשמר ✓</span>`}
+      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doPrint}
+        title=${nOut ? "PDF לרוחב — הרשימות והשורות המסומנות" : "PDF לרוחב — כל הרשימות"}>
+        <${FileDown} size=${15} /><span className="lbl">PDF${nOut ? ` (${nOut})` : ""}</span></button>
+      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doExcel}
+        title=${nOut ? "אקסל — הרשימות והשורות המסומנות" : "אקסל — כל הרשימות"}>
+        <${FileSpreadsheet} size=${15} /><span className="lbl">אקסל${nOut ? ` (${nOut})` : ""}</span></button>
     </div>
     ${err && html`<p className="rjErr">${err}</p>`}
     <div className="lliTableWrap rjTableWrap"><table className="lliTable">
-      <colgroup><col style=${{ width: 44 }} /><col /><col style=${{ width: 130 }} /><col style=${{ width: 90 }} /><col style=${{ width: 90 }} /><col style=${{ width: 60 }} /></colgroup>
+      <colgroup><col style=${{ width: 56 }} /><col /><col style=${{ width: 130 }} /><col style=${{ width: 90 }} /><col style=${{ width: 90 }} /><col style=${{ width: 60 }} /></colgroup>
       <thead><tr>
-        <th><input type="checkbox" title="סימון הכול" checked=${allPicked}
-          onChange=${(e) => setPicked(e.target.checked ? Object.fromEntries(lists.map((l) => [l.id, true])) : {})} /></th>
+        <th title="להדפסה"><span className="sbColThIn"><${Printer} size=${14} /><input type="checkbox" className="sbColTick" title="סימון הכול להדפסה" checked=${allPicked}
+          onChange=${(e) => setPicked(e.target.checked ? Object.fromEntries(lists.map((l) => [l.id, true])) : {})} /></span></th>
         <th style=${{ textAlign: "start" }}>שם הרשימה</th><th>תאריך</th><th>שורות</th><th>טופלו</th><th style=${{ width: 70 }}></th>
       </tr></thead>
       <tbody>
@@ -316,7 +324,8 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
             </tr>
             ${open && html`<tr><td colSpan="6" className="rjOpen">
               <div className="rjOpenIn"><${ListEditor} list=${l} projectId=${projectId} subs=${subs || []} edit=${(fn) => editList(l.id, fn)} flash=${flash}
-                onPrint=${(rowPick) => doPrint([l], rowPick)} onExcel=${(rowPick) => doExcel([l], rowPick)} /></div>
+                pick=${rowPicks[l.id] || {}} setPick=${(m) => setRowPicks({ ...rowPicks, [l.id]: m })}
+                onSave=${saveAll} saveState=${saveState} /></div>
             </td></tr>`}
           <//>`;
         })}
@@ -327,8 +336,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
 }
 
 // ----------------------------------------------------------------------------- one list
-function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
-  const [pick, setPick] = useState({});
+function ListEditor({ list, projectId, subs, edit, flash, pick, setPick, onSave, saveState }) {
   const cols = colsOf(list);
   const rows = list.rows || [];
   const setRow = (id, patch) => edit((l) => { l.rows = (l.rows || []).map((r) => (r.id === id ? { ...r, ...patch } : r)); return l; });
@@ -341,7 +349,6 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
   };
   const setCol = (k, v) => edit((l) => { l.cols = { ...(l.cols || {}), [k]: v }; return l; });
   const picked = rows.filter((r) => pick[r.id]).map((r) => r.id);
-  const rowPick = picked.length ? picked : null;
   // The column titles as on the submittal board: the name, and beside it the
   // tick that decides whether the column prints.
   const thV = (k, label) => html`<th key=${k} className=${`sbColTh ${cols[k] === false ? "off" : ""}`}><span className="sbColThIn"><span>${label}</span>
@@ -355,20 +362,14 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
       <label>נוכחים בסיור<input className="lliIn" style=${{ textAlign: "start", fontSize: 13 }} value=${list.attendees || ""} onChange=${(e) => edit((l) => ({ ...l, attendees: e.target.value }))} /></label>
     </div>
     <${Viewers} subs=${subs} value=${list.viewers || []} onChange=${(v) => edit((l) => ({ ...l, viewers: v }))} />
-    <div className="rjBar">
-      <button type="button" className="rjBtn primary" onClick=${addRow}><${Plus} size=${15} strokeWidth=${2.4} /> שורה</button>
-      <span style=${{ marginInlineEnd: "auto" }}></span>
-      <button type="button" className="rjBtn" onClick=${() => onPrint(rowPick)} title=${rowPick ? "PDF לרוחב לשורות המסומנות" : "PDF לרוחב לכל הרשימה"}>
-        <${FileDown} size=${15} /> PDF${rowPick ? ` (${rowPick.length})` : ""}</button>
-      <button type="button" className="rjBtn" onClick=${() => onExcel(rowPick)} title=${rowPick ? "אקסל לשורות המסומנות" : "אקסל לכל הרשימה"}>
-        <${FileSpreadsheet} size=${15} /> אקסל${rowPick ? ` (${rowPick.length})` : ""}</button>
-    </div>
     <div className="lliTableWrap rjTableWrap"><table className="lliTable rjRows">
-      <colgroup><col style=${{ width: 62 }} /><col style=${{ width: 62 }} /><col style=${{ width: 70 }} /><col style=${{ width: 230 }} />
+      <colgroup><col style=${{ width: 44 }} /><col style=${{ width: 62 }} /><col style=${{ width: 70 }} /><col style=${{ width: 230 }} />
         <col style=${{ width: 130 }} /><col style=${{ width: 140 }} /><col style=${{ width: 210 }} /><col style=${{ width: 120 }} />
-        <col style=${{ width: 220 }} /><col style=${{ width: 40 }} /><col style=${{ width: 44 }} /></colgroup>
+        <col style=${{ width: 220 }} /><col style=${{ width: 44 }} /><col style=${{ width: 62 }} /></colgroup>
       <thead><tr>
-        ${thV("done", "טופל")}
+        <th title="להדפסה"><span className="sbColThIn"><${Printer} size=${14} />
+          <input type="checkbox" className="sbColTick" title="סימון כל השורות להדפסה" checked=${rows.length > 0 && picked.length === rows.length}
+            onChange=${(e) => setPick(e.target.checked ? Object.fromEntries(rows.map((r) => [r.id, true])) : {})} /></span></th>
         ${thV("n", "מס\"ד")}
         ${thV("floor", "קומה")}
         ${thV("desc", "תיאור")}
@@ -377,14 +378,13 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
         ${thV("photos", "תמונות")}
         ${thV("plans", "תוכנית")}
         ${thV("notes", "הערות")}
-        <th style=${{ width: 34 }}><input type="checkbox" title="סימון כל השורות להדפסה" checked=${rows.length > 0 && picked.length === rows.length}
-          onChange=${(e) => setPick(e.target.checked ? Object.fromEntries(rows.map((r) => [r.id, true])) : {})} /></th>
-        <th style=${{ width: 40 }}></th>
+        <th></th>
+        ${thV("done", "טופל")}
       </tr></thead>
       <tbody>
         ${rows.length === 0 && html`<tr><td colSpan="11" className="rjEmpty">אין שורות — "+ שורה"</td></tr>`}
         ${rows.map((r, i) => html`<tr key=${r.id} className=${r.done ? "ok" : ""}>
-          <td><input type="checkbox" title="טופל" checked=${!!r.done} onChange=${(e) => setRow(r.id, { done: e.target.checked })} /></td>
+          <td><input type="checkbox" className="rjPick" title="להדפסה" checked=${!!pick[r.id]} onChange=${(e) => setPick({ ...pick, [r.id]: e.target.checked })} /></td>
           <td style=${{ fontWeight: 800, color: "#5b5e66" }}>${i + 1}</td>
           <td><input className="lliIn" value=${r.floor || ""} onChange=${(e) => setRow(r.id, { floor: e.target.value })} /></td>
           <td><textarea className="lliIn lliDesc" rows="2" dir="auto" value=${r.desc || ""} onChange=${(e) => setRow(r.id, { desc: e.target.value })} /></td>
@@ -396,13 +396,16 @@ function ListEditor({ list, projectId, subs, edit, flash, onPrint, onExcel }) {
             rowEdit=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, plans: fn(x.plans || []) } : x)); return l; })} /></td>
           <td><${Notes} notes=${r.notes || []}
             onChange=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, notes: fn(x.notes || []) } : x)); return l; })} /></td>
-          <td><input type="checkbox" title="להדפסה" checked=${!!pick[r.id]} onChange=${(e) => setPick({ ...pick, [r.id]: e.target.checked })} /></td>
           <td><button type="button" className="rjBtn icon" title="מחיקת השורה" onClick=${() => delRow(r)}><${Trash2} size=${14} color="#b02a37" /></button></td>
+          <td><input type="checkbox" title="טופל" checked=${!!r.done} onChange=${(e) => setRow(r.id, { done: e.target.checked })} /></td>
         </tr>`)}
       </tbody>
     </table></div>
-    <div style=${{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+    <div style=${{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, marginTop: 10 }}>
       <button type="button" className="rjBtn" onClick=${addRow}><${Plus} size=${15} strokeWidth=${2.4} /> שורה</button>
+      <button type="button" className="rjBtn primary" onClick=${onSave}><${Save} size=${15} /> שמירה</button>
+      ${saveState === "saving" && html`<span className="rjSaved" style=${{ color: "#5b5e66" }}>שומר…</span>`}
+      ${saveState === "saved" && html`<span className="rjSaved">נשמר ✓</span>`}
     </div>
   <//>`;
 }
@@ -522,7 +525,9 @@ function linkSeconds(projectEnd) {
 }
 function rowsFor(l, rowPick) {
   const all = (l.rows || []).map((r, i) => ({ ...r, n: i + 1 }));
-  return rowPick ? all.filter((r) => rowPick.indexOf(r.id) >= 0) : all;
+  // rowPick: the ids for every list, or { listId: ids } — a list with none prints whole
+  const ids = rowPick && !Array.isArray(rowPick) ? rowPick[l.id] : rowPick;
+  return ids && ids.length ? all.filter((r) => ids.indexOf(r.id) >= 0) : all;
 }
 // dates isolated left-to-right, so a Hebrew line does not turn 03/11/2026 round
 const ltr = (s) => `⁦${s}⁩`;
@@ -554,6 +559,30 @@ async function signedLinks(lists, rowPick, projectEnd) {
   }
   return out;
 }
+// A row printed in pieces is put back together wherever two pieces of it landed
+// on the same page: "המשך" is only for a row the page really cut. It runs at the
+// moment the shared paginator says the pages are final, before anything prints.
+const MERGE_JS = `<script>
+(function () {
+  var v = false;
+  function merge() {
+    Array.prototype.forEach.call(document.querySelectorAll("#pages tbody"), function (tb) {
+      Array.prototype.slice.call(tb.querySelectorAll("tr.contRow")).forEach(function (tr) {
+        var prev = tr.previousElementSibling;
+        if (!prev || prev.getAttribute("data-rid") !== tr.getAttribute("data-rid")) return;
+        ["c-photos", "c-plans"].forEach(function (k) {
+          var from = tr.querySelector("td." + k + " .phs"), to = prev.querySelector("td." + k + " .phs");
+          if (from && to) while (from.firstChild) to.appendChild(from.firstChild);
+        });
+        tr.remove();
+      });
+    });
+  }
+  Object.defineProperty(window, "__awPaged", { configurable: true,
+    get: function () { return v; },
+    set: function (x) { if (x === true && !v) { try { merge(); } catch (e) {} } v = x; } });
+})();
+<\/script>`;
 export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged }) {
   // The window opens on the click itself; a window opened after an await is one
   // the browser blocks as a pop-up.
@@ -594,12 +623,15 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
   // One list: no band — its name, date and attendees are the heading. Several:
   // a quiet grey band names each one, and each starts on its own page.
   const body = lists.map((l) => rowsFor(l, rowPick).flatMap(piecesOf).map((r) =>
-    `<tr${single ? "" : ` data-sec="${esc(secTitle(l))}"`}${r.done ? ' class="ok"' : ""}>${cols.map((c) => `<td class="c-${c[0]}">${cell(r, c[0])}</td>`).join("")}</tr>`).join("")).join("");
+    `<tr data-rid="${esc(l.id + ":" + r.id)}"${single ? "" : ` data-sec="${esc(secTitle(l))}"`} class="${[r.done ? "ok" : "", r.cont ? "contRow" : ""].join(" ").trim()}">${cols.map((c) => `<td class="c-${c[0]}">${cell(r, c[0])}</td>`).join("")}</tr>`).join("")).join("");
   const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "<span></span>";
   const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
   const footBlock = b.footerImg ? `<div class="footImg" id="footimg"><img src="${b.footerImg}" alt="footer"></div>` : "";
   const title = single ? (lists[0].name || "ריג'קטים") : "ריג'קטים";
-  const info = single ? infoLine(lists[0]) : "";
+  // Under the subject: the date in the subject's colour, then the attendees.
+  const l0 = single ? lists[0] : null;
+  const dateLine = l0 && l0.list_date ? `תאריך: ${ltr(fmt(l0.list_date))}` : "";
+  const attLine = l0 && (l0.attendees || "").trim() ? `נוכחים בסיור: ${l0.attendees.trim()}` : "";
   const doc = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>${esc(`${projectName || ""} - ${title}`)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
 ${printSheetCss({ landscape: true, accent: acc, marginMm: 7, framePad: "3mm 5mm" })}
@@ -610,6 +642,7 @@ body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; dir
 .ttlWrap { grid-column: 2; text-align: center; }
 .ttlWrap .ttl { font-size: 17px; font-weight: 800; color: ${WEISS_NAVY_INK}; }
 .ttlWrap .sub { font-size: 11.5px; font-weight: 700; color: ${acc}; margin-top: 2px; }
+.ttlWrap .dt { font-size: 11px; font-weight: 700; color: ${acc}; margin-top: 2px; }
 .ttlWrap .inf { font-size: 10.5px; font-weight: 600; color: #3d4350; margin-top: 2px; }
 .pgSec { font-size: 10.5px; font-weight: 800; color: ${WEISS_NAVY_INK}; background: #eef1f5; border: 1px solid #dfe3ea; padding: 3px 8px; border-radius: 5px; margin: 0 0 4px; text-align: center; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -623,9 +656,9 @@ img.ph { width: 104px; height: 80px; object-fit: contain; border: 1px solid #e6e
 .cont { font-size: 7.5px; color: #6b7280; font-weight: 600; }
 .nt { margin-bottom: 2px; } .nt b { color: #5b5e66; unicode-bidi: isolate; }
 </style></head><body><div id="src">
-<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div>${info ? `<div class="inf">${esc(info)}</div>` : ""}</div>${clientLogo}</div>
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div>${dateLine ? `<div class="dt">${esc(dateLine)}</div>` : ""}${attLine ? `<div class="inf">${esc(attLine)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${colg}</colgroup><thead><tr>${cols.map((c) => `<th>${esc(c[1])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
-${footBlock}</div><div id="pages"></div>${paginateJs ? paginateJs(printedStampText("he")) : ""}</body></html>`;
+${footBlock}</div><div id="pages"></div>${MERGE_JS}${paginateJs ? paginateJs(printedStampText("he")) : ""}</body></html>`;
   if (printLists.docOnly) return doc;
   if (!w) return;
   w.document.open(); w.document.write(doc); w.document.close(); w.focus();
