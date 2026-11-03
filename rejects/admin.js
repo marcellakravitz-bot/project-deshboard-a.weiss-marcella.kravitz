@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 2 · 03.11.2026";
+export const REJECTS_BUILD = "rejects build 3 · 03.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -164,7 +164,7 @@ const css = `
 `;
 
 // ----------------------------------------------------------------------------- the module
-export function RejectsBoard({ projectId, projectName, printParts, currentEmail, subs }) {
+export function RejectsBoard({ projectId, projectName, projectEnd, printParts, currentEmail, subs }) {
   const [lists, setLists] = useState(null);
   const [err, setErr] = useState("");
   const [openId, setOpenId] = useState(null);
@@ -274,7 +274,7 @@ export function RejectsBoard({ projectId, projectName, printParts, currentEmail,
 
   const chosen = lists.filter((l) => picked[l.id]);
   const forOut = chosen.length ? chosen : lists;
-  const doPrint = (ls, rowPick) => printLists({ lists: ls, rowPick, projectName, ...(printParts || {}) });
+  const doPrint = (ls, rowPick) => printLists({ lists: ls, rowPick, projectName, projectEnd, ...(printParts || {}) });
   const doExcel = (ls, rowPick) => excelLists({ lists: ls, rowPick, projectName }).catch((e) => flash("הייצוא נכשל: " + (e.message || e)));
   const allPicked = lists.length > 0 && chosen.length === lists.length;
 
@@ -496,75 +496,137 @@ function Notes({ notes, onChange }) {
 }
 
 // ----------------------------------------------------------------------------- printing (landscape, house paper)
+// 03.11.26 (rejects build 3) — her notes on the printout:
+//  · the date (and attendees) sit in the main heading; no second blue band
+//  · A. Weiss navy, not the project colour
+//  · light-grey column lines as well as row lines
+//  · description and notes narrower, the photos wider and as many to a line as
+//    fit, half the gap between them
+//  · a row never cut by the foot of the page: a row with many photos is printed
+//    in pieces, and every piece repeats the number, floor, description and the
+//    rest, so nothing is left blank on the next page
+//  · every photo is a link to the full picture (a signed link valid 12 months)
+const WEISS_NAVY = "#1A559E";        // BRAND_PALETTES "navy" — the submittal form and the contacts sheet
+const WEISS_NAVY_INK = "#103460";
+const PHOTOS_PER_PIECE = 8;          // two lines of four: the tallest a piece of a row may be
+// 03.11.26 — a photo link is valid until the end of the project (its end date in
+// the project settings, to the end of that day). A project with no end date, or
+// one already past it, gets twelve months.
+const YEAR_SECONDS = 365 * 24 * 3600;
+function linkSeconds(projectEnd) {
+  const m = String(projectEnd || "").match(/^(\d{4})-(\d{2})-(\d{2})/) || String(projectEnd || "").match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})/);
+  if (!m) return YEAR_SECONDS;
+  const end = m[1].length === 4 ? new Date(+m[1], +m[2] - 1, +m[3], 23, 59, 59) : new Date(+m[3], +m[2] - 1, +m[1], 23, 59, 59);
+  const secs = Math.floor((end.getTime() - Date.now()) / 1000);
+  return secs > 3600 ? secs : YEAR_SECONDS;
+}
 function rowsFor(l, rowPick) {
   const all = (l.rows || []).map((r, i) => ({ ...r, n: i + 1 }));
   return rowPick ? all.filter((r) => rowPick.indexOf(r.id) >= 0) : all;
 }
-function secTitle(l) {
-  // dates isolated left-to-right, so a Hebrew line does not turn 03/11/2026 round
-  return [l.name || "ללא שם", l.list_date ? `תאריך: \u2066${fmt(l.list_date)}\u2069` : "", (l.attendees || "").trim() ? `נוכחים בסיור: ${l.attendees.trim()}` : ""]
+// dates isolated left-to-right, so a Hebrew line does not turn 03/11/2026 round
+const ltr = (s) => `⁦${s}⁩`;
+function infoLine(l) {
+  return [l.list_date ? `תאריך: ${ltr(fmt(l.list_date))}` : "", (l.attendees || "").trim() ? `נוכחים בסיור: ${l.attendees.trim()}` : ""]
     .filter(Boolean).join("  ·  ");
 }
-export function printLists({ lists, rowPick, projectName, brand, accent, paginateJs, whenPaged }) {
+function secTitle(l) { return [l.name || "ללא שם", infoLine(l)].filter(Boolean).join("  ·  "); }
+// A row with more photos (or plans) than fit in one piece becomes several pieces.
+function piecesOf(r) {
+  const ph = r.photos || [], pl = r.plans || [];
+  const n = Math.max(1, Math.ceil(Math.max(ph.length, pl.length) / PHOTOS_PER_PIECE));
+  const out = [];
+  for (let i = 0; i < n; i++) {
+    out.push({ ...r, photos: ph.slice(i * PHOTOS_PER_PIECE, (i + 1) * PHOTOS_PER_PIECE),
+      plans: pl.slice(i * PHOTOS_PER_PIECE, (i + 1) * PHOTOS_PER_PIECE), cont: i > 0 });
+  }
+  return out;
+}
+async function signedLinks(lists, rowPick, projectEnd) {
+  const paths = [];
+  lists.forEach((l) => rowsFor(l, rowPick).forEach((r) => (r.photos || []).concat(r.plans || []).forEach((p) => { if (p && p.path) paths.push(p.path); })));
+  const out = {};
+  for (let i = 0; i < paths.length; i += 100) {
+    try {
+      const { data } = await supabase.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), linkSeconds(projectEnd));
+      (data || []).forEach((d) => { if (d && d.path && d.signedUrl) out[d.path] = d.signedUrl; });
+    } catch (e) { console.warn("[rejects] links", e); }
+  }
+  return out;
+}
+export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged }) {
+  // The window opens on the click itself; a window opened after an await is one
+  // the browser blocks as a pop-up.
+  const w = printLists.docOnly ? null : window.open("", "_blank");
+  if (w) { try { w.document.write('<p dir="rtl" style="font-family:Arial;padding:24px">מכין את ההדפסה…</p>'); } catch (e) {} }
+  const links = printLists.docOnly ? {} : await signedLinks(lists, rowPick, projectEnd);
   const b = brand || {};
-  const acc = accent || "#14265e";
-  // The columns that print are the ones ticked on the FIRST list; with several
-  // lists printed together, a column prints if any of them has it ticked.
+  const acc = WEISS_NAVY;
+  const single = lists.length === 1;
   const on = {};
   COLS.forEach(([k]) => { on[k] = lists.some((l) => colsOf(l)[k] !== false); });
   const cols = [];
-  if (on.n) cols.push(["n", "מס\"ד", 4]);
-  if (on.floor) cols.push(["floor", "קומה", 6]);
-  if (on.desc) cols.push(["desc", "תיאור", 26]);
-  if (on.owner) cols.push(["owner", "אחריות", 10]);
-  if (on.due) cols.push(["due", "מועד לביצוע", 8]);
-  if (on.photos) cols.push(["photos", "תמונות", 29]);
-  if (on.plans) cols.push(["plans", "תוכנית", 18]);
-  if (on.notes) cols.push(["notes", "הערות", 18]);
-  if (on.done) cols.push(["done", "טופל", 5]);
+  if (on.n) cols.push(["n", "מס\"ד", 3.2]);
+  if (on.floor) cols.push(["floor", "קומה", 4.5]);
+  if (on.desc) cols.push(["desc", "תיאור", 17]);
+  if (on.owner) cols.push(["owner", "אחריות", 8]);
+  if (on.due) cols.push(["due", "מועד לביצוע", 7]);
+  if (on.photos) cols.push(["photos", "תמונות", on.plans ? 34 : 44]);
+  if (on.plans) cols.push(["plans", "תוכנית", 12]);
+  if (on.notes) cols.push(["notes", "הערות", 12]);
+  if (on.done) cols.push(["done", "טופל", 4]);
   const total = cols.reduce((a, c) => a + c[2], 0);
   const colg = cols.map((c) => `<col style="width:${((c[2] / total) * 100).toFixed(2)}%">`).join("");
-  const imgs = (arr) => (arr || []).map((p) => `<img class="ph" src="${p.thumb}" alt="">`).join("");
+  const imgs = (arr) => (arr || []).map((p) => {
+    const im = `<img class="ph" src="${p.thumb}" alt="">`;
+    const url = p.path && links[p.path];
+    return url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${im}</a>` : im;
+  }).join("");
   const cell = (r, k) => {
-    if (k === "n") return String(r.n);
+    if (k === "n") return `${r.n}${r.cont ? '<div class="cont">המשך</div>' : ""}`;
     if (k === "due") return r.due ? `<span dir="ltr">${fmt(r.due)}</span>` : "";
-    if (k === "photos") return imgs(r.photos);
-    if (k === "plans") return imgs(r.plans);
+    if (k === "photos") return `<div class="phs">${imgs(r.photos)}</div>`;
+    if (k === "plans") return `<div class="phs">${imgs(r.plans)}</div>`;
     if (k === "notes") return (r.notes || []).map((n) => `<div class="nt"><b dir="ltr">${fmt(n.at)}</b> ${esc(n.text)}</div>`).join("");
     if (k === "done") return r.done ? "✓" : "";
     return esc(r[k]).replace(/\n/g, "<br>");
   };
-  const body = lists.map((l) => rowsFor(l, rowPick).map((r) =>
-    `<tr data-sec="${esc(secTitle(l))}"${r.done ? ' class="ok"' : ""}>${cols.map((c) => `<td class="c-${c[0]}">${cell(r, c[0])}</td>`).join("")}</tr>`).join("")).join("");
+  // One list: no band — its name, date and attendees are the heading. Several:
+  // a quiet grey band names each one, and each starts on its own page.
+  const body = lists.map((l) => rowsFor(l, rowPick).flatMap(piecesOf).map((r) =>
+    `<tr${single ? "" : ` data-sec="${esc(secTitle(l))}"`}${r.done ? ' class="ok"' : ""}>${cols.map((c) => `<td class="c-${c[0]}">${cell(r, c[0])}</td>`).join("")}</tr>`).join("")).join("");
   const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "<span></span>";
   const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
   const footBlock = b.footerImg ? `<div class="footImg" id="footimg"><img src="${b.footerImg}" alt="footer"></div>` : "";
-  const title = lists.length === 1 ? (lists[0].name || "ריג'קטים") : "ריג'קטים";
+  const title = single ? (lists[0].name || "ריג'קטים") : "ריג'קטים";
+  const info = single ? infoLine(lists[0]) : "";
   const doc = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>${esc(`${projectName || ""} - ${title}`)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
 ${printSheetCss({ landscape: true, accent: acc, marginMm: 7, framePad: "3mm 5mm" })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: rtl; }
-.hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 8px; margin-bottom: 8px; }
+.hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 6px; margin-bottom: 6px; }
 .hdr img { max-height: 40px; max-width: 140px; object-fit: contain; justify-self: start; }
 .hdr img.clientLogo { justify-self: end; }
 .ttlWrap { grid-column: 2; text-align: center; }
-.ttlWrap .ttl { font-size: 18px; font-weight: 800; color: ${acc}; }
-.ttlWrap .sub { font-size: 11px; font-weight: 600; color: ${acc}; margin-top: 2px; }
-.pgSec { font-size: 11px; font-weight: 800; color: #fff; background: ${acc}; padding: 5px 8px; border-radius: 6px; margin: 0 0 5px; text-align: center; }
+.ttlWrap .ttl { font-size: 17px; font-weight: 800; color: ${WEISS_NAVY_INK}; }
+.ttlWrap .sub { font-size: 11.5px; font-weight: 700; color: ${acc}; margin-top: 2px; }
+.ttlWrap .inf { font-size: 10.5px; font-weight: 600; color: #3d4350; margin-top: 2px; }
+.pgSec { font-size: 10.5px; font-weight: 800; color: ${WEISS_NAVY_INK}; background: #eef1f5; border: 1px solid #dfe3ea; padding: 3px 8px; border-radius: 5px; margin: 0 0 4px; text-align: center; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-th { background: ${acc}; color: #fff; font-size: 9.5px; font-weight: 800; padding: 5px 4px; }
-td { font-size: 9px; padding: 4px; border-bottom: 1px solid #e6e8ec; text-align: center; vertical-align: top; word-break: break-word; }
+th { background: ${acc}; color: #fff; font-size: 9.5px; font-weight: 800; padding: 5px 3px; border: 1px solid ${acc}; }
+td { font-size: 9px; padding: 3px; border: 1px solid #e3e6eb; text-align: center; vertical-align: top; word-break: break-word; }
 td.c-desc, td.c-notes { text-align: right; }
 tr.ok td { background: #e3f3e6; }
-/* 03.11.26 — big enough to read on paper: four times the first size */
-img.ph { width: 46%; height: 105px; object-fit: contain; border-radius: 3px; margin: 1px 1%; border: 1px solid #e6e8ec; display: inline-block; vertical-align: top; background: #fff; }
-.nt { margin-bottom: 2px; } .nt b { color: #5b5e66; direction: ltr; unicode-bidi: isolate; }
+.phs { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.phs a { display: block; line-height: 0; }
+img.ph { width: 104px; height: 80px; object-fit: contain; border: 1px solid #e6e8ec; border-radius: 2px; background: #fff; display: block; }
+.cont { font-size: 7.5px; color: #6b7280; font-weight: 600; }
+.nt { margin-bottom: 2px; } .nt b { color: #5b5e66; unicode-bidi: isolate; }
 </style></head><body><div id="src">
-<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div></div>${clientLogo}</div>
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div>${info ? `<div class="inf">${esc(info)}</div>` : ""}</div>${clientLogo}</div>
 <table><colgroup>${colg}</colgroup><thead><tr>${cols.map((c) => `<th>${esc(c[1])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
 ${footBlock}</div><div id="pages"></div>${paginateJs ? paginateJs(printedStampText("he")) : ""}</body></html>`;
   if (printLists.docOnly) return doc;
-  const w = window.open("", "_blank");
   if (!w) return;
   w.document.open(); w.document.write(doc); w.document.close(); w.focus();
   if (whenPaged) whenPaged(w, 300); else setTimeout(() => { try { w.print(); } catch (e) {} }, 800);
