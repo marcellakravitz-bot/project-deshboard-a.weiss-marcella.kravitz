@@ -555,7 +555,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "03.11.2026 · build 235";
+var APP_BUILD = "03.11.2026 · build 236";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -7957,13 +7957,17 @@ function PhotoGalleryCard({ photos, canEdit, onUploadPhotos, onRemovePhoto, isRT
 // src/cards/CardView.jsx
 // By Room (24.10.2026, build 218): the module lives in its own folder, byroom/. The dashboard only loads it:
 // the administrator gets the management screen, a signed-in client or contractor the approved-room viewer.
-var ByRoomAdminLazy = React14.lazy(() => import("./byroom/admin.js").then((m) => ({ default: m.ByRoomAdmin })));
-var ByRoomMemberLazy = React14.lazy(() => import("./byroom/admin.js").then((m) => ({ default: m.ByRoomMember })));
+// 03.11.26 — the module files carry the build in their address, so a new build
+// is never served from the browser's copy of the last one (a Ctrl+F5 reloads the
+// page, not the files the page loads afterwards).
+var MODULE_V = "?v=" + String(APP_BUILD).replace(/\D+/g, "");
+var ByRoomAdminLazy = React14.lazy(() => import("./byroom/admin.js" + MODULE_V).then((m) => ({ default: m.ByRoomAdmin })));
+var ByRoomMemberLazy = React14.lazy(() => import("./byroom/admin.js" + MODULE_V).then((m) => ({ default: m.ByRoomMember })));
 // Facility File / תיק מתקן (28.10.2026, build 224): its own folder, facility/. For the administrator the
 // Contacts cube becomes "תיק מתקן" and the contacts table is chapter 1 inside it. Everyone else still gets
 // the contacts table exactly as before.
-var RejectsLazy = React14.lazy(() => import("./rejects/admin.js").then((m) => ({ default: m.RejectsBoard })));
-var FacilityLazy = React14.lazy(() => import("./facility/admin.js").then((m) => ({ default: m.FacilityFile })));
+var RejectsLazy = React14.lazy(() => import("./rejects/admin.js" + MODULE_V).then((m) => ({ default: m.RejectsBoard })));
+var FacilityLazy = React14.lazy(() => import("./facility/admin.js" + MODULE_V).then((m) => ({ default: m.FacilityFile })));
 
 // What each mark IS, for By Room (25.10.2026, builds 221-222): the LLI rows ticked BY ROOM, under what she corrected
 // on the room list — the same merge the old room screen made — plus the LLI supplier and status (222).

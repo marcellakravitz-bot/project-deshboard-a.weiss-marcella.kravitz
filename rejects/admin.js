@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 5 · 03.11.2026";
+export const REJECTS_BUILD = "rejects build 6 · 03.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -332,6 +332,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
       </tbody>
     </table></div>
     ${toast && html`<div className="rjToast">${toast}</div>`}
+    <p style=${{ textAlign: "center", fontSize: 10.5, color: "#9a9da5", margin: "14px 0 0", direction: "ltr" }}>${REJECTS_BUILD}</p>
   </div>`;
 }
 
