@@ -1462,7 +1462,7 @@ function sbPagesOf(att, numPages) {
 // extract, so the pages themselves are sent and the model reads them by eye.
 // Deliberately smaller and fewer than the print render: legible is enough.
 
-function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders }) {
+function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders, filters }) {
   // Two questions on the boards, one everywhere else. The audience decides
   // which columns are printed: a client's copy carries what a client sees on
   // the screen, and hers carries everything (29.8.26).
@@ -1478,13 +1478,13 @@ function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders
   const [step, setStep] = useState6(() => {
     if (!titles || !startLang) return null;
     const d = titles(startLang) || {};
-    return { title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "" };
+    return { title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "", filters: {} };
   });
   const pick = (v) => {
     if (titles) {
       const d = titles(v) || {};
       setLang(v);
-      setStep({ title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "" });
+      setStep({ title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "", filters: {} });
       return;
     }
     return withAudience ? onPick(v, who) : onPick(v);
@@ -1531,6 +1531,16 @@ function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders
                   onClick: () => setStep({ ...step, order: o[0] })
                 }, he ? o[1] : (o[2] || o[1])))))
             : null,
+          // 05.11.26 — narrowing the report: each filter a list, "all" first.
+          (filters || []).filter((f) => f && (f.options || []).length).map((f) => sbH("label", { key: f.key, className: "printAskField" },
+            sbH("span", null, he ? f.he : (f.en || f.he)),
+            sbH("select", {
+              className: "printAskSel",
+              value: (step.filters || {})[f.key] || "",
+              onChange: (e) => setStep({ ...step, filters: { ...(step.filters || {}), [f.key]: e.target.value } })
+            },
+              sbH("option", { value: "" }, he ? "הכול" : "All"),
+              f.options.map((o) => sbH("option", { key: o[0], value: o[0] }, he ? o[1] : (o[2] || o[1])))))),
           sbH(
             "div",
             { className: "printAskBtns" },
@@ -2920,6 +2930,7 @@ var signCss = `
           padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
           font-family: inherit; color: var(--ink); background: #fff;
         }
+        .printAskSel { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; color: var(--ink); }
         .printAskSeg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
         .printAskSeg button { flex: 1; border: 0; background: #fff; padding: 8px 10px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--steel); cursor: pointer; }
         .printAskSeg button + button { border-inline-start: 1px solid var(--line); }

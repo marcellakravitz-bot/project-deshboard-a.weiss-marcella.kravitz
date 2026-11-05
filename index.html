@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 252";
+var APP_BUILD = "05.11.2026 · build 253";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -11955,7 +11955,22 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // titles, the disciplines, the units and the statuses all read from it, not
   // from whatever language the screen happens to be in. Before this, choosing
   // English gave an English heading over a Hebrew table (15.10.26).
-  const exportGrid = (audience, printLang) => {
+  // 05.11.26 — the supplier a row is filed under (as the screen shows it),
+  // and the two print filters built on it and on "ordered".
+  const supplierOf = (r) => {
+    const v = lliRowOf(data, r.code);
+    return String(v.supplier || boardTradeCompany(contacts, contactsCatalog, r.category, lang) || "").trim();
+  };
+  const lliFilters = () => {
+    const sups = Array.from(new Set(all.filter((r) => !isRemoved(r)).map(supplierOf).filter(Boolean)))
+      .sort((a, b) => a.localeCompare(b, lang === "he" ? "he" : "en"));
+    return [
+      { key: "supplier", he: "ספק", en: "Supplier", options: sups.map((x) => [x, x]).concat([["__none__", "ללא ספק", "No supplier"]]) },
+      { key: "ordered", he: "הוזמן / לא הוזמן", en: "Ordered", options: [["yes", "הוזמן", "Ordered"], ["no", "לא הוזמן", "Not ordered"]] }
+    ];
+  };
+  const exportGrid = (audience, printLang, flt) => {
+    const F = flt || {};
     const lg = printLang === "en" ? "en" : printLang === "he" ? "he" : lang;
     const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
     const yn = (v) => (v ? T("yes") : T("no"));
@@ -11989,6 +12004,12 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
         if (isHidden(r) && (audience === "client" || audience === "contractor")) return;
         if (printOff[r.code]) return;
         const v = lliRowOf(data, r.code);
+        if (F.supplier) {
+          const sp = supplierOf(r);
+          if (F.supplier === "__none__" ? sp : sp !== F.supplier) return;
+        }
+        if (F.ordered === "yes" && !v.ordered) return;
+        if (F.ordered === "no" && v.ordered) return;
         body.push([
           r.source === "boq" ? r.code : T("manual"),
           cat(r.category),
@@ -12033,7 +12054,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     const lg = printLang === "en" ? "en" : "he";
     const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
     const H = hdr || lliTitles(lg);
-    const g0 = exportGrid(audience, lg);
+    const g0 = exportGrid(audience, lg, H.filters);
     if (!g0.body.length) { setPoNote(T("nothingToExport")); return; }
     setPoNote(T("translating"));
     // The description and the supplier are the only two columns holding free
@@ -12104,7 +12125,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
     const lg = printLang === "en" ? "en" : "he";
     const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
     const H = hdr || lliTitles(lg);
-    const g0 = exportGrid(audience, lg);
+    const g0 = exportGrid(audience, lg, H.filters);
     if (!g0.body.length) { setPoNote(T("nothingToExport")); return; }
     // The window is opened HERE, inside the click, and told what it is waiting
     // for. Opening it after the translation comes back is what a pop-up blocker
@@ -12382,6 +12403,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
         ? sbH(PrintLangAsk, {
             titles: lliTitles,
             orders: BOARD_ORDERS,
+            filters: lliFilters(),
             onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, "admin", hdr); },
             onClose: () => setPrintAsk(null)
           })
