@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 247";
+var APP_BUILD = "05.11.2026 · build 248";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1820,8 +1820,13 @@ var pdfViewer = `
         /* 20.10.26 — "no BOQ item" reads in red, wherever the row shows it. */
         .lliBoqRefIn.noBoq, .sbChkCodeIn.noBoq { color: #d32f2f; font-weight: 600; }
         .lliBoqRefIn::placeholder { color: var(--mist); font-size: 9.5px; }
-        .lliAlsoOn label { display: inline-flex; align-items: center; gap: 3px; cursor: pointer; }
-        .lliAlsoOn input { width: 12px; height: 12px; accent-color: var(--accent, #0F3460); }
+        .lliAlsoBtn {
+          border: 1px solid #dfe3e9; background: #fff; color: #a3aab5; border-radius: 6px;
+          padding: 1px 7px; font-family: inherit; font-size: 10.5px; font-weight: 800; cursor: pointer; line-height: 1.5;
+        }
+        .lliAlsoBtn:hover { border-color: #b9c0ca; color: #6b7480; }
+        .lliAlsoBtn.on { background: #1A559E; border-color: #1A559E; color: #fff; }
+        .lliAlsoBtn.on:hover { background: #164a8a; }
         .lliMarkInput {
           width: 240px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 9px;
           font-family: inherit; font-size: 12.5px; font-weight: 700; text-align: center;
@@ -1989,6 +1994,9 @@ var pdfViewer = `
            must keep fitting the page. */
         .lliTable.marksTable { min-width: 0; }
         .lliTable .cSec { width: 120px; text-align: start; }
+        /* 05.11.26 — the item number in the middle of its cell, SD / SUB under it. */
+        .lliTable:not(.marksTable) td.cSec { text-align: center; }
+        .lliTable:not(.marksTable) td.cSec .lliCode { display: block; text-align: center; }
         /* The category is a combo, and at 100px the wording it holds was cut
            off. Wider, and the box inside it sits on the middle of the column
            rather than against its edge (7.9.26). */
@@ -12562,26 +12570,21 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                         ? sbH(
                             "span",
                             { className: "lliAlsoOn" },
-                            sbH(
-                              "label",
-                              { title: r.source === "boq" ? L("routedSd") : L("alsoSd") },
-                              sbH("input", {
-                                type: "checkbox",
-                                checked: flagOf(r, "sd"),
-                                onChange: () => toggleFlag(r, "sd")
-                              }),
-                              "SD"
-                            ),
-                            sbH(
-                              "label",
-                              { title: r.source === "boq" ? L("routedSubmittal") : L("alsoSubmittal") },
-                              sbH("input", {
-                                type: "checkbox",
-                                checked: flagOf(r, "submittal"),
-                                onChange: () => toggleFlag(r, "submittal")
-                              }),
-                              "SUB"
-                            )
+                            // 05.11.26 — no tick boxes: the word is the switch,
+                            // royal blue when the line is needed there, grey
+                            // when it is not.
+                            sbH("button", {
+                              type: "button", className: `lliAlsoBtn ${flagOf(r, "sd") ? "on" : ""}`.trim(),
+                              "aria-pressed": flagOf(r, "sd"),
+                              title: r.source === "boq" ? L("routedSd") : L("alsoSd"),
+                              onClick: () => toggleFlag(r, "sd")
+                            }, "SD"),
+                            sbH("button", {
+                              type: "button", className: `lliAlsoBtn ${flagOf(r, "submittal") ? "on" : ""}`.trim(),
+                              "aria-pressed": flagOf(r, "submittal"),
+                              title: r.source === "boq" ? L("routedSubmittal") : L("alsoSubmittal"),
+                              onClick: () => toggleFlag(r, "submittal")
+                            }, "SUB")
                           )
                         : null
                     ),
