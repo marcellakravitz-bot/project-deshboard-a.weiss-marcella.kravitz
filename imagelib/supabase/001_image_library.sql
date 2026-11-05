@@ -33,3 +33,7 @@ create policy image_library_edit on public.image_library for update to authentic
 drop policy if exists image_library_drop on public.image_library;
 create policy image_library_drop on public.image_library for delete to authenticated
   using (public.is_admin());
+
+-- 05.11.26: the table needs its grants too (new tables here get none by default)
+grant select, insert, update, delete on public.image_library to authenticated;
+grant select, insert, update, delete on public.image_library to service_role;

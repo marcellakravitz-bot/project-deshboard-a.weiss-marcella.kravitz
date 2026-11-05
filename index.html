@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 241";
+var APP_BUILD = "05.11.2026 · build 242";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -23678,7 +23678,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
   } }))));
 }
 function ProjectDashboardApp() {
-  const [lang, setLang] = useState6("en");
+  const [lang, setLang] = useState6("he");   // 05.11.26 — the site opens in Hebrew; EN is a click away
   const [menuOpen, setMenuOpen] = useState6(false);
   const [menuView, setMenuView] = useState6("options");
   const [view, setView] = useState6("login");
