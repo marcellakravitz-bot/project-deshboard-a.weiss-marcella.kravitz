@@ -320,7 +320,7 @@ var COPY = {
       { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
       { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, iconColor: "#2563EB", title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Long Lead & Order Tracking" },
+      { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Order & Delivery Tracking" },
       { key: "submittal", icon: FileCheck2, iconColor: "#1A7F4B", title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
@@ -442,7 +442,7 @@ var COPY = {
       { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
       { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, iconColor: "#2563EB", title: "Project Schedule", sub: "MS Project" },
-      { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Long Lead & Order Tracking" },
+      { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Order & Delivery Tracking" },
       { key: "submittal", icon: FileCheck2, iconColor: "#1A7F4B", title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
@@ -555,7 +555,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 239";
+var APP_BUILD = "05.11.2026 · build 240";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1978,12 +1978,9 @@ var pdfViewer = `
           text-align: center; padding: 7px 6px; border-bottom: 1px solid #b6c8e2;
         }
         .lliTable tr.lliOff td { opacity: .45; }
-        /* Long lead, and nobody has ordered it yet. A wash of red, not a
-           warning sign: it has to be readable for as long as the list is
-           (29.8.26). */
         /* ONE fan of three colours, and the same rule on all three boards
            (29.8.26):
-             red    something is late, or long lead and not moving yet
+             red    something is late
              orange it is with somebody, waiting for an answer
              green  it is done
            LLI has no orange: an order is either placed or it is not. */
@@ -2140,10 +2137,6 @@ var pdfViewer = `
         }
         .lliOrd.on { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
         .lliOrd:disabled { cursor: default; }
-        .lliLongTag {
-          display: inline-block; margin-top: 3px; background: #fdf0d6; color: #8a6a12;
-          border-radius: 999px; padding: 1px 7px; font-size: 10px; font-weight: 800; white-space: nowrap;
-        }
         .lliMixed { color: #e08a12; font-weight: 900; margin-inline-start: 2px; }
         .blockRule { height: 1px; background: var(--line); margin: 18px 0 14px; }
         .plansBlock { }
@@ -2879,10 +2872,9 @@ var pdfViewer = `
         .boqTick:hover { border-color: #1a7f4b; }
         /* One colour for all three routes: a tick is a tick. */
         .boqTick.on { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
-        .boqTick.on.longLead { background: #e08a12; border-color: #e08a12; }
         /* Routed here, then taken off that board from the list itself: the tick
            stays, in grey, so an empty box still means "never routed" (29.8.26). */
-        .boqTick.on.off, .boqTick.on.off.longLead {
+        .boqTick.on.off {
           background: #c7ccd4; border-color: #c7ccd4; color: #fff;
         }
         .boqActions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
@@ -9788,9 +9780,8 @@ function boqText(node, lang) {
 //                     approved before fabricating or building.
 //   LLI       — WHEN. In this office the LLI table is the ordering status board:
 //                     everything that is actually ordered from a supplier and
-//                     tracked until it lands. Long lead items are the subset of
-//                     those whose approval + fabrication + delivery threaten the
-//                     programme, and they carry an extra "long lead" mark.
+//                     tracked until it lands. (The "long lead" mark that used to
+//                     sit inside it was removed on 05.11.26.)
 //
 // An electrical panel is all three. Wall paint is a submittal and nothing else.
 // A staircase is an SD. Demolition is none of them.
@@ -9809,9 +9800,9 @@ var BOQ_RULES_SD = [
   /לוח(ות)?\s*חשמל/, /מדרגות/, /מעקה/, /בהתאמה\s*אישית/, /מותאם\s*אישית/, /חירוץ/,
   /shop\s*drawing/i, /fabricat/i, /custom[- ]made/i, /bespoke/i, /joinery/i, /millwork/i
 ];
-// The subset of ordered items whose lead time is the risk. These get the extra
-// mark inside the LLI table, not a separate tab.
-var BOQ_RULES_LONGLEAD = [
+// Lines that are plainly something ordered from a supplier (05.11.26: these
+// used to carry a "long lead" mark too; now they are simply routed to LLI).
+var BOQ_RULES_ORDERED = [
   /לוח(ות)?\s*חשמל/, /גופ[יה]\s*תאורה/, /יחיד(ה|ות)\s*(מיזוג|טיפול)/, /מזגן/, /צ׳ילר/, /צ'ילר/,
   /AHU/i, /FCU/i, /VRF/i, /VRV/i, /מעלית/, /גנרטור/, /UPS/i, /שנא(י|ים)/, /מיובא/, /יבוא/,
   /דלת(ות)?\s*(אש|אקוסטי|מתכת|פח)/, /מערכת\s*(גילוי|כיבוי|כריזה|בקרה)/
@@ -9824,7 +9815,7 @@ var BOQ_RULES_WORKONLY = [
 ];
 
 function boqFlagsEmpty() {
-  return { submittal: false, sd: false, lli: false, longLead: false, review: false };
+  return { submittal: false, sd: false, lli: false, review: false };
 }
 function boqAnyFlag(f) {
   return !!(f && (f.submittal || f.sd || f.lli));
@@ -9842,8 +9833,8 @@ function boqRuleFlags(chapterNo, item, subName) {
   }
   if (BOQ_RULES_WORKONLY.some((re) => re.test(text))) return { ...boqFlagsEmpty(), settled: true, source: "rule" };
   const sd = BOQ_RULES_SD.some((re) => re.test(text));
-  const longLead = BOQ_RULES_LONGLEAD.some((re) => re.test(text));
-  if (sd || longLead) {
+  const ordered = BOQ_RULES_ORDERED.some((re) => re.test(text));
+  if (sd || ordered) {
     // A word like "מעלית" or "לוח חשמל" is enough to know the line belongs on a
     // board. It is NOT enough to know which product it is: settling it here
     // used to keep it away from the model, and a line with no family name has
@@ -9851,9 +9842,8 @@ function boqRuleFlags(chapterNo, item, subName) {
     // floor panels, ended up as one record with the wrong quantity. The rule is
     // kept as the answer to fall back on, and the line is still asked about
     // (28.8.26).
-    // Anything worth drawing or worth chasing is also worth approving, and a
-    // long lead item is by definition something that gets ordered.
-    return { submittal: true, sd, lli: longLead, longLead, settled: false, source: "rule" };
+    // Anything worth drawing or worth chasing is also worth approving.
+    return { submittal: true, sd, lli: ordered, settled: false, source: "rule" };
   }
   return null;
 }
@@ -9864,7 +9854,7 @@ function boqRuleFlags(chapterNo, item, subName) {
 // the line is ticked for approval and for ordering. Generous on purpose: a tick
 // Marcella removes costs her a click, a missing line costs her an item.
 function boqFallbackFlags(source) {
-  return { submittal: true, sd: false, lli: true, longLead: false, source };
+  return { submittal: true, sd: false, lli: true, source };
 }
 function boqClassifyPayload(rows) {
   return rows.map((r) => ({
@@ -9912,18 +9902,16 @@ function boqCleanCategory(v) {
   // even though it has no submittal folder.
   return BOARD_CATEGORIES.some((c) => c.key === k) ? k : null;
 }
-// "SDLX" -> submittal + shop drawing + ordered + long lead. "R" is the model
+// "SDL" -> submittal + shop drawing + ordered. An "X" (the old long-lead letter)
+// still means ordered. "R" is the model
 // saying it could not decide: the line is shown with a "check this" mark rather
 // than guessed at, which is what her instructions ask for.
 function boqParseFlagString(s) {
   const v = String(s || "").toUpperCase();
-  const longLead = v.indexOf("X") >= 0;
   return {
     submittal: v.indexOf("S") >= 0,
     sd: v.indexOf("D") >= 0,
-    // A long lead item is ordered by definition, whatever the model wrote.
-    lli: v.indexOf("L") >= 0 || longLead,
-    longLead,
+    lli: v.indexOf("L") >= 0 || v.indexOf("X") >= 0,
     review: v.indexOf("R") >= 0
   };
 }
@@ -9943,11 +9931,11 @@ async function boqClassify(tree, ask, onProgress) {
         // a product name and a discipline, and only the model gives those. The
         // rule travels with the line as the answer to use if the model has none.
         if (ruled && ruled.settled) {
-          out[item.code] = { submittal: ruled.submittal, sd: ruled.sd, lli: ruled.lli, longLead: !!ruled.longLead, source: "rule" };
+          out[item.code] = { submittal: ruled.submittal, sd: ruled.sd, lli: ruled.lli, source: "rule" };
         } else {
           pending.push({
             ...item, chapter: ch.c, chapterName: boqText(ch, "he"), subName: boqText(sub, "he"),
-            hint: ruled ? { submittal: ruled.submittal, sd: ruled.sd, lli: ruled.lli, longLead: !!ruled.longLead } : null
+            hint: ruled ? { submittal: ruled.submittal, sd: ruled.sd, lli: ruled.lli } : null
           });
         }
       });
@@ -10013,14 +10001,14 @@ function boqFlagsOf(auto, overrides, code) {
   const accessory = !!((o && o.accessory) || (a && a.accessory));
   if (o) {
     return {
-      submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli, longLead: !!o.longLead,
+      submittal: !!o.submittal, sd: !!o.sd, lli: !!o.lli,
       // A line she has been through herself is not "still to be checked".
       review: false, group, category, main, accessory, source: "user"
     };
   }
   if (a) {
     return {
-      submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli, longLead: !!a.longLead,
+      submittal: !!a.submittal, sd: !!a.sd, lli: !!a.lli,
       review: !!a.review, group, category, main, accessory, source: a.source || "auto"
     };
   }
@@ -10043,7 +10031,6 @@ function boqGroupsOf(sub, auto, overrides, flagKey) {
     }
     g.items.push(item);
     BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) g.flags[k] = true; });
-    if (f.longLead) g.flags.longLead = true;
   });
   return out;
 }
@@ -10260,7 +10247,6 @@ function boqProducts(tree, auto, overrides, flagKey, category) {
     if (f.accessory || (!boqAnyFlag(f) && boqLooksLikeComponent(item))) p.acc[item.code] = true;
     if (p.subs.indexOf(sub) < 0) p.subs.push(sub);
     BOQ_FLAG_KEYS.forEach((k) => { if (f[k]) p.flags[k] = true; });
-    if (f.longLead) p.flags.longLead = true;
     if (f.review) p.flags.review = true;
     // The first discipline anyone named for this product wins; a later line
     // that says nothing does not erase it.
@@ -10312,7 +10298,7 @@ function boqProducts(tree, auto, overrides, flagKey, category) {
 // both look like the documents the office already sends — the same coloured
 // frame, the same logo, the same footer as the contacts sheet and the schedule.
 //
-// What goes out is WHAT IS ON THE SCREEN: the category filter, "only long lead",
+// What goes out is WHAT IS ON THE SCREEN: the category filter,
 // "only what is still open" all apply. The list you are looking at is the list
 // you get, which is the only rule nobody has to be told.
 //
@@ -10773,7 +10759,7 @@ async function boardXlsxStyled(ExcelJS, opts) {
       c.alignment = { horizontal: "center", vertical: "middle", wrapText: true };
       c.border = { top: thin, left: thin, bottom: thin, right: thin };
       // Every other row tinted: on a wide sheet it is what stops the eye from
-      // sliding into the line above. A row that needs attention — a long lead
+      // sliding into the line above. A row that needs attention — a late
       // item nobody has ordered — takes a soft red instead (29.8.26).
       const tint = toneFill(ri, ri);
       if (tint) c.fill = fill(tint);
@@ -11074,7 +11060,7 @@ function boardExportPdf(opts) {
       }
       return `<td>${esc(v)}</td>`;
     }).join("");
-    // A row that needs the eye — a long lead item nobody has ordered yet —
+    // A row that needs the eye — something late —
     // carries its colour onto the paper too (29.8.26).
     const cls = (alertRows && alertRows[ri] && "alert") || (toneRows && toneRows[ri]) || "";
     // The section this row belongs to, carried on the row itself. The
@@ -11137,7 +11123,7 @@ th { background: ${P.accent}; color: #fff; font-weight: 800; font-size: 10px; pa
 td { font-size: 10px; padding: 4px 4px; border: 1px solid ${P.line}; text-align: center;
   vertical-align: middle; word-break: break-word; white-space: pre-wrap; }
 tbody tr:nth-child(even) td { background: ${P.zebra}; }
-/* Long lead, not yet ordered. A wash rather than a shout — it has to survive
+/* A row that needs the eye. A wash rather than a shout — it has to survive
    being read for ten minutes (29.8.26). */
 tbody tr.alert td, tbody tr.alert:nth-child(even) td { background: #fbe3e3; }
 /* The same fan on the drawings report: past its date and still not in, in
@@ -11330,8 +11316,6 @@ function lliStatusColor(key, ordered) {
 }
 var LLI_L = {
   title: { en: "LLI — order control", he: "LLI — מעקב הזמנות" },
-  longLead: { en: "Long lead", he: "אספקה ארוכה" },
-  onlyLong: { en: "Only long lead", he: "רק אספקה ארוכה" },
   byRoomCol: { en: "BY ROOM", he: "BY ROOM" },
   dragHint: { en: "Drag the row to where it belongs", he: "גוררים את השורה למקום שלה" },
   pasteHint: {
@@ -11401,11 +11385,7 @@ var LLI_L = {
   // ticking it in the routing table in project settings.
   routedSd: { en: "On the shop-drawing board", he: "מופיע בטבלת SD" },
   routedSubmittal: { en: "On the submittal checklist", he: "מופיע בסבמיטלים" },
-  longLeadCol: { en: "LONG LEAD", he: "אספקה ארוכה" },
-  longLeadHint: {
-    en: "Long lead: approval, manufacture and delivery threaten the programme. The same tick as the routing table in project settings.",
-    he: "אספקה ארוכה: האישור, הייצור והאספקה מאיימים על לוח הזמנים. אותו סימון כמו בטבלת הסיווג בהגדרות הפרויקט."
-  },
+
   oamCol: { en: "O&M FILE", he: "תיק מתקן" },
   noCatSection: { en: "Other", he: "ללא תחום" },
   myCats: { en: "Categories", he: "קטגוריות" },
@@ -11520,6 +11500,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   const [newCatHe, setNewCatHe] = useState6("");
   const [newCatEn, setNewCatEn] = useState6("");
   const [oamRun, setOamRun] = useState6(null);
+  // Which O&M file the language question is for — the PDF has no date line
+  // of its own, the workbook does (05.11.26).
+  const [oamKind, setOamKind] = useState6("pdf");
   // A date she copied off one cell, waiting to be dropped into others. It is
   // held in the board, not in the system clipboard: the dates in this table go
   // from one cell to another and almost never leave the page (15.10.26).
@@ -11621,20 +11604,15 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   const flagOf = (r, key) => {
     if (r.source === "boq") return !!(r.product && r.product.flags && r.product.flags[key]);
     const v = lliRowOf(data, r.code);
-    return key === "sd" ? !!v.alsoSd : key === "submittal" ? !!v.alsoSubmittal : !!v.longLead;
+    return key === "sd" ? !!v.alsoSd : key === "submittal" ? !!v.alsoSubmittal : false;
   };
   const writeFlag = (code, key, value, into) => {
     const cur = boqFlagsOf(auto, into, code);
     const f = {
-      submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+      submittal: cur.submittal, sd: cur.sd, lli: cur.lli,
       group: cur.group, category: cur.category, main: cur.main, accessory: cur.accessory
     };
     f[key] = value;
-    // The routing table's own rule, kept here word for word: a long-lead item
-    // is an ordered item, and taking a line off the ordering board takes its
-    // long-lead mark with it.
-    if (key === "longLead" && value) f.lli = true;
-    if (key === "lli" && !value) f.longLead = false;
     into[code] = f;
   };
   // 02.11.26 — a discipline picked on LLI for a BOQ product goes into the routing
@@ -11646,7 +11624,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     (r.product.items || []).forEach((it) => {
       const cur = boqFlagsOf(auto, next, it.code);
       next[it.code] = {
-        submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+        submittal: cur.submittal, sd: cur.sd, lli: cur.lli,
         group: cur.group, category: category || null, main: cur.main, accessory: cur.accessory
       };
     });
@@ -11655,7 +11633,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   const toggleFlag = (r, key) => {
     const now = flagOf(r, key);
     if (r.source !== "boq") {
-      patch(r.code, key === "sd" ? { alsoSd: !now } : key === "submittal" ? { alsoSubmittal: !now } : { longLead: !now });
+      if (key !== "sd" && key !== "submittal") return;
+      patch(r.code, key === "sd" ? { alsoSd: !now } : { alsoSubmittal: !now });
       return;
     }
     if (!onChangeBoqFlags) return;
@@ -11730,7 +11709,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     title: boqText(p, lang),
     unit: p.unit,
     qty: p.qty,
-    longLead: p.flags.longLead,
     review: p.flags.review,
     routed: true,
     defaultHidden: false
@@ -11801,8 +11779,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       v.qtyActual, v.po,
       v.poDate ? sbFmtDate(v.poDate) : "",
       v.eta ? sbFmtDate(v.eta) : "",
-      v.ordered ? lliStatusLabel(v.status, lang) : "",
-      r.longLead ? L("longLead") : ""
+      v.ordered ? lliStatusLabel(v.status, lang) : ""
     ].filter(Boolean).join(" \u0000 ").toLowerCase();
   };
   const hitCodes = markNeedle
@@ -11946,12 +11923,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     else window.open(url, "_blank", "noopener");
   };
   // What leaves the board. The rows are the ones on screen — the category chips
-  // and "only long lead" have already done their work above — and the columns
+  // have already done their work above — and the columns
   // are the board's own, minus the ones that are buttons rather than facts.
-  // A long lead item that has not been ordered yet is the one thing on this
-  // board that costs money to miss, so it is coloured — on screen, on paper and
-  // in the workbook. No note beside it: the colour is the note (29.8.26).
-  const needsOrder = (r) => !!r.longLead && !lliRowOf(data, r.code).ordered;
   // The sheet is produced in the language chosen on the way out — the column
   // titles, the disciplines, the units and the statuses all read from it, not
   // from whatever language the screen happens to be in. Before this, choosing
@@ -11963,16 +11936,16 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     const head = [
       T("section"), T("category"), T("typeMark"), T("desc"), T("supplier"),
       T("qtyBoq"), T("unit"), T("qtySurveyor"), T("ordered"), T("poNo"),
-      T("poDate"), T("eta"), T("etaActual"), T("status"), T("longLead")
+      T("poDate"), T("eta"), T("etaActual"), T("status")
     ];
-    const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 12, 9];
+    const widths = [14, 12, 10, 30, 16, 10, 7, 10, 8, 12, 12, 18, 12, 12, 12];
     // What each column IS, so the workbook stores it as that. The item number
     // is text on purpose: "08.11.0010" is a name, and Excel would eat the
     // leading zero and the second dot (30.8.26).
     const types = [
       "text", "text", "text", "text", "text",
       "number", "text", "number", "text", "text",
-      "date", "text", "date", "date", "text", "text"
+      "date", "text", "date", "date", "text"
     ];
     const cat = (k) => {
       const c = boardCategoryOf(k);
@@ -11980,7 +11953,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     };
     const body = [];
     const imgs = [];
-    const alerts = [];
     const tone = [];
     groups.forEach((g) => {
       g.rows.forEach((r) => {
@@ -12003,15 +11975,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
           v.ordered && v.poDate ? sbFmtDate(v.poDate) : "",
           v.ordered && v.eta ? sbFmtDate(v.eta) : "",
           v.ordered && v.etaActual ? sbFmtDate(v.etaActual) : "",
-          v.ordered ? lliStatusLabel(v.status, lg) : "",
-          r.longLead ? T("longLead") : ""
+          v.ordered ? lliStatusLabel(v.status, lg) : ""
         ]);
         imgs.push(v.image || null);
-        alerts.push(needsOrder(r));
         tone.push(v.ordered ? "ok" : "");
       });
     });
-    return { head, body, widths, types, imgs, alerts, tone };
+    return { head, body, widths, types, imgs, tone };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -12116,8 +12086,18 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     });
     return { head, body, widths, types, imgs, secs, T, lg };
   };
-  const oamExcel = async (printLang) => {
+  const oamTitles = (lg0, kind) => {
+    const lg = lg0 === "en" ? "en" : "he";
+    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    return {
+      title: `${projectName || ""}`.trim() || T("oamDoc"),
+      subtitle: T("oamDoc"),
+      date: kind === "pdf" ? "" : sbFmtDate(new Date().toISOString().slice(0, 10))
+    };
+  };
+  const oamExcel = async (printLang, hdr) => {
     const g0 = oamGrid(printLang);
+    const H = hdr || oamTitles(printLang);
     if (!g0.body.length) { setPoNote(g0.T("nothingToExport")); return; }
     setPoNote(g0.T("translating"));
     // The wording and the supplier are the free text here; the discipline is
@@ -12133,8 +12113,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       setPoNote(null);
     }
     const res = await boardExportXlsx({
-      title: `${projectName || ""}`.trim() || g.T("oamDoc"),
-      subtitle: `${g.T("oamDoc")} \u00b7 ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      title: H.title,
+      subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "),
       sheetName: g.lg === "he" ? "\u05ea\u05d9\u05e7 \u05de\u05ea\u05e7\u05df" : "O&M",
       fileName: boardFileName(projectName, g.T("oamDoc"), "xlsx"),
       head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
@@ -12147,8 +12127,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, g.lg));
     else if (trNote) setPoNote(trNote);
   };
-  const oamPdf = (printLang) => {
+  const oamPdf = (printLang, hdr) => {
     const g0 = oamGrid(printLang);
+    const H = hdr || oamTitles(printLang, "pdf");
     if (!g0.body.length) { setPoNote(g0.T("nothingToExport")); return; }
     setPoNote(null);
     // The window is opened inside the click, before the translation, or a
@@ -12169,9 +12150,10 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
         trNote = g0.T("trFailed");
       }
       boardExportPdf({
-        title: `${projectName || ""}`.trim() || g.T("oamDoc"),
+        title: H.title,
         fileName: boardFileName(projectName, g.T("oamDoc"), ""),
-        subtitle: g.T("oamDoc"),
+        subtitle: H.subtitle,
+        issuedLabel: String(H.date || "").trim() || undefined,
         head: g.head, body: g.body, widths: g.widths,
         // One discipline per page, named above the column titles (15.10.26).
         sections: g.secs,
@@ -12183,9 +12165,21 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       setPoNote(trNote);
     })();
   };
-  const onExcel = async (printLang, audience) => {
+  // 05.11.26 — the report's header lines, as they print unless she changes
+  // them in the report-details window.
+  const lliTitles = (lg0) => {
+    const lg = lg0 === "en" ? "en" : "he";
+    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    return {
+      title: `${projectName || ""}`.trim() || T("title"),
+      subtitle: T("title"),
+      date: `${T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`
+    };
+  };
+  const onExcel = async (printLang, audience, hdr) => {
     const lg = printLang === "en" ? "en" : "he";
     const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    const H = hdr || lliTitles(lg);
     const g0 = exportGrid(audience, lg);
     if (!g0.body.length) { setPoNote(T("nothingToExport")); return; }
     setPoNote(T("translating"));
@@ -12227,9 +12221,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     ({ head, widths, types: colTypes, body, imgCol } = sbDropCols({ head, widths, types: colTypes, body, keys, imgCol }, lliHide));
     if (imgCol < 0) imgCol = null;
     const res = await boardExportXlsx({
-      title: exportTitle(), subtitle: exportSub(), sheetName: "LLI",
+      title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "), sheetName: "LLI",
       fileName: boardFileName(projectName, "LLI", "xlsx"),
-      head, body, widths, alertRows: g.alerts, toneRows: g.tone,
+      head, body, widths, toneRows: g.tone,
       // The photo column is text; everything else keeps the kind the board
       // gave it.
       colTypes,
@@ -12243,18 +12237,18 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // item is and WHEN it lands; nothing about who it was bought from or on what
   // order — that half of the board is hers (29.8.26).
 // What each audience sees, on the screen and on the paper — one list, so the
-// two cannot drift apart. The client is told WHAT is on order and whether it
-// is a long lead item; the dates the supplier committed to are the main
+// two cannot drift apart. The client is told WHAT is on order; the dates the supplier committed to are the main
 // contractor's business, and the client sees them only when the contractor
 // chooses to say something. (7.9.26)
 // Every column the LLI sheets can carry, in their order (21.10.26).
 var LLI_EXPORT_KEYS = ["section", "category", "typeMark", "desc", "image", "supplier", "qtyBoq", "unit", "qtySurveyor",
-  "ordered", "poNo", "poDate", "eta", "etaActual", "status", "longLead"];
-var LLI_CLIENT_KEYS = ["section", "category", "typeMark", "desc", "image", "status", "longLead"];
-var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "supplier", "eta", "etaActual", "status", "longLead"];
-  const onPdf = (printLang, audience) => {
+  "ordered", "poNo", "poDate", "eta", "etaActual", "status"];
+var LLI_CLIENT_KEYS = ["section", "category", "typeMark", "desc", "image", "status"];
+var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "supplier", "eta", "etaActual", "status"];
+  const onPdf = (printLang, audience, hdr) => {
     const lg = printLang === "en" ? "en" : "he";
     const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
+    const H = hdr || lliTitles(lg);
     const g0 = exportGrid(audience, lg);
     if (!g0.body.length) { setPoNote(T("nothingToExport")); return; }
     // The window is opened HERE, inside the click, and told what it is waiting
@@ -12296,17 +12290,16 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       ({ head, widths, body, imgCol } = sbDropCols({ head, widths, types: head.map(() => "text"), body, keys, imgCol }, lliHide));
       if (imgCol < 0) imgCol = null;
       boardExportPdf({
-        title: exportTitle(),
+        title: H.title,
         // The name the browser offers when she saves it.
         fileName: boardFileName(projectName, "LLI", ""),
         // The date is a line of its own, and it says what it is: the day the
-        // report was issued.
-        subtitle: T("title"),
-        issuedLabel: `${T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+        // report was issued. All three lines are hers to change (05.11.26).
+        subtitle: H.subtitle,
+        issuedLabel: H.date,
         head, body, widths,
         accent: (printBrand || {}).accent, brand: printBrand,
         isRTL: lg !== "en", imgCol, imgs,
-        alertRows: g.alerts,
         toneRows: g.tone,
         // The date is in the heading of this report, so it is not repeated at the
         // foot of every page.
@@ -12383,8 +12376,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
           ordered: v.ordered,
           status: v.status,
           statusLabel: lliStatusLabel(v.status, lang),
-          statusColor: lliStatusColor(v.status, v.ordered),
-          longLead: r.longLead
+          statusColor: lliStatusColor(v.status, v.ordered)
         });
       });
     });
@@ -12606,7 +12598,8 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       // 21.10.26 — only the language is asked; the columns are the ticks.
       printAsk
         ? sbH(PrintLangAsk, {
-            onPick: (lg) => { setPrintAsk(null); printAsk(lg, "admin"); },
+            titles: lliTitles,
+            onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, "admin", hdr); },
             onClose: () => setPrintAsk(null)
           })
         : null,
@@ -12626,8 +12619,8 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 sbH(
                   "div",
                   { className: "printAskBtns" },
-                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamRun(() => oamExcel); } }, "Excel"),
-                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamRun(() => oamPdf); } }, "PDF")
+                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamKind("xlsx"); setOamRun(() => oamExcel); } }, "Excel"),
+                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamKind("pdf"); setOamRun(() => oamPdf); } }, "PDF")
                 )
               )
             ),
@@ -12637,7 +12630,8 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       // Question two: which language. Both files are offered both ways.
       oamRun
         ? sbH(PrintLangAsk, {
-            onPick: (lg) => { const f = oamRun; setOamRun(null); f(lg); },
+            titles: (lg) => oamTitles(lg, oamKind),
+            onPick: (lg, who, hdr) => { const f = oamRun; setOamRun(null); f(lg, hdr); },
             onClose: () => setOamRun(null)
           })
         : null
@@ -12674,7 +12668,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                     sbH(Printer, { size: 14, strokeWidth: 2 }),
                     sbH("input", {
                       type: "checkbox", className: "lliShowTick",
-                      title: isRTL ? "סימון הכול" : "Tick all",
+                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
                       checked: anyPrintPick && groups.every((g) => g.rows.every((r) => isHidden(r) || printPick[r.code])),
                       onChange: (e) => {
                         const next = {};
@@ -12700,15 +12694,29 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 thT("status", "cSt", L("status")),
                 canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
                 canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null,
-                canEdit ? thT("longLead", "cRoom", L("longLeadCol"), L("longLeadHint")) : null,
-                canEdit ? sbH("th", { className: "cRoom", title: L("oamHint") }, L("oamCol")) : null
+                // 05.11.26 — one tick over the column puts every row on screen in
+                // the O&M file, or takes every one out.
+                canEdit ? sbH("th", { className: "cRoom", title: L("oamHint") },
+                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
+                    L("oamCol"),
+                    sbH("input", {
+                      type: "checkbox", className: "lliShowTick",
+                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
+                      checked: groups.some((g) => g.rows.length) && groups.every((g) => g.rows.every((r) => inOam(r))),
+                      onChange: (e) => {
+                        const on = e.target.checked;
+                        const next = { ...data };
+                        groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = { ...lliRowOf(data, r.code), oam: on }; }));
+                        onChangeRows(next);
+                      }
+                    }))) : null
               )
             ),
             groups.map((g) =>
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 19 : 15 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 18 : 15 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -12721,7 +12729,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       // The row the find is standing on carries the reference,
                       // so the board can bring it into view (30.8.26).
                       ref: hitNow === r.code ? hitRef : void 0,
-                      className: `${anchorRow === r.code && canEdit ? "lliHere" : ""} ${hidden ? "lliOff" : ""} ${needsOrder(r) ? "lliLate" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""}`.trim(),
+                      className: `${anchorRow === r.code && canEdit ? "lliHere" : ""} ${hidden ? "lliOff" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""}`.trim(),
                       // Wherever she puts the cursor in this row, this is now
                       // the row a new one is added under.
                       onFocusCapture: () => standOn(r.code),
@@ -13096,23 +13104,6 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                           })
                         )
                       : null,
-                    // Long lead, beside BY ROOM and worked exactly as it is in
-                    // the routing table: on a BOQ line it IS the routing's own
-                    // tick, so the two can never disagree (15.10.26).
-                    canEdit
-                      ? sbH(
-                          "td",
-                          { className: "cRoom" },
-                          sbH("input", {
-                            type: "checkbox",
-                            className: "lliShowTick",
-                            checked: flagOf(r, "longLead"),
-                            title: L("longLeadHint"),
-                            "aria-label": L("longLeadCol"),
-                            onChange: () => toggleFlag(r, "longLead")
-                          })
-                        )
-                      : null,
                     // And the O&M document. Every row is in it until she takes
                     // it out.
                     canEdit
@@ -13144,7 +13135,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       { className: "lliClashRow" },
                       sbH(
                         "td",
-                        { colSpan: canEdit ? 21 : 15 },
+                        { colSpan: canEdit ? 20 : 15 },
                         sbH(
                           "div",
                           { className: "lliClashNote" },
@@ -13174,7 +13165,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       className: `lliDropTail ${drag.over === null ? "lliDropHere" : ""}`.trim(),
                       onDragOver: (e) => { e.preventDefault(); if (drag.over !== null) setDrag({ ...drag, over: null }); },
                       onDrop: (e) => { e.preventDefault(); dropRow(g, drag.code, null); setDrag(null); }
-                    }, sbH("td", { colSpan: canEdit ? 18 : 14 }))
+                    }, sbH("td", { colSpan: canEdit ? 17 : 14 }))
                   : null
               )
             )
@@ -13340,6 +13331,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
 
   const [busyRow, setBusyRow] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
+  // 05.11.26 — which drawings go to the PDF / Excel; none ticked prints all.
+  const [printPick, setPrintPick] = useState6({});
+  const anyPrintPick = Object.keys(printPick).some((k) => printPick[k]);
+  // Excel asks for the report's details only — the workbook follows the screen's language.
+  const [xlsAsk, setXlsAsk] = useState6(false);
   const [exportNote, setExportNote] = useState6(null);
   const L = (k) => sbText(SD_L[k] || { en: k, he: k }, lang);
 
@@ -13512,6 +13508,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     groups.forEach((g) => {
       g.rows.forEach((r) => {
         if (isHidden(r)) return;
+        if (anyPrintPick && !printPick[r.code]) return;
         const v = sdRowOf(data, r.code);
         // The client's approval counts on the paper too — the report is what
         // gets circulated, and a drawing signed this morning must not go out
@@ -13540,12 +13537,23 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
-  const onExcel = async () => {
+  // 05.11.26 — the report's header lines, as they print unless she changes them.
+  const sdTitles = (lg0) => {
+    const lg = lg0 === "en" ? "en" : "he";
+    const T = (k) => sbText(SD_L[k], lg);
+    return {
+      title: `${projectName || ""}`.trim() || T("title"),
+      subtitle: T("title"),
+      date: `${T("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`
+    };
+  };
+  const onExcel = async (hdr) => {
+    const H = hdr || sdTitles(lang);
     const g = exportGrid();
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     setExportNote(null);
     const res = await boardExportXlsx({
-      title: exportTitle(), subtitle: exportSub(), sheetName: "SD",
+      title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "), sheetName: "SD",
       fileName: boardFileName(projectName, "SD", "xlsx"),
       head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
       accent: (printBrand || {}).accent, isRTL
@@ -13556,17 +13564,18 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // where it stands and when it was signed. Nothing about the file itself
   // (29.8.26).
   const sdClientKeys = ["section", "category", "typeMark", "desc", "dueAt", "toClient", "status"];
-  const onPdf = (printLang, audience) => {
+  const onPdf = (printLang, audience, hdr) => {
+    const H = hdr || sdTitles(printLang);
     const g = exportGrid();
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     const keep = audience === "client"
       ? sdClientKeys.map((k) => g.head.indexOf(L(k))).filter((i) => i >= 0)
       : g.head.map((_, i) => i);
     boardExportPdf({
-      title: exportTitle(),
+      title: H.title,
       fileName: boardFileName(projectName, "SD", ""),
-      subtitle: L("title"),
-      issuedLabel: `${L("issuedOn")} ${sbFmtDate(new Date().toISOString().slice(0, 10))}`,
+      subtitle: H.subtitle,
+      issuedLabel: H.date,
       head: keep.map((i) => g.head[i]),
       body: g.body.map((row) => keep.map((i) => row[i])),
       widths: keep.map((i) => g.widths[i]),
@@ -13682,14 +13691,23 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         SD_STATUSES.map((st) => sbH("option", { key: st.key, value: st.key }, sbText(st, lang))),
       ),
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: addManual }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
-      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: onExcel }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
+      canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setXlsAsk(true) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
       exportNote ? sbH("span", { className: "lliPoNote" }, exportNote) : null,
       printAsk
         ? sbH(PrintLangAsk, {
             withAudience: true,
-            onPick: (lg, who) => { setPrintAsk(null); printAsk(lg, who); },
+            titles: sdTitles,
+            onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, who, hdr); },
             onClose: () => setPrintAsk(null)
+          })
+        : null,
+      xlsAsk
+        ? sbH(PrintLangAsk, {
+            titles: sdTitles,
+            startLang: lang,
+            onPick: (lg, who, hdr) => { setXlsAsk(false); onExcel(hdr); },
+            onClose: () => setXlsAsk(false)
           })
         : null
     ),
@@ -13708,6 +13726,20 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "tr",
                 null,
+                // 05.11.26 — which drawings go to the PDF / Excel: the rightmost column.
+                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "סימון שורות להדפסה ולאקסל — בלי סימון יוצא הכול" : "Tick rows to print — none ticked prints all" },
+                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
+                    sbH(Printer, { size: 14, strokeWidth: 2 }),
+                    sbH("input", {
+                      type: "checkbox", className: "lliShowTick",
+                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
+                      checked: anyPrintPick && groups.every((g) => g.rows.every((r) => isHidden(r) || printPick[r.code])),
+                      onChange: (e) => {
+                        const next = {};
+                        if (e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                        setPrintPick(next);
+                      }
+                    }))) : null,
                 sbH("th", { className: "cSec" }, L("section")),
                 sbH("th", { className: "cCat" }, L("category")),
                 sbH("th", { className: "cMark" }, L("typeMark")),
@@ -13723,7 +13755,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 9 : 8 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 10 : 8 }, g.title)),
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -13747,7 +13779,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                   const shownFile = (ap && ap.file) || v.file;
                   const approvedOn = (ap && ap.approvedAt) || v.approvedAt || "";
                   // The same fan as the ordering board: red for a drawing that
-                  // is long lead or past its date and still not in, orange
+                  // is past its date and still not in, orange
                   // while it is with somebody, green once it is signed
                   // (29.8.26).
                   const tone0 = sdDueTone(v, done);
@@ -13755,6 +13787,19 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                   return sbH(
                     "tr",
                     { key: r.code, className: `${hidden ? "lliOff" : ""} ${tone}`.trim() },
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cRoom" },
+                          sbH("input", {
+                            type: "checkbox",
+                            className: "lliShowTick",
+                            checked: !!printPick[r.code],
+                            title: isRTL ? "להדפסה ולאקסל" : "Print / Excel",
+                            onChange: () => setPrintPick({ ...printPick, [r.code]: !printPick[r.code] })
+                          })
+                        )
+                      : null,
                     sbH(
                       "td",
                       { className: "cSec" },
@@ -16385,7 +16430,7 @@ function roomsFromSheet(aoa) {
 // -----------------------------------------------------------------------------
 
 var LLIC_L = {
-  title: { en: "Long lead & order tracking", he: "מעקב הזמנות ואספקה" },
+  title: { en: "Order & delivery tracking", he: "מעקב הזמנות ואספקה" },
   lead: {
     en: "What is on order and when it is due on site.",
     he: "מה בהזמנה ומתי הוא אמור להגיע לאתר."
@@ -16398,7 +16443,6 @@ var LLIC_L = {
   eta: { en: "Required delivery", he: "מועד אספקה נדרש" },
   etaActual: { en: "Actual delivery", he: "מועד אספקה בפועל" },
   status: { en: "Status", he: "סטטוס" },
-  longLead: { en: "Long lead", he: "אספקה ארוכה" },
   supplier: { en: "Supplier", he: "ספק" },
   editDate: { en: "Edit the date", he: "עריכת התאריך" },
   download: { en: "Download as PDF", he: "הורדת PDF" },
@@ -16476,8 +16520,7 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta, s
               showSupplier ? sbH("th", { key: "supplier" }, L("supplier")) : null,
               showEta ? sbH("th", { key: "eta" }, L("eta")) : null,
               showEta ? sbH("th", { key: "etaActual" }, L("etaActual")) : null,
-              sbH("th", null, L("status")),
-              sbH("th", null, L("longLead"))
+              sbH("th", null, L("status"))
             )),
             sbH("tbody", null, rows.map((r) => sbH(
               "tr",
@@ -16507,9 +16550,6 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta, s
                     className: "sdcChip",
                     style: { background: `${r.statusColor}1f`, color: r.statusColor }
                   }, r.statusLabel)
-                : sbH("span", { className: "sdcNone" }, "—")),
-              sbH("td", null, r.longLead
-                ? sbH("span", { className: "sdcChip", style: { background: "#e08a121f", color: "#e08a12" } }, L("longLead"))
                 : sbH("span", { className: "sdcNone" }, "—"))
             )))
           )
@@ -20858,7 +20898,7 @@ function SubmittalFolder({
     const write = (code, val) => {
       const cur = boqFlagsOf(auto, next, code);
       next[code] = {
-        submittal: cur.submittal, sd: cur.sd, lli: val, longLead: val ? cur.longLead : false,
+        submittal: cur.submittal, sd: cur.sd, lli: val,
         group: cur.group, category: cur.category, main: cur.main, accessory: cur.accessory
       };
     };
@@ -22772,7 +22812,6 @@ var BOQ_T = {
   submittal: { en: "Submittal", he: "סבמיטל" },
   sd: { en: "SD", he: "SD" },
   lli: { en: "LLI", he: "LLI" },
-  longLead: { en: "Long lead", he: "אספקה ארוכה" },
   code: { en: "Item", he: "סעיף" },
   desc: { en: "Description", he: "תיאור" },
   unit: { en: "Unit", he: "יח׳" },
@@ -22842,12 +22881,10 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose,
     // Without this, ticking a box would quietly throw away a discipline she had
     // corrected by hand, because the override row would stop carrying it.
     const next = {
-      submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+      submittal: cur.submittal, sd: cur.sd, lli: cur.lli,
       group: cur.group, category: cur.category, main: cur.main
     };
     next[key] = !next[key];
-    if (key === "longLead" && next.longLead) next.lli = true;
-    if (key === "lli" && !next.lli) next.longLead = false;
     setDraft({ ...draft, [code]: next });
   };
   const bulk = (rows, key, value) => {
@@ -22855,12 +22892,10 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose,
     rows.forEach((r) => {
       const cur = boqFlagsOf(auto, draft, r.item.code);
       const f = {
-        submittal: cur.submittal, sd: cur.sd, lli: cur.lli, longLead: cur.longLead,
+        submittal: cur.submittal, sd: cur.sd, lli: cur.lli,
         group: cur.group, category: cur.category, main: cur.main
       };
       f[key] = value;
-      if (key === "longLead" && value) f.lli = true;
-      if (key === "lli" && !value) f.longLead = false;
       next[r.item.code] = f;
     });
     setDraft(next);
@@ -22980,7 +23015,7 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose,
                             sbH("th", { className: "cCat" }, L("category")),
                             sbH("th", { className: "cUnit" }, L("unit")),
                             sbH("th", { className: "cQ" }, L("qty")),
-                            ["submittal", "sd", "lli", "longLead"].map((k) =>
+                            ["submittal", "sd", "lli"].map((k) =>
                               sbH("th", { key: k, className: `cFlag ${k}` }, sbH("span", null, L(k)), bulkBtns(rows, k))
                             )
                           )
@@ -23018,7 +23053,7 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose,
                                     setDraft({
                                       ...draft,
                                       [r.item.code]: {
-                                        submittal: f.submittal, sd: f.sd, lli: f.lli, longLead: f.longLead,
+                                        submittal: f.submittal, sd: f.sd, lli: f.lli,
                                         group: e.target.value, category: f.category, main: f.main
                                       }
                                     })
@@ -23041,7 +23076,7 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose,
                                       setDraft({
                                         ...draft,
                                         [r.item.code]: {
-                                          submittal: f.submittal, sd: f.sd, lli: f.lli, longLead: f.longLead,
+                                          submittal: f.submittal, sd: f.sd, lli: f.lli,
                                           group: f.group, category: e.target.value || null, main: f.main
                                         }
                                       })
@@ -23054,8 +23089,7 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose,
                               sbH("td", { className: "cQ", dir: "ltr" }, r.item.qty == null ? "—" : r.item.qty),
                               sbH("td", { className: "cFlag" }, tick(r.item.code, "submittal", f.submittal)),
                               sbH("td", { className: "cFlag" }, tick(r.item.code, "sd", f.sd)),
-                              sbH("td", { className: "cFlag" }, tick(r.item.code, "lli", f.lli)),
-                              sbH("td", { className: "cFlag" }, tick(r.item.code, "longLead", f.longLead))
+                              sbH("td", { className: "cFlag" }, tick(r.item.code, "lli", f.lli))
                             );
                           })
                         )

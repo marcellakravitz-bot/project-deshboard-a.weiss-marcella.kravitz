@@ -1461,13 +1461,75 @@ function sbPagesOf(att, numPages) {
 // extract, so the pages themselves are sent and the model reads them by eye.
 // Deliberately smaller and fewer than the print render: legible is enough.
 
-function PrintLangAsk({ onPick, onClose, withAudience }) {
+function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang }) {
   // Two questions on the boards, one everywhere else. The audience decides
   // which columns are printed: a client's copy carries what a client sees on
   // the screen, and hers carries everything (29.8.26).
-  const [lang, setLang] = useState6("he");
+  //
+  // 05.11.26 — with `titles` (a function of the language that gives the
+  // report's own header lines), a second step follows the language: the
+  // report's details, filled in as they would print, every line hers to
+  // change, and printed only on "אישור". A small X closes it.
+  // With `startLang` the language is already known (a workbook follows the
+  // screen) and the window opens straight on the report's details.
+  const [lang, setLang] = useState6(startLang || "he");
   const [who, setWho] = useState6("admin");
-  const pick = (v) => (withAudience ? onPick(v, who) : onPick(v));
+  const [step, setStep] = useState6(() => {
+    if (!titles || !startLang) return null;
+    const d = titles(startLang) || {};
+    return { title: d.title || "", subtitle: d.subtitle || "", date: d.date || "" };
+  });
+  const pick = (v) => {
+    if (titles) {
+      const d = titles(v) || {};
+      setLang(v);
+      setStep({ title: d.title || "", subtitle: d.subtitle || "", date: d.date || "" });
+      return;
+    }
+    return withAudience ? onPick(v, who) : onPick(v);
+  };
+  const xBtn = sbH("button", {
+    type: "button", className: "printAskX", title: "סגירה · Close", "aria-label": "Close", onClick: onClose
+  }, "\u00d7");
+  if (step) {
+    const he = lang !== "en";
+    const field = (key, label) => sbH(
+      "label",
+      { className: "printAskField" },
+      sbH("span", null, label),
+      sbH("input", {
+        type: "text", value: step[key], dir: he ? "rtl" : "ltr",
+        onChange: (e) => setStep({ ...step, [key]: e.target.value })
+      })
+    );
+    const ok = () => onPick(lang, who, { ...step });
+    return createPortal(
+      sbH(
+        "div",
+        { className: "printAskScrim", onClick: onClose },
+        sbH(
+          "div",
+          {
+            className: "printAskBox printAskDetails", dir: he ? "rtl" : "ltr",
+            onClick: (e) => e.stopPropagation(),
+            onKeyDown: (e) => { if (e.key === "Enter") ok(); if (e.key === "Escape") onClose(); }
+          },
+          xBtn,
+          sbH("h3", null, he ? "פרטי הדוח" : "Report details"),
+          sbH("p", null, he ? "כך יופיעו הכותרות בדוח. אפשר לשנות לפני ההפקה." : "This is how the report's header will read. Change anything before it is produced."),
+          field("title", he ? "כותרת" : "Title"),
+          field("subtitle", he ? "כותרת משנה" : "Subtitle"),
+          field("date", he ? "שורת תאריך" : "Date line"),
+          sbH(
+            "div",
+            { className: "printAskBtns" },
+            sbH("button", { type: "button", className: "sgBtn", onClick: ok }, he ? "אישור" : "OK")
+          )
+        )
+      ),
+      document.body
+    );
+  }
   return createPortal(
     sbH(
       "div",
@@ -1475,6 +1537,7 @@ function PrintLangAsk({ onPick, onClose, withAudience }) {
       sbH(
         "div",
         { className: "printAskBox", dir: "rtl", onClick: (e) => e.stopPropagation() },
+        titles ? xBtn : null,
         sbH("h3", null, "הדפסה"),
         withAudience
           ? sbH(
@@ -2831,6 +2894,22 @@ var signCss = `
         .printAskBtns { display: flex; gap: 10px; margin: 18px 0 10px; }
         .printAskBtns button { flex: 1; }
         .printAskCancel { font-size: 12px; }
+        /* 05.11.26 — the report's details, and the small X at the top right. */
+        .printAskBox { position: relative; }
+        .printAskX {
+          position: absolute; top: 8px; right: 10px; width: 26px; height: 26px; padding: 0;
+          border: 0; background: transparent; color: var(--steel); font-size: 20px; line-height: 1;
+          cursor: pointer; border-radius: 6px; font-family: inherit;
+        }
+        .printAskX:hover { background: #eef1f5; color: var(--ink); }
+        .printAskDetails { max-width: 440px; text-align: start; }
+        .printAskDetails h3 { padding-right: 28px; }
+        .printAskField { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; font-size: 12.5px; font-weight: 700; color: var(--ink); }
+        .printAskField input {
+          padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px;
+          font-family: inherit; color: var(--ink); background: #fff;
+        }
+        .printAskField input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
         .sbFormHeadSide.start { justify-content: flex-start; }
         .sbFormHeadSide.end { justify-content: flex-end; }
         @media (max-width: 640px) {
