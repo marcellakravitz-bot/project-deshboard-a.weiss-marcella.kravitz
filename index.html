@@ -127,7 +127,11 @@ import {
   sdApprovalOf,
   sdClientStatus,
   sdFileLabel,
-  sdStatus
+  sdStatus,
+  imgLibAdd,
+  openImagePicker,
+  imgPickProps,
+  imgAsk
 } from "./sign.js";
 import * as XLSX3 from "xlsx";
 import Papa3 from "papaparse";
@@ -555,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 240";
+var APP_BUILD = "05.11.2026 · build 241";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -11884,32 +11888,36 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // A picture from the clipboard. Chrome, Edge and Safari all put a screenshot
   // or a copied image on the clipboard as a file, so the same path that handles
   // an uploaded file handles this one — it is only the way in that differs.
-  const onImagePaste = async (code, e) => {
-    const file = sbClipboardImage(e);
-    if (!file) return;
-    e.preventDefault();
-    setBusyRow(code);
-    try {
-      patch(code, { image: await sbMakeThumb(file, 640) });
-    } catch (ex) {
-      console.warn("[awdash] could not read the pasted picture", ex);
-    } finally {
-      setBusyRow(null);
-    }
-  };
-  const onImage = async (code, e) => {
-    const f = e.target.files && e.target.files[0];
-    e.target.value = "";
+  // 05.11.26 — one way in for a picture, wherever it comes from (a file, the
+  // clipboard, the picture library). Each new picture is also kept in the
+  // library.
+  const putLliImage = async (code, f) => {
     if (!f) return;
     setBusyRow(code);
     try {
       const thumb = await sbMakeThumb(f, 640);
       patch(code, { image: thumb });
+      const v0 = lliRowOf(data, code);
+      imgLibAdd({
+        projectId, projectName, source: "lli", dataUrl: thumb, file: f,
+        label: [v0.typeMark, String(v0.desc || "").split("\n")[0]].filter(Boolean).join(" \u00b7 ") || code
+      });
     } catch (ex) {
       console.warn("[awdash] lli image failed", ex);
     } finally {
       setBusyRow(null);
     }
+  };
+  const onImagePaste = async (code, e) => {
+    const file = sbClipboardImage(e);
+    if (!file) return;
+    e.preventDefault();
+    await putLliImage(code, file);
+  };
+  const onImage = async (code, e) => {
+    const f = e.target.files && e.target.files[0];
+    e.target.value = "";
+    await putLliImage(code, f);
   };
   const openFile = async (att) => {
     // The tab is opened INSIDE the click, before anything is awaited. Reading
@@ -12949,7 +12957,8 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                                 if (inp) inp.click();
                               }
                             : void 0,
-                          onPaste: canEdit ? (e) => onImagePaste(r.code, e) : void 0
+                          onPaste: canEdit ? (e) => onImagePaste(r.code, e) : void 0,
+                          ...imgPickProps({ projectId, enabled: canEdit, onFile: (f) => { setPasteAt(r.code); putLliImage(r.code, f); } })
                         },
                         v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
                         busyRow === r.code ? sbH("span", { className: "lliImgBusy" }, sbH("span", { className: "sbSpin" })) : null,
@@ -12960,11 +12969,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                                 type: "button",
                                 className: "lliImgPick",
                                 title: L("pickFile"),
-                                onClick: (e) => {
-                                  e.stopPropagation();
-                                  const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
-                                  if (inp) inp.click();
-                                }
+                                onClick: (e) => imgAsk(e, { projectId, onFile: (f) => putLliImage(r.code, f) })
                               },
                               sbH(Upload4, { size: 10, strokeWidth: 2.4 })
                             )
@@ -14713,6 +14718,8 @@ function RfiForm({
         thumb, name: named.name, caption: ""
       }];
       setLogged({ images: next }, "evFile", named.name);
+      imgLibAdd({ projectId, projectName, source: "rfi", dataUrl: thumb, file: f,
+        label: [d.number || d.no || "", d.subject || d.title || ""].filter(Boolean).join(" \u00b7 ") || "RFI" });
     } catch (ex) {
       setErr(lang === "he" ? "לא הצלחתי לקרוא את התמונה." : "Could not read the image.");
     } finally {
@@ -14965,17 +14972,14 @@ function RfiForm({
             const inp = e.currentTarget.querySelector("input[type=file]");
             if (inp) inp.click();
           },
-          onPaste: ro ? void 0 : onImagePaste
+          onPaste: ro ? void 0 : onImagePaste,
+          ...imgPickProps({ projectId, enabled: !ro, onFile: (f) => putImage(f) })
         },
         sbH(ImagePlus, { size: 22, strokeWidth: 1.6 }),
         sbH("span", null, busy === "image" ? "…" : L("pasteBox")),
         ro ? null : sbH("button", {
           type: "button", className: "sbImgPick", title: L("pickFile"),
-          onClick: (e) => {
-            e.stopPropagation();
-            const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
-            if (inp) inp.click();
-          }
+          onClick: (e) => imgAsk(e, { projectId, onFile: (f) => putImage(f) })
         }, sbH(Upload4, { size: 12, strokeWidth: 2.4 })),
         ro ? null : sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPickImageFile })
       ),
@@ -17577,7 +17581,11 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
   const putMarkImage = async (key, f) => {
     setBusy(key);
     try {
-      patchMark(key, { image: await sbMakeThumb(f, 640) });
+      const thumb = await sbMakeThumb(f, 640);
+      patchMark(key, { image: thumb });
+      const v0 = roomsMarkOf(d, key);
+      imgLibAdd({ projectId, projectName, source: "rooms", dataUrl: thumb, file: f,
+        label: [String(key).split("|").pop(), v0.name].filter(Boolean).join(" \u00b7 ") });
     } catch (ex) {
       console.warn("[awdash] room mark image failed", ex);
     } finally {
@@ -17701,7 +17709,8 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
                       const inp = e.currentTarget.querySelector("input[type=file]");
                       if (inp) inp.click();
                     } : void 0,
-                    onPaste: canEdit ? (e) => onMarkPaste(m.key, e) : void 0
+                    onPaste: canEdit ? (e) => onMarkPaste(m.key, e) : void 0,
+                    ...imgPickProps({ projectId, enabled: canEdit, onFile: (f) => { setMarkPasteAt(m.key); putMarkImage(m.key, f); } })
                   },
                   v.image ? sbH("img", { src: v.image, alt: "" }) : sbH(ImagePlus, { size: 15, strokeWidth: 1.8 }),
                   busy === m.key ? sbH("span", { className: "lliImgBusy" }, sbH("span", { className: "sbSpin" })) : null,
@@ -17709,11 +17718,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
                     type: "button",
                     className: "lliImgPick",
                     title: L("pickFile"),
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
-                      if (inp) inp.click();
-                    }
+                    onClick: (e) => imgAsk(e, { projectId, onFile: (f) => putMarkImage(m.key, f) })
                   }, sbH(Upload4, { size: 10, strokeWidth: 2.4 })) : null,
                   canEdit ? sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => onMarkImage(m.key, e) }) : null
                 ),
@@ -19132,6 +19137,8 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       const named = f.name ? f : new File([f], "pasted-image.png", { type: f.type || "image/png" });
       const up = await sbUploadFile(projectId, d.id, named);
       set({ image: { name: named.name, thumb, path: up.path, inline: up.inline, dataUrl: up.inline ? null : null } });
+      imgLibAdd({ projectId, projectName: d.projectName || "", source: "submittal", dataUrl: thumb, file: f,
+        label: [d.typeId, d.itemDescription, d.modelCode].filter(Boolean).join(" \u00b7 ") });
     } catch (ex) {
       setErr(lang === "he" ? "\u05dc\u05d0 \u05d4\u05e6\u05dc\u05d7\u05ea\u05d9 \u05dc\u05d4\u05e2\u05dc\u05d5\u05ea \u05d0\u05ea \u05d4\u05ea\u05de\u05d5\u05e0\u05d4." : "Could not upload the image.");
     } finally {
@@ -20021,7 +20028,8 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
             const inp = e.currentTarget.querySelector("input[type=file]");
             if (inp) inp.click();
           },
-          onPaste: ro ? void 0 : onImagePasteSb
+          onPaste: ro ? void 0 : onImagePasteSb,
+          ...imgPickProps({ projectId, enabled: !ro, onFile: (f) => putImage(f) })
         },
         d.image && d.image.thumb
           ? sbH(React15.Fragment, null,
@@ -20054,11 +20062,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
           type: "button",
           className: "sbImgPick",
           title: L("pickFile"),
-          onClick: (e) => {
-            e.stopPropagation();
-            const inp = e.currentTarget.parentNode.querySelector("input[type=file]");
-            if (inp) inp.click();
-          }
+          onClick: (e) => imgAsk(e, { projectId, onFile: (f) => putImage(f) })
         }, sbH(Upload4, { size: 12, strokeWidth: 2.4 })),
         ro ? null : sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onPickImage })
       )

@@ -26,6 +26,7 @@ import {
 // The print-language question and the signature pad open over the page, so
 // they are portalled to the body — the same way the dashboard does it.
 import { createPortal } from "react-dom";
+import { createRoot as imgLibCreateRoot } from "react-dom/client";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 var SUBMITTAL_BUCKET = "submittals";var SB_PRINT_PAGE_CAP = 40;
@@ -3082,8 +3083,325 @@ var signCss = `
         }
 `;
 
+
+// ===========================================================================
+// The picture library (מאגר תמונות) — 05.11.2026.
+//
+// Every picture put into any picture box on the site (LLI, submittals, rooms,
+// RFI, rejects) is also kept once in public.image_library. Any picture box can
+// then take a picture three ways: Ctrl+V / right-click → paste, a file from
+// the computer, or a picture from the library. All three end in a File handed
+// to the box's own upload path, so each board keeps doing exactly what it did
+// with an uploaded file.
+// ===========================================================================
+var IMGLIB_SOURCES = [
+  ["lli", "LLI"], ["submittal", "סבמיטל"], ["sd", "SD"], ["rooms", "חיפוש לפי חדר"],
+  ["rfi", "RFI"], ["rejects", "ריג'קטים"], ["photos", "תמונות"]
+];
+var imgLibSourceLabel = (k) => { const x = IMGLIB_SOURCES.find((s) => s[0] === k); return x ? x[1] : (k || ""); };
+async function imgLibFileToDataUrl(file, maxDim = 900) {
+  return await new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (Math.max(w, h) > maxDim) { const k = maxDim / Math.max(w, h); w = Math.round(w * k); h = Math.round(h * k); }
+        const c = document.createElement("canvas"); c.width = w; c.height = h;
+        const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, w, h); g.drawImage(img, 0, 0, w, h);
+        try { resolve(c.toDataURL("image/jpeg", 0.82)); } catch (e) { resolve(reader.result); }
+      };
+      img.onerror = () => resolve(null);
+      img.src = reader.result;
+    };
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+// Keep one picture in the library. Never in the way: a failure is logged and
+// forgotten, and a picture already there (same bytes) is simply skipped.
+// A picture taken FROM the library is already in it; putting it into a box
+// re-encodes it, so without this it would come back as a second copy.
+var imgLibFromLib = new WeakSet();
+async function imgLibAdd({ projectId, projectName, source, label, dataUrl, file }) {
+  try {
+    if (!projectId) return;
+    if (file && imgLibFromLib.has(file)) return;
+    let data = dataUrl;
+    if (!data && file) data = await imgLibFileToDataUrl(file);
+    if (!data || !/^data:image\//.test(data)) return;
+    let who = "";
+    try { const { data: u } = await supabase.auth.getUser(); who = (u && u.user && u.user.email) || ""; } catch (e) {}
+    const { error } = await supabase.from("image_library").insert({
+      project_id: String(projectId), project_name: String(projectName || ""), source: String(source || ""),
+      label: String(label || "").slice(0, 300), data, created_by: who
+    });
+    if (error && error.code !== "23505") console.warn("[awdash] image library add", error.message || error);
+  } catch (e) {
+    console.warn("[awdash] image library add", e);
+  }
+}
+function imgLibDataUrlToFile(dataUrl, name) {
+  const m = String(dataUrl || "").match(/^data:([^;,]*)(;base64)?,(.*)$/);
+  if (!m) return null;
+  const type = m[1] || "image/jpeg";
+  const raw = m[2] ? atob(m[3]) : decodeURIComponent(m[3]);
+  const bytes = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+  return new File([bytes], name || `library.${type.indexOf("png") >= 0 ? "png" : "jpg"}`, { type });
+}
+// The clipboard, read on a right-click "paste". The browser asks once for
+// permission; if it says no, Ctrl+V on the selected box still works.
+async function imgLibClipboardFile() {
+  if (!navigator.clipboard || !navigator.clipboard.read) return null;
+  const items = await navigator.clipboard.read();
+  for (const it of items) {
+    const t = (it.types || []).find((x) => /^image\//.test(x));
+    if (t) {
+      const blob = await it.getType(t);
+      return new File([blob], `pasted.${t.split("/")[1] || "png"}`, { type: t });
+    }
+  }
+  return null;
+}
+function imgLibChooseFile(onFile, multiple) {
+  const inp = document.createElement("input");
+  inp.type = "file"; inp.accept = "image/*"; if (multiple) inp.multiple = true;
+  inp.style.display = "none";
+  inp.onchange = () => {
+    const fs = Array.from(inp.files || []);
+    inp.remove();
+    if (fs.length) onFile(multiple ? fs : fs[0]);
+  };
+  document.body.appendChild(inp);
+  inp.click();
+}
+
+var IMGLIB_CSS = `
+.ilScrim { position: fixed; inset: 0; background: rgba(16,22,34,.55); z-index: 1200; display: flex; align-items: center; justify-content: center; padding: 18px; }
+.ilBox { position: relative; background: #fff; border-radius: 14px; padding: 22px 24px; width: 100%; max-width: 380px; box-shadow: 0 20px 60px rgba(0,0,0,.3); font-family: 'Assistant','Inter',sans-serif; color: #14181f; text-align: center; }
+.ilBox h3 { margin: 0 0 6px; font-size: 17px; padding: 0 28px; }
+.ilBox p { margin: 2px 0; font-size: 13px; color: #5b6575; }
+.ilX { position: absolute; top: 8px; right: 10px; width: 26px; height: 26px; padding: 0; border: 0; background: transparent; color: #5b6575; font-size: 20px; line-height: 1; cursor: pointer; border-radius: 6px; font-family: inherit; }
+.ilX:hover { background: #eef1f5; color: #14181f; }
+.ilBtns { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.ilBtn { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1px solid #d9dee6; background: #fff; border-radius: 10px; padding: 11px 14px; font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit; color: #16324f; }
+.ilBtn:hover { border-color: #1A559E; color: #1A559E; background: #f3f7fc; }
+.ilNote { margin-top: 10px !important; color: #b02a37 !important; font-weight: 700; }
+.ilMenu { position: fixed; z-index: 1250; background: #fff; border: 1px solid #d9dee6; border-radius: 10px; box-shadow: 0 10px 30px rgba(16,32,58,.22); padding: 5px; min-width: 190px; font-family: 'Assistant','Inter',sans-serif; }
+.ilMenu button { display: block; width: 100%; text-align: start; border: 0; background: transparent; padding: 8px 12px; border-radius: 7px; font-size: 13.5px; font-weight: 600; color: #16324f; cursor: pointer; font-family: inherit; }
+.ilMenu button:hover { background: #f0f4fa; color: #1A559E; }
+.ilMenuNote { padding: 6px 12px; font-size: 12px; color: #b02a37; font-weight: 700; max-width: 220px; }
+.ilLib { max-width: 980px; width: calc(100vw - 28px); height: calc(100vh - 40px); display: flex; flex-direction: column; text-align: start; padding: 18px 18px 14px; }
+.ilLib h3 { text-align: center; }
+.ilBar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: center; margin: 10px 0 12px; }
+.ilBar input, .ilBar select { padding: 7px 10px; border: 1px solid #d9dee6; border-radius: 8px; font-size: 13px; font-family: inherit; background: #fff; color: #14181f; }
+.ilBar input { min-width: 200px; }
+.ilChip { border: 1px solid #d9dee6; background: #fff; border-radius: 999px; padding: 5px 12px; font-size: 12.5px; font-weight: 700; color: #5b6575; cursor: pointer; font-family: inherit; }
+.ilChip.on { background: #1A559E; border-color: #1A559E; color: #fff; }
+.ilGrid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); grid-auto-rows: max-content; gap: 10px; align-content: start; padding: 2px; }
+.ilCell { border: 1px solid #e1e5ec; border-radius: 10px; background: #fff; cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column; text-align: start; font-family: inherit; }
+.ilCell:hover { border-color: #1A559E; box-shadow: 0 0 0 2px rgba(26,85,158,.18); }
+.ilThumb { height: 112px; background: #f4f6f9; display: flex; align-items: center; justify-content: center; }
+.ilThumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
+.ilMeta { padding: 6px 8px 7px; font-size: 11.5px; line-height: 1.3; color: #14181f; }
+.ilMeta b { display: block; font-size: 10.5px; color: #1A559E; font-weight: 800; }
+.ilMeta span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ilMeta i { display: block; font-style: normal; color: #8a93a3; font-size: 10.5px; margin-top: 2px; }
+.ilEmpty { grid-column: 1 / -1; text-align: center; color: #5b6575; padding: 40px 0; font-size: 14px; }
+.ilFoot { text-align: center; font-size: 12px; color: #8a93a3; margin-top: 8px; }
+`;
+var imgLibHost = null;
+function imgLibMount() {
+  if (imgLibHost) return imgLibHost;
+  if (!document.getElementById("ilCss")) {
+    const st = document.createElement("style"); st.id = "ilCss"; st.textContent = IMGLIB_CSS; document.head.appendChild(st);
+  }
+  const el = document.createElement("div"); el.id = "ilHost"; document.body.appendChild(el);
+  imgLibHost = { el, root: imgLibCreateRoot(el) };
+  return imgLibHost;
+}
+function imgLibClose() {
+  if (imgLibHost) imgLibHost.root.render(null);
+}
+// opts: { projectId, onFile, at: {x, y} (right-click menu) or null (the
+// question box), multiple }
+function openImagePicker(opts) {
+  const h = imgLibMount();
+  h.root.render(sbH(ImgPicker, { ...opts, key: Date.now() }));
+}
+// The two ways in, as props for any picture box: the small upload icon asks,
+// a right-click opens the menu.
+function imgPickProps({ projectId, onFile, multiple, enabled = true }) {
+  if (!enabled) return {};
+  return {
+    onContextMenu: (e) => {
+      e.preventDefault(); e.stopPropagation();
+      openImagePicker({ projectId, onFile, multiple, at: { x: e.clientX, y: e.clientY } });
+    }
+  };
+}
+function imgAsk(e, { projectId, onFile, multiple }) {
+  if (e) { e.preventDefault(); e.stopPropagation(); }
+  openImagePicker({ projectId, onFile, multiple, at: null });
+}
+
+function ImgPicker({ projectId, onFile, at, multiple }) {
+  const [view, setView] = useState6(at ? "menu" : "ask");
+  const [note, setNote] = useState6(null);
+  const done = (f) => { imgLibClose(); if (f) onFile(f); };
+  useEffect5(() => {
+    const k = (e) => { if (e.key === "Escape") imgLibClose(); };
+    window.addEventListener("keydown", k);
+    return () => window.removeEventListener("keydown", k);
+  }, []);
+  const fromComputer = () => { imgLibClose(); imgLibChooseFile(onFile, multiple); };
+  const fromClipboard = async () => {
+    try {
+      const f = await imgLibClipboardFile();
+      if (f) { done(multiple ? [f] : f); return; }
+      setNote("אין תמונה בלוח ההעתקה. העתיקי תמונה ונסי שוב.");
+    } catch (e) {
+      setNote("הדפדפן לא אישר קריאה מהלוח. לחצי על התיבה ואז Ctrl+V.");
+    }
+  };
+  if (view === "lib") return sbH(ImgLibrary, { projectId, onPick: (f) => done(multiple ? [f] : f), onClose: imgLibClose });
+  if (view === "menu") {
+    const x = Math.min(at.x, window.innerWidth - 210), y = Math.min(at.y, window.innerHeight - 150);
+    return sbH(
+      React15.Fragment, null,
+      sbH("div", { style: { position: "fixed", inset: 0, zIndex: 1240 }, onClick: imgLibClose, onContextMenu: (e) => { e.preventDefault(); imgLibClose(); } }),
+      sbH("div", { className: "ilMenu", dir: "rtl", style: { left: x, top: y } },
+        sbH("button", { type: "button", onClick: fromClipboard }, "הדבקה"),
+        sbH("button", { type: "button", onClick: fromComputer }, "העלאה מהמחשב"),
+        sbH("button", { type: "button", onClick: () => setView("lib") }, "בחירה ממאגר התמונות"),
+        note ? sbH("div", { className: "ilMenuNote" }, note) : null)
+    );
+  }
+  return sbH(
+    "div", { className: "ilScrim", onClick: imgLibClose },
+    sbH("div", { className: "ilBox", dir: "rtl", onClick: (e) => e.stopPropagation() },
+      sbH("button", { type: "button", className: "ilX", "aria-label": "Close", onClick: imgLibClose }, "×"),
+      sbH("h3", null, "העלאת תמונה"),
+      sbH("p", null, "מאיפה להביא את התמונה?"),
+      sbH("div", { className: "ilBtns" },
+        sbH("button", { type: "button", className: "ilBtn", onClick: fromComputer }, "העלאת קובץ מהמחשב"),
+        sbH("button", { type: "button", className: "ilBtn", onClick: () => setView("lib") }, "העלאת קובץ מהמאגר"),
+        sbH("button", { type: "button", className: "ilBtn", onClick: fromClipboard }, "הדבקה מהלוח")),
+      note ? sbH("p", { className: "ilNote" }, note) : null)
+  );
+}
+
+// The library itself: every picture the site holds, newest first. The list
+// comes without the pictures; the pictures load as they scroll into view.
+function ImgLibrary({ projectId, onPick, onClose }) {
+  const [list, setList] = useState6(null);
+  const [err, setErr] = useState6(null);
+  const [src, setSrc] = useState6("all");
+  const [proj, setProj] = useState6("all");
+  const [q, setQ] = useState6("");
+  const [pics, setPics] = useState6({});
+  const [busy, setBusy] = useState6(null);
+  const want = useRef5(new Set());
+  const loading = useRef5(new Set());
+  const timer = useRef5(null);
+  useEffect5(() => {
+    (async () => {
+      const out = [];
+      for (let from = 0; ; from += 1000) {
+        const { data, error } = await supabase.from("image_library")
+          .select("id, project_id, project_name, source, label, created_at")
+          .order("created_at", { ascending: false }).range(from, from + 999);
+        if (error) { setErr(error.message || String(error)); setList([]); return; }
+        out.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+      setList(out);
+    })();
+  }, []);
+  const flush = () => {
+    timer.current = null;
+    const ids = Array.from(want.current).filter((id) => !loading.current.has(id)).slice(0, 24);
+    want.current.clear();
+    if (!ids.length) return;
+    ids.forEach((id) => loading.current.add(id));
+    supabase.from("image_library").select("id, data").in("id", ids).then(({ data }) => {
+      const add = {};
+      (data || []).forEach((r) => { add[r.id] = r.data; });
+      setPics((p) => ({ ...p, ...add }));
+    });
+  };
+  const ask = (id) => {
+    if (pics[id] || loading.current.has(id)) return;
+    want.current.add(id);
+    if (!timer.current) timer.current = setTimeout(flush, 60);
+  };
+  const obs = useRef5(null);
+  if (!obs.current && typeof IntersectionObserver !== "undefined") {
+    obs.current = new IntersectionObserver((ents) => {
+      ents.forEach((en) => { if (en.isIntersecting) ask(en.target.getAttribute("data-id")); });
+    }, { rootMargin: "300px" });
+  }
+  useEffect5(() => () => { if (obs.current) obs.current.disconnect(); }, []);
+  const projects = [];
+  (list || []).forEach((r) => {
+    if (!projects.some((p) => p[0] === r.project_id)) projects.push([r.project_id, r.project_name || r.project_id]);
+  });
+  const sources = IMGLIB_SOURCES.filter((s) => (list || []).some((r) => r.source === s[0]));
+  const qq = q.trim().toLowerCase();
+  const shown = (list || []).filter((r) =>
+    (src === "all" || r.source === src) && (proj === "all" || r.project_id === proj)
+    && (!qq || `${r.label} ${r.project_name}`.toLowerCase().indexOf(qq) >= 0));
+  const pick = async (r) => {
+    setBusy(r.id);
+    try {
+      let d = pics[r.id];
+      if (!d) { const { data } = await supabase.from("image_library").select("data").eq("id", r.id).maybeSingle(); d = data && data.data; }
+      const f = d ? imgLibDataUrlToFile(d) : null;
+      if (f) { imgLibFromLib.add(f); onPick(f); }
+    } finally { setBusy(null); }
+  };
+  return sbH(
+    "div", { className: "ilScrim", onClick: onClose },
+    sbH("div", { className: "ilBox ilLib", dir: "rtl", onClick: (e) => e.stopPropagation() },
+      sbH("button", { type: "button", className: "ilX", "aria-label": "Close", onClick: onClose }, "×"),
+      sbH("h3", null, "מאגר התמונות"),
+      sbH("div", { className: "ilBar" },
+        sbH("input", { type: "search", placeholder: "חיפוש לפי תיאור / סימון / פרויקט", value: q, onChange: (e) => setQ(e.target.value) }),
+        sbH("select", { value: proj, onChange: (e) => setProj(e.target.value) },
+          sbH("option", { value: "all" }, "כל הפרויקטים"),
+          projects.map((p) => sbH("option", { key: p[0], value: p[0] }, p[1] + (p[0] === projectId ? " (הפרויקט הנוכחי)" : "")))),
+        sbH("button", { type: "button", className: `ilChip ${src === "all" ? "on" : ""}`, onClick: () => setSrc("all") }, "הכול"),
+        sources.map((s) => sbH("button", { key: s[0], type: "button", className: `ilChip ${src === s[0] ? "on" : ""}`, onClick: () => setSrc(s[0]) }, s[1]))),
+      sbH("div", { className: "ilGrid" },
+        list == null ? sbH("div", { className: "ilEmpty" }, "טוען…")
+          : err ? sbH("div", { className: "ilEmpty" }, "לא הצלחתי לפתוח את המאגר: " + err)
+          : !shown.length ? sbH("div", { className: "ilEmpty" }, "אין תמונות להצגה")
+          : shown.map((r) => sbH("div", {
+              key: r.id, role: "button", tabIndex: 0, className: "ilCell",
+              onKeyDown: (e) => { if (e.key === "Enter") pick(r); }, "data-id": r.id, title: r.label || "",
+              ref: (el) => { if (el && obs.current) obs.current.observe(el); else if (el) ask(r.id); },
+              onClick: () => pick(r)
+            },
+            sbH("div", { className: "ilThumb" },
+              busy === r.id ? sbH("span", { className: "sbSpin" })
+                : pics[r.id] ? sbH("img", { src: pics[r.id], alt: "", loading: "lazy" }) : null),
+            sbH("div", { className: "ilMeta" },
+              sbH("b", null, imgLibSourceLabel(r.source)),
+              sbH("span", null, r.label || "—"),
+              sbH("i", null, `${r.project_name || ""}${r.created_at ? " · " + sbFmtDate(String(r.created_at).slice(0, 10)) : ""}`))))),
+      list ? sbH("div", { className: "ilFoot" }, `${shown.length} תמונות`) : null)
+  );
+}
+
 export {
   PrintLangAsk,
+  IMGLIB_SOURCES,
+  imgLibAdd,
+  imgLibDataUrlToFile,
+  openImagePicker,
+  imgPickProps,
+  imgAsk,
   PDFJS_VERSION,
   PDFJS_SOURCES,
   pdfJsLoadingPromise,

@@ -23,11 +23,11 @@ import htm from "https://esm.sh/htm@3.1.1";
 import {
   Plus, Printer, FileDown, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save,
 } from "lucide-react";
-import { supabase, printSheetCss, printedStampText } from "../sign.js";
+import { supabase, printSheetCss, printedStampText, imgLibAdd, imgPickProps, imgAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 6 · 03.11.2026";
+export const REJECTS_BUILD = "rejects build 7 · 05.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -323,7 +323,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
               <td onClick=${(e) => e.stopPropagation()}><button type="button" className="rjBtn icon" title="מחיקת הרשימה" onClick=${() => removeList(l)}><${Trash2} size=${14} color="#b02a37" /></button></td>
             </tr>
             ${open && html`<tr><td colSpan="6" className="rjOpen">
-              <div className="rjOpenIn"><${ListEditor} list=${l} projectId=${projectId} subs=${subs || []} edit=${(fn) => editList(l.id, fn)} flash=${flash}
+              <div className="rjOpenIn"><${ListEditor} list=${l} projectId=${projectId} projectName=${projectName} subs=${subs || []} edit=${(fn) => editList(l.id, fn)} flash=${flash}
                 pick=${rowPicks[l.id] || {}} setPick=${(m) => setRowPicks({ ...rowPicks, [l.id]: m })}
                 onSave=${saveAll} saveState=${saveState} /></div>
             </td></tr>`}
@@ -337,7 +337,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
 }
 
 // ----------------------------------------------------------------------------- one list
-function ListEditor({ list, projectId, subs, edit, flash, pick, setPick, onSave, saveState }) {
+function ListEditor({ list, projectId, projectName, subs, edit, flash, pick, setPick, onSave, saveState }) {
   const cols = colsOf(list);
   const rows = list.rows || [];
   const setRow = (id, patch) => edit((l) => { l.rows = (l.rows || []).map((r) => (r.id === id ? { ...r, ...patch } : r)); return l; });
@@ -391,9 +391,9 @@ function ListEditor({ list, projectId, subs, edit, flash, pick, setPick, onSave,
           <td><textarea className="lliIn lliDesc" rows="2" dir="auto" value=${r.desc || ""} onChange=${(e) => setRow(r.id, { desc: e.target.value })} /></td>
           <td><input className="lliIn" value=${r.owner || ""} onChange=${(e) => setRow(r.id, { owner: e.target.value })} /></td>
           <td><input className="lliIn" type="date" value=${r.due || ""} onChange=${(e) => setRow(r.id, { due: e.target.value })} /></td>
-          <td><${Shots} items=${r.photos || []} projectId=${projectId} listId=${list.id} flash=${flash}
+          <td><${Shots} items=${r.photos || []} projectId=${projectId} projectName=${projectName} libLabel=${[list.name, r.floor, String(r.desc || "").split("\n")[0]].filter(Boolean).join(" · ")} listId=${list.id} flash=${flash}
             onChange=${(next) => setRow(r.id, { photos: typeof next === "function" ? next(r.photos || []) : next })} rowEdit=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, photos: fn(x.photos || []) } : x)); return l; })} /></td>
-          <td><${Shots} items=${r.plans || []} projectId=${projectId} listId=${list.id} flash=${flash} noCamera=${true}
+          <td><${Shots} items=${r.plans || []} projectId=${projectId} projectName=${projectName} libLabel=${[list.name, r.floor, String(r.desc || "").split("\n")[0]].filter(Boolean).join(" · ")} listId=${list.id} flash=${flash} noCamera=${true}
             rowEdit=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, plans: fn(x.plans || []) } : x)); return l; })} /></td>
           <td><${Notes} notes=${r.notes || []}
             onChange=${(fn) => edit((l) => { l.rows = (l.rows || []).map((x) => (x.id === r.id ? { ...x, notes: fn(x.notes || []) } : x)); return l; })} /></td>
@@ -435,7 +435,7 @@ function Viewers({ subs, value, onChange }) {
 }
 
 // ----------------------------------------------------------------------------- photos: paste, upload, camera
-function Shots({ items, projectId, listId, flash, rowEdit, noCamera }) {
+function Shots({ items, projectId, projectName, libLabel, listId, flash, rowEdit, noCamera }) {
   const fileRef = useRef(null);
   const camRef = useRef(null);
   const [busy, setBusy] = useState(0);
@@ -448,6 +448,8 @@ function Shots({ items, projectId, listId, flash, rowEdit, noCamera }) {
         const p = await storePhoto(projectId, listId, f);
         if (!p.path) flash("התמונה נשמרה בתצוגה מוקטנת בלבד — העלאה לאחסון נכשלה");
         rowEdit((cur) => cur.concat([p]));
+        // 05.11.26 — kept in the site's picture library too.
+        imgLibAdd({ projectId, projectName, source: "rejects", file: f, label: libLabel || "" });
       } catch (e) { flash("הוספת התמונה נכשלה"); }
       setBusy((b) => b - 1);
     }
@@ -466,11 +468,12 @@ function Shots({ items, projectId, listId, flash, rowEdit, noCamera }) {
   return html`<div className="rjBoxes">
     ${items.map((p) => html`<div key=${p.id} className="rjBox" title="פתיחה בגודל מלא" onClick=${() => openPhoto(p)}>
       <img src=${p.thumb} alt="" /><button type="button" className="x" title="הסרה" onClick=${(e) => { e.stopPropagation(); remove(p); }}>×</button></div>`)}
-    <div className="rjBox" tabIndex="0" onPaste=${onPaste} title="לחיצה על הריבוע ואז Ctrl+V — או העלאה/צילום"
+    <div className="rjBox" tabIndex="0" onPaste=${onPaste} title="לחיצה על הריבוע ואז Ctrl+V, מקש ימני — או העלאה/צילום"
+      onContextMenu=${imgPickProps({ projectId, multiple: true, onFile: (fs) => add(fs) }).onContextMenu}
       onClick=${(e) => e.currentTarget.focus()}>
       <span className="hint">${busy > 0 ? "מעלה…" : items.length ? "+ תמונה נוספת" : "הדבקה / העלאה"}</span>
       <div className="acts">
-        <button type="button" title="העלאת תמונה" onClick=${(e) => { e.stopPropagation(); fileRef.current && fileRef.current.click(); }}><${Upload} size=${12} /></button>
+        <button type="button" title="העלאת תמונה — מהמחשב או מהמאגר" onClick=${(e) => imgAsk(e, { projectId, multiple: true, onFile: (fs) => add(fs) })}><${Upload} size=${12} /></button>
         ${!noCamera && html`<button type="button" title="צילום" onClick=${(e) => { e.stopPropagation(); camRef.current && camRef.current.click(); }}><${Camera} size=${12} /></button>`}
       </div>
     </div>
