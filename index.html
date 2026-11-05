@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 249";
+var APP_BUILD = "05.11.2026 · build 250";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1793,8 +1793,9 @@ var pdfViewer = `
         /* The row a new one will be added under. A line at its edge and nothing
            else: it has to be visible without colouring a row that already says
            something with its colour (late, ordered, off the board). */
-        .lliTable tbody tr.lliHere > td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
-        .lliTable tbody tr.lliHere > td:last-child { box-shadow: inset -3px 0 0 var(--accent); }
+        /* 05.11.26 — the row she is working in: a thin dark-blue outline round
+           the whole row (the chapter bands' colour), not two bars at its ends. */
+        .lliTable tbody tr.lliHere { outline: 1.5px solid #0F3460; outline-offset: -1.5px; }
         /* A date, its calendar, and the two small ways to move it about. */
         .lliDateCell { display: flex; align-items: center; gap: 2px; }
         .lliDateCell .lliIn { flex: 1; min-width: 0; }
@@ -12402,7 +12403,22 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                   });
                 })(),
                 // 05.11.26 — shown to the client / supervision: beside the printer.
-                canEdit ? sbH("th", { className: "cAct" }, isRTL ? "לקוח / פיקוח" : "Client / supervision") : null,
+                // The title works like the printer: every row on, then all off.
+                (() => {
+                  if (!canEdit) return null;
+                  const allOn = groups.every((g) => g.rows.every((r) => !isHidden(r)));
+                  return sbH("th", {
+                    className: `cAct prAllTh clShowTh ${allOn ? "on" : ""}`.trim(),
+                    title: isRTL
+                      ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח")
+                      : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
+                    onClick: () => {
+                      const next = { ...data };
+                      groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = { ...lliRowOf(data, r.code), hidden: allOn }; }));
+                      onChangeRows(next);
+                    }
+                  }, isRTL ? "לקוח / פיקוח" : "Client / supervision");
+                })(),
                 canEdit ? sbH("th", { className: "cGrip" }, "") : null,
                 thT("section", "cSec", L("section")),
                 thT("category", "cCat", L("category")),
