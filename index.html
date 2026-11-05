@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 243";
+var APP_BUILD = "05.11.2026 · build 244";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2475,9 +2475,16 @@ var pdfViewer = `
         .sdHist { list-style: none; margin: 10px 0 0; padding: 0; max-height: 50vh; overflow: auto; text-align: start; }
         .sdHist li { display: flex; gap: 12px; padding: 7px 4px; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
         .sdHistAt { font-weight: 800; color: var(--steel); min-width: 70px; }
-        .lliThIn { display: inline-flex; align-items: center; gap: 4px; }
-        .lliColTick { width: 13px; height: 13px; margin: 0; flex: none; cursor: pointer; accent-color: var(--accent, #0F3460); }
-        th.lliColOff .lliThIn > span { opacity: .45; text-decoration: line-through; }
+        /* 05.11.26 — print switches. A column title: dark = prints, faded and
+           struck through = left out; click to switch. A row without its print
+           V: still editable, greyed. Same on LLI, submittals, SD, rejects, RFI. */
+        th.prColTh, th.prAllTh { cursor: pointer; user-select: none; }
+        .rfiTable th.cPrint, .rfiTable td.cPrint { width: 44px; text-align: center; }
+        th.prColTh:hover, th.prAllTh:hover { background-color: rgba(16, 52, 96, .06); }
+        th.prColTh.off { color: #a3aab5 !important; text-decoration: line-through; text-decoration-thickness: 1.5px; }
+        tr.prOff > td { background: #f4f5f7 !important; }
+        tr.prOff > td > *:not(.prKeep), tr.prOff > td:not(.prKeep) { color: #9aa2ad; }
+        tr.prOff > td:not(.prKeep) > * { opacity: .6; }
         .lliFilter.sbCatBar { margin-bottom: 10px; }
         .sbTopCreate { display: flex; justify-content: center; margin: 4px 0 14px; }
         .sbCatBar {
@@ -2515,7 +2522,6 @@ var pdfViewer = `
         .sbBoardTable th.sbColTh { white-space: nowrap; }
         .sbColThIn { display: inline-flex; align-items: center; gap: 5px; }
         .sbColTick { width: 13px; height: 13px; margin: 0; cursor: pointer; accent-color: var(--accent, #0F3460); }
-        .sbBoardTable th.sbColTh.off > .sbColThIn > span { opacity: .45; text-decoration: line-through; }
         .sbBoardTable tbody tr.sbBandRow td {
           background: var(--accent); color: #fff; font-weight: 800; font-size: 12.5px;
           letter-spacing: .3px; padding: 6px 9px; text-align: center;
@@ -11222,10 +11228,6 @@ function lliBlankRow() {
     // actually committed to. The second is the one that tells you whether the
     // job is in trouble, and it only means anything next to the first. (3.9.26)
     po: "", eta: "", etaActual: "", status: "pending", hidden: false, byRoom: false,
-    // Every row belongs in the O&M document until she says otherwise — that is
-    // what she asked for, and it is the right default: a row left out of the
-    // file by accident is a material nobody can trace later (15.10.26).
-    oam: true,
     // A hand-made row may answer a line in the bill of quantities. When it
     // does, this holds that line's number (15.10.26).
     boqRef: "",
@@ -11390,7 +11392,6 @@ var LLI_L = {
   routedSd: { en: "On the shop-drawing board", he: "מופיע בטבלת SD" },
   routedSubmittal: { en: "On the submittal checklist", he: "מופיע בסבמיטלים" },
 
-  oamCol: { en: "O&M FILE", he: "תיק מתקן" },
   noCatSection: { en: "Other", he: "ללא תחום" },
   myCats: { en: "Categories", he: "קטגוריות" },
   myCatsTitle: { en: "Categories in the list", he: "קטגוריות ברשימה הנפתחת" },
@@ -11408,11 +11409,6 @@ var LLI_L = {
     he: "יש שורות שמסווגות לקטגוריה הזו. להסיר בכל זאת? הן יופיעו ללא קטגוריה."
   },
   catsClose: { en: "Close", he: "סגירה" },
-  oamHint: {
-    en: "Ticked rows go into the finish-materials O&M document. Every row starts ticked.",
-    he: "שורות מסומנות נכנסות למסמך חומרי גמר - תיק מתקן. כל שורה מתחילה מסומנת."
-  },
-  oamDoc: { en: "Finish materials - O&M file", he: "חומרי גמר - תיק מתקן" },
   boqRef: { en: "BOQ item", he: "סעיף כתב כמויות" },
   boqRefHint: {
     en: "Type or pick a BOQ item number. Its wording, unit and quantity fill this row.",
@@ -11465,8 +11461,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   const [cat, setCat] = useState6("all");
   // 05.11.26 — the products ticked for printing. None ticked: the PDF and the
   // workbook carry the board as before; some ticked: only those.
-  const [printPick, setPrintPick] = useState6({});
-  const anyPrintPick = Object.keys(printPick).some((k) => printPick[k]);
+  // 05.11.26 — every row prints until its V is taken off; a row without its V
+  // stays editable but is greyed.
+  const [printOff, setPrintOff] = useState6({});
   const [busyRow, setBusyRow] = useState6(null);
   const [poNote, setPoNote] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
@@ -11481,32 +11478,23 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     setLliHide(next);
     try { window.localStorage.setItem("aw.lliHide", JSON.stringify(next)); } catch (e) {}
   };
-  // A column title with its tick. Ticked: in the workbook and on the PDF.
+  // 05.11.26 — a column title is its own switch: dark, it prints; a click
+  // greys it and strikes it through, and it is left out of the PDF and Excel.
   const thT = (key, cls, label, title) => sbH(
     "th",
-    { className: `${cls} ${canEdit && lliHide.indexOf(key) >= 0 ? "lliColOff" : ""}`.trim(), title },
     canEdit
-      ? sbH("span", { className: "lliThIn" },
-          sbH("input", {
-            type: "checkbox", className: "lliColTick", checked: lliHide.indexOf(key) < 0,
-            title: lang === "he" ? "\u05de\u05e1\u05d5\u05de\u05df \u2014 \u05d9\u05d5\u05e4\u05d9\u05e2 \u05d1\u05d0\u05e7\u05e1\u05dc \u05d5\u05d1-PDF" : "Ticked: in the workbook and the PDF",
-            onClick: (e) => e.stopPropagation(),
-            onChange: () => toggleLliCol(key)
-          }),
-          sbH("span", null, label))
-      : label
+      ? {
+          className: `${cls} prColTh ${lliHide.indexOf(key) >= 0 ? "off" : ""}`.trim(),
+          title: prColTitle(lang, lliHide.indexOf(key) < 0, title),
+          onClick: () => toggleLliCol(key)
+        }
+      : { className: cls, title },
+    label
   );
-  // The O&M document is asked two questions on the way out: which file, and
-  // then which language — one window after the other (15.10.26).
-  const [oamAsk, setOamAsk] = useState6(false);
   // The window where she adds categories to the dropdown (20.10.26).
   const [catsOpen, setCatsOpen] = useState6(false);
   const [newCatHe, setNewCatHe] = useState6("");
   const [newCatEn, setNewCatEn] = useState6("");
-  const [oamRun, setOamRun] = useState6(null);
-  // Which O&M file the language question is for — the PDF has no date line
-  // of its own, the workbook does (05.11.26).
-  const [oamKind, setOamKind] = useState6("pdf");
   // A date she copied off one cell, waiting to be dropped into others. It is
   // held in the board, not in the system clipboard: the dates in this table go
   // from one cell to another and almost never leave the page (15.10.26).
@@ -11691,11 +11679,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       : null
   );
 
-  // The O&M tick lives on the row, and a row that was never touched is in.
-  const inOam = (r) => {
-    const v = lliRowOf(data, r.code);
-    return v.oam === void 0 ? true : !!v.oam;
-  };
 
   // The rows the BOQ gives us, plus whatever was added by hand. One row is one
   // parent product — a door, a panel, a lighting type — and its number is the
@@ -11967,7 +11950,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
         // Only what is ticked for showing is printed. An unticked row is off
         // the board as far as the client and the paper are concerned (29.8.26).
         if (isHidden(r)) return;
-        if (anyPrintPick && !printPick[r.code]) return;
+        if (printOff[r.code]) return;
         const v = lliRowOf(data, r.code);
         body.push([
           r.source === "boq" ? r.code : T("manual"),
@@ -11994,185 +11977,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
 
-  // ===========================================================================
-  // חומרי גמר - תיק מתקן — the O&M document (15.10.26)
-  //
-  // The same board, read for a different reason. The ordering columns — who it
-  // was bought from, on what order, when it lands, whether it is late — belong
-  // to the procurement sheet and say nothing to whoever opens the building's
-  // file in three years. What that reader needs is WHAT the material is and
-  // WHERE to buy it again: the discipline, the mark, the wording, the supplier
-  // and a picture.
-  //
-  // It is not filtered by the category chips and it does not care whether a row
-  // is "for ordering": the only question asked of a row is whether its O&M tick
-  // is on — and every row's is, until she turns one off.
-  // ===========================================================================
-  // The O&M document is read one discipline at a time — the ceilings together,
-  // the flooring together — so it is ORDERED BY DISCIPLINE, and inside each one
-  // by the chapter and the order she put the rows in. On paper each discipline
-  // then starts its own page and carries its name over every page it fills
-  // (15.10.26).
-  // 20.10.26 — ordered by the category written in the row's own column, not
-  // by chapter. Inside a category: its sub-categories in the catalogue's order
-  // (a row with the category alone comes first), and then the order the rows
-  // stand in on the screen. Each category starts a page of its own.
-  const oamRows = () => {
-    const list = all.filter((r) => !isRemoved(r) && inOam(r));
-    // Where each row stands on the screen: chapter by chapter, and inside a
-    // chapter the order she dragged them into — the same rule the table uses.
-    const byCh = [];
-    list.forEach((r) => {
-      const ch = homeOf(r);
-      const key = ch ? ch.code : "manual";
-      let g = byCh.find((x) => x.key === key);
-      if (!g) { g = { key, rows: [] }; byCh.push(g); }
-      g.rows.push(r);
-    });
-    const screenPos = {};
-    let n = 0;
-    byCh.forEach((g) => {
-      g.rows.forEach((r, i2) => { r.oamPos = i2; });
-      g.rows.slice().sort((x, y) => {
-        const oa = lliRowOf(data, x.code).order, ob = lliRowOf(data, y.code).order;
-        const va = oa == null ? x.oamPos : oa, vb = ob == null ? y.oamPos : ob;
-        return va === vb ? x.oamPos - y.oamPos : va - vb;
-      }).forEach((r) => { screenPos[r.code] = n++; });
-    });
-    const catOrder = (r) => {
-      const i = BOARD_CATEGORIES.findIndex((c) => c.key === r.category);
-      return i < 0 ? BOARD_CATEGORIES.length : i;
-    };
-    const subOrder = (r) => {
-      const sub = String(lliRowOf(data, r.code).subCategory || "").trim();
-      if (!sub) return -1;
-      const i = sbSubcats(r.category).findIndex((x) => x[0] === sub || x[1] === sub);
-      return i < 0 ? 9999 : i;
-    };
-    return list.slice().sort((x, y) =>
-      (catOrder(x) - catOrder(y)) || (subOrder(x) - subOrder(y)) || (screenPos[x.code] - screenPos[y.code]));
-  };
-  // The full wording of the BOQ item a row stands for, when there is one: the
-  // representative line of a BOQ product, or the line a hand-made row names.
-  const oamBoqWording = (r, v, lg) => {
-    if (r.source === "boq" && r.product) {
-      const lead = r.product.lead || null;
-      return (lead ? boqText(lead, lg) : "") || boqText(r.product, lg);
-    }
-    const ref = boqRefCode(v.boqRef);
-    const line = ref ? boqLineOf(ref) : null;
-    return line ? boqText(line, lg) : "";
-  };
-  const oamGrid = (printLang) => {
-    const lg = printLang === "en" ? "en" : "he";
-    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
-    const head = [T("category"), T("typeMark"), T("desc"), T("supplier"), T("image")];
-    const widths = [18, 14, 40, 20, 16];
-    const types = ["text", "text", "text", "text", "text"];
-    const body = [];
-    const imgs = [];
-    const secs = [];
-    oamRows().forEach((r) => {
-      const v = lliRowOf(data, r.code);
-      const c = boardCategoryOf(r.category);
-      // The heading the paginator puts over the page. A row with no discipline
-      // is gathered under one plain heading rather than on a page of its own.
-      secs.push(c ? sbText(c, lg) : T("noCatSection"));
-      // The category cell says what the column says: the sub-category when
-      // one was picked, the category otherwise.
-      const sub = String(v.subCategory || "").trim();
-      body.push([
-        c ? (sub ? sbSubcatLabel(sub, r.category, lg) : sbText(c, lg)) : "",
-        v.typeMark || "",
-        // What she wrote on the row, and otherwise the item's full wording
-        // from the bill of quantities — not the short family name (20.10.26).
-        String(v.desc || "").trim() || oamBoqWording(r, v, lg) || r.title || "",
-        v.supplier || boardTradeCompany(contacts, contactsCatalog, r.category, lg) || "",
-        ""
-      ]);
-      imgs.push(v.image || null);
-    });
-    return { head, body, widths, types, imgs, secs, T, lg };
-  };
-  const oamTitles = (lg0, kind) => {
-    const lg = lg0 === "en" ? "en" : "he";
-    const T = (k) => sbText(LLI_L[k] || { en: k, he: k }, lg);
-    return {
-      title: `${projectName || ""}`.trim() || T("oamDoc"),
-      subtitle: T("oamDoc"),
-      date: kind === "pdf" ? "" : sbFmtDate(new Date().toISOString().slice(0, 10))
-    };
-  };
-  const oamExcel = async (printLang, hdr) => {
-    const g0 = oamGrid(printLang);
-    const H = hdr || oamTitles(printLang);
-    if (!g0.body.length) { setPoNote(g0.T("nothingToExport")); return; }
-    setPoNote(g0.T("translating"));
-    // The wording and the supplier are the free text here; the discipline is
-    // known in both languages and a mark is a code.
-    let g = g0;
-    let trNote = null;
-    try {
-      g = { ...g0, ...(await awTranslateGrid(g0, [1, 2, 3], g0.lg)) };
-      setPoNote(null);
-    } catch (e) {
-      console.warn("[awdash] translate failed", e);
-      trNote = g0.T("trFailed");
-      setPoNote(null);
-    }
-    const res = await boardExportXlsx({
-      title: H.title,
-      subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "),
-      sheetName: g.lg === "he" ? "\u05ea\u05d9\u05e7 \u05de\u05ea\u05e7\u05df" : "O&M",
-      fileName: boardFileName(projectName, g.T("oamDoc"), "xlsx"),
-      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
-      imgCol: 4, imgs: g.imgs,
-      // No red, no green. Nothing on this document is late or ordered, so
-      // nothing on it is coloured for being either — she asked for white paper
-      // in so many words (15.10.26).
-      accent: (printBrand || {}).accent, isRTL: g.lg === "he"
-    });
-    if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, g.lg));
-    else if (trNote) setPoNote(trNote);
-  };
-  const oamPdf = (printLang, hdr) => {
-    const g0 = oamGrid(printLang);
-    const H = hdr || oamTitles(printLang, "pdf");
-    if (!g0.body.length) { setPoNote(g0.T("nothingToExport")); return; }
-    setPoNote(null);
-    // The window is opened inside the click, before the translation, or a
-    // pop-up blocker eats it.
-    const win = window.open("", "_blank");
-    if (win) {
-      win.document.open();
-      win.document.write(awWaitPage(g0.lg));
-      win.document.close();
-    }
-    (async () => {
-      let g = g0;
-      let trNote = null;
-      try {
-        g = { ...g0, ...(await awTranslateGrid(g0, [1, 2, 3], g0.lg)) };
-      } catch (e) {
-        console.warn("[awdash] translate failed", e);
-        trNote = g0.T("trFailed");
-      }
-      boardExportPdf({
-        title: H.title,
-        fileName: boardFileName(projectName, g.T("oamDoc"), ""),
-        subtitle: H.subtitle,
-        issuedLabel: String(H.date || "").trim() || undefined,
-        head: g.head, body: g.body, widths: g.widths,
-        // One discipline per page, named above the column titles (15.10.26).
-        sections: g.secs,
-        accent: (printBrand || {}).accent, brand: printBrand,
-        isRTL: g.lg === "he", imgCol: 4, imgs: g.imgs,
-        noStamp: true,
-        win
-      });
-      setPoNote(trNote);
-    })();
-  };
   // 05.11.26 — the report's header lines, as they print unless she changes
   // them in the report-details window.
   const lliTitles = (lg0) => {
@@ -12597,12 +12401,6 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
           document.body
         );
       })() : null,
-      // The second document this board can produce. Its own button, because it
-      // is a different document and not a different view of this one.
-      canEdit
-        ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setOamAsk(true) },
-            sbH(Download2, { size: 14, strokeWidth: 2 }), " ", L("oamDoc"))
-        : null,
       // 21.10.26 — only the language is asked; the columns are the ticks.
       printAsk
         ? sbH(PrintLangAsk, {
@@ -12610,39 +12408,8 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
             onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, "admin", hdr); },
             onClose: () => setPrintAsk(null)
           })
-        : null,
-      // Question one: which file. The same window the language question wears,
-      // so the two steps read as one errand.
-      oamAsk
-        ? createPortal(
-            sbH(
-              "div",
-              { className: "printAskScrim", onClick: () => setOamAsk(false) },
-              sbH(
-                "div",
-                { className: "printAskBox", dir: "rtl", onClick: (e) => e.stopPropagation() },
-                sbH("h3", null, L("oamDoc")),
-                sbH("p", null, "\u05d1\u05d0\u05d9\u05d6\u05d4 \u05e7\u05d5\u05d1\u05e5 \u05dc\u05d4\u05e4\u05d9\u05e7 \u05d0\u05ea \u05d4\u05de\u05e1\u05de\u05da?"),
-                sbH("p", { className: "printAskEn", dir: "ltr" }, "Excel or PDF?"),
-                sbH(
-                  "div",
-                  { className: "printAskBtns" },
-                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamKind("xlsx"); setOamRun(() => oamExcel); } }, "Excel"),
-                  sbH("button", { type: "button", className: "sgBtn", onClick: () => { setOamAsk(false); setOamKind("pdf"); setOamRun(() => oamPdf); } }, "PDF")
-                )
-              )
-            ),
-            document.body
-          )
-        : null,
-      // Question two: which language. Both files are offered both ways.
-      oamRun
-        ? sbH(PrintLangAsk, {
-            titles: (lg) => oamTitles(lg, oamKind),
-            onPick: (lg, who, hdr) => { const f = oamRun; setOamRun(null); f(lg, hdr); },
-            onClose: () => setOamRun(null)
-          })
         : null
+
     ),
     !boqData ? sbH("p", { className: "lliNote" }, L("noBoq")) : null,
     // The bill of quantities, offered to any row that wants to name the item it
@@ -12671,17 +12438,17 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 "tr",
                 null,
                 // 05.11.26 — which products go to the PDF / Excel: the rightmost column.
-                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "סימון מוצרים להדפסה ולאקסל — בלי סימון יוצא הכול" : "Tick products to print — none ticked prints all" },
+                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
                   sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
                     sbH(Printer, { size: 14, strokeWidth: 2 }),
                     sbH("input", {
                       type: "checkbox", className: "lliShowTick",
                       title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
-                      checked: anyPrintPick && groups.every((g) => g.rows.every((r) => isHidden(r) || printPick[r.code])),
+                      checked: groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code])),
                       onChange: (e) => {
                         const next = {};
-                        if (e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
-                        setPrintPick(next);
+                        if (!e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                        setPrintOff(next);
                       }
                     }))) : null,
                 canEdit ? sbH("th", { className: "cGrip" }, "") : null,
@@ -12701,30 +12468,27 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 thT("etaActual", "cEta", L("etaActual")),
                 thT("status", "cSt", L("status")),
                 canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
-                canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null,
-                // 05.11.26 — one tick over the column puts every row on screen in
-                // the O&M file, or takes every one out.
-                canEdit ? sbH("th", { className: "cRoom", title: L("oamHint") },
-                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
-                    L("oamCol"),
-                    sbH("input", {
-                      type: "checkbox", className: "lliShowTick",
-                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
-                      checked: groups.some((g) => g.rows.length) && groups.every((g) => g.rows.every((r) => inOam(r))),
-                      onChange: (e) => {
-                        const on = e.target.checked;
-                        const next = { ...data };
-                        groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = { ...lliRowOf(data, r.code), oam: on }; }));
-                        onChangeRows(next);
-                      }
-                    }))) : null
+                // 05.11.26 — a click on the title ticks every row on screen, or
+                // clears every one.
+                canEdit ? sbH("th", {
+                  className: "cRoom prAllTh",
+                  title: isRTL ? "לחיצה על הכותרת — סימון הכול / ניקוי הכול" : "Click the title: tick all / clear all",
+                  onClick: () => {
+                    const vis = [];
+                    groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) vis.push(r.code); }));
+                    const on = !vis.every((c) => !!lliRowOf(data, c).byRoom);
+                    const next = { ...data };
+                    vis.forEach((c) => { next[c] = { ...lliRowOf(data, c), byRoom: on }; });
+                    onChangeRows(next);
+                  }
+                }, L("byRoomCol")) : null
               )
             ),
             groups.map((g) =>
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 18 : 15 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 19 : 15 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -12737,7 +12501,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       // The row the find is standing on carries the reference,
                       // so the board can bring it into view (30.8.26).
                       ref: hitNow === r.code ? hitRef : void 0,
-                      className: `${anchorRow === r.code && canEdit ? "lliHere" : ""} ${hidden ? "lliOff" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""}`.trim(),
+                      className: `${anchorRow === r.code && canEdit ? "lliHere" : ""} ${hidden ? "lliOff" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""} ${printOff[r.code] ? "prOff" : ""}`.trim(),
                       // Wherever she puts the cursor in this row, this is now
                       // the row a new one is added under.
                       onFocusCapture: () => standOn(r.code),
@@ -12778,13 +12542,13 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                     canEdit
                       ? sbH(
                           "td",
-                          { className: "cRoom" },
+                          { className: "cRoom prKeep" },
                           sbH("input", {
                             type: "checkbox",
                             className: "lliShowTick",
-                            checked: !!printPick[r.code],
+                            checked: !printOff[r.code],
                             title: isRTL ? "להדפסה ולאקסל" : "Print / Excel",
-                            onChange: () => setPrintPick({ ...printPick, [r.code]: !printPick[r.code] })
+                            onChange: () => setPrintOff({ ...printOff, [r.code]: !printOff[r.code] })
                           })
                         )
                       : null,
@@ -13108,22 +12872,6 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                             onChange: () => patch(r.code, { byRoom: !v.byRoom })
                           })
                         )
-                      : null,
-                    // And the O&M document. Every row is in it until she takes
-                    // it out.
-                    canEdit
-                      ? sbH(
-                          "td",
-                          { className: "cRoom" },
-                          sbH("input", {
-                            type: "checkbox",
-                            className: "lliShowTick",
-                            checked: inOam(r),
-                            title: L("oamHint"),
-                            "aria-label": L("oamCol"),
-                            onChange: () => patch(r.code, { oam: !inOam(r) })
-                          })
-                        )
                       : null
                   );
                   // The warning itself, in words, on its own line under the row.
@@ -13140,7 +12888,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       { className: "lliClashRow" },
                       sbH(
                         "td",
-                        { colSpan: canEdit ? 20 : 15 },
+                        { colSpan: canEdit ? 19 : 15 },
                         sbH(
                           "div",
                           { className: "lliClashNote" },
@@ -13170,7 +12918,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       className: `lliDropTail ${drag.over === null ? "lliDropHere" : ""}`.trim(),
                       onDragOver: (e) => { e.preventDefault(); if (drag.over !== null) setDrag({ ...drag, over: null }); },
                       onDrop: (e) => { e.preventDefault(); dropRow(g, drag.code, null); setDrag(null); }
-                    }, sbH("td", { colSpan: canEdit ? 17 : 14 }))
+                    }, sbH("td", { colSpan: canEdit ? 19 : 15 }))
                   : null
               )
             )
@@ -13337,10 +13085,30 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const [busyRow, setBusyRow] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
   // 05.11.26 — which drawings go to the PDF / Excel; none ticked prints all.
-  const [printPick, setPrintPick] = useState6({});
-  const anyPrintPick = Object.keys(printPick).some((k) => printPick[k]);
+  // 05.11.26 — every row prints until its V is taken off; a row without its V
+  // stays editable but is greyed.
+  const [printOff, setPrintOff] = useState6({});
   // Excel asks for the report's details only — the workbook follows the screen's language.
   const [xlsAsk, setXlsAsk] = useState6(false);
+  // 05.11.26 — which columns print: the column titles are the switches.
+  // Kept in this browser.
+  const SD_COL_KEYS = ["section", "category", "typeMark", "desc", "qty", "dueAt", "toClient", "status"];
+  const [sdHide, setSdHide] = useState6(() => {
+    try { const v = JSON.parse(window.localStorage.getItem("aw.sdHide") || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  });
+  const toggleSdCol = (k) => {
+    const next = sdHide.indexOf(k) >= 0 ? sdHide.filter((x) => x !== k) : sdHide.concat([k]);
+    if (next.length >= SD_COL_KEYS.length) return;
+    setSdHide(next);
+    try { window.localStorage.setItem("aw.sdHide", JSON.stringify(next)); } catch (e) {}
+  };
+  const thS = (key, cls, label) => sbH(
+    "th",
+    canEdit
+      ? { className: `${cls} prColTh ${sdHide.indexOf(key) >= 0 ? "off" : ""}`.trim(), title: prColTitle(lang, sdHide.indexOf(key) < 0), onClick: () => toggleSdCol(key) }
+      : { className: cls },
+    label
+  );
   const [exportNote, setExportNote] = useState6(null);
   const L = (k) => sbText(SD_L[k] || { en: k, he: k }, lang);
 
@@ -13513,7 +13281,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     groups.forEach((g) => {
       g.rows.forEach((r) => {
         if (isHidden(r)) return;
-        if (anyPrintPick && !printPick[r.code]) return;
+        if (printOff[r.code]) return;
         const v = sdRowOf(data, r.code);
         // The client's approval counts on the paper too — the report is what
         // gets circulated, and a drawing signed this morning must not go out
@@ -13538,7 +13306,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         ]);
       });
     });
-    return { head, body, widths, types, tone };
+    return { head, body, widths, types, tone, keys: SD_COL_KEYS.slice() };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -13554,7 +13322,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   };
   const onExcel = async (hdr) => {
     const H = hdr || sdTitles(lang);
-    const g = exportGrid();
+    const g = sbDropCols(exportGrid(), sdHide);
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     setExportNote(null);
     const res = await boardExportXlsx({
@@ -13571,7 +13339,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const sdClientKeys = ["section", "category", "typeMark", "desc", "dueAt", "toClient", "status"];
   const onPdf = (printLang, audience, hdr) => {
     const H = hdr || sdTitles(printLang);
-    const g = exportGrid();
+    const g = sbDropCols(exportGrid(), sdHide);
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     const keep = audience === "client"
       ? sdClientKeys.map((k) => g.head.indexOf(L(k))).filter((i) => i >= 0)
@@ -13732,27 +13500,27 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 "tr",
                 null,
                 // 05.11.26 — which drawings go to the PDF / Excel: the rightmost column.
-                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "סימון שורות להדפסה ולאקסל — בלי סימון יוצא הכול" : "Tick rows to print — none ticked prints all" },
+                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
                   sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
                     sbH(Printer, { size: 14, strokeWidth: 2 }),
                     sbH("input", {
                       type: "checkbox", className: "lliShowTick",
                       title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
-                      checked: anyPrintPick && groups.every((g) => g.rows.every((r) => isHidden(r) || printPick[r.code])),
+                      checked: groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code])),
                       onChange: (e) => {
                         const next = {};
-                        if (e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
-                        setPrintPick(next);
+                        if (!e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                        setPrintOff(next);
                       }
                     }))) : null,
-                sbH("th", { className: "cSec" }, L("section")),
-                sbH("th", { className: "cCat" }, L("category")),
-                sbH("th", { className: "cMark" }, L("typeMark")),
-                sbH("th", { className: "cDesc" }, L("desc")),
-                sbH("th", { className: "cQty" }, isRTL ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" : "Subcontractor"),
-                sbH("th", { className: "cDate" }, L("dueAt")),
-                sbH("th", { className: "cReq" }, L("toClient")),
-                sbH("th", { className: "cStat" }, L("status")),
+                thS("section", "cSec", L("section")),
+                thS("category", "cCat", L("category")),
+                thS("typeMark", "cMark", L("typeMark")),
+                thS("desc", "cDesc", L("desc")),
+                thS("qty", "cQty", isRTL ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" : "Subcontractor"),
+                thS("dueAt", "cDate", L("dueAt")),
+                thS("toClient", "cReq", L("toClient")),
+                thS("status", "cStat", L("status")),
                 canEdit ? sbH("th", { className: "cAct" }, "") : null
               )
             ),
@@ -13791,17 +13559,17 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                   const tone = tone0 === "ok" ? "lliDone" : tone0 === "wait" ? "lliWait" : tone0 === "late" ? "lliLate" : "";
                   return sbH(
                     "tr",
-                    { key: r.code, className: `${hidden ? "lliOff" : ""} ${tone}`.trim() },
+                    { key: r.code, className: `${hidden ? "lliOff" : ""} ${tone} ${printOff[r.code] ? "prOff" : ""}`.trim() },
                     canEdit
                       ? sbH(
                           "td",
-                          { className: "cRoom" },
+                          { className: "cRoom prKeep" },
                           sbH("input", {
                             type: "checkbox",
                             className: "lliShowTick",
-                            checked: !!printPick[r.code],
+                            checked: !printOff[r.code],
                             title: isRTL ? "להדפסה ולאקסל" : "Print / Excel",
-                            onChange: () => setPrintPick({ ...printPick, [r.code]: !printPick[r.code] })
+                            onChange: () => setPrintOff({ ...printOff, [r.code]: !printOff[r.code] })
                           })
                         )
                       : null,
@@ -14337,6 +14105,27 @@ function RfiCard({
   const [fStatus, setFStatus] = useState6("all");
   const [fPriority, setFPriority] = useState6("all");
   const [note, setNote] = useState6(null);
+  // 05.11.26 — print switches, as on the other boards: the column titles
+  // (kept in this browser) and a V on every row (every row prints until its V
+  // is taken off; without it the row is greyed but still editable).
+  const RFI_COL_KEYS = ["no", "discipline", "subject", "dateRaised", "raisedBy", "responsibility", "priority", "dueDate", "drawingUpdate", "status"];
+  const [rfiHide, setRfiHide] = useState6(() => {
+    try { const v = JSON.parse(window.localStorage.getItem("aw.rfiHide") || "[]"); return Array.isArray(v) ? v : []; } catch (e) { return []; }
+  });
+  const toggleRfiCol = (k) => {
+    const next = rfiHide.indexOf(k) >= 0 ? rfiHide.filter((x) => x !== k) : rfiHide.concat([k]);
+    if (next.length >= RFI_COL_KEYS.length) return;
+    setRfiHide(next);
+    try { window.localStorage.setItem("aw.rfiHide", JSON.stringify(next)); } catch (e) {}
+  };
+  const thR = (key, cls) => sbH(
+    "th",
+    canEdit
+      ? { className: `${cls} prColTh ${rfiHide.indexOf(key) >= 0 ? "off" : ""}`.trim(), title: prColTitle(lang, rfiHide.indexOf(key) < 0), onClick: () => toggleRfiCol(key) }
+      : { className: cls },
+    L(key)
+  );
+  const [printOff, setPrintOff] = useState6({});
 
   const all = Object.keys(rows || {})
     .map((k) => rows[k])
@@ -14407,7 +14196,7 @@ function RfiCard({
     ];
     const widths = [70, 110, 240, 90, 130, 110, 90, 100, 110, 100];
     const types = ["text", "text", "text", "date", "text", "text", "text", "date", "text", "text"];
-    const body = shown.map((r) => [
+    const body = shown.filter((r) => !printOff[r.id]).map((r) => [
       r.no,
       r.discipline || "",
       r.subject || "",
@@ -14419,7 +14208,7 @@ function RfiCard({
       L(RFI_DRAWING_L[r.drawingUpdate] || "tbd"),
       L(RFI_STATUS_L[r.status] || "stOpen")
     ]);
-    return { head, body, widths, types };
+    return sbDropCols({ head, body, widths, types, keys: RFI_COL_KEYS.slice() }, rfiHide);
   };
   const onExcel = async () => {
     const g = exportGrid();
@@ -14493,16 +14282,29 @@ function RfiCard({
               "table",
               { className: "rfiTable" },
               sbH("thead", null, sbH("tr", null,
-                sbH("th", { className: "cNo" }, L("no")),
-                sbH("th", { className: "cDis" }, L("discipline")),
-                sbH("th", { className: "cSub" }, L("subject")),
-                sbH("th", { className: "cDt" }, L("dateRaised")),
-                sbH("th", { className: "cBy" }, L("raisedBy")),
-                sbH("th", { className: "cResp" }, L("responsibility")),
-                sbH("th", { className: "cPr" }, L("priority")),
-                sbH("th", { className: "cDue" }, L("dueDate")),
-                sbH("th", { className: "cDw" }, L("drawingUpdate")),
-                sbH("th", { className: "cSt" }, L("status")),
+                canEdit ? sbH("th", { className: "cPrint", title: isRTL ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
+                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
+                    sbH(Printer, { size: 14, strokeWidth: 2 }),
+                    sbH("input", {
+                      type: "checkbox", className: "lliShowTick",
+                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
+                      checked: shown.every((r) => !printOff[r.id]),
+                      onChange: (e) => {
+                        const next = {};
+                        if (!e.target.checked) shown.forEach((r) => { next[r.id] = true; });
+                        setPrintOff(next);
+                      }
+                    }))) : null,
+                thR("no", "cNo"),
+                thR("discipline", "cDis"),
+                thR("subject", "cSub"),
+                thR("dateRaised", "cDt"),
+                thR("raisedBy", "cBy"),
+                thR("responsibility", "cResp"),
+                thR("priority", "cPr"),
+                thR("dueDate", "cDue"),
+                thR("drawingUpdate", "cDw"),
+                thR("status", "cSt"),
                 sbH("th", { className: "cAct" }, "")
               )),
               sbH("tbody", null, shown.map((r) => {
@@ -14510,7 +14312,12 @@ function RfiCard({
                 const risk = rfiScheduleRisk(r, scheduleData);
                 return sbH(
                   "tr",
-                  { key: r.id, className: `rfiRow st-${r.status}` },
+                  { key: r.id, className: `rfiRow st-${r.status} ${printOff[r.id] ? "prOff" : ""}`.trim() },
+                  canEdit ? sbH("td", { className: "cPrint prKeep" }, sbH("input", {
+                    type: "checkbox", className: "lliShowTick", checked: !printOff[r.id],
+                    title: isRTL ? "להדפסה ולאקסל" : "Print / Excel",
+                    onChange: () => setPrintOff({ ...printOff, [r.id]: !printOff[r.id] })
+                  })) : null,
                   sbH("td", { className: "cNo", dir: "ltr" }, sbH("b", null, r.no)),
                   sbH("td", { className: "cDis" }, r.discipline || "—"),
                   sbH("td", { className: "cSub" },
@@ -20434,6 +20241,14 @@ function SbPdfColPick({ lang }) {
   );
 }
 // Leaves out the columns she unticked, keeping the photo column's position.
+// 05.11.26 — the hint on a column title that is a print switch.
+function prColTitle(lang, on, extra) {
+  const he = lang !== "en";
+  const t = on
+    ? (he ? "מודפסת — לחיצה תוציא את העמודה מה-PDF ומהאקסל" : "Prints — click to leave this column out of the PDF and Excel")
+    : (he ? "לא מודפסת — לחיצה תחזיר את העמודה להדפסה" : "Not printed — click to print this column");
+  return extra ? `${extra}\n${t}` : t;
+}
 function sbDropCols(g, keysOut) {
   const out = keysOut || [];
   if (!out.length || !g.keys) return g;
@@ -20670,10 +20485,13 @@ var SB_BOARD_COLS = [
   { key: "status", label: (lg) => sbText(SB_L.status, lg), width: 13, kind: "text" },
   { key: "clientOkCol", label: (lg) => sbText({ en: "Client approval", he: "\u05d0\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d7" }, lg), width: 11, kind: "date" }
 ];
+// 05.11.26 — the rows she took the print V off on the board. Every row prints
+// until then. Held for this page visit only.
+var sbPrintOffMap = {};
 function sbBoardGridRaw(opts) {
   const { lang, audience, tradeFor } = opts;
   const L = (k) => sbText(SB_L[k], lang);
-  const rows = sbBoardRows(opts);
+  const rows = sbBoardRows(opts).filter((r) => !sbPrintOffMap[r.key]);
   const keys = SB_BOARD_COLS.map((c) => c.key);
   const head = SB_BOARD_COLS.map((c) => c.label(lang));
   const widths = SB_BOARD_COLS.map((c) => c.width);
@@ -20885,7 +20703,16 @@ function SubmittalFolder({
     bySec[r.disc].push(r);
   });
   const showBands = allMode || order.length > 1;
-  const ncols = SB_BOARD_COLS.length + 2;
+  const ncols = SB_BOARD_COLS.length + 2 + (canEdit ? 1 : 0);
+  // 05.11.26 — the print V on every row, the rightmost column. Kept in a
+  // module map as well, because the exports build their own rows.
+  const [printOff, setPrintOffState] = useState6(() => ({ ...sbPrintOffMap }));
+  const setPrintOff = (next) => { sbPrintOffMap = next; setPrintOffState(next); };
+  const prTd = (k) => (canEdit ? sbH("td", { className: "cRoom prKeep" }, k ? sbH("input", {
+    type: "checkbox", className: "lliShowTick", checked: !printOff[k],
+    title: he ? "להדפסה ולאקסל" : "Print / Excel",
+    onChange: () => setPrintOff({ ...printOff, [k]: !printOff[k] })
+  }) : null) : null);
   // 02.11.26 — a V on the row puts the product on the LLI list. It writes the
   // routing (the same table the LLI board's own ticks write), so ticking here
   // IS ticking there. A row she made by hand on LLI is on LLI already.
@@ -21043,7 +20870,8 @@ function SubmittalFolder({
     const tone = r.tone === "ok" ? "sbOk" : r.tone === "late" ? "sbLate" : r.tone === "wait" ? "sbWait" : "";
     const main = sbH(
       "tr",
-      { key: r.key, className: `${isNew ? "sbRowNew" : ""} ${tone}`.trim() },
+      { key: r.key, className: `${isNew ? "sbRowNew" : ""} ${tone} ${printOff[r.key] ? "prOff" : ""}`.trim() },
+      prTd(r.key),
       // AI: the check against the BOQ line, as an icon (22.10.26).
       sbH(
         "td",
@@ -21145,6 +20973,7 @@ function SubmittalFolder({
         kids.push(sbH(
           "tr",
           { key: `${r.key}:l:${l.item.code}`, className: "sbChkLine" },
+          prTd(null),
           sbH("td", { className: "sbAiCell" }),
           sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
           sbH("td", { dir: "ltr", className: "sbChkCode" }, l.label),
@@ -21162,6 +20991,7 @@ function SubmittalFolder({
         kids.push(sbH(
           "tr",
           { key: `${r.key}:v:${s.id}`, className: "sbRowOlder" },
+          prTd(null),
           sbH("td", { className: "sbAiCell" }),
           sbH("td", { className: "sbNoCell" },
             sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
@@ -21321,21 +21151,33 @@ function SubmittalFolder({
             "table",
             { className: "sbTable sbBoardTable" },
             sbH("thead", null, sbH("tr", null,
+              // 05.11.26 — which rows print: the rightmost column.
+              canEdit ? sbH("th", { className: "cRoom", title: he ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
+                sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
+                  sbH(Printer, { size: 14, strokeWidth: 2 }),
+                  sbH("input", {
+                    type: "checkbox", className: "lliShowTick",
+                    title: he ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
+                    checked: rowsAll.every((r) => !printOff[r.key]),
+                    onChange: (e) => {
+                      const next = {};
+                      if (!e.target.checked) rowsAll.forEach((r) => { next[r.key] = true; });
+                      setPrintOff(next);
+                    }
+                  }))) : null,
               sbH("th", { className: "sbAiCell", title: "\u05d1\u05d3\u05d9\u05e7\u05ea AI \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea" }, "AI"),
+              // 05.11.26 — the column title is the switch: dark prints, faded
+              // and struck through is left out. No tick beside it.
               SB_BOARD_COLS.map((c) => sbH(
                 "th",
-                { key: c.key, className: `sbColTh ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim() },
-                sbH("span", { className: "sbColThIn" },
-                  sbH("span", null, c.label(lang)),
-                  // Ticked: the column is in the workbook and on the PDF.
-                  canEdit
-                    ? sbH("input", {
-                        type: "checkbox", className: "sbColTick",
-                        title: he ? "מסומן — יופיע באקסל וב-PDF" : "Ticked: in the workbook and the PDF",
-                        checked: hidden.indexOf(c.key) < 0,
-                        onChange: () => onToggleCol && onToggleCol(c.key)
-                      })
-                    : null)
+                canEdit
+                  ? {
+                      key: c.key, className: `sbColTh prColTh ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim(),
+                      title: prColTitle(lang, hidden.indexOf(c.key) < 0),
+                      onClick: () => onToggleCol && onToggleCol(c.key)
+                    }
+                  : { key: c.key, className: "sbColTh" },
+                c.label(lang)
               )),
               sbH("th", { className: "cAct" }, "")
             )),

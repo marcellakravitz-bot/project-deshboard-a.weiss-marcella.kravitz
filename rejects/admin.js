@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from 
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 8 · 05.11.2026";
+export const REJECTS_BUILD = "rejects build 9 · 05.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -139,8 +139,7 @@ const css = `
 /* an open list never widens the list of lists: it scrolls inside itself */
 .rj .rjOpenIn{width:0;min-width:100%}
 .rj .rjOpenIn .lliTableWrap{max-width:100%}
-.rj .rjRows th.sbColTh{white-space:nowrap}
-.rj .rjRows th.sbColTh.off>.sbColThIn>span{opacity:.45;text-decoration:line-through}
+.rj .rjRows th.prColTh{white-space:nowrap}
 /* the LLI board is 1520px wide by its own rule; these tables are not */
 .rj .lliTable{min-width:0}
 .rj .rjRows{min-width:1290px}
@@ -171,7 +170,9 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   const [err, setErr] = useState("");
   const [openId, setOpenId] = useState(null);
   const [picked, setPicked] = useState({});           // lists ticked for print / export
-  const [rowPicks, setRowPicks] = useState({});       // listId -> { rowId: true }: rows ticked inside a list
+  // 05.11.26 — every row prints until its V is taken off; a row without its V
+  // stays editable but is greyed.
+  const [rowOff, setRowOff] = useState({});           // listId -> { rowId: true }: rows taken out of print
   const [saveState, setSaveState] = useState("");
   const [toast, setToast] = useState("");
   const dirty = useRef({});                           // listId -> true
@@ -275,14 +276,16 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
 
   if (!lists) return html`<div className="rj" dir="rtl"><style>${css}</style><p className="rjEmpty">טוען…</p></div>`;
 
-  // 03.11.26 — one PDF and one Excel button, at the top. A list ticked prints
-  // whole; rows ticked inside a list print just those rows of it; nothing
-  // ticked prints every list.
-  const rowsTicked = (l) => (l.rows || []).filter((r) => (rowPicks[l.id] || {})[r.id]).map((r) => r.id);
-  const targets = lists.filter((l) => picked[l.id] || rowsTicked(l).length);
-  const forOut = targets.length ? targets : lists;
+  // 03.11.26 — one PDF and one Excel button, at the top. The lists ticked
+  // print (nothing ticked: every list); inside a list, the rows that still
+  // carry their print V (05.11.26). A list with every row taken out is left out.
+  const offOf = (l) => rowOff[l.id] || {};
+  const rowsOn = (l) => (l.rows || []).filter((r) => !offOf(l)[r.id]).map((r) => r.id);
+  const someOff = (l) => (l.rows || []).some((r) => offOf(l)[r.id]);
+  const targets = lists.filter((l) => picked[l.id]);
+  const forOut = (targets.length ? targets : lists).filter((l) => !(l.rows || []).length || rowsOn(l).length);
   const pickMap = {};
-  forOut.forEach((l) => { const ids = rowsTicked(l); if (ids.length) pickMap[l.id] = ids; });
+  forOut.forEach((l) => { if (someOff(l)) pickMap[l.id] = rowsOn(l); });
   const nOut = targets.length;
   const doPrint = () => printLists({ lists: forOut, rowPick: pickMap, projectName, projectEnd, ...(printParts || {}) });
   const doExcel = () => excelLists({ lists: forOut, rowPick: pickMap, projectName }).catch((e) => flash("הייצוא נכשל: " + (e.message || e)));
@@ -324,7 +327,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
             </tr>
             ${open && html`<tr><td colSpan="6" className="rjOpen">
               <div className="rjOpenIn"><${ListEditor} list=${l} projectId=${projectId} projectName=${projectName} subs=${subs || []} edit=${(fn) => editList(l.id, fn)} flash=${flash}
-                pick=${rowPicks[l.id] || {}} setPick=${(m) => setRowPicks({ ...rowPicks, [l.id]: m })}
+                off=${rowOff[l.id] || {}} setOff=${(m) => setRowOff({ ...rowOff, [l.id]: m })}
                 onSave=${saveAll} saveState=${saveState} /></div>
             </td></tr>`}
           <//>`;
@@ -337,7 +340,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
 }
 
 // ----------------------------------------------------------------------------- one list
-function ListEditor({ list, projectId, projectName, subs, edit, flash, pick, setPick, onSave, saveState }) {
+function ListEditor({ list, projectId, projectName, subs, edit, flash, off, setOff, onSave, saveState }) {
   const cols = colsOf(list);
   const rows = list.rows || [];
   const setRow = (id, patch) => edit((l) => { l.rows = (l.rows || []).map((r) => (r.id === id ? { ...r, ...patch } : r)); return l; });
@@ -349,11 +352,11 @@ function ListEditor({ list, projectId, projectName, subs, edit, flash, pick, set
     edit((l) => { l.rows = (l.rows || []).filter((x) => x.id !== r.id); return l; });
   };
   const setCol = (k, v) => edit((l) => { l.cols = { ...(l.cols || {}), [k]: v }; return l; });
-  const picked = rows.filter((r) => pick[r.id]).map((r) => r.id);
-  // The column titles as on the submittal board: the name, and beside it the
-  // tick that decides whether the column prints.
-  const thV = (k, label) => html`<th key=${k} className=${`sbColTh ${cols[k] === false ? "off" : ""}`}><span className="sbColThIn"><span>${label}</span>
-    <input type="checkbox" className="sbColTick" title="מסומן — יופיע בהדפסה ובאקסל" checked=${cols[k] !== false} onChange=${(e) => setCol(k, e.target.checked)} /></span></th>`;
+  // 05.11.26 — the column title is the switch, as on the other boards: dark
+  // prints; a click greys it and strikes it through, and it is left out.
+  const thV = (k, label) => html`<th key=${k} className=${`prColTh ${cols[k] === false ? "off" : ""}`}
+    title=${cols[k] === false ? "לא מודפסת — לחיצה תחזיר את העמודה להדפסה" : "מודפסת — לחיצה תוציא את העמודה מה-PDF ומהאקסל"}
+    onClick=${() => setCol(k, cols[k] === false)}>${label}</th>`;
 
   return html`<${F}>
     <div className="rjHead">
@@ -368,9 +371,9 @@ function ListEditor({ list, projectId, projectName, subs, edit, flash, pick, set
         <col style=${{ width: 130 }} /><col style=${{ width: 140 }} /><col style=${{ width: 210 }} /><col style=${{ width: 120 }} />
         <col style=${{ width: 220 }} /><col style=${{ width: 44 }} /><col style=${{ width: 62 }} /></colgroup>
       <thead><tr>
-        <th title="להדפסה"><span className="sbColThIn"><${Printer} size=${14} />
-          <input type="checkbox" className="sbColTick" title="סימון כל השורות להדפסה" checked=${rows.length > 0 && picked.length === rows.length}
-            onChange=${(e) => setPick(e.target.checked ? Object.fromEntries(rows.map((r) => [r.id, true])) : {})} /></span></th>
+        <th title="שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס"><span style=${{ display: "inline-flex", alignItems: "center", gap: 4 }}><${Printer} size=${14} />
+          <input type="checkbox" className="rjPick" title="סימון הכול / ניקוי הכול" checked=${rows.every((r) => !off[r.id])}
+            onChange=${(e) => setOff(e.target.checked ? {} : Object.fromEntries(rows.map((r) => [r.id, true])))} /></span></th>
         ${thV("n", "מס\"ד")}
         ${thV("floor", "קומה")}
         ${thV("desc", "תיאור")}
@@ -384,8 +387,8 @@ function ListEditor({ list, projectId, projectName, subs, edit, flash, pick, set
       </tr></thead>
       <tbody>
         ${rows.length === 0 && html`<tr><td colSpan="11" className="rjEmpty">אין שורות — "+ שורה"</td></tr>`}
-        ${rows.map((r, i) => html`<tr key=${r.id} className=${r.done ? "ok" : ""}>
-          <td><input type="checkbox" className="rjPick" title="להדפסה" checked=${!!pick[r.id]} onChange=${(e) => setPick({ ...pick, [r.id]: e.target.checked })} /></td>
+        ${rows.map((r, i) => html`<tr key=${r.id} className=${`${r.done ? "ok" : ""} ${off[r.id] ? "prOff" : ""}`.trim()}>
+          <td className="prKeep"><input type="checkbox" className="rjPick" title="להדפסה ולאקסל" checked=${!off[r.id]} onChange=${() => setOff({ ...off, [r.id]: !off[r.id] })} /></td>
           <td style=${{ fontWeight: 800, color: "#5b5e66" }}>${i + 1}</td>
           <td><input className="lliIn" value=${r.floor || ""} onChange=${(e) => setRow(r.id, { floor: e.target.value })} /></td>
           <td><textarea className="lliIn lliDesc" rows="2" dir="auto" value=${r.desc || ""} onChange=${(e) => setRow(r.id, { desc: e.target.value })} /></td>
