@@ -1,0 +1,20 @@
+# One-off: GitHub Pages kept a timed-out deployment (build 254, f790938) marked
+# "in progress", which blocks every new deployment. This cancels it. 05.11.2026.
+name: cancel stuck pages deployment
+on:
+  push:
+    paths: [".github/workflows/cancel-stuck-pages.yml"]
+  workflow_dispatch:
+permissions:
+  pages: write
+  id-token: write
+  deployments: write
+jobs:
+  cancel:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X POST "repos/${{ github.repository }}/pages/deployments/f7909380c40cf098d5d16cd3ca7102cd5df7996e/cancel" || true
+          gh api "repos/${{ github.repository }}/pages/deployments/f7909380c40cf098d5d16cd3ca7102cd5df7996e" || true
