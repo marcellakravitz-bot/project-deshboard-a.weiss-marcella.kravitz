@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from 
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 9 · 05.11.2026";
+export const REJECTS_BUILD = "rejects build 10 · 05.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -371,9 +371,9 @@ function ListEditor({ list, projectId, projectName, subs, edit, flash, off, setO
         <col style=${{ width: 130 }} /><col style=${{ width: 140 }} /><col style=${{ width: 210 }} /><col style=${{ width: 120 }} />
         <col style=${{ width: 220 }} /><col style=${{ width: 44 }} /><col style=${{ width: 62 }} /></colgroup>
       <thead><tr>
-        <th title="שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס"><span style=${{ display: "inline-flex", alignItems: "center", gap: 4 }}><${Printer} size=${14} />
-          <input type="checkbox" className="rjPick" title="סימון הכול / ניקוי הכול" checked=${rows.every((r) => !off[r.id])}
-            onChange=${(e) => setOff(e.target.checked ? {} : Object.fromEntries(rows.map((r) => [r.id, true])))} /></span></th>
+        <th className=${`prAllTh prPrintTh ${rows.every((r) => !off[r.id]) ? "on" : ""}`}
+          title=${rows.every((r) => !off[r.id]) ? "כל השורות מסומנות להדפסה — לחיצה מבטלת את כל הסימונים" : "לחיצה מסמנת את כל השורות להדפסה"}
+          onClick=${() => setOff(rows.every((r) => !off[r.id]) ? Object.fromEntries(rows.map((r) => [r.id, true])) : {})}><${Printer} size=${16} /></th>
         ${thV("n", "מס\"ד")}
         ${thV("floor", "קומה")}
         ${thV("desc", "תיאור")}

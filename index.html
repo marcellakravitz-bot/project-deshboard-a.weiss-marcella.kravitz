@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 245";
+var APP_BUILD = "05.11.2026 · build 246";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2464,6 +2464,16 @@ var pdfViewer = `
            struck through = left out; click to switch. A row without its print
            V: still editable, greyed. Same on LLI, submittals, SD, rejects, RFI. */
         th.prColTh, th.prAllTh { cursor: pointer; user-select: none; }
+        th.prPrintTh { color: #9aa2ad; }
+        th.prPrintTh.on { color: var(--accent, #1A559E); }
+        .clShowBtn {
+          width: 30px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+          border: 1px solid transparent; background: transparent; border-radius: 8px; cursor: pointer; color: #a3aab5;
+        }
+        .clShowBtn:hover { border-color: #d9dee6; }
+        .clShowBtn.on { color: #2e6b1f; background: #fff; border: 1.5px solid #9fd39a; }
+        .clShowBtn.on:hover { border-color: #5fae55; }
+        td.cTrash, th.cTrash { width: 34px; text-align: center; }
         /* 05.11.26 — the typed category cell and its list. */
         .lliCatIn { min-width: 110px; text-align: start; }
         .lliCatRo { font-size: 12.5px; }
@@ -12374,19 +12384,17 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 "tr",
                 null,
                 // 05.11.26 — which products go to the PDF / Excel: the rightmost column.
-                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
-                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
-                    sbH(Printer, { size: 14, strokeWidth: 2 }),
-                    sbH("input", {
-                      type: "checkbox", className: "lliShowTick",
-                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
-                      checked: groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code])),
-                      onChange: (e) => {
-                        const next = {};
-                        if (!e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
-                        setPrintOff(next);
-                      }
-                    }))) : null,
+                (() => {
+                  if (!canEdit) return null;
+                  const allOn = groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code]));
+                  return prPrintTh(isRTL, allOn, () => {
+                    const next = {};
+                    if (allOn) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                    setPrintOff(next);
+                  });
+                })(),
+                // 05.11.26 — shown to the client / supervision: beside the printer.
+                canEdit ? sbH("th", { className: "cAct" }, isRTL ? "לקוח / פיקוח" : "Client / supervision") : null,
                 canEdit ? sbH("th", { className: "cGrip" }, "") : null,
                 thT("section", "cSec", L("section")),
                 thT("category", "cCat", L("category")),
@@ -12403,7 +12411,6 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 thT("eta", "cEta", L("eta")),
                 thT("etaActual", "cEta", L("etaActual")),
                 thT("status", "cSt", L("status")),
-                canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
                 // 05.11.26 — a click on the title ticks every row on screen, or
                 // clears every one.
                 canEdit ? sbH("th", {
@@ -12417,14 +12424,15 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                     vis.forEach((c) => { next[c] = { ...lliRowOf(data, c), byRoom: on }; });
                     onChangeRows(next);
                   }
-                }, L("byRoomCol")) : null
+                }, L("byRoomCol")) : null,
+                canEdit ? sbH("th", { className: "cTrash" }, "") : null
               )
             ),
             groups.map((g) =>
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 19 : 15 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 20 : 15 }, g.title)),
                 g.rows.map((r) => {
                   const v = lliRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -12487,6 +12495,13 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                             onChange: () => setPrintOff({ ...printOff, [r.code]: !printOff[r.code] })
                           })
                         )
+                      : null,
+                    // Shown to the client / supervision — what the "show" tick
+                    // always meant (29.8.26), now a send arrow beside the
+                    // printer (05.11.26).
+                    canEdit
+                      ? sbH("td", { className: "cAct prKeep" },
+                          sbH(ClientShowBtn, { on: !hidden, he: isRTL, onClick: () => patch(r.code, { hidden: !hidden }) }))
                       : null,
                     canEdit
                       ? sbH(
@@ -12769,37 +12784,6 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                           )
                         : sbH("span", { className: "lliDash" }, "—")
                     ),
-                    // Ticked means the row is on the board: it is printed, it
-                    // is exported, and it is what a client sees. Unticking is
-                    // how a row is taken off all three at once (29.8.26).
-                    canEdit
-                      ? sbH(
-                          "td",
-                          { className: "cAct" },
-                          sbH("input", {
-                            type: "checkbox",
-                            className: "lliShowTick",
-                            checked: !hidden,
-                            title: hidden ? L("restore") : L("hide"),
-                            "aria-label": L("showCol"),
-                            onChange: () => patch(r.code, { hidden: !hidden })
-                          }),
-                          // Off the list altogether — a grey tick in the
-                          // routing table, and it comes back from the bar at
-                          // the top of the board (30.8.26).
-                          sbH(
-                            "button",
-                            {
-                              type: "button",
-                              className: "lliRowDel",
-                              title: L("removeRow"),
-                              "aria-label": L("removeRow"),
-                              onClick: () => patch(r.code, { removed: true })
-                            },
-                            sbH(Trash2, { size: 13, strokeWidth: 2 })
-                          )
-                        )
-                      : null,
                     // BY ROOM: this row is also part of the room search. What
                     // travels there is the four things a room screen needs —
                     // the category, the mark, the description and the photo —
@@ -12818,6 +12802,15 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                             onChange: () => patch(r.code, { byRoom: !v.byRoom })
                           })
                         )
+                      : null,
+                    // Off the list altogether — the leftmost cell. It comes
+                    // back from the bar at the top of the board (30.8.26).
+                    canEdit
+                      ? sbH("td", { className: "cTrash prKeep" },
+                          sbH("button", {
+                            type: "button", className: "lliRowDel", title: L("removeRow"), "aria-label": L("removeRow"),
+                            onClick: () => patch(r.code, { removed: true })
+                          }, sbH(Trash2, { size: 13, strokeWidth: 2 })))
                       : null
                   );
                   // The warning itself, in words, on its own line under the row.
@@ -12834,7 +12827,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       { className: "lliClashRow" },
                       sbH(
                         "td",
-                        { colSpan: canEdit ? 19 : 15 },
+                        { colSpan: canEdit ? 20 : 15 },
                         sbH(
                           "div",
                           { className: "lliClashNote" },
@@ -12864,7 +12857,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       className: `lliDropTail ${drag.over === null ? "lliDropHere" : ""}`.trim(),
                       onDragOver: (e) => { e.preventDefault(); if (drag.over !== null) setDrag({ ...drag, over: null }); },
                       onDrop: (e) => { e.preventDefault(); dropRow(g, drag.code, null); setDrag(null); }
-                    }, sbH("td", { colSpan: canEdit ? 19 : 15 }))
+                    }, sbH("td", { colSpan: canEdit ? 20 : 15 }))
                   : null
               )
             )
@@ -13459,19 +13452,15 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 "tr",
                 null,
                 // 05.11.26 — which drawings go to the PDF / Excel: the rightmost column.
-                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
-                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
-                    sbH(Printer, { size: 14, strokeWidth: 2 }),
-                    sbH("input", {
-                      type: "checkbox", className: "lliShowTick",
-                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
-                      checked: groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code])),
-                      onChange: (e) => {
-                        const next = {};
-                        if (!e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
-                        setPrintOff(next);
-                      }
-                    }))) : null,
+                (() => {
+                  if (!canEdit) return null;
+                  const allOn = groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code]));
+                  return prPrintTh(isRTL, allOn, () => {
+                    const next = {};
+                    if (allOn) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                    setPrintOff(next);
+                  });
+                })(),
                 thS("section", "cSec", L("section")),
                 thS("category", "cCat", L("category")),
                 thS("typeMark", "cMark", L("typeMark")),
@@ -14276,19 +14265,14 @@ function RfiCard({
               "table",
               { className: "rfiTable" },
               sbH("thead", null, sbH("tr", null,
-                canEdit ? sbH("th", { className: "cPrint", title: isRTL ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
-                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
-                    sbH(Printer, { size: 14, strokeWidth: 2 }),
-                    sbH("input", {
-                      type: "checkbox", className: "lliShowTick",
-                      title: isRTL ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
-                      checked: shown.every((r) => !printOff[r.id]),
-                      onChange: (e) => {
-                        const next = {};
-                        if (!e.target.checked) shown.forEach((r) => { next[r.id] = true; });
-                        setPrintOff(next);
-                      }
-                    }))) : null,
+                canEdit ? (() => {
+                  const allOn = shown.every((r) => !printOff[r.id]);
+                  return prPrintTh(isRTL, allOn, () => {
+                    const next = {};
+                    if (allOn) shown.forEach((r) => { next[r.id] = true; });
+                    setPrintOff(next);
+                  }, "cPrint");
+                })() : null,
                 thR("no", "cNo"),
                 thR("discipline", "cDis"),
                 thR("subject", "cSub"),
@@ -20365,6 +20349,27 @@ function boardOrderBy(g, secs, ranks) {
   });
   return { ...out, sections };
 }
+// 05.11.26 — the printer over the print column is itself the switch: one
+// click ticks every row for print, the next clears every tick.
+function prPrintTh(he, allOn, toggle, cls) {
+  return sbH("th", {
+    className: `${cls || "cRoom"} prAllTh prPrintTh ${allOn ? "on" : ""}`.trim(),
+    title: he
+      ? (allOn ? "כל השורות מסומנות להדפסה — לחיצה מבטלת את כל הסימונים" : "לחיצה מסמנת את כל השורות להדפסה")
+      : (allOn ? "Every row is ticked for print — click to clear all" : "Click to tick every row for print"),
+    onClick: toggle
+  }, sbH(Printer, { size: 16, strokeWidth: 2 }));
+}
+// 05.11.26 — "לקוח / פיקוח": the row is shown to the users set up as clients
+// (architects, supervision). A send arrow: solid dark green in a light-green
+// frame when shown, a grey outline when not.
+function ClientShowBtn({ on, he, onClick }) {
+  return sbH("button", {
+    type: "button", className: `clShowBtn ${on ? "on" : ""}`.trim(),
+    title: he ? (on ? "מוצג ללקוח / פיקוח — לחיצה מסתירה" : "לא מוצג ללקוח / פיקוח — לחיצה מציגה") : (on ? "Shown to client / supervision — click to hide" : "Hidden from client / supervision — click to show"),
+    "aria-pressed": on, onClick
+  }, sbH(SendIcon2, { size: 16, strokeWidth: 2, fill: on ? "currentColor" : "none" }));
+}
 // 05.11.26 — the hint on a column title that is a print switch.
 function prColTitle(lang, on, extra) {
   const he = lang !== "en";
@@ -21290,19 +21295,14 @@ function SubmittalFolder({
             { className: "sbTable sbBoardTable" },
             sbH("thead", null, sbH("tr", null,
               // 05.11.26 — which rows print: the rightmost column.
-              canEdit ? sbH("th", { className: "cRoom", title: he ? "שורה מסומנת יוצאת ל-PDF ולאקסל; שורה בלי V לא תודפס" : "Ticked rows go to the PDF / Excel; a row without its tick is left out" },
-                sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
-                  sbH(Printer, { size: 14, strokeWidth: 2 }),
-                  sbH("input", {
-                    type: "checkbox", className: "lliShowTick",
-                    title: he ? "סימון הכול / ניקוי הכול" : "Tick all / clear all",
-                    checked: rowsAll.every((r) => !printOff[r.key]),
-                    onChange: (e) => {
-                      const next = {};
-                      if (!e.target.checked) rowsAll.forEach((r) => { next[r.key] = true; });
-                      setPrintOff(next);
-                    }
-                  }))) : null,
+              canEdit ? (() => {
+                const allOn = rowsAll.every((r) => !printOff[r.key]);
+                return prPrintTh(he, allOn, () => {
+                  const next = {};
+                  if (allOn) rowsAll.forEach((r) => { next[r.key] = true; });
+                  setPrintOff(next);
+                });
+              })() : null,
               sbH("th", { className: "sbAiCell", title: "\u05d1\u05d3\u05d9\u05e7\u05ea AI \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea" }, "AI"),
               // 05.11.26 — the column title is the switch: dark prints, faded
               // and struck through is left out. No tick beside it.
