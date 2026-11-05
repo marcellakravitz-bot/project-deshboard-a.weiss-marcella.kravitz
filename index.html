@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 253";
+var APP_BUILD = "05.11.2026 · build 254";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -11969,6 +11969,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       { key: "ordered", he: "הוזמן / לא הוזמן", en: "Ordered", options: [["yes", "הוזמן", "Ordered"], ["no", "לא הוזמן", "Not ordered"]] }
     ];
   };
+  const lliOrderOf = (g, H) => (H.order === "boq" ? [g.chSecs, g.chRank] : H.order === "sup" ? [g.supSecs, g.supRank] : [g.catSecs, g.catRank]);
   const exportGrid = (audience, printLang, flt) => {
     const F = flt || {};
     const lg = printLang === "en" ? "en" : printLang === "he" ? "he" : lang;
@@ -11996,7 +11997,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     const imgs = [];
     const tone = [];
     // 05.11.26 — what each row is grouped under on paper, both ways.
-    const catSecs = [], catRank = [], chSecs = [], chRank = [];
+    const catSecs = [], catRank = [], chSecs = [], chRank = [], supSecs = [], supRank = [];
+    const supList = Array.from(new Set(all.map(supplierOf).filter(Boolean))).sort((a, b) => a.localeCompare(b, lang === "he" ? "he" : "en"));
     groups.forEach((g, gi) => {
       g.rows.forEach((r) => {
         // 05.11.26 — the client / supervision arrow decides only what those
@@ -12032,9 +12034,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
         catRank.push(boardCatRank(r.category));
         chSecs.push(g.ch ? `${g.ch.code} \u00b7 ${boqText(g.ch, lg)}` : T("manual"));
         chRank.push(gi);
+        // 05.11.26 — or by supplier: the supplier's name over its products.
+        const sp = supplierOf(r);
+        supSecs.push(sp || (lg === "he" ? "ללא ספק" : "No supplier"));
+        supRank.push(sp ? supList.indexOf(sp) : 99999);
       });
     });
-    return { head, body, widths, types, imgs, tone, catSecs, catRank, chSecs, chRank };
+    return { head, body, widths, types, imgs, tone, catSecs, catRank, chSecs, chRank, supSecs, supRank };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -12094,12 +12100,11 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     // Then the columns she unticked in the table's titles (21.10.26).
     ({ head, widths, types: colTypes, body, imgCol } = sbDropCols({ head, widths, types: colTypes, body, keys, imgCol }, lliHide));
     if (imgCol < 0) imgCol = null;
-    const byBoq = H.order === "boq";
-    const O = boardOrderBy({ body, imgs, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
+    const O = boardOrderBy({ body, imgs, tone: g.tone }, ...lliOrderOf(g, H));
     const res = await boardExportXlsx({
       title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "), sheetName: "LLI",
       fileName: boardFileName(projectName, "LLI", "xlsx"),
-      head, body: O.body, sections: O.sections, widths, toneRows: O.tone,
+      head, body: O.body, sections: O.sections, widths, toneRows: H.tones === false ? null : O.tone,
       // The photo column is text; everything else keeps the kind the board
       // gave it.
       colTypes,
@@ -12165,8 +12170,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       // Then the columns she unticked in the table's titles (21.10.26).
       ({ head, widths, body, imgCol } = sbDropCols({ head, widths, types: head.map(() => "text"), body, keys, imgCol }, lliHide));
       if (imgCol < 0) imgCol = null;
-      const byBoq = H.order === "boq";
-      const O = boardOrderBy({ body, imgs, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
+      const O = boardOrderBy({ body, imgs, tone: g.tone }, ...lliOrderOf(g, H));
       boardExportPdf({
         title: H.title,
         // The name the browser offers when she saves it.
@@ -12178,7 +12182,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
         head, body: O.body, widths, sections: O.secs,
         accent: (printBrand || {}).accent, brand: printBrand,
         isRTL: lg !== "en", imgCol, imgs: O.imgs,
-        toneRows: O.tone,
+        toneRows: H.tones === false ? null : O.tone,
         // The date is in the heading of this report, so it is not repeated at the
         // foot of every page.
         noStamp: true,
@@ -12402,8 +12406,9 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       printAsk
         ? sbH(PrintLangAsk, {
             titles: lliTitles,
-            orders: BOARD_ORDERS,
+            orders: BOARD_ORDERS.concat([["sup", "ספק", "Supplier"]]),
             filters: lliFilters(),
+            tones: true,
             onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, "admin", hdr); },
             onClose: () => setPrintAsk(null)
           })
@@ -13359,7 +13364,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const res = await boardExportXlsx({
       title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "), sheetName: "SD",
       fileName: boardFileName(projectName, "SD", "xlsx"),
-      head: g.head, body: O.body, sections: O.sections, toneRows: O.tone, widths: g.widths, colTypes: g.types,
+      head: g.head, body: O.body, sections: O.sections, toneRows: H.tones === false ? null : O.tone, widths: g.widths, colTypes: g.types,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -13385,7 +13390,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       head: keep.map((i) => g.head[i]),
       body: O.body.map((row) => keep.map((i) => row[i])),
       widths: keep.map((i) => g.widths[i]),
-      toneRows: O.tone,
+      toneRows: H.tones === false ? null : O.tone,
       sections: O.secs,
       // The drawings report keeps its printed-on stamp; only the ordering
       // report drops it, because she asked for that one by name (29.8.26).
@@ -13496,6 +13501,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
             withAudience: true,
             titles: sdTitles,
             orders: BOARD_ORDERS,
+                tones: true,
             onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, who, hdr); },
             onClose: () => setPrintAsk(null)
           })
@@ -13504,6 +13510,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         ? sbH(PrintLangAsk, {
             titles: sdTitles,
             orders: BOARD_ORDERS,
+                tones: true,
             startLang: lang,
             onPick: (lg, who, hdr) => { setXlsAsk(false); onExcel(hdr); },
             onClose: () => setXlsAsk(false)
@@ -21794,7 +21801,7 @@ function SubmittalCard({
       fileName: boardFileName(pName, name, "xlsx"),
       head: g.head, widths: g.widths, colTypes: g.types,
       sections: grouped.sections, body: grouped.body,
-      toneRows: grouped.tone, imgCol: g.imgCol, imgs: grouped.imgs,
+      toneRows: H.tones === false ? null : grouped.tone, imgCol: g.imgCol, imgs: grouped.imgs,
       summary: summaryOf(lang),
       accent: (printBrand || {}).accent, isRTL
     });
@@ -21815,7 +21822,7 @@ function SubmittalCard({
       subtitle: H.subtitle,
       issuedLabel: String(H.date || "").trim() || undefined,
       head: g.head, widths: g.widths,
-      body: grouped.body, toneRows: grouped.tone, sections: grouped.secs,
+      body: grouped.body, toneRows: H.tones === false ? null : grouped.tone, sections: grouped.secs,
       imgCol: g.imgCol, imgs: grouped.imgs, imgH: 48,
       summary: summaryOf(lg),
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
@@ -22163,6 +22170,7 @@ function SubmittalCard({
                 withAudience: true,
                 titles: sbTitles,
                 orders: BOARD_ORDERS,
+                tones: true,
                 onPick: (lg, who, hdr) => { const f = allAsk; setAllAsk(null); f(lg, who, hdr); },
                 onClose: () => setAllAsk(null)
               })
@@ -22172,6 +22180,7 @@ function SubmittalCard({
                 titles: sbTitles,
                 startLang: lang,
                 orders: BOARD_ORDERS,
+                tones: true,
                 onPick: (lg, who, hdr) => { setXlsAskSb(false); runExcel(hdr); },
                 onClose: () => setXlsAskSb(false)
               })

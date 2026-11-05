@@ -1462,7 +1462,7 @@ function sbPagesOf(att, numPages) {
 // extract, so the pages themselves are sent and the model reads them by eye.
 // Deliberately smaller and fewer than the print render: legible is enough.
 
-function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders, filters }) {
+function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders, filters, tones }) {
   // Two questions on the boards, one everywhere else. The audience decides
   // which columns are printed: a client's copy carries what a client sees on
   // the screen, and hers carries everything (29.8.26).
@@ -1478,13 +1478,13 @@ function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders
   const [step, setStep] = useState6(() => {
     if (!titles || !startLang) return null;
     const d = titles(startLang) || {};
-    return { title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "", filters: {} };
+    return { title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "", filters: {}, tones: true };
   });
   const pick = (v) => {
     if (titles) {
       const d = titles(v) || {};
       setLang(v);
-      setStep({ title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "", filters: {} });
+      setStep({ title: d.title || "", subtitle: d.subtitle || "", date: d.date || "", order: (orders && orders[0] && orders[0][0]) || "", filters: {}, tones: true });
       return;
     }
     return withAudience ? onPick(v, who) : onPick(v);
@@ -1516,8 +1516,8 @@ function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders
             onKeyDown: (e) => { if (e.key === "Enter") ok(); if (e.key === "Escape") onClose(); }
           },
           xBtn,
-          sbH("h3", null, he ? "פרטי הדוח" : "Report details"),
-          sbH("p", null, he ? "כך יופיעו הכותרות בדוח. אפשר לשנות לפני ההפקה." : "This is how the report's header will read. Change anything before it is produced."),
+          sbH("h3", { className: "printAskCenter" }, he ? "הגדרות הדפסה" : "Print settings"),
+          sbH("p", { className: "printAskCenter" }, he ? "כך יופיעו הכותרות בדוח. אפשר לשנות לפני ההפקה." : "This is how the report's header will read. Change anything before it is produced."),
           field("title", he ? "כותרת" : "Title"),
           field("subtitle", he ? "כותרת משנה" : "Subtitle"),
           field("date", he ? "שורת תאריך" : "Date line"),
@@ -1530,6 +1530,15 @@ function PrintLangAsk({ onPick, onClose, withAudience, titles, startLang, orders
                   key: o[0], type: "button", className: step.order === o[0] ? "on" : "",
                   onClick: () => setStep({ ...step, order: o[0] })
                 }, he ? o[1] : (o[2] || o[1])))))
+            : null,
+          // 05.11.26 — the status colours on the rows (green / yellow / orange),
+          // or plain white paper.
+          tones
+            ? sbH("div", { className: "printAskField" },
+                sbH("span", null, he ? "גווני סטטוס בשורות" : "Status colours on the rows"),
+                sbH("div", { className: "printAskSeg" },
+                  sbH("button", { type: "button", className: step.tones !== false ? "on" : "", onClick: () => setStep({ ...step, tones: true }) }, he ? "עם גוונים" : "With colours"),
+                  sbH("button", { type: "button", className: step.tones === false ? "on" : "", onClick: () => setStep({ ...step, tones: false }) }, he ? "בלי גוונים" : "Without")))
             : null,
           // 05.11.26 — narrowing the report: each filter a list, "all" first.
           (filters || []).filter((f) => f && (f.options || []).length).map((f) => sbH("label", { key: f.key, className: "printAskField" },
@@ -2931,8 +2940,10 @@ var signCss = `
           font-family: inherit; color: var(--ink); background: #fff;
         }
         .printAskSel { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; font-size: 14px; font-family: inherit; background: #fff; color: var(--ink); }
-        .printAskSeg { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-        .printAskSeg button { flex: 1; border: 0; background: #fff; padding: 8px 10px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--steel); cursor: pointer; }
+        .printAskCenter { text-align: center; }
+        h3.printAskCenter { padding-left: 28px; }
+        .printAskSeg { display: inline-flex; align-self: flex-start; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+        .printAskSeg button { flex: none; min-width: 92px; border: 0; background: #fff; padding: 8px 10px; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--steel); cursor: pointer; }
         .printAskSeg button + button { border-inline-start: 1px solid var(--line); }
         .printAskSeg button.on { background: var(--accent, #1A559E); color: #fff; }
         .printAskField input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
