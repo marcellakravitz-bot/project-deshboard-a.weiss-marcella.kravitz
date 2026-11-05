@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 251";
+var APP_BUILD = "05.11.2026 · build 252";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2474,6 +2474,17 @@ var pdfViewer = `
            V: still editable, greyed. Same on LLI, submittals, SD, rejects, RFI. */
         th.prColTh, th.prAllTh { cursor: pointer; user-select: none; }
         th.prPrintTh { color: #9aa2ad; }
+        .rsBox { max-width: 560px; width: calc(100vw - 32px); text-align: start; }
+        .rsBox h3 { padding-right: 28px; text-align: center; }
+        .rsBox > p { text-align: center; }
+        .rsAll { display: flex; align-items: center; gap: 8px; margin: 12px 0 6px; font-size: 13px; font-weight: 800; cursor: pointer; }
+        .rsList { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow: auto; border: 1px solid var(--line); border-radius: 10px; }
+        .rsList li + li { border-top: 1px solid var(--line); }
+        .rsList label { display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; cursor: pointer; font-size: 13px; }
+        .rsList label:hover { background: #f5f7fb; }
+        .rsList input, .rsAll input { width: 15px; height: 15px; margin: 2px 0 0; accent-color: var(--accent, #1A559E); flex: none; }
+        .rsCode { font-weight: 800; color: var(--accent-ink, #103460); white-space: nowrap; }
+        .rsLabel { flex: 1; color: var(--ink); }
         th.prPrintTh.on { color: var(--accent, #1A559E); }
         .clShowBtn {
           width: 30px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
@@ -11392,7 +11403,7 @@ var LLI_L = {
   // bill of quantities — the routing table keeps its tick, in grey (30.8.26).
   removeRow: { en: "Remove from this list", he: "הסרה מהרשימה" },
   removedSome: { en: "Removed from this list", he: "הוסרו מהרשימה" },
-  restoreAll: { en: "Restore all", he: "החזרת הכל" },
+  restoreAll: { en: "Restore lines", he: "החזרת סעיפים" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
   addUnder: {
     en: "The new row goes directly under the row you are standing in — the one marked at its edges.",
@@ -11742,6 +11753,27 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // with a grey tick (30.8.26).
   const isRemoved = (r) => !!(data[r.code] || {}).removed;
   const removedCount = all.filter(isRemoved).length;
+  // 05.11.26 — "החזרת סעיפים" opens the list of what was removed.
+  const [restoreAsk, setRestoreAsk] = useState6(false);
+  const restoreDialog = restoreAsk && canEdit
+    ? sbH(RestoreRowsAsk, {
+        he: isRTL,
+        items: all.filter(isRemoved).map((r) => {
+          const v = (data[r.code] || {});
+          return {
+            key: r.code,
+            code: r.source === "boq" ? r.code : "",
+            label: [v.typeMark, String(v.desc || "").split("\n")[0] || r.title].filter(Boolean).join(" \u00b7 ")
+          };
+        }),
+        onRestore: (keys) => {
+          const next = { ...data };
+          keys.forEach((k) => { next[k] = { ...(next[k] || {}), removed: false }; });
+          onChangeRows && onChangeRows(next);
+        },
+        onClose: () => setRestoreAsk(false)
+      })
+    : null;
   const visible = all.filter((r) =>
     !isRemoved(r) &&
     (cat === "all" || r.category === cat) &&
@@ -12247,8 +12279,9 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       { className: "lliTally" },
       sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${orderedCount} ${L("ordersOf")}`)
     ),
+    restoreDialog,
     // Nothing is thrown away: what she removed is counted here and comes back
-    // with one press (30.8.26).
+    // — every line, or the ones she picks (05.11.26).
     canEdit && removedCount
       ? sbH(
           "div",
@@ -12259,13 +12292,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
             {
               type: "button",
               className: "lliOffRestore",
-              onClick: () => {
-                const next = { ...data };
-                all.forEach((r) => {
-                  if ((next[r.code] || {}).removed) next[r.code] = { ...next[r.code], removed: false };
-                });
-                onChangeRows && onChangeRows(next);
-              }
+              onClick: () => setRestoreAsk(true)
             },
             sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
             " ",
@@ -12959,7 +12986,7 @@ var SD_L = {
   removeCol: { en: "Remove", he: "מחיקה" },
   removeRow: { en: "Remove from this list", he: "מחיקה מהרשימה" },
   removedSome: { en: "Removed from this list", he: "נמחקו מהרשימה" },
-  restoreAll: { en: "Restore all", he: "החזרת הכל" },
+  restoreAll: { en: "Restore lines", he: "החזרת סעיפים" },
   onlyOpen: { en: "Only what is still open", he: "רק מה שעדיין פתוח" },
   addRow: { en: "Add a row", he: "הוספת שורה" },
   manual: { en: "Manual", he: "ידני" },
@@ -13137,6 +13164,27 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   };
   const isRemoved = (r) => !!(data[r.code] || {}).removed;
   const removedCount = all.filter(isRemoved).length;
+  // 05.11.26 — "החזרת סעיפים" opens the list of what was removed.
+  const [restoreAsk, setRestoreAsk] = useState6(false);
+  const restoreDialog = restoreAsk && canEdit
+    ? sbH(RestoreRowsAsk, {
+        he: isRTL,
+        items: all.filter(isRemoved).map((r) => {
+          const v = (data[r.code] || {});
+          return {
+            key: r.code,
+            code: r.source === "boq" ? r.code : "",
+            label: [v.typeMark, String(v.desc || "").split("\n")[0] || r.title].filter(Boolean).join(" \u00b7 ")
+          };
+        }),
+        onRestore: (keys) => {
+          const next = { ...data };
+          keys.forEach((k) => { next[k] = { ...(next[k] || {}), removed: false }; });
+          onChangeRows && onChangeRows(next);
+        },
+        onClose: () => setRestoreAsk(false)
+      })
+    : null;
   const visible = all.filter((r) =>
     !isRemoved(r) &&
     (cat === "all" || r.category === cat) &&
@@ -13386,8 +13434,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       { className: "lliTally" },
       sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${doneCount} ${L("approvedOf")}`)
     ),
+    restoreDialog,
     // Nothing is thrown away: what she removed is counted here and comes back
-    // with one press (30.8.26).
+    // — every line, or the ones she picks (05.11.26).
     canEdit && removedCount
       ? sbH(
           "div",
@@ -13398,13 +13447,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
             {
               type: "button",
               className: "lliOffRestore",
-              onClick: () => {
-                const next = { ...data };
-                all.forEach((r) => {
-                  if ((next[r.code] || {}).removed) next[r.code] = { ...next[r.code], removed: false };
-                });
-                onChangeRows && onChangeRows(next);
-              }
+              onClick: () => setRestoreAsk(true)
             },
             sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
             " ",
@@ -20373,6 +20416,32 @@ function ClientShowBtn({ on, he, onClick }) {
     "aria-pressed": on, onClick
   }, sbH(SendIcon2, { size: 16, strokeWidth: 2, fill: on ? "currentColor" : "none" }));
 }
+// 05.11.26 — the lines she took off a board, one by one: tick the ones to
+// bring back. items: [{ key, code, label }].
+function RestoreRowsAsk({ he, items, onRestore, onClose }) {
+  const [pick, setPick] = useState6({});
+  const n = items.filter((x) => pick[x.key]).length;
+  const allOn = items.length > 0 && n === items.length;
+  return createPortal(
+    sbH("div", { className: "printAskScrim", onClick: onClose },
+      sbH("div", { className: "printAskBox rsBox", dir: he ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+        sbH("button", { type: "button", className: "printAskX", "aria-label": "Close", onClick: onClose }, "\u00d7"),
+        sbH("h3", null, he ? `סעיפים שהוסרו (${items.length})` : `Removed lines (${items.length})`),
+        sbH("p", null, he ? "סמני את הסעיפים להחזרה לרשימה." : "Tick the lines to bring back."),
+        sbH("label", { className: "rsAll" },
+          sbH("input", { type: "checkbox", checked: allOn, onChange: () => setPick(allOn ? {} : Object.fromEntries(items.map((x) => [x.key, true]))) }),
+          he ? "סימון הכול" : "Tick all"),
+        sbH("ul", { className: "rsList" }, items.map((x) => sbH("li", { key: x.key },
+          sbH("label", null,
+            sbH("input", { type: "checkbox", checked: !!pick[x.key], onChange: () => setPick({ ...pick, [x.key]: !pick[x.key] }) }),
+            x.code ? sbH("span", { className: "rsCode", dir: "ltr" }, x.code) : null,
+            sbH("span", { className: "rsLabel" }, x.label || "\u2014"))))),
+        sbH("div", { className: "printAskBtns" },
+          sbH("button", { type: "button", className: "sgBtn", disabled: !n, onClick: () => { onRestore(items.filter((x) => pick[x.key]).map((x) => x.key)); onClose(); } },
+            he ? `החזרה לרשימה${n ? ` (${n})` : ""}` : `Bring back${n ? ` (${n})` : ""}`)))),
+    document.body
+  );
+}
 // 05.11.26 — the hint on a column title that is a print switch.
 function prColTitle(lang, on, extra) {
   const he = lang !== "en";
@@ -20818,6 +20887,7 @@ function SubmittalFolder({
   chkOff,
   onRemoveChk,
   onRestoreChk,
+  onRestoreChkSome,
   tradeFor,
   reviewRows,
   onPlaceReview,
@@ -20937,6 +21007,7 @@ function SubmittalFolder({
     }, on ? "\u2713 LLI" : "+ LLI");
   };
   const hidden = colHide || [];
+  const [restoreAsk, setRestoreAsk] = useState6(false);
   // Lines she took off the board, across what is on screen.
   const offCount = scope.reduce((n, c) => {
     const off = ((chkOff || {})[c.key]) || {};
@@ -21281,12 +21352,25 @@ function SubmittalFolder({
           `${offCount} ${L("removedSome")}`,
           sbH(
             "button",
-            { type: "button", className: "sbOffRestore", onClick: () => scope.forEach((c) => onRestoreChk && onRestoreChk(c.key)) },
+            { type: "button", className: "sbOffRestore", onClick: () => setRestoreAsk(true) },
             sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
             " ",
-            L("restoreAll")
+            he ? "החזרת סעיפים" : "Restore lines"
           )
         )
+      : null,
+    restoreAsk && canEdit
+      ? sbH(RestoreRowsAsk, {
+          he,
+          items: scope.flatMap((c) => {
+            const off = ((chkOff || {})[c.key]) || {};
+            return boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", c.key)
+              .filter((p) => off[p.code])
+              .map((p) => ({ key: `${c.key}|${p.code}`, code: p.code, label: `${sbText(c, lang)} \u00b7 ${boqText(p, lang)}` }));
+          }),
+          onRestore: (keys) => onRestoreChkSome && onRestoreChkSome(keys.map((k) => { const i = k.indexOf("|"); return [k.slice(0, i), k.slice(i + 1)]; })),
+          onClose: () => setRestoreAsk(false)
+        })
       : null,
     rowsAll.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
@@ -22148,6 +22232,17 @@ function SubmittalCard({
           ...(submittalChkOff || {}),
           [catKey]: { ...((submittalChkOff || {})[catKey] || {}), [code]: true }
         }),
+        // 05.11.26 — bring back just the lines she picked: [[catKey, code], …]
+        onRestoreChkSome: (pairs) => {
+          const next = { ...(submittalChkOff || {}) };
+          pairs.forEach(([cat, code]) => {
+            if (!next[cat]) return;
+            const m = { ...next[cat] };
+            delete m[code];
+            if (Object.keys(m).length) next[cat] = m; else delete next[cat];
+          });
+          if (onChangeChkOff) onChangeChkOff(next);
+        },
         onRestoreChk: (catKey) => {
           const next = { ...(submittalChkOff || {}) };
           delete next[catKey];
