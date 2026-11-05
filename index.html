@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 248";
+var APP_BUILD = "05.11.2026 · build 249";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -11951,9 +11951,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     const catSecs = [], catRank = [], chSecs = [], chRank = [];
     groups.forEach((g, gi) => {
       g.rows.forEach((r) => {
-        // Only what is ticked for showing is printed. An unticked row is off
-        // the board as far as the client and the paper are concerned (29.8.26).
-        if (isHidden(r)) return;
+        // 05.11.26 — the client / supervision arrow decides only what those
+        // users see (and their copy); her own paper follows the print V alone.
+        if (isHidden(r) && (audience === "client" || audience === "contractor")) return;
         if (printOff[r.code]) return;
         const v = lliRowOf(data, r.code);
         body.push([
@@ -12394,10 +12394,10 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 // 05.11.26 — which products go to the PDF / Excel: the rightmost column.
                 (() => {
                   if (!canEdit) return null;
-                  const allOn = groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code]));
+                  const allOn = groups.every((g) => g.rows.every((r) => !printOff[r.code]));
                   return prPrintTh(isRTL, allOn, () => {
                     const next = {};
-                    if (allOn) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                    if (allOn) groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = true; }));
                     setPrintOff(next);
                   });
                 })(),
@@ -12453,7 +12453,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                       // The row the find is standing on carries the reference,
                       // so the board can bring it into view (30.8.26).
                       ref: hitNow === r.code ? hitRef : void 0,
-                      className: `${anchorRow === r.code && canEdit ? "lliHere" : ""} ${hidden ? "lliOff" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""} ${printOff[r.code] ? "prOff" : ""}`.trim(),
+                      className: `${anchorRow === r.code && canEdit ? "lliHere" : ""} ${v.ordered ? "lliDone" : ""} ${dragging ? "lliDragging" : ""} ${lineAbove ? "lliDropHere" : ""} ${isHit(r.code) ? "lliHit" : ""} ${hitNow === r.code ? "lliHitNow" : ""} ${printOff[r.code] ? "prOff" : ""}`.trim(),
                       // Wherever she puts the cursor in this row, this is now
                       // the row a new one is added under.
                       onFocusCapture: () => standOn(r.code),
