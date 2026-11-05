@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 244";
+var APP_BUILD = "05.11.2026 · build 245";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1817,21 +1817,6 @@ var pdfViewer = `
           background: #fff; text-align: center; outline: none;
         }
         .lliBoqRefIn:focus { border-color: var(--accent); }
-        /* 20.10.26 — her own categories for the dropdown. */
-        .lliCatsBox { max-width: 460px; width: calc(100vw - 32px); }
-        .lliCatsList { list-style: none; margin: 10px 0; padding: 0; max-height: 240px; overflow-y: auto;
-          border: 1px solid var(--line); border-radius: 8px; }
-        .lliCatsList li { display: grid; grid-template-columns: 1fr 1fr 28px; gap: 8px; align-items: center;
-          padding: 6px 10px; border-bottom: 1px solid var(--line); font-size: 13px; }
-        .lliCatsList li:last-child { border-bottom: none; }
-        .lliCatsEn { color: var(--mist); }
-        .lliCatsDel { border: none; background: none; cursor: pointer; color: #d32f2f; display: inline-flex;
-          align-items: center; justify-content: center; padding: 2px; border-radius: 6px; }
-        .lliCatsDel:hover { background: #fbe3e3; }
-        .lliCatsNone { color: var(--mist); font-size: 12.5px; }
-        .lliCatsAdd { display: grid; grid-template-columns: 1fr 1fr auto; gap: 6px; align-items: center; margin-top: 8px; }
-        .lliCatsAdd .sgBtn:disabled { opacity: .45; cursor: default; }
-        .lliCatsDup { color: #d32f2f; font-size: 12px; margin: 6px 0 0; }
         /* 20.10.26 — "no BOQ item" reads in red, wherever the row shows it. */
         .lliBoqRefIn.noBoq, .sbChkCodeIn.noBoq { color: #d32f2f; font-weight: 600; }
         .lliBoqRefIn::placeholder { color: var(--mist); font-size: 9.5px; }
@@ -2479,7 +2464,26 @@ var pdfViewer = `
            struck through = left out; click to switch. A row without its print
            V: still editable, greyed. Same on LLI, submittals, SD, rejects, RFI. */
         th.prColTh, th.prAllTh { cursor: pointer; user-select: none; }
+        /* 05.11.26 — the typed category cell and its list. */
+        .lliCatIn { min-width: 110px; text-align: start; }
+        .lliCatRo { font-size: 12.5px; }
+        .bcList {
+          position: fixed; z-index: 1300; max-height: 300px; overflow: auto; background: #fff;
+          border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(16,32,58,.2);
+          padding: 4px; font-family: 'Assistant','Inter',sans-serif; font-size: 13px;
+        }
+        .bcOpt { display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 7px; cursor: pointer; color: #16324f; }
+        .bcOpt > span { flex: 1; }
+        .bcOpt.cat { font-weight: 800; }
+        .bcOpt.sub { padding-inline-start: 24px; font-weight: 500; color: #3a4658; }
+        .bcOpt.none { color: #8a93a3; font-style: italic; }
+        .bcOpt.new { color: var(--accent, #1A559E); font-weight: 800; border-top: 1px solid var(--line); margin-top: 4px; }
+        .bcOpt:hover { background: #f0f4fa; }
+        .bcOpt.on { background: var(--accent-soft, #eef3fa); }
+        .bcDel { border: 0; background: transparent; color: #d02f2f; font-size: 15px; font-weight: 800; cursor: pointer; padding: 0 4px; line-height: 1; border-radius: 5px; }
+        .bcDel:hover { background: #fdecec; }
         .rfiTable th.cPrint, .rfiTable td.cPrint { width: 44px; text-align: center; }
+        .rfiDiscBar { margin-bottom: 10px; }
         th.prColTh:hover, th.prAllTh:hover { background-color: rgba(16, 52, 96, .06); }
         th.prColTh.off { color: #a3aab5 !important; text-decoration: line-through; text-decoration-thickness: 1.5px; }
         tr.prOff > td { background: #f4f5f7 !important; }
@@ -8140,7 +8144,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
     projectId: project.id, project, projectName: project.name, currentEmail,
     contactsNode: React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }),
     contactsCount: (contacts || []).length,
@@ -11393,22 +11397,6 @@ var LLI_L = {
   routedSubmittal: { en: "On the submittal checklist", he: "מופיע בסבמיטלים" },
 
   noCatSection: { en: "Other", he: "ללא תחום" },
-  myCats: { en: "Categories", he: "קטגוריות" },
-  myCatsTitle: { en: "Categories in the list", he: "קטגוריות ברשימה הנפתחת" },
-  myCatsNote: {
-    en: "A category added here appears in the category list of the LLI and SD tables, in every project.",
-    he: "קטגוריה שמוסיפים כאן מופיעה ברשימה הנפתחת של עמודת הקטגוריה בטבלאות LLI ו-SD, בכל הפרויקטים."
-  },
-  myCatsNone: { en: "No categories added yet.", he: "עדיין לא נוספו קטגוריות." },
-  myCatHe: { en: "Name in Hebrew", he: "שם בעברית" },
-  myCatEn: { en: "Name in English", he: "שם באנגלית" },
-  myCatAdd: { en: "Add", he: "הוספה" },
-  myCatDup: { en: "That name is already in the list.", he: "השם הזה כבר קיים ברשימה." },
-  myCatInUse: {
-    en: "Rows are filed under this category. Remove it anyway? They will show no category.",
-    he: "יש שורות שמסווגות לקטגוריה הזו. להסיר בכל זאת? הן יופיעו ללא קטגוריה."
-  },
-  catsClose: { en: "Close", he: "סגירה" },
   boqRef: { en: "BOQ item", he: "סעיף כתב כמויות" },
   boqRefHint: {
     en: "Type or pick a BOQ item number. Its wording, unit and quantity fill this row.",
@@ -11491,10 +11479,6 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       : { className: cls, title },
     label
   );
-  // The window where she adds categories to the dropdown (20.10.26).
-  const [catsOpen, setCatsOpen] = useState6(false);
-  const [newCatHe, setNewCatHe] = useState6("");
-  const [newCatEn, setNewCatEn] = useState6("");
   // A date she copied off one cell, waiting to be dropped into others. It is
   // held in the board, not in the system clipboard: the dates in this table go
   // from one cell to another and almost never leave the page (15.10.26).
@@ -11826,7 +11810,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     const key = ch ? ch.code : "manual";
     let g = groups.find((x) => x.key === key);
     if (!g) {
-      g = { key, title: ch ? `${ch.code} · ${boqText(ch, lang)}` : L("manual"), rows: [] };
+      g = { key, ch, title: ch ? `${ch.code} · ${boqText(ch, lang)}` : L("manual"), rows: [] };
       groups.push(g);
     }
     g.rows.push(r);
@@ -11945,7 +11929,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     const body = [];
     const imgs = [];
     const tone = [];
-    groups.forEach((g) => {
+    // 05.11.26 — what each row is grouped under on paper, both ways.
+    const catSecs = [], catRank = [], chSecs = [], chRank = [];
+    groups.forEach((g, gi) => {
       g.rows.forEach((r) => {
         // Only what is ticked for showing is printed. An unticked row is off
         // the board as far as the client and the paper are concerned (29.8.26).
@@ -11970,9 +11956,13 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
         ]);
         imgs.push(v.image || null);
         tone.push(v.ordered ? "ok" : "");
+        catSecs.push(cat(r.category) || T("noCatSection"));
+        catRank.push(boardCatRank(r.category));
+        chSecs.push(g.ch ? `${g.ch.code} \u00b7 ${boqText(g.ch, lg)}` : T("manual"));
+        chRank.push(gi);
       });
     });
-    return { head, body, widths, types, imgs, tone };
+    return { head, body, widths, types, imgs, tone, catSecs, catRank, chSecs, chRank };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -12032,14 +12022,16 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     // Then the columns she unticked in the table's titles (21.10.26).
     ({ head, widths, types: colTypes, body, imgCol } = sbDropCols({ head, widths, types: colTypes, body, keys, imgCol }, lliHide));
     if (imgCol < 0) imgCol = null;
+    const byBoq = H.order === "boq";
+    const O = boardOrderBy({ body, imgs, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
     const res = await boardExportXlsx({
       title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "), sheetName: "LLI",
       fileName: boardFileName(projectName, "LLI", "xlsx"),
-      head, body, widths, toneRows: g.tone,
+      head, body: O.body, sections: O.sections, widths, toneRows: O.tone,
       // The photo column is text; everything else keeps the kind the board
       // gave it.
       colTypes,
-      imgCol, imgs,
+      imgCol, imgs: O.imgs,
       accent: (printBrand || {}).accent, isRTL: lg === "he"
     });
     if (res && res.styled === false) setPoNote(sbText(BOARD_EXPORT_T.plainNote, lg));
@@ -12101,6 +12093,8 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       // Then the columns she unticked in the table's titles (21.10.26).
       ({ head, widths, body, imgCol } = sbDropCols({ head, widths, types: head.map(() => "text"), body, keys, imgCol }, lliHide));
       if (imgCol < 0) imgCol = null;
+      const byBoq = H.order === "boq";
+      const O = boardOrderBy({ body, imgs, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
       boardExportPdf({
         title: H.title,
         // The name the browser offers when she saves it.
@@ -12109,10 +12103,10 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
         // report was issued. All three lines are hers to change (05.11.26).
         subtitle: H.subtitle,
         issuedLabel: H.date,
-        head, body, widths,
+        head, body: O.body, widths, sections: O.secs,
         accent: (printBrand || {}).accent, brand: printBrand,
-        isRTL: lg !== "en", imgCol, imgs,
-        toneRows: g.tone,
+        isRTL: lg !== "en", imgCol, imgs: O.imgs,
+        toneRows: O.tone,
         // The date is in the heading of this report, so it is not repeated at the
         // foot of every page.
         noStamp: true,
@@ -12342,69 +12336,11 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       }, sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("addRow")) : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onExcel) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " Excel") : null,
       canEdit ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPrintAsk(() => onPdf) }, sbH(Download2, { size: 14, strokeWidth: 2 }), " PDF") : null,
-      // Her own categories for the dropdown (20.10.26).
-      canEdit && onChangeBoardCats
-        ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setCatsOpen(true) },
-            sbH(Plus2, { size: 14, strokeWidth: 2.2 }), " ", L("myCats"))
-        : null,
-      catsOpen && onChangeBoardCats ? (() => {
-        const mine = ((contactsCatalog || {}).boardCats || []).filter((c) => c && c.key);
-        const norm = (t) => String(t || "").trim().toLowerCase();
-        const he = newCatHe.trim(), en = newCatEn.trim();
-        const dup = (he || en) && BOARD_CATEGORIES.some((c) =>
-          (he && (norm(c.he) === norm(he) || norm(c.en) === norm(he))) ||
-          (en && (norm(c.he) === norm(en) || norm(c.en) === norm(en))));
-        const add = () => {
-          if (!(he || en) || dup) return;
-          const key = `c-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
-          onChangeBoardCats(mine.concat([{ key, he: he || en, en: en || he }]));
-          setNewCatHe(""); setNewCatEn("");
-        };
-        const drop = (c) => {
-          const used = all.some((r) => r.category === c.key);
-          if (used && !window.confirm(L("myCatInUse"))) return;
-          onChangeBoardCats(mine.filter((x) => x.key !== c.key));
-        };
-        const onKey = (e) => { if (e.key === "Enter") { e.preventDefault(); add(); } };
-        return createPortal(
-          sbH(
-            "div",
-            { className: "printAskScrim", onClick: () => setCatsOpen(false) },
-            sbH(
-              "div",
-              { className: "printAskBox lliCatsBox", dir: isRTL ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
-              sbH("h3", null, L("myCatsTitle")),
-              sbH("p", null, L("myCatsNote")),
-              mine.length
-                ? sbH("ul", { className: "lliCatsList" }, mine.map((c) => sbH(
-                    "li", { key: c.key },
-                    sbH("span", null, c.he),
-                    sbH("span", { className: "lliCatsEn", dir: "ltr" }, c.en),
-                    sbH("button", { type: "button", className: "lliCatsDel", "aria-label": "\u00d7", onClick: () => drop(c) },
-                      sbH(X3, { size: 14, strokeWidth: 2.2 }))
-                  )))
-                : sbH("p", { className: "lliCatsNone" }, L("myCatsNone")),
-              sbH(
-                "div",
-                { className: "lliCatsAdd" },
-                sbH("input", { className: "lliIn", type: "text", dir: "rtl", value: newCatHe, placeholder: L("myCatHe"),
-                  onChange: (e) => setNewCatHe(e.target.value), onKeyDown: onKey }),
-                sbH("input", { className: "lliIn", type: "text", dir: "ltr", value: newCatEn, placeholder: L("myCatEn"),
-                  onChange: (e) => setNewCatEn(e.target.value), onKeyDown: onKey }),
-                sbH("button", { type: "button", className: "sgBtn", disabled: !(he || en) || !!dup, onClick: add }, L("myCatAdd"))
-              ),
-              dup ? sbH("p", { className: "lliCatsDup" }, L("myCatDup")) : null,
-              sbH("div", { className: "printAskBtns" },
-                sbH("button", { type: "button", className: "sgBtn", onClick: () => setCatsOpen(false) }, L("catsClose")))
-            )
-          ),
-          document.body
-        );
-      })() : null,
       // 21.10.26 — only the language is asked; the columns are the ticks.
       printAsk
         ? sbH(PrintLangAsk, {
             titles: lliTitles,
+            orders: BOARD_ORDERS,
             onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, "admin", hdr); },
             onClose: () => setPrintAsk(null)
           })
@@ -12637,13 +12573,23 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                     sbH(
                       "td",
                       { className: "cCat" },
-                      sbH(BoardCatSelect, {
+                      sbH(BoardCatCombo, {
                         value: r.category || "",
                         subValue: v.subCategory || "",
                         lang,
                         disabled: !canEdit,
                         noneLabel: L("noCat"),
-                        onPick: (pick) => { patch(r.code, { category: pick.category, subCategory: pick.subCategory }); writeCategory(r, pick.category); }
+                        // A category she typed is hers, not the BOQ routing's:
+                        // it stays on the row, so the submittal folders are not
+                        // touched by it (05.11.26).
+                        onPick: (pick) => {
+                          patch(r.code, { category: pick.category, subCategory: pick.subCategory });
+                          const c = pick.category ? boardCategoryOf(pick.category) : null;
+                          if (!c || !c.custom) writeCategory(r, pick.category);
+                        },
+                        onNewCat: (name) => boardAddCat(name, contactsCatalog, onChangeBoardCats),
+                        onDropCat: (key) => boardDropCat(key, contactsCatalog, onChangeBoardCats),
+                        inUse: (key) => all.some((x) => x.category === key)
                       })
                     ),
                     sbH(
@@ -13068,7 +13014,7 @@ function sdDueTone(v, done) {
   return warn.toISOString().slice(0, 10) <= today ? "wait" : "";
 }
 
-function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail, userPerms }) {
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail, userPerms, onChangeBoardCats }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -13277,8 +13223,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     // approved-as-noted, orange for submitted, red for a drawing whose due date
     // has passed and is still not in. Nothing else is coloured (29.8.26).
     const tone = [];
+    const catSecs = [], catRank = [], chSecs = [], chRank = [];
     const today = new Date().toISOString().slice(0, 10);
-    groups.forEach((g) => {
+    groups.forEach((g, gi) => {
       g.rows.forEach((r) => {
         if (isHidden(r)) return;
         if (printOff[r.code]) return;
@@ -13290,6 +13237,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         const done = !!ap || SD_DONE.indexOf(v.status) >= 0;
         const approvedOn = (ap && ap.approvedAt) || v.approvedAt || "";
         tone.push(sdDueTone(v, done));
+        // 05.11.26 — what the row is grouped under on paper, both ways.
+        catSecs.push(cat2(r.category) || (lang === "he" ? "ללא תחום" : "Other"));
+        catRank.push(boardCatRank(r.category));
+        chSecs.push(r.chapter ? `${r.chapter.code} \u00b7 ${boqText(r.chapter, lang)}` : L("manual"));
+        chRank.push(gi);
         const stAt = ap ? approvedOn : (v.statusAt || (done ? v.approvedAt : ""));
         body.push([
           r.source === "boq" ? r.code : L("manual"),
@@ -13306,7 +13258,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         ]);
       });
     });
-    return { head, body, widths, types, tone, keys: SD_COL_KEYS.slice() };
+    return { head, body, widths, types, tone, keys: SD_COL_KEYS.slice(), catSecs, catRank, chSecs, chRank };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -13325,10 +13277,12 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const g = sbDropCols(exportGrid(), sdHide);
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     setExportNote(null);
+    const byBoq = H.order === "boq";
+    const O = boardOrderBy({ body: g.body, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
     const res = await boardExportXlsx({
       title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "), sheetName: "SD",
       fileName: boardFileName(projectName, "SD", "xlsx"),
-      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      head: g.head, body: O.body, sections: O.sections, toneRows: O.tone, widths: g.widths, colTypes: g.types,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -13341,6 +13295,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const H = hdr || sdTitles(printLang);
     const g = sbDropCols(exportGrid(), sdHide);
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
+    const byBoq = H.order === "boq";
+    const O = boardOrderBy({ body: g.body, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
     const keep = audience === "client"
       ? sdClientKeys.map((k) => g.head.indexOf(L(k))).filter((i) => i >= 0)
       : g.head.map((_, i) => i);
@@ -13350,9 +13306,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       subtitle: H.subtitle,
       issuedLabel: H.date,
       head: keep.map((i) => g.head[i]),
-      body: g.body.map((row) => keep.map((i) => row[i])),
+      body: O.body.map((row) => keep.map((i) => row[i])),
       widths: keep.map((i) => g.widths[i]),
-      toneRows: g.tone,
+      toneRows: O.tone,
+      sections: O.secs,
       // The drawings report keeps its printed-on stamp; only the ordering
       // report drops it, because she asked for that one by name (29.8.26).
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
@@ -13471,6 +13428,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         ? sbH(PrintLangAsk, {
             withAudience: true,
             titles: sdTitles,
+            orders: BOARD_ORDERS,
             onPick: (lg, who, hdr) => { setPrintAsk(null); printAsk(lg, who, hdr); },
             onClose: () => setPrintAsk(null)
           })
@@ -13478,6 +13436,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       xlsAsk
         ? sbH(PrintLangAsk, {
             titles: sdTitles,
+            orders: BOARD_ORDERS,
             startLang: lang,
             onPick: (lg, who, hdr) => { setXlsAsk(false); onExcel(hdr); },
             onClose: () => setXlsAsk(false)
@@ -13599,13 +13558,16 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     sbH(
                       "td",
                       { className: "cCat" },
-                      sbH(BoardCatSelect, {
+                      sbH(BoardCatCombo, {
                         value: r.category || "",
                         subValue: v.subCategory || "",
                         lang,
                         disabled: !canEdit,
                         noneLabel: L("noCat"),
-                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory })
+                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory }),
+                        onNewCat: (name) => boardAddCat(name, contactsCatalog, onChangeBoardCats),
+                        onDropCat: (key) => boardDropCat(key, contactsCatalog, onChangeBoardCats),
+                        inUse: (key) => all.some((x) => x.category === key)
                       })
                     ),
                     sbH(
@@ -14104,6 +14066,8 @@ function RfiCard({
   const [q, setQ] = useState6("");
   const [fStatus, setFStatus] = useState6("all");
   const [fPriority, setFPriority] = useState6("all");
+  // 05.11.26 — the discipline bar: only the disciplines the RFIs carry.
+  const [fDisc, setFDisc] = useState6("all");
   const [note, setNote] = useState6(null);
   // 05.11.26 — print switches, as on the other boards: the column titles
   // (kept in this browser) and a V on every row (every row prints until its V
@@ -14177,7 +14141,14 @@ function RfiCard({
     setOpenId(null);
   };
 
+  const discOf = (r) => String(r.discipline || "").trim();
+  const usedDiscs = Array.from(new Set(all.map(discOf).filter(Boolean)))
+    .sort((a, b) => a.localeCompare(b, lang === "he" ? "he" : "en"));
+  // What the discipline box offers: the catalogue's categories and every
+  // discipline typed on an RFI before; anything else typed is new.
+  const discOptions = Array.from(new Set(BOARD_CATEGORIES.map((c) => sbText(c, lang)).concat(usedDiscs)));
   const shown = all.filter((r) => {
+    if (fDisc !== "all" && discOf(r) !== fDisc) return false;
     if (fStatus !== "all" && r.status !== fStatus) return false;
     if (fPriority !== "all" && r.priority !== fPriority) return false;
     const s = q.trim().toLowerCase();
@@ -14196,7 +14167,12 @@ function RfiCard({
     ];
     const widths = [70, 110, 240, 90, 130, 110, 90, 100, 110, 100];
     const types = ["text", "text", "text", "date", "text", "text", "text", "date", "text", "text"];
-    const body = shown.filter((r) => !printOff[r.id]).map((r) => [
+    const out = shown.filter((r) => !printOff[r.id]);
+    // 05.11.26 — on paper, one discipline at a time, each from a new page.
+    const noDisc = lang === "he" ? "ללא קטגוריה" : "No category";
+    const catSecs = out.map((r) => discOf(r) || noDisc);
+    const catRank = out.map((r) => { const i = usedDiscs.indexOf(discOf(r)); return i < 0 ? 9999 : i; });
+    const body = out.map((r) => [
       r.no,
       r.discipline || "",
       r.subject || "",
@@ -14208,31 +14184,41 @@ function RfiCard({
       L(RFI_DRAWING_L[r.drawingUpdate] || "tbd"),
       L(RFI_STATUS_L[r.status] || "stOpen")
     ]);
-    return sbDropCols({ head, body, widths, types, keys: RFI_COL_KEYS.slice() }, rfiHide);
+    return sbDropCols({ head, body, widths, types, keys: RFI_COL_KEYS.slice(), catSecs, catRank }, rfiHide);
   };
-  const onExcel = async () => {
+  const rfiTitles = (lg0) => ({
+    title: (projectName || "").trim() || "RFI",
+    subtitle: "RFI",
+    date: `${lg0 === "en" ? "Report issued on" : "תאריך הנפקת דוח"} ${sbFmtDate(rfiToday())}`
+  });
+  const [xlsAsk, setXlsAsk] = useState6(false);
+  const onExcel = async (hdr) => {
+    const H = hdr || rfiTitles(lang);
     const g = exportGrid();
     if (!g.body.length) { setNote(L("nothingToExport")); return; }
     setNote(null);
+    const O = boardOrderBy({ body: g.body }, g.catSecs, g.catRank);
     const res = await boardExportXlsx({
-      title: (projectName || "").trim() || L("title"),
-      subtitle: `${L("title")} · ${sbFmtDate(rfiToday())}`,
+      title: H.title,
+      subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "),
       sheetName: "RFI",
       fileName: boardFileName(projectName, "RFI", "xlsx"),
-      head: g.head, body: g.body, widths: g.widths, colTypes: g.types,
+      head: g.head, body: O.body, sections: O.sections, widths: g.widths, colTypes: g.types,
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
-  const onPdf = (printLang) => {
+  const onPdf = (printLang, hdr) => {
+    const H = hdr || rfiTitles(printLang);
     const g = exportGrid();
     if (!g.body.length) { setNote(L("nothingToExport")); return; }
+    const O = boardOrderBy({ body: g.body }, g.catSecs, g.catRank);
     boardExportPdf({
-      title: (projectName || "").trim() || L("title"),
+      title: H.title,
       fileName: boardFileName(projectName, "RFI", ""),
-      subtitle: L("title"),
-      issuedLabel: `${L("issuedOn")} ${sbFmtDate(rfiToday())}`,
-      head: g.head, body: g.body, widths: g.widths,
+      subtitle: H.subtitle,
+      issuedLabel: String(H.date || "").trim() || undefined,
+      head: g.head, body: O.body, widths: g.widths, sections: O.secs,
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
     });
   };
@@ -14249,6 +14235,14 @@ function RfiCard({
   const register = sbH(
     "div",
     { className: "rfiWrap" },
+    usedDiscs.length
+      ? sbH("div", { className: "sbCatBar lliFilter rfiDiscBar", role: "tablist" },
+          ["all"].concat(usedDiscs).map((k) => sbH("button", {
+            key: k, type: "button", role: "tab",
+            className: `sbCatBtn ${fDisc === k ? "on" : ""} ${k === "all" ? "all" : ""}`.trim(),
+            onClick: () => setFDisc(k)
+          }, k === "all" ? (isRTL ? "כל הקטגוריות" : "All categories") : k)))
+      : null,
     sbH(
       "div",
       { className: "rfiTools" },
@@ -14359,7 +14353,7 @@ function RfiCard({
       sbH(
         "div",
         { className: "rfiExportRow" },
-        sbH("button", { type: "button", className: "rfiGrayPill", onClick: onExcel },
+        sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setXlsAsk(true) },
           sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
         sbH("button", { type: "button", className: "rfiGrayPill", onClick: () => setPrintAsk(() => onPdf) },
           sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF")
@@ -14367,7 +14361,10 @@ function RfiCard({
       note ? sbH("p", { className: "rfiNote" }, note) : null
     ),
     printAsk
-      ? sbH(PrintLangAsk, { onPick: (lg) => { setPrintAsk(null); onPdf(lg); }, onClose: () => setPrintAsk(null) })
+      ? sbH(PrintLangAsk, { titles: rfiTitles, onPick: (lg, who, hdr) => { setPrintAsk(null); onPdf(lg, hdr); }, onClose: () => setPrintAsk(null) })
+      : null,
+    xlsAsk
+      ? sbH(PrintLangAsk, { titles: rfiTitles, startLang: lang, onPick: (lg, who, hdr) => { setXlsAsk(false); onExcel(hdr); }, onClose: () => setXlsAsk(false) })
       : null
   );
 
@@ -14377,7 +14374,7 @@ function RfiCard({
     { className: "functionPageBody rfiBody", style: { flexDirection: "column" } },
     open
       ? sbH(RfiForm, {
-          lang, isRTL, L, rec: open, canEdit, projectId, projectName, printBrand,
+          lang, isRTL, L, rec: open, canEdit, projectId, projectName, printBrand, discOptions,
           boqData, scheduleData, currentEmail,
           onBack: () => setOpenId(null),
           onPatch: (next, ev, detail) => (ev ? patchLogged(open.id, next, ev, detail) : patch(open.id, next)),
@@ -14422,7 +14419,7 @@ function rfiScheduleRisk(r, scheduleData) {
 // list of fields: the printed document has to be predictable.
 // -----------------------------------------------------------------------------
 function RfiForm({
-  lang, isRTL, L, rec, canEdit, projectId, projectName, printBrand,
+  lang, isRTL, L, rec, canEdit, projectId, projectName, printBrand, discOptions,
   boqData, scheduleData, currentEmail, onBack, onPatch, onAddToChangeInstructions
 }) {
   const d = rec || {};
@@ -14457,7 +14454,7 @@ function RfiForm({
           })
         : sbH("input", {
             className: "rfiIn", type: o.type || "text", readOnly: ro,
-            dir: o.dir, value: d[o.name || key] || "",
+            dir: o.dir, value: d[o.name || key] || "", list: o.list,
             onChange: (e) => set({ [o.name || key]: e.target.value })
           })
     );
@@ -14661,7 +14658,8 @@ function RfiForm({
       { className: "rfiGrid" },
       readOnlyField("projectName", projectName),
       readOnlyField("no", d.no),
-      field("discipline"),
+      field("discipline", { list: "rfiDiscOpts" }),
+      sbH("datalist", { id: "rfiDiscOpts", key: "rfiDiscOpts" }, (discOptions || []).map((x) => sbH("option", { key: x, value: x }))),
       field("subject", { wide: true }),
       readOnlyField("dateRaised", sbFmtDate(d.dateRaised)),
       readOnlyField("raisedBy", d.raisedBy),
@@ -17770,40 +17768,140 @@ function boardTradeCompany(contacts, catalog, categoryKey, lang) {
 // right (Whiteboards under Electrical); the Hebrew column is the authority and
 // the four values on that row were put back: Cables / LED Profiles /
 // VRF-VRV Units / Sinks.
-function boardCatValue(category, subCategory) {
+// ---------------------------------------------------------------------------
+// 05.11.26 — the category cell is typed into. The list that opens under it is
+// every category and sub-category there is (the catalogue as it stood, plus
+// anything typed before); a name that is not on the list becomes a category
+// of its own — kept in the catalogue, offered from then on, and shown in the
+// bar above the table as soon as a row carries it. No "+ categories" window.
+// ---------------------------------------------------------------------------
+function boardCatOptions(lang) {
+  const out = [];
+  BOARD_CATEGORIES.forEach((c) => {
+    const name = sbText(c, lang);
+    out.push({ cat: c.key, sub: "", label: name, full: name, names: [c.he, c.en], custom: !!c.custom });
+    sbSubcats(c.key).forEach((row) => {
+      const sn = lang === "he" ? row[1] : row[0];
+      out.push({ cat: c.key, sub: row[0], label: sn, full: `${name} \u203a ${sn}`, names: [row[0], row[1]] });
+    });
+  });
+  return out;
+}
+function boardCatLabel(category, subCategory, lang) {
   if (!category) return "";
-  return subCategory ? `${category}|${subCategory}` : category;
+  const c = boardCategoryOf(category);
+  if (!c) return "";
+  if (subCategory) {
+    const row = sbSubcats(category).find((x) => x[0] === subCategory || x[1] === subCategory);
+    return row ? (lang === "he" ? row[1] : row[0]) : subCategory;
+  }
+  return sbText(c, lang);
 }
-function boardCatPick(value) {
-  const [category, subCategory] = String(value || "").split("|");
-  return { category: category || null, subCategory: subCategory || "" };
+// A new category from a name she typed. A name the catalogue already holds
+// (in either language) is that category, not a second copy.
+function boardAddCat(name, catalog, onChangeBoardCats) {
+  const v = String(name || "").trim();
+  if (!v) return null;
+  const lc = v.toLowerCase();
+  const hit = BOARD_CATEGORIES.find((c) => [c.he, c.en].some((x) => String(x || "").trim().toLowerCase() === lc));
+  if (hit) return hit.key;
+  if (!onChangeBoardCats) return null;
+  const key = `c-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`;
+  const mine = ((catalog || {}).boardCats || []).filter((c) => c && c.key);
+  const next = mine.concat([{ key, he: v, en: v }]);
+  boardSetCustomCats(next);
+  onChangeBoardCats(next);
+  return key;
 }
-function BoardCatSelect({ value, subValue, lang, disabled, noneLabel, onPick }) {
+function boardDropCat(key, catalog, onChangeBoardCats) {
+  if (!onChangeBoardCats) return;
+  const next = ((catalog || {}).boardCats || []).filter((c) => c && c.key && c.key !== key);
+  boardSetCustomCats(next);
+  onChangeBoardCats(next);
+}
+function BoardCatCombo({ value, subValue, lang, disabled, noneLabel, onPick, onNewCat, onDropCat, inUse }) {
+  const cur = boardCatLabel(value, subValue, lang);
+  const [text, setText] = useState6(cur);
+  const [open, setOpen] = useState6(false);
+  const [typed, setTyped] = useState6(false);
+  const [box, setBox] = useState6(null);
+  const ref = useRef5(null);
+  useEffect5(() => { if (!open) setText(cur); }, [cur, open]);
+  useEffect5(() => {
+    if (!open) return;
+    const off = (e) => { if (e.target && e.target.closest && e.target.closest(".bcList")) return; setOpen(false); };
+    window.addEventListener("scroll", off, true);
+    window.addEventListener("resize", off);
+    return () => { window.removeEventListener("scroll", off, true); window.removeEventListener("resize", off); };
+  }, [open]);
+  if (disabled) return sbH("span", { className: "lliCatRo" }, cur || "\u2014");
+  const opts = boardCatOptions(lang);
+  const q = typed ? text.trim().toLowerCase() : "";
+  const low = (x) => String(x || "").trim().toLowerCase();
+  const shown = q ? opts.filter((o) => low(o.full).indexOf(q) >= 0 || o.names.some((x) => low(x).indexOf(q) >= 0)) : opts;
+  const pick = (o) => { setOpen(false); setTyped(false); onPick(o ? { category: o.cat, subCategory: o.sub || "" } : { category: null, subCategory: "" }); };
+  const commit = () => {
+    const v = text.trim();
+    setOpen(false); setTyped(false);
+    if (v === cur) return;
+    if (!v) { onPick({ category: null, subCategory: "" }); return; }
+    const lc = low(v);
+    const same = (o) => low(o.full) === lc || o.names.some((x) => low(x) === lc);
+    const hit = opts.find((o) => !o.sub && same(o))
+      || (value && opts.find((o) => o.cat === value && o.sub && same(o)))
+      || opts.find((o) => o.sub && same(o));
+    if (hit) { onPick({ category: hit.cat, subCategory: hit.sub || "" }); return; }
+    const key = onNewCat ? onNewCat(v) : null;
+    if (key) onPick({ category: key, subCategory: "" });
+    else setText(cur);
+  };
+  const openList = () => {
+    const r = ref.current ? ref.current.getBoundingClientRect() : null;
+    if (r) setBox({ left: r.left, top: r.bottom + 2, width: Math.max(r.width, 230), up: r.bottom + 300 > window.innerHeight ? r.top : null });
+    setOpen(true);
+  };
   return sbH(
-    "select",
-    {
-      className: "lliIn lliSel lliCatSel",
-      value: boardCatValue(value, subValue),
-      disabled,
-      onChange: (e) => onPick(boardCatPick(e.target.value))
-    },
-    sbH("option", { value: "" }, noneLabel),
-    BOARD_CATEGORIES.map((c) => {
-      const subs = sbSubcats(c.key);
-      const name = sbText(c, lang);
-      return sbH(
-        "optgroup",
-        { key: c.key, label: name },
-        // The discipline on its own stays available, for a row that is one of
-        // these and nothing more specific.
-        sbH("option", { value: c.key }, name),
-        subs.map((row) => sbH(
-          "option",
-          { key: `${c.key}|${row[0]}`, value: `${c.key}|${row[0]}` },
-          lang === "he" ? row[1] : row[0]
-        ))
-      );
-    })
+    React15.Fragment, null,
+    sbH("input", {
+      ref, type: "text", className: "lliIn lliCatIn", value: text, placeholder: noneLabel,
+      dir: lang === "he" ? "rtl" : "ltr",
+      title: lang === "he" ? "בחירה מהרשימה, או הקלדת שם חדש — קטגוריה חדשה נוספת לרשימה ולסרגל" : "Pick from the list, or type a new name — it becomes a category",
+      onFocus: openList,
+      onClick: () => { if (!open) openList(); },
+      onChange: (e) => { setText(e.target.value); setTyped(true); if (!open) openList(); },
+      onBlur: commit,
+      onKeyDown: (e) => {
+        if (e.key === "Enter") { e.preventDefault(); e.currentTarget.blur(); }
+        else if (e.key === "Escape") { setText(cur); setTyped(false); setOpen(false); }
+      }
+    }),
+    open && box ? createPortal(
+      sbH("div", {
+        className: "bcList", dir: lang === "he" ? "rtl" : "ltr",
+        style: box.up != null
+          ? { left: box.left, bottom: window.innerHeight - box.up + 2, width: box.width }
+          : { left: box.left, top: box.top, width: box.width },
+        onMouseDown: (e) => e.preventDefault()
+      },
+        sbH("div", { className: "bcOpt none", onClick: () => pick(null) }, noneLabel),
+        shown.map((o) => sbH("div", {
+          key: `${o.cat}|${o.sub}`, className: `bcOpt ${o.sub ? "sub" : "cat"} ${o.cat === value && (o.sub || "") === (subValue || "") ? "on" : ""}`.trim(),
+          onClick: () => pick(o)
+        },
+          sbH("span", null, o.sub ? o.label : o.label),
+          o.custom && onDropCat && !(inUse && inUse(o.cat))
+            ? sbH("button", {
+                type: "button", className: "bcDel", title: lang === "he" ? "הסרה מהרשימה" : "Remove from the list",
+                onClick: (e) => { e.stopPropagation(); onDropCat(o.cat); }
+              }, "\u00d7")
+            : null)),
+        typed && text.trim() && !opts.some((o) => low(o.full) === low(text) || o.names.some((x) => low(x) === low(text)))
+          ? sbH("div", { className: "bcOpt new", onClick: () => { const el = ref.current; if (el) el.blur(); } },
+              lang === "he" ? `+ קטגוריה חדשה: "${text.trim()}"` : `+ New category: "${text.trim()}"`)
+          : null
+      ),
+      document.body
+    ) : null
   );
 }
 function sbSubcatCanon(input, catKey) {
@@ -20241,6 +20339,32 @@ function SbPdfColPick({ lang }) {
   );
 }
 // Leaves out the columns she unticked, keeping the photo column's position.
+// 05.11.26 — how a report is ordered on paper: by category, or by the
+// chapters of the bill of quantities. Each group starts its own page, under
+// its own name and the column titles (the paginator's sections), and a row
+// is never cut across two pages.
+var BOARD_ORDERS = [["cat", "קטגוריות", "Categories"], ["boq", "פרקי כתב כמויות", "BOQ chapters"]];
+function boardCatRank(key) {
+  const i = BOARD_CATEGORIES.findIndex((c) => c.key === key);
+  return i < 0 ? 9999 : i;
+}
+// g: { body, imgs?, tone? }, one label and one rank per row. Returns the rows
+// regrouped (stable inside a group), the labels for the PDF, and the sections
+// for the workbook (their idx point into the regrouped arrays).
+function boardOrderBy(g, secs, ranks) {
+  const n = (g.body || []).length;
+  const idx = Array.from({ length: n }, (_, i) => i).sort((a, b) => ((ranks[a] || 0) - (ranks[b] || 0)) || (a - b));
+  const P = (arr) => (Array.isArray(arr) ? idx.map((i) => arr[i]) : arr);
+  const out = { body: P(g.body), imgs: P(g.imgs), tone: P(g.tone), secs: P(secs) };
+  const sections = [];
+  out.secs.forEach((lab, i) => {
+    let x = sections[sections.length - 1];
+    if (!x || x.label !== lab) { x = { label: lab, rows: [], idx: [] }; sections.push(x); }
+    x.rows.push(out.body[i]);
+    x.idx.push(i);
+  });
+  return { ...out, sections };
+}
 // 05.11.26 — the hint on a column title that is a print switch.
 function prColTitle(lang, on, extra) {
   const he = lang !== "en";
@@ -20514,12 +20638,26 @@ function sbBoardGridRaw(opts) {
     };
     return keys.map((k) => cells[k]);
   });
+  // 05.11.26 — on paper the rows go by discipline, or by the chapter of the
+  // bill of quantities their line belongs to.
+  const chapters = ((opts.boqData && opts.boqData.chapters) || []);
+  const chOf = (r) => {
+    if (r.product && r.product.chapter) return r.product.chapter;
+    const code = String(r.boq || "").trim();
+    if (!code) return null;
+    return chapters.find((ch) => code === String(ch.code) || code.indexOf(`${ch.code}.`) === 0) || null;
+  };
+  const noCh = lang === "he" ? "ללא פרק בכתב הכמויות" : "No BOQ chapter";
   const res = {
     head, body, widths, types, keys,
     tone: rows.map((r) => r.tone),
     secs: rows.map((r) => r.disc),
     imgs: rows.map((r) => r.img),
-    imgCol: keys.indexOf("imgCol")
+    imgCol: keys.indexOf("imgCol"),
+    catSecs: rows.map((r) => r.disc),
+    catRank: rows.map((r) => { const i = SB_ALL_FOLDERS.findIndex((c) => r.cat && c.key === r.cat.key); return i < 0 ? 999 : i; }),
+    chSecs: rows.map((r) => { const ch = chOf(r); return ch ? `${ch.code} \u00b7 ${boqText(ch, lang)}` : noCh; }),
+    chRank: rows.map((r) => { const ch = chOf(r); const i = ch ? chapters.indexOf(ch) : -1; return i < 0 ? 99999 : i; })
   };
   // A client's copy carries what a client is owed; the internal target date
   // stays on her side (30.8.26).
@@ -21506,6 +21644,7 @@ function SubmittalCard({
   // 21.10.26 — two buttons. They export exactly what the toolbar has open: one
   // discipline, or every one of them, grouped by discipline under a band.
   const [allAsk, setAllAsk] = useState6(null);
+  const [xlsAskSb, setXlsAskSb] = useState6(false);
   const [allNote, setAllNote] = useState6(null);
   const gridOf = (lg, who) => sbBoardGrid({
     list: visibleList, boqData, boqFlags, lliRows,
@@ -21521,40 +21660,54 @@ function SubmittalCard({
     chkOff: submittalChkOff || {}, lang: lg,
     categories: chosen ? [chosen] : FOLDERS
   }), lg);
-  const runExcel = async () => {
+  // 05.11.26 — the report's header lines and its order, asked before it is
+  // produced; every category (or BOQ chapter) starts its own page.
+  const sbTitles = (lg0) => ({
+    title: pName || "",
+    subtitle: "SUBMITTAL",
+    date: `${lg0 === "en" ? "Report issued on" : "תאריך הנפקת דוח"} ${today2()}`
+  });
+  const sbOrdered = (g, H) => {
+    const byBoq = H && H.order === "boq";
+    return boardOrderBy({ body: g.body, imgs: g.imgs, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
+  };
+  const runExcel = async (hdr) => {
+    const H = hdr || sbTitles(lang);
     const g = gridOf(lang, "admin");
     if (!g.body.length) { setAllNote(L("nothingToExport")); return; }
     setAllNote(null);
     const name = chosen ? `SUB - ${chosen.en}` : "SUB";
-    const grouped = sbGroupBySection(g);
+    const grouped = sbOrdered(g, H);
     const res = await boardExportXlsx({
-      title: pName,
-      subtitle: `SUBMITTAL · ${today2()}`,
+      title: H.title,
+      subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "),
       sheetName: chosen ? chosen.en : "Submittals",
       fileName: boardFileName(pName, name, "xlsx"),
       head: g.head, widths: g.widths, colTypes: g.types,
       sections: grouped.sections, body: grouped.body,
-      toneRows: g.tone, imgCol: g.imgCol, imgs: g.imgs,
+      toneRows: grouped.tone, imgCol: g.imgCol, imgs: grouped.imgs,
       summary: summaryOf(lang),
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setAllNote(sbText(BOARD_EXPORT_T.plainNote, lang));
   };
-  const runPdf = (lg, who) => {
+  const runPdf = (lg, who, hdr) => {
+    const H = hdr || sbTitles(lg);
     const g = gridOf(lg, who);
     if (!g.body.length) { setAllNote(sbText(SB_L.nothingToExport, lg)); return; }
     setAllNote(null);
     const name = chosen ? `SUB - ${chosen.en}` : "SUB";
-    const grouped = sbGroupBySection(g);
-    // The header says SUBMITTAL and nothing more; each discipline is the band
-    // above its own rows (20.10.26).
+    const grouped = sbOrdered(g, H);
+    // 05.11.26 — every discipline (or chapter) starts its own page, its name
+    // above the column titles on each page of it.
     boardExportPdf({
-      title: pName,
+      title: H.title,
       fileName: boardFileName(pName, name, ""),
-      subtitle: "SUBMITTAL",
+      subtitle: H.subtitle,
+      issuedLabel: String(H.date || "").trim() || undefined,
       head: g.head, widths: g.widths,
       body: grouped.body, toneRows: grouped.tone, sections: grouped.secs,
-      imgCol: g.imgCol, imgs: grouped.imgs, imgH: 48, secFlow: true,
+      imgCol: g.imgCol, imgs: grouped.imgs, imgH: 48,
       summary: summaryOf(lg),
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: lg !== "en"
     });
@@ -21855,10 +22008,13 @@ function SubmittalCard({
       );
     })() : null,
     // The disciplines as a toolbar: names only, "all" first (21.10.26).
+    // 05.11.26 — only the disciplines that have rows on the board right now.
     sbH(
       "div",
       { className: "sbCatBar", role: "tablist" },
-      [{ key: "all", he: "כל הקטגוריות", en: "All categories" }].concat(FOLDERS).map((c) => sbH(
+      [{ key: "all", he: "כל הקטגוריות", en: "All categories" }].concat(FOLDERS.filter((c) => c.key === selected || sbBoardRows({
+        list: visibleList, boqData, boqFlags, lliRows, chkOff: submittalChkOff || {}, lang, categories: [c]
+      }).some((r) => canEdit || r.lead))).map((c) => sbH(
         "button",
         {
           key: c.key,
@@ -21888,7 +22044,7 @@ function SubmittalCard({
       ? sbH(
           "div",
           { className: "sbExportBar sbExportTwo" },
-          sbH("button", { type: "button", className: "sbExpBtn", onClick: runExcel, title: "Excel" },
+          sbH("button", { type: "button", className: "sbExpBtn", onClick: () => setXlsAskSb(true), title: "Excel" },
             sbH(Download2, { size: 15, strokeWidth: 2 }), " Excel"),
           sbH("button", { type: "button", className: "sbExpBtn", onClick: () => setAllAsk(() => runPdf), title: "PDF" },
             sbH(Download2, { size: 15, strokeWidth: 2 }), " PDF"),
@@ -21896,8 +22052,19 @@ function SubmittalCard({
           allAsk
             ? sbH(PrintLangAsk, {
                 withAudience: true,
-                onPick: (lg, who) => { const f = allAsk; setAllAsk(null); f(lg, who); },
+                titles: sbTitles,
+                orders: BOARD_ORDERS,
+                onPick: (lg, who, hdr) => { const f = allAsk; setAllAsk(null); f(lg, who, hdr); },
                 onClose: () => setAllAsk(null)
+              })
+            : null,
+          xlsAskSb
+            ? sbH(PrintLangAsk, {
+                titles: sbTitles,
+                startLang: lang,
+                orders: BOARD_ORDERS,
+                onPick: (lg, who, hdr) => { setXlsAskSb(false); runExcel(hdr); },
+                onClose: () => setXlsAskSb(false)
               })
             : null
         )
