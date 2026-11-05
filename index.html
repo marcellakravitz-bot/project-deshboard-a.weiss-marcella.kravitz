@@ -909,7 +909,7 @@ var cards = `
           transition: background-color .15s ease, border-color .15s ease, color .15s ease;
         }
         .cardTitle { font-size: 12.5px; font-weight: 700; margin: 0; line-height: 1.2; }
-        .cardSub { font-size: 10.5px; color: var(--mist); margin: 1px 0 0; font-weight: 500; line-height: 1.2; }
+        /* 05.11.26 — the cubes carry a name only; the grey line under it is gone. */
         .lockBadge {
           position: absolute; top: 10px; inset-inline-end: 10px;
           width: 21px; height: 21px; border-radius: 999px;
@@ -5243,7 +5243,7 @@ function Dashboard({
       },
       isLocked && /* @__PURE__ */ React9.createElement("span", { className: "lockBadge" }, /* @__PURE__ */ React9.createElement(Lock2, { size: 11, strokeWidth: 2.4 })),
       /* @__PURE__ */ React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, /* @__PURE__ */ React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
-      /* @__PURE__ */ React9.createElement("div", null, /* @__PURE__ */ React9.createElement("p", { className: "cardTitle" }, c.title), c.sub && /* @__PURE__ */ React9.createElement("p", { className: "cardSub" }, c.sub))
+      /* @__PURE__ */ React9.createElement("div", null, /* @__PURE__ */ React9.createElement("p", { className: "cardTitle" }, c.title))
     );
   })), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
 }
@@ -6627,8 +6627,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
         { key: c.key, className: "dashCard", type: "button", onClick: () => onPick(c.key) },
         React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
         React9.createElement("div", null,
-          React9.createElement("p", { className: "cardTitle" }, c.title),
-          c.sub && React9.createElement("p", { className: "cardSub" }, c.sub))
+          React9.createElement("p", { className: "cardTitle" }, c.title))
       ))
     );
   };
