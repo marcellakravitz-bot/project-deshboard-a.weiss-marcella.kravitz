@@ -559,7 +559,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 250";
+var APP_BUILD = "05.11.2026 · build 251";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -12228,12 +12228,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
   return sbH(
     "div",
     { className: "lliCard", dir: isRTL ? "rtl" : "ltr" },
-    sbH(
-      "div",
-      { className: "lliHead" },
-      sbH("h2", { className: "lliTitle" }, L("title")),
-      null
-    ),
+    // 05.11.26 — no second title: the screen's own heading already says it.
     // The category filter is the first thing on the page, on purpose.
     sbH(
       "div",
@@ -13375,12 +13370,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   return sbH(
     "div",
     { className: "lliCard sdCard", dir: isRTL ? "rtl" : "ltr" },
-    sbH(
-      "div",
-      { className: "lliHead" },
-      sbH("h2", { className: "lliTitle" }, L("title")),
-      null
-    ),
+    // 05.11.26 — no second title: the screen's own heading already says it.
     sbH(
       "div",
       { className: "lliFilter sbCatBar" },
@@ -16299,11 +16289,7 @@ function LliClientBoard({ lang, isRTL, rows, projectName, onDownload, showEta, s
   return sbH(
     "div",
     { className: "functionPageBody sdcWrap" },
-    sbH(
-      "div",
-      { className: "sdcHead centre" },
-      sbH("h2", { className: "sdcTitle" }, L("title"))
-    ),
+    // 05.11.26 — no second title: the screen's own heading already says it.
 
     rows.length === 0
       ? sbH("div", { className: "sdcEmpty" }, L("empty"))
@@ -16484,7 +16470,6 @@ function SdClientBoard({
     sbH(
       "div",
       { className: "sdcHead centre" },
-      sbH("h2", { className: "sdcTitle" }, L("title")),
       sbH("p", { className: "sdcSub" }, L("lead"))
     ),
     err ? sbH("div", { className: "sdSignErr" }, err) : null,
@@ -17032,7 +17017,6 @@ function MarcellaCard({ appIsRTL, rows, onChangeRows, canEdit, projectId, projec
       sbH(
         "div",
         null,
-        sbH("h2", { className: "mkTitle" }, L("title")),
         sbH("p", { className: "mkSub" }, projectName ? `${projectName} · ${L("lead")}` : L("lead"))
       ),
       ro
@@ -17586,7 +17570,7 @@ function RoomsCard({ appIsRTL, data, onChange, canEdit, projectId, projectName, 
       { className: "roomsHead" },
       room ? sbH("button", { type: "button", className: "loginBack", onClick: () => { setRoom(null); setQuery(""); } },
         sbH(isRTL ? ArrowRight : ArrowLeft, { size: 14, strokeWidth: 2.4 }), " ", L("back")) : sbH("span", null),
-      sbH("h2", { className: "roomsTitle" }, L("title")),
+      sbH("span", null),
       langSwitch
     ),
     // The landing page. One question, in the middle, and nothing else competing

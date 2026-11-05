@@ -336,7 +336,6 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
   if (!ch) {
     const tail = CHAPTERS.length % 3;
     return html`<div className="fac" dir="rtl"><style>${css}</style>
-      <div className="facHead"><h2>תיק מתקן</h2>${projectName && html`<span className="facSub">${projectName}</span>`}</div>
       ${err && html`<p className="facErr">${err}</p>`}
       <div className=${`cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim()}>
         ${CHAPTERS.map((c) => {
