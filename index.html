@@ -555,7 +555,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "05.11.2026 · build 238";
+var APP_BUILD = "05.11.2026 · build 239";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -12668,6 +12668,20 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
               sbH(
                 "tr",
                 null,
+                // 05.11.26 — which products go to the PDF / Excel: the rightmost column.
+                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "סימון מוצרים להדפסה ולאקסל — בלי סימון יוצא הכול" : "Tick products to print — none ticked prints all" },
+                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
+                    sbH(Printer, { size: 14, strokeWidth: 2 }),
+                    sbH("input", {
+                      type: "checkbox", className: "lliShowTick",
+                      title: isRTL ? "סימון הכול" : "Tick all",
+                      checked: anyPrintPick && groups.every((g) => g.rows.every((r) => isHidden(r) || printPick[r.code])),
+                      onChange: (e) => {
+                        const next = {};
+                        if (e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                        setPrintPick(next);
+                      }
+                    }))) : null,
                 canEdit ? sbH("th", { className: "cGrip" }, "") : null,
                 thT("section", "cSec", L("section")),
                 thT("category", "cCat", L("category")),
@@ -12687,21 +12701,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 canEdit ? sbH("th", { className: "cAct" }, L("showCol")) : null,
                 canEdit ? sbH("th", { className: "cRoom", title: L("byRoomHint") }, L("byRoomCol")) : null,
                 canEdit ? thT("longLead", "cRoom", L("longLeadCol"), L("longLeadHint")) : null,
-                canEdit ? sbH("th", { className: "cRoom", title: L("oamHint") }, L("oamCol")) : null,
-                // 05.11.26 — which products go to the PDF / Excel.
-                canEdit ? sbH("th", { className: "cRoom", title: isRTL ? "סימון מוצרים להדפסה ולאקסל — בלי סימון יוצא הכול" : "Tick products to print — none ticked prints all" },
-                  sbH("span", { style: { display: "inline-flex", alignItems: "center", gap: 4 } },
-                    sbH(Printer, { size: 14, strokeWidth: 2 }),
-                    sbH("input", {
-                      type: "checkbox", className: "lliShowTick",
-                      title: isRTL ? "סימון הכול" : "Tick all",
-                      checked: anyPrintPick && groups.every((g) => g.rows.every((r) => isHidden(r) || printPick[r.code])),
-                      onChange: (e) => {
-                        const next = {};
-                        if (e.target.checked) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
-                        setPrintPick(next);
-                      }
-                    }))) : null
+                canEdit ? sbH("th", { className: "cRoom", title: L("oamHint") }, L("oamCol")) : null
               )
             ),
             groups.map((g) =>
@@ -12759,6 +12759,19 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                     // The grip is a column of its own at the very edge of the
                     // table, so it is a straight line down the side instead of
                     // drifting with the width of the number beside it (29.8.26).
+                    canEdit
+                      ? sbH(
+                          "td",
+                          { className: "cRoom" },
+                          sbH("input", {
+                            type: "checkbox",
+                            className: "lliShowTick",
+                            checked: !!printPick[r.code],
+                            title: isRTL ? "להדפסה ולאקסל" : "Print / Excel",
+                            onChange: () => setPrintPick({ ...printPick, [r.code]: !printPick[r.code] })
+                          })
+                        )
+                      : null,
                     canEdit
                       ? sbH(
                           "td",
@@ -13113,19 +13126,6 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                             title: L("oamHint"),
                             "aria-label": L("oamCol"),
                             onChange: () => patch(r.code, { oam: !inOam(r) })
-                          })
-                        )
-                      : null,
-                    canEdit
-                      ? sbH(
-                          "td",
-                          { className: "cRoom" },
-                          sbH("input", {
-                            type: "checkbox",
-                            className: "lliShowTick",
-                            checked: !!printPick[r.code],
-                            title: isRTL ? "להדפסה ולאקסל" : "Print / Excel",
-                            onChange: () => setPrintPick({ ...printPick, [r.code]: !printPick[r.code] })
                           })
                         )
                       : null
