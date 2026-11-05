@@ -23,11 +23,11 @@ import htm from "https://esm.sh/htm@3.1.1";
 import {
   Plus, Printer, FileDown, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save,
 } from "lucide-react";
-import { supabase, printSheetCss, printedStampText, imgLibAdd, imgPickProps, imgAsk } from "../sign.js";
+import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 7 · 05.11.2026";
+export const REJECTS_BUILD = "rejects build 8 · 05.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -448,8 +448,6 @@ function Shots({ items, projectId, projectName, libLabel, listId, flash, rowEdit
         const p = await storePhoto(projectId, listId, f);
         if (!p.path) flash("התמונה נשמרה בתצוגה מוקטנת בלבד — העלאה לאחסון נכשלה");
         rowEdit((cur) => cur.concat([p]));
-        // 05.11.26 — kept in the site's picture library too.
-        imgLibAdd({ projectId, projectName, source: "rejects", file: f, label: libLabel || "" });
       } catch (e) { flash("הוספת התמונה נכשלה"); }
       setBusy((b) => b - 1);
     }

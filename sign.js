@@ -3087,17 +3087,15 @@ var signCss = `
 // ===========================================================================
 // The picture library (מאגר תמונות) — 05.11.2026.
 //
-// Every picture put into any picture box on the site (LLI, submittals, rooms,
-// RFI, rejects) is also kept once in public.image_library. Any picture box can
+// Every picture put into an LLI or submittal picture box (and SD, should it
+// ever carry pictures) is also kept once in public.image_library — not the
+// rejects photos, the rooms or the RFI (05.11.26, at her word). Any picture box can
 // then take a picture three ways: Ctrl+V / right-click → paste, a file from
 // the computer, or a picture from the library. All three end in a File handed
 // to the box's own upload path, so each board keeps doing exactly what it did
 // with an uploaded file.
 // ===========================================================================
-var IMGLIB_SOURCES = [
-  ["lli", "LLI"], ["submittal", "סבמיטל"], ["sd", "SD"], ["rooms", "חיפוש לפי חדר"],
-  ["rfi", "RFI"], ["rejects", "ריג'קטים"], ["photos", "תמונות"]
-];
+var IMGLIB_SOURCES = [["lli", "LLI"], ["submittal", "סבמיטל"], ["sd", "SD"]];
 var imgLibSourceLabel = (k) => { const x = IMGLIB_SOURCES.find((s) => s[0] === k); return x ? x[1] : (k || ""); };
 async function imgLibFileToDataUrl(file, maxDim = 900) {
   return await new Promise((resolve) => {
@@ -3123,9 +3121,11 @@ async function imgLibFileToDataUrl(file, maxDim = 900) {
 // A picture taken FROM the library is already in it; putting it into a box
 // re-encodes it, so without this it would come back as a second copy.
 var imgLibFromLib = new WeakSet();
+var IMGLIB_KEEP = ["lli", "submittal", "sd"];
 async function imgLibAdd({ projectId, projectName, source, label, dataUrl, file }) {
   try {
     if (!projectId) return;
+    if (IMGLIB_KEEP.indexOf(source) < 0) return;
     if (file && imgLibFromLib.has(file)) return;
     let data = dataUrl;
     if (!data && file) data = await imgLibFileToDataUrl(file);
@@ -3202,6 +3202,11 @@ var IMGLIB_CSS = `
 .ilGrid { flex: 1; min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); grid-auto-rows: max-content; gap: 10px; align-content: start; padding: 2px; }
 .ilCell { border: 1px solid #e1e5ec; border-radius: 10px; background: #fff; cursor: pointer; padding: 0; overflow: hidden; display: flex; flex-direction: column; text-align: start; font-family: inherit; }
 .ilCell:hover { border-color: #1A559E; box-shadow: 0 0 0 2px rgba(26,85,158,.18); }
+.ilCell { position: relative; }
+.ilDel { position: absolute; top: 5px; right: 5px; z-index: 2; width: 22px; height: 22px; padding: 0; border-radius: 999px; border: 1px solid #f0c6c0; background: #fff; color: #d02f2f; font-size: 15px; line-height: 1; font-weight: 800; cursor: pointer; display: none; align-items: center; justify-content: center; box-shadow: 0 2px 6px rgba(16,32,58,.18); font-family: inherit; }
+.ilCell:hover .ilDel, .ilCell:focus-within .ilDel { display: flex; }
+.ilDel:hover { background: #d02f2f; color: #fff; border-color: #d02f2f; }
+@media (hover: none) { .ilDel { display: flex; } }
 .ilThumb { height: 112px; background: #f4f6f9; display: flex; align-items: center; justify-content: center; }
 .ilThumb img { max-width: 100%; max-height: 100%; object-fit: contain; display: block; }
 .ilMeta { padding: 6px 8px 7px; font-size: 11.5px; line-height: 1.3; color: #14181f; }
@@ -3302,6 +3307,7 @@ function ImgLibrary({ projectId, onPick, onClose }) {
   const [q, setQ] = useState6("");
   const [pics, setPics] = useState6({});
   const [busy, setBusy] = useState6(null);
+  const [delNote, setDelNote] = useState6(null);
   const want = useRef5(new Set());
   const loading = useRef5(new Set());
   const timer = useRef5(null);
@@ -3311,6 +3317,7 @@ function ImgLibrary({ projectId, onPick, onClose }) {
       for (let from = 0; ; from += 1000) {
         const { data, error } = await supabase.from("image_library")
           .select("id, project_id, project_name, source, label, created_at")
+          .in("source", IMGLIB_KEEP)
           .order("created_at", { ascending: false }).range(from, from + 999);
         if (error) { setErr(error.message || String(error)); setList([]); return; }
         out.push(...(data || []));
@@ -3361,6 +3368,16 @@ function ImgLibrary({ projectId, onPick, onClose }) {
       if (f) { imgLibFromLib.add(f); onPick(f); }
     } finally { setBusy(null); }
   };
+  // The small X on a picture: out of the library only — the report that uses
+  // it keeps its own copy.
+  const drop = async (r, e) => {
+    e.stopPropagation();
+    if (!confirm("למחוק את התמונה מהמאגר? (התמונה נשארת בדוח שבו היא נמצאת)")) return;
+    const { data, error } = await supabase.from("image_library").delete().eq("id", r.id).select("id");
+    if (error || !data || !data.length) { setDelNote("המחיקה לא בוצעה — רק מנהל מערכת יכול למחוק מהמאגר."); return; }
+    setDelNote(null);
+    setList((l) => (l || []).filter((x) => x.id !== r.id));
+  };
   return sbH(
     "div", { className: "ilScrim", onClick: onClose },
     sbH("div", { className: "ilBox ilLib", dir: "rtl", onClick: (e) => e.stopPropagation() },
@@ -3383,6 +3400,7 @@ function ImgLibrary({ projectId, onPick, onClose }) {
               ref: (el) => { if (el && obs.current) obs.current.observe(el); else if (el) ask(r.id); },
               onClick: () => pick(r)
             },
+            sbH("button", { type: "button", className: "ilDel", title: "מחיקה מהמאגר", "aria-label": "Delete", onClick: (e) => drop(r, e) }, "\u00d7"),
             sbH("div", { className: "ilThumb" },
               busy === r.id ? sbH("span", { className: "sbSpin" })
                 : pics[r.id] ? sbH("img", { src: pics[r.id], alt: "", loading: "lazy" }) : null),
@@ -3390,6 +3408,7 @@ function ImgLibrary({ projectId, onPick, onClose }) {
               sbH("b", null, imgLibSourceLabel(r.source)),
               sbH("span", null, r.label || "—"),
               sbH("i", null, `${r.project_name || ""}${r.created_at ? " · " + sbFmtDate(String(r.created_at).slice(0, 10)) : ""}`))))),
+      delNote ? sbH("p", { className: "ilNote", style: { textAlign: "center" } }, delNote) : null,
       list ? sbH("div", { className: "ilFoot" }, `${shown.length} תמונות`) : null)
   );
 }

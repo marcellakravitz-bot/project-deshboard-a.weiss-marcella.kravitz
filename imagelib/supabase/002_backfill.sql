@@ -1,5 +1,8 @@
 -- One-time: put every picture already on the site into image_library.
 -- Run once after 001. Safe to run again (the same picture is kept once).
+-- 05.11.26 — the library keeps LLI / submittal / SD pictures only; after this
+-- ran, rejects and rooms pictures were deleted from it at her word:
+--   delete from public.image_library where source not in ('lli','submittal','sd');
 with names as (
   select p->>'id' id, coalesce(p->>'name','') name
   from app_state, jsonb_array_elements(value::jsonb) c, jsonb_array_elements(coalesce(c->'projects','[]')) p
