@@ -23,12 +23,12 @@
 // =============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
-import { Plus, X, Save, FileText, FileSpreadsheet, ChevronDown, ChevronLeft, Trash2, History, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { Plus, X, Save, FileText, FileSpreadsheet, ChevronDown, ChevronLeft, Trash2, History, GripVertical } from "lucide-react";
 import { supabase, PrintLangAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 7 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 8 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -155,9 +155,13 @@ export const TASK_STATUS = [
 const ST = Object.fromEntries(TASK_STATUS.map((s) => [s[0], s]));
 
 const css = `
-.tsk{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;width:100%;box-sizing:border-box;max-width:1180px;margin:0 auto;padding:0 16px 28px}
+.tsk{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;width:100%;box-sizing:border-box;max-width:1440px;margin:0 auto;padding:0 16px 28px}
 .tsk .tskBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:8px 12px;margin-bottom:10px}
-.tsk .tskBar .sbCatBar{margin:0;flex:1 1 auto}
+/* 06.11.26 — every category in the bar, small and plain, wrapping onto a
+   second line when needed and always centred; the tools on their own line, left. */
+.tsk .tskBar .sbCatBar{margin:0;flex:1 1 100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px}
+.tsk .tskBar .sbCatBar .sbCatBtn{font-size:11.5px;font-weight:400;padding:4px 10px}
+.tsk .tskBar .sbCatBar .sbCatBtn.on{font-weight:600}
 .tsk .tskTools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-inline-start:auto}
 .tsk .tskBtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:700;padding:6px 12px;border-radius:9px;border:1px solid var(--line,#e6e6e9);background:#fff;color:var(--ink,#17181c);cursor:pointer;white-space:nowrap}
 .tsk .tskBtn:hover{border-color:var(--accent,#17181c)}
@@ -167,7 +171,11 @@ const css = `
 .tsk .tskWin{background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:12px}
 .tsk .tskGrp{margin-bottom:12px}
 .tsk .tskHead{width:100%;box-sizing:border-box;gap:6px}
-.tsk .tskHead.drop{outline:2px dashed var(--accent,#14265e);outline-offset:-2px}
+.tsk .tskHead{position:relative;cursor:grab}
+.tsk .tskHead.dragging{opacity:.45}
+.tsk .tskHead.dropBefore::before,.tsk .tskHead.dropAfter::after{content:"";position:absolute;left:0;right:0;height:3px;border-radius:3px;background:var(--accent,#14265e)}
+.tsk .tskHead.dropBefore::before{top:-7px}
+.tsk .tskHead.dropAfter::after{bottom:-7px}
 .tsk .tskHeadBtn{flex:1 1 auto;display:flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;font:inherit;font-weight:800;color:inherit;text-align:start;padding:0}
 .tsk .tskAddIn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line,#e6e6e9);background:#fff;border-radius:7px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:2px 8px;color:#3f434b}
 .tsk .tskAddIn:hover{border-color:var(--accent,#14265e)}
@@ -186,12 +194,14 @@ const css = `
 .tsk tr.late td.due input{color:#b02a37;font-weight:800}
 .tsk .tskIn{width:100%;min-width:0;box-sizing:border-box;border:1px solid var(--line,#e6e6e9);border-radius:7px;padding:5px 7px;font:inherit;font-size:13px;background:#fff}
 .tsk textarea.tskIn{resize:vertical;min-height:32px;line-height:1.4}
+.tsk textarea.tskArea{display:block}
+.tsk input[type=date].tskIn{padding:5px 4px;font-size:12.5px}
 .tsk tr.done .tskIn{background:transparent}
 .tsk select.tskSt{font-weight:800;border-radius:99px;text-align:center;padding:4px 6px;border:0}
 .tsk select.tskSt option{background:#fff;color:#17181c}
 .tsk .tskUpd{display:flex;align-items:center;justify-content:center;gap:4px}
 .tsk .tskUpd .last{font-size:11px;color:#5b5e66;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tsk .tskFixed{text-align:start;font-weight:700;padding:5px 7px;font-size:13px}
+.tsk .tskFixed{text-align:start;font-weight:400;padding:5px 7px;font-size:13px;line-height:1.4}
 .tsk .tskEnd{display:flex;flex-direction:column;align-items:center;gap:3px}
 .tsk .tskRfi{border:1px solid #7C3AED;color:#7C3AED;background:#fff;border-radius:6px;font:inherit;font-size:10.5px;font-weight:800;padding:1px 6px;cursor:pointer;white-space:nowrap}
 .tsk .tskRfi:hover{background:#f3edff}
@@ -327,7 +337,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     .concat(tasks.some((t) => catOf(t) === NONE) ? [NONE] : []);
   const inUse = cats.map((c) => c.key).concat(tasks.some((t) => catOf(t) === NONE) ? [NONE] : []);
   const shownGroups = cat === "all" ? inUse : inUse.filter((k) => k === cat);
-  useEffect(() => { if (cat !== "all" && !withTasks.includes(cat)) setCat("all"); }, [withTasks.join("|")]);
+  useEffect(() => { if (cat !== "all" && !inUse.includes(cat)) setCat("all"); }, [inUse.join("|")]);
   const [newCat, setNewCat] = useState(null);         // the "+ קטגוריה" box
   const deleteCat = (k) => {
     if (!onCatalogChange || k === NONE) return;
@@ -378,23 +388,34 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   // 06.11.26 — the groups move up and down among themselves (closed or open):
   // she decides which comes first. The order is the library's, so every
   // project shows them the same way.
+  // 06.11.26 — no arrows: a category is dragged by its heading; a line shows
+  // where it will land, and the page scrolls while it is held near the top or
+  // the bottom, so it can go anywhere on the board, not only what is on screen.
   const [dragK, setDragK] = useState(null);
-  const moveCat = (k, toK) => {
+  const [dropAt, setDropAt] = useState(null);         // { k, pos: "before" | "after" }
+  const moveCat = (k, toK, pos) => {
     if (!onCatalogChange || k === NONE || toK === NONE || k === toK) return;
     const all = ((catalog || {}).taskCats || []).slice();
     const from = all.findIndex((c) => c.key === k);
-    const to = all.findIndex((c) => c.key === toK);
-    if (from < 0 || to < 0) return;
+    if (from < 0) return;
     const [x] = all.splice(from, 1);
-    all.splice(to, 0, x);
+    const to = all.findIndex((c) => c.key === toK);
+    if (to < 0) return;
+    all.splice(pos === "after" ? to + 1 : to, 0, x);
     onCatalogChange({ ...(catalog || {}), taskCats: all });
   };
-  const stepCat = (k, d) => {
-    const real = inUse.filter((x) => x !== NONE);
-    const i = real.indexOf(k), j = i + d;
-    if (i < 0 || j < 0 || j >= real.length) return;
-    moveCat(k, real[j]);
-  };
+  useEffect(() => {
+    if (!dragK) return;
+    let raf = 0, dy = 0;
+    const tick = () => { if (dy) { window.scrollBy(0, dy); raf = requestAnimationFrame(tick); } else raf = 0; };
+    const onOver = (e) => {
+      const edge = 80, h = window.innerHeight;
+      dy = e.clientY < edge ? -Math.ceil((edge - e.clientY) / 4) : e.clientY > h - edge ? Math.ceil((e.clientY - (h - edge)) / 4) : 0;
+      if (dy && !raf) raf = requestAnimationFrame(tick);
+    };
+    document.addEventListener("dragover", onOver);
+    return () => { document.removeEventListener("dragover", onOver); if (raf) cancelAnimationFrame(raf); dy = 0; };
+  }, [dragK]);
   const addCat = (name) => {
     const v = String(name || "").trim();
     if (!v || !onCatalogChange) return "";
@@ -418,15 +439,15 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   const doExport = async (kind, hdr) => {
     if (!boardExport) return;
     const H = hdr || tskTitles();
-    const head = ["תאריך הקמה", "תיאור", "אחריות", "תאריך יעד", "סטטוס", "הערות / מידע נוסף", "עדכון אחרון"];
-    const widths = [9, 26, 11, 9, 9, 18, 18];
+    const head = ["תאריך הקמה", "תיאור", "אחריות", "תאריך יעד", "סטטוס", "תאריך ביצוע", "הערות / מידע נוסף", "עדכון אחרון"];
+    const widths = [9, 24, 10, 9, 9, 9, 15, 15];
     const body = [], tone = [], secs = [], ranks = [];
     shownGroups.forEach((k, gi) => {
       tasks.filter((t) => catOf(t) === k).forEach((t) => {
         const st = ST[t.status] || ST.open;
         const ups = t.updates || [];
         const last = ups[ups.length - 1];
-        body.push([fmt(t.created), t.desc || "", t.owner || "", fmt(t.due), st[1], t.notes || "", last ? `${fmt(last.date)} – ${last.text}` : ""]);
+        body.push([fmt(t.created), t.desc || "", t.owner || "", fmt(t.due), st[1], fmt(t.doneAt), t.notes || "", last ? `${fmt(last.date)} – ${last.text}` : ""]);
         tone.push(t.status === "done" ? "ok" : t.status === "progress" ? "wait" : t.status === "info" ? "" : "late");
         secs.push(catName(k)); ranks.push(gi);
       });
@@ -459,7 +480,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     <div className="tskBar">
       <div className="sbCatBar">
         <button type="button" className=${`sbCatBtn all ${cat === "all" ? "on" : ""}`} onClick=${() => setCat("all")}>כל הקטגוריות</button>
-        ${withTasks.map((k) => html`<button key=${k} type="button" className=${`sbCatBtn ${cat === k ? "on" : ""}`} onClick=${() => { setCat(k); setOpenGrp((o) => ({ ...o, [k]: true })); }}>${catName(k)}</button>`)}
+        ${inUse.map((k) => html`<button key=${k} type="button" className=${`sbCatBtn ${cat === k ? "on" : ""}`} onClick=${() => { setCat(k); setOpenGrp((o) => ({ ...o, [k]: true })); }}>${catName(k)}</button>`)}
       </div>
       <div className="tskTools">
         <button type="button" className="tskBtn primary" title="משימה חדשה" onClick=${() => setNewAsk(true)}><${Plus} size=${16} strokeWidth=${2.6} /> משימה חדשה</button>
@@ -484,12 +505,19 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
         const list = tasks.filter((t) => catOf(t) === k);
         const open = !!openGrp[k] || cat === k;
         return html`<div key=${k} className="tskGrp">
-          <div className=${`contactsAdminGroupHead tskHead ${open ? "open" : ""} ${dragK && dragK !== k && k !== NONE ? "drop" : ""}`.trim()}
+          <div className=${`contactsAdminGroupHead tskHead ${open ? "open" : ""} ${dragK === k ? "dragging" : ""} ${dropAt && dropAt.k === k && dragK !== k ? (dropAt.pos === "after" ? "dropAfter" : "dropBefore") : ""}`.trim()}
             draggable=${k !== NONE && !!onCatalogChange}
+            title=${k !== NONE && onCatalogChange ? "לגרור את הכותרת כדי לשנות את מקום הקטגוריה" : ""}
             onDragStart=${(e) => { setDragK(k); try { e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", k); } catch (x) {} }}
-            onDragEnd=${() => setDragK(null)}
-            onDragOver=${(e) => { if (dragK && k !== NONE) e.preventDefault(); }}
-            onDrop=${(e) => { e.preventDefault(); if (dragK) moveCat(dragK, k); setDragK(null); }}>
+            onDragEnd=${() => { setDragK(null); setDropAt(null); }}
+            onDragOver=${(e) => {
+              if (!dragK || k === NONE) return;
+              e.preventDefault();
+              const r = e.currentTarget.getBoundingClientRect();
+              const pos = e.clientY > r.top + r.height / 2 ? "after" : "before";
+              if (!dropAt || dropAt.k !== k || dropAt.pos !== pos) setDropAt({ k, pos });
+            }}
+            onDrop=${(e) => { e.preventDefault(); if (dragK && dropAt) moveCat(dragK, dropAt.k, dropAt.pos); setDragK(null); setDropAt(null); }}>
             ${k !== NONE && onCatalogChange && html`<span className="tskGrip" title="גרירה לשינוי הסדר"><${GripVertical} size=${15} /></span>`}
             <button type="button" className="tskHeadBtn" onClick=${() => setOpenGrp((o) => ({ ...o, [k]: !open }))}>
               ${open ? html`<${ChevronDown} size=${16} className="contactsSecChev" />` : html`<${ChevronLeft} size=${16} className="contactsSecChev" />`}
@@ -497,16 +525,12 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
             </button>
             <button type="button" className="tskAddIn" title=${`משימה נוספת ב"${catName(k)}"`} onClick=${() => setNewAsk(k === NONE ? true : k)}><${Plus} size=${14} strokeWidth=${2.6} /> משימה</button>
             ${k !== NONE && onCatalogChange && html`<button type="button" className="tskCatDel" title="מחיקת הקטגוריה מהמערכת" onClick=${() => deleteCat(k)}><${Trash2} size=${13} /></button>`}
-            ${k !== NONE && onCatalogChange && cat === "all" && html`<span className="tskMove">
-              <button type="button" title="למעלה" disabled=${inUse.indexOf(k) === 0} onClick=${() => stepCat(k, -1)}><${ArrowUp} size=${14} /></button>
-              <button type="button" title="למטה" disabled=${inUse.filter((x) => x !== NONE).indexOf(k) === inUse.filter((x) => x !== NONE).length - 1} onClick=${() => stepCat(k, 1)}><${ArrowDown} size=${14} /></button>
-            </span>`}
           </div>
           ${open && html`<div className="tskTblWrap"><table>
-            <colgroup><col style=${{ width: "10%" }} /><col style=${{ width: "24%" }} /><col style=${{ width: "12%" }} /><col style=${{ width: "11%" }} />
-              <col style=${{ width: "10%" }} /><col style=${{ width: "18%" }} /><col style=${{ width: "11%" }} /><col style=${{ width: "7%" }} /></colgroup>
-            <thead><tr><th>תאריך הקמה</th><th>תיאור</th><th>אחריות</th><th>תאריך יעד</th><th>סטטוס</th><th>הערות / מידע נוסף</th><th>עדכונים</th><th></th></tr></thead>
-            <tbody>${list.length === 0 && html`<tr><td colSpan=${8} className="tskEmpty">אין משימות בקטגוריה — "+ משימה" בכותרת</td></tr>`}${list.map((t) => {
+            <colgroup><col style=${{ width: "10%" }} /><col style=${{ width: "20%" }} /><col style=${{ width: "10%" }} /><col style=${{ width: "10%" }} />
+              <col style=${{ width: "9%" }} /><col style=${{ width: "10%" }} /><col style=${{ width: "16%" }} /><col style=${{ width: "9%" }} /><col style=${{ width: "6%" }} /></colgroup>
+            <thead><tr><th>תאריך הקמה</th><th>תיאור</th><th>אחריות</th><th>תאריך יעד</th><th>סטטוס</th><th>תאריך ביצוע</th><th>הערות / מידע נוסף</th><th>עדכונים</th><th></th></tr></thead>
+            <tbody>${list.length === 0 && html`<tr><td colSpan=${9} className="tskEmpty">אין משימות בקטגוריה — "+ משימה" בכותרת</td></tr>`}${list.map((t) => {
               const st = ST[t.status] || ST.open;
               const late = t.due && t.status !== "done" && t.status !== "info" && t.due < nowIso;
               const ups = t.updates || [];
@@ -515,12 +539,16 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
                 <td><input type="date" className="tskIn" value=${t.created || ""} onChange=${(e) => patch(t.id, { created: e.target.value })} /></td>
                 <td>${isFixed(t)
                   ? html`<div className="tskFixed" title="משימה קבועה בכל פרויקט">${t.desc}</div>`
-                  : html`<textarea className="tskIn" rows=${1} value=${t.desc || ""} placeholder="תיאור המשימה" onChange=${(e) => patch(t.id, { desc: e.target.value })} />`}</td>
+                  : html`<${Area} value=${t.desc || ""} placeholder="תיאור המשימה" rows=${3} h=${(t.h || {}).desc}
+                      onChange=${(v) => patch(t.id, { desc: v })} onH=${(px) => patch(t.id, { h: { ...(t.h || {}), desc: px } })} />`}</td>
                 <td><input className="tskIn" list="tskPeople" value=${t.owner || ""} placeholder="אחראי/ת" onChange=${(e) => patch(t.id, { owner: e.target.value })} /></td>
                 <td className="due"><input type="date" className="tskIn" value=${t.due || ""} title=${late ? "עבר תאריך היעד" : ""} onChange=${(e) => patch(t.id, { due: e.target.value })} /></td>
-                <td><select className="tskIn tskSt" style=${{ color: st[2], background: st[3] }} value=${st[0]} onChange=${(e) => patch(t.id, { status: e.target.value })}>
+                <td><select className="tskIn tskSt" style=${{ color: st[2], background: st[3] }} value=${st[0]}
+                  onChange=${(e) => { const v = e.target.value; patch(t.id, { status: v, doneAt: v === "done" ? (t.status === "done" && t.doneAt ? t.doneAt : today()) : "" }); }}>
                   ${TASK_STATUS.map((s) => html`<option key=${s[0]} value=${s[0]}>${s[1]}</option>`)}</select></td>
-                <td><textarea className="tskIn" rows=${1} value=${t.notes || ""} placeholder="הערות / מידע נוסף" onChange=${(e) => patch(t.id, { notes: e.target.value })} /></td>
+                <td><input type="date" className="tskIn" value=${t.doneAt || ""} title="נכתב לבד כשהסטטוס הופך ל'בוצע'" onChange=${(e) => patch(t.id, { doneAt: e.target.value })} /></td>
+                <td><${Area} value=${t.notes || ""} placeholder="הערות / מידע נוסף" rows=${isFixed(t) ? 2 : 3} h=${(t.h || {}).notes}
+                  onChange=${(v) => patch(t.id, { notes: v })} onH=${(px) => patch(t.id, { h: { ...(t.h || {}), notes: px } })} /></td>
                 <td><div className="tskUpd">
                   <button type="button" className="tskBtn icon" title="עדכון חדש" onClick=${() => setUpdFor(t.id)}><${Plus} size=${14} strokeWidth=${2.6} /></button>
                   <button type="button" className="tskBtn icon" title=${last ? `רשימת עדכונים · אחרון: ${fmt(last.date)}` : "רשימת עדכונים"} disabled=${!ups.length}
@@ -550,6 +578,25 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
       onRemove=${(uidv) => { if (confirm("למחוק את העדכון?")) patch(logTask.id, { updates: (logTask.updates || []).filter((u) => u.id !== uidv) }); }} />`}
     ${toast && html`<div className="tskToast">${toast}</div>`}
   </div>`;
+}
+
+// 06.11.26 — a text box three lines tall to begin with; when she drags it
+// taller, the height is kept with the task and it opens that way next time.
+function Area({ value, onChange, placeholder, rows, h, onH }) {
+  const ref = useRef(null);
+  const base = useRef(0);
+  useEffect(() => { if (ref.current && !h) base.current = Math.round(ref.current.offsetHeight); }, []);
+  // A drag of the corner ends with the mouse let go on the box: if its height
+  // changed, that height is hers.
+  const check = () => {
+    const el = ref.current;
+    if (!el || !onH) return;
+    const px = Math.round(el.offsetHeight);
+    const was = h || base.current;
+    if (was && Math.abs(px - was) > 2) onH(px);
+  };
+  return html`<textarea ref=${ref} className="tskIn tskArea" rows=${rows || 3} value=${value} placeholder=${placeholder}
+    style=${h ? { height: h + "px" } : null} onChange=${(e) => onChange(e.target.value)} onMouseUp=${check} />`;
 }
 
 // A new task: its category (from the library, or a new one typed here — it
