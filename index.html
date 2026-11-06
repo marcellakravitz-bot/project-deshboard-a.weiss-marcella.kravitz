@@ -8207,6 +8207,7 @@ function CardView({
   onChangeCiQueue,
   projectMarkup,
   appRole,
+  teamMode,
   onChangeLliRows,
   sdRows,
   onChangeSdRows,
@@ -8281,7 +8282,7 @@ function CardView({
     } })), isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
     projectId: project.id, projectName: project.name, projectEnd: project.endDate, currentEmail,
     subs: ((subsData || {}).list) || [],
-    printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
+    printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" && !teamMode ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
     categories: BOARD_CATEGORIES.map((c) => ({ key: c.key, he: c.he, en: c.en })),
     brand: { accent: project.accent || null, clientLogo: project.clientLogoUrl || null, supervisionLogo: project.supervisionLogoUrl || null, brandLogo: DEFAULT_BRAND_LOGO_URL || null } })), showSchedule && /* @__PURE__ */ React14.createElement(
     ProjectScheduleCard,
@@ -23522,6 +23523,7 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
 // has a preview (the app's home screen in a phone, sized to the window, no
 // scrolling) and an editor that switches its buttons on and off. The app reads
 // the switches from the server (sub-portal, app-config).
+var AW_OWNER_EMAIL = "marcella.kravitz@gmail.com";
 var APP_DEFS = [
   { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "קבלני משנה, לו\"ז, יומן ועוד — כפי שמנהל פרויקט רואה" },
   { key: "sub", he: "אפליקציית קבלן משנה", sub: "מה שקבלן משנה רואה במקצוע שלו" }
@@ -24695,6 +24697,10 @@ function ProjectDashboardApp() {
   });
   const [isAuthenticated, setIsAuthenticated] = useState6(false);
   const [authRole, setAuthRole] = useState6(null);
+  // 06.11.26 — a dashboard team user ("team"): the administrator's screens on
+  // the projects given to them, without the black menu. The server keeps them
+  // inside those projects (users/supabase/001_team_role.sql).
+  const [teamMode, setTeamMode] = useState6(false);
   const [appRole, setAppRole] = useState6(null);
   // Who may write which row, and when.
   //
@@ -24863,7 +24869,7 @@ function ProjectDashboardApp() {
     })();
   }, [isAuthenticated, appRole]);
   useEffect5(() => {
-    if (!isAuthenticated || appRole !== "admin" || !sbAiRulesLoaded) return;
+    if (!isAuthenticated || appRole !== "admin" || teamMode || !sbAiRulesLoaded) return;
     (async () => {
       try {
         await saveAppState("submittal-ai-rules", sbAiRules);
@@ -24891,7 +24897,7 @@ function ProjectDashboardApp() {
     })();
   }, [isAuthenticated]);
   useEffect5(() => {
-    if (!isAuthenticated || appRole !== "admin" || !printSettingsLoaded) return;
+    if (!isAuthenticated || appRole !== "admin" || teamMode || !printSettingsLoaded) return;
     (async () => {
       try { await saveAppState("print-settings", printSettings); } catch (e) { console.error("[awdash] save print-settings failed", e); }
     })();
@@ -24912,7 +24918,7 @@ function ProjectDashboardApp() {
     })();
   }, [isAuthenticated, appRole]);
   useEffect5(() => {
-    if (!isAuthenticated || appRole !== "admin" || !appConfigLoaded) return;
+    if (!isAuthenticated || appRole !== "admin" || teamMode || !appConfigLoaded) return;
     (async () => { try { await saveAppState("app-config", appConfig); } catch (e) { console.error("[awdash] save app-config failed", e); } })();
   }, [appConfig, appConfigLoaded, isAuthenticated, appRole]);
   // One scanned signature (stamp + pen) per user, keyed by e-mail. Its own row
@@ -25374,7 +25380,7 @@ function ProjectDashboardApp() {
   // not locked, absent. The same rule is enforced in the database by
   // marcella_may_read(), so a hidden card is not the only thing standing
   // between another account and the contents. (5.9.26)
-  const canSeeMarcella = appRole === "admin"
+  const canSeeMarcella = (appRole === "admin" && !teamMode)
     || !!((userPerms || {})[String(loggedInEmail || "").trim().toLowerCase()] || {}).marcella;
   // What a client's board holds, named rather than deduced. A list of what is
   // shown is safer than a list of what is hidden: a cube added next month is
@@ -25400,7 +25406,7 @@ function ProjectDashboardApp() {
   // which lists every project whatever its switch says.
   const visibleProjects = (activeContractor.projects || []).filter(
     (p) => p.name && p.name.trim() && p.published && (
-      appRole === "admin" ||
+      (appRole === "admin" && !teamMode) ||
       (allowedProjectIds || []).indexOf(String(p.id)) >= 0
     )
   );
@@ -25528,7 +25534,7 @@ function ProjectDashboardApp() {
         // project they were not given opened empty — but its name, and the
         // fact that it exists, were on their screen. (7.9.26)
         let granted = null;
-        if (role !== "admin") {
+        if (role !== "admin" || email !== AW_OWNER_EMAIL) {
           try {
             const { data: rows, error: accErr } = await supabase
               .from("project_access").select("project_id, role");
@@ -25547,12 +25553,16 @@ function ProjectDashboardApp() {
         // that is off does not reach anyone except the system administrator,
         // whatever rights they were given. Switching it back on restores it.
         const configured = projs.filter((p) =>
-          p.name && (role === "admin" || (p.published && granted.indexOf(String(p.id)) >= 0)));
+          p.name && ((role === "admin" && email === AW_OWNER_EMAIL) || (p.published && granted.indexOf(String(p.id)) >= 0)));
+        // 06.11.26 — the black menu is hers alone (marcella.kravitz@gmail.com);
+        // any other administrator account works as a team user.
+        const isTeam = role === "team" || (role === "admin" && email !== AW_OWNER_EMAIL);
+        setTeamMode(isTeam);
         setLoginError(null);
         setForm({ email: "", password: "" });
         setIsAuthenticated(true);
         setLoggedInEmail(email);
-        setAppRole(role);
+        setAppRole(isTeam ? "admin" : role);
         // A corporate mail filter often strips the invitation link, so the
         // invitation says instead: your first password is your own address.
         // Anyone who signs in with exactly that has not chosen a password yet,
@@ -25569,8 +25579,8 @@ function ProjectDashboardApp() {
           setDisclaimerChecked(false);
           setShowDisclaimer(true);
         }
-        if (role === "admin" || role === "contractor") {
-          const mine = role === "admin" ? projs.map((p) => p.id) : configured.map((p) => p.id);
+        if (role === "admin" || role === "contractor" || isTeam) {
+          const mine = role === "admin" && !isTeam ? projs.map((p) => p.id) : configured.map((p) => p.id);
           setSessionGrants(mine.map((id) => ({ projectId: id, role: "contractor", allowedCards: [] })));
           setAuthRole("contractor");
           // A main contractor edits the projects they were given — that is what
@@ -25578,7 +25588,7 @@ function ProjectDashboardApp() {
           // that are theirs to read only are read-only by their own rule, not
           // by withholding this. (7.9.26)
           setEditableProjectIds(mine);
-          if (role === "admin") {
+          if (role === "admin" || isTeam) {
             setView("projectPicker");
           } else {
             const target = configured[0] || null;
@@ -25782,6 +25792,7 @@ function ProjectDashboardApp() {
     setIsAuthenticated(false);
     setAuthRole(null);
     setAppRole(null);
+    setTeamMode(false);
     setLoggedInEmail(null);
     setEditableProjectIds([]);
     setAllowedProjectIds(null);
@@ -26618,6 +26629,7 @@ function ProjectDashboardApp() {
         onChangeCiQueue: (next) => updateProjectExtras(activeProject.id, { ciQueue: next }),
         projectMarkup: activeProject.markupPct || 0,
         appRole,
+        teamMode,
         // Where an RFI, an LLI row or a submittal is sent when somebody ticks
         // "add to change instructions". The change-instructions register reads
         // this list; nothing here decides that a change is owed. (2.9.26)
@@ -26682,7 +26694,7 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms, printSettings }), systemAdminSection === "apps" && React15.createElement(AppsScreen, { isRTL, config: appConfig, onChange: setAppConfig, loaded: appConfigLoaded }), systemAdminSection === "printSettings" && React15.createElement(PrintSettingsScreen, { isRTL, value: printSettings, onSave: setPrintSettings, defaultLogo: DEFAULT_BRAND_LOGO_URL || activeContractor.logoUrl, defaultAccent: viewData.accent && viewData.accent.accent || "#1A559E" }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "libraries" && /* @__PURE__ */ React15.createElement(DataLibrariesScreen, {
+  })(), view === "systemAdmin" && !teamMode && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms, printSettings }), systemAdminSection === "apps" && React15.createElement(AppsScreen, { isRTL, config: appConfig, onChange: setAppConfig, loaded: appConfigLoaded }), systemAdminSection === "printSettings" && React15.createElement(PrintSettingsScreen, { isRTL, value: printSettings, onSave: setPrintSettings, defaultLogo: DEFAULT_BRAND_LOGO_URL || activeContractor.logoUrl, defaultAccent: viewData.accent && viewData.accent.accent || "#1A559E" }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "libraries" && /* @__PURE__ */ React15.createElement(DataLibrariesScreen, {
     isRTL, catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog(n),
     // the contacts catalogue tab keeps the categories as they are
     contactsProps: { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [], hiddenCats: (cur && cur.hiddenCats) || [] })), contactsByProject, onContactsChange: setProjectContacts }
@@ -26930,7 +26942,7 @@ function ProjectDashboardApp() {
           setPendingDisclaimer(false);
         }
       }
-    }), showDisclaimer && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), document.body), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: APP_FRAME_DIR, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("libraries") }, /* @__PURE__ */ React15.createElement(DatabaseIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מאגרי מידע" : "Data libraries"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("printSettings") }, React15.createElement(Printer, { size: 16, strokeWidth: 1.9 }), React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות הדפסת מסמכים" : "Document print settings"), React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("apps") }, React15.createElement(SmartphoneIcon, { size: 16, strokeWidth: 1.9 }), React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "אפליקציות" : "Apps"), React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+    }), showDisclaimer && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), document.body), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: APP_FRAME_DIR, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && !teamMode && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), appRole === "admin" && !teamMode && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && !teamMode && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && !teamMode && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("libraries") }, /* @__PURE__ */ React15.createElement(DatabaseIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מאגרי מידע" : "Data libraries"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && !teamMode && React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("printSettings") }, React15.createElement(Printer, { size: 16, strokeWidth: 1.9 }), React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות הדפסת מסמכים" : "Document print settings"), React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && !teamMode && React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("apps") }, React15.createElement(SmartphoneIcon, { size: 16, strokeWidth: 1.9 }), React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "אפליקציות" : "Apps"), React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
