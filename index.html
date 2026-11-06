@@ -2692,6 +2692,12 @@ var pdfViewer = `
         .appsEditHint { font-size: 12.5px; font-weight: 700; color: var(--steel); margin: 0 0 8px; text-align: start; }
         .appsTick { display: flex; align-items: center; gap: 8px; padding: 5px 2px; font-size: 13.5px; cursor: pointer; }
         .appsTick input { width: 17px; height: 17px; accent-color: #1f7a3e; }
+        .appsFolders { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px; }
+        .appsFolder { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 6px; background: #fff; }
+        .appsFolder > b { display: block; font-size: 12.5px; color: var(--accent, #0F3460); margin-bottom: 2px; }
+        .appsFolder.soon { background: #f7f8fa; }
+        .appsTick.off { cursor: default; color: var(--mist); }
+        .appsTick .soonTag { margin-inline-start: auto; font-size: 10.5px; font-weight: 800; color: #8a6d00; background: #fff4cc; border-radius: 999px; padding: 2px 8px; }
         /* The phone fills the window's height and never scrolls the page. */
         .appsPvScrim { position: fixed; inset: 0; z-index: 900; background: rgba(16,17,20,.55); display: flex; align-items: center; justify-content: center; padding: 12px; overflow: hidden; }
         .appsPvWrap { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; max-height: 100%; }
@@ -23624,6 +23630,22 @@ var APP_DEFS = [
   { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "קבלני משנה, לו\"ז, יומן ועוד — כפי שמנהל פרויקט רואה" },
   { key: "sub", he: "אפליקציית קבלן משנה", sub: "מה שקבלן משנה רואה במקצוע שלו" }
 ];
+// 06.11.26 — every folder of the dashboard, with the buttons it has in the
+// apps. A folder with no buttons yet is listed too, so the whole site is in
+// view; its screens in the app are still to be built.
+var APP_FOLDERS = [
+  { he: "ניהול קבלני משנה", btns: ["log", "weekly", "standards", "specs"] },
+  { he: "Submittal", btns: ["submittal"] },
+  { he: "SD", btns: ["sd"] },
+  { he: "ריג'קטים", btns: ["rejects"] },
+  { he: "ניהול משימות", btns: ["tasks"] },
+  { he: "By Room", soon: "חיפוש לפי חדר" },
+  { he: "לו\"ז פרויקט", soon: "לו\"ז הפרויקט (MS Project)" },
+  { he: "LLI", soon: "הזמנות ואספקות" },
+  { he: "RFI", soon: "שאלות ותשובות" },
+  { he: "הוראות שינוי", soon: "הוראות שינוי ותמחור" },
+  { he: "תיק מתקן", soon: "תיק מתקן / אנשי קשר" }
+];
 var APP_BUTTONS = [
   ["log", "יומן עדכונים"], ["weekly", "לו״ז שבועי"], ["submittal", "סבמיטלים"], ["sd", "SD"],
   ["standards", "בדיקות מכון התקנים"], ["specs", "מפרטים מיוחדים"], ["rejects", "ריג'קטים"],
@@ -23708,11 +23730,18 @@ function AppsScreen({ isRTL, config, onChange, loaded }) {
           sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPreview(a.key) }, isRTL ? "תצוגה מקדימה" : "Preview"),
           sbH("button", { type: "button", className: `ghostBtn small ${edit === a.key ? "on" : ""}`, onClick: () => setEdit(edit === a.key ? null : a.key) }, isRTL ? "עריכה" : "Edit"))),
       edit === a.key ? sbH("div", { className: "appsEdit" },
-        sbH("p", { className: "appsEditHint" }, isRTL ? "הלחצנים שיוצגו באפליקציה:" : "Buttons shown in the app:"),
-        APP_BUTTONS.filter((x) => !x[2] || a.key === "pm").map(([b, label]) => sbH("label", { key: b, className: "appsTick" },
-          sbH("input", { type: "checkbox", checked: hiddenOf(a.key).indexOf(b) < 0, onChange: () => toggle(a.key, b) }), label)),
-        sbH("div", { style: { textAlign: "center", marginTop: 10 } },
-          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPreview(a.key) }, isRTL ? "תצוגה מקדימה" : "Preview"))) : null))));
+        sbH("p", { className: "appsEditHint" }, isRTL ? "מה יוצג באפליקציה — לפי התיקיות באתר:" : "What the app shows, by the dashboard's folders:"),
+        sbH("div", { className: "appsFolders" }, APP_FOLDERS.map((f) => {
+          const btns = (f.btns || []).map((b) => APP_BUTTONS.find((x) => x[0] === b)).filter((x) => x && (!x[2] || a.key === "pm"));
+          if (f.btns && !btns.length) return null;
+          return sbH("div", { key: f.he, className: `appsFolder ${f.soon ? "soon" : ""}` },
+            sbH("b", null, f.he),
+            f.soon
+              ? sbH("label", { className: "appsTick off", title: "המסך הזה עוד לא קיים באפליקציה" },
+                  sbH("input", { type: "checkbox", disabled: true, checked: false }), f.soon, sbH("span", { className: "soonTag" }, "בקרוב"))
+              : btns.map(([b, label]) => sbH("label", { key: b, className: "appsTick" },
+                  sbH("input", { type: "checkbox", checked: hiddenOf(a.key).indexOf(b) < 0, onChange: () => toggle(a.key, b) }), label)));
+        }))) : null))));
 }
 // 06.11.26 — "הגדרות הדפסת מסמכים": everything a printed sheet carries around
 // its content — logos, the frame, the footer (text and picture), the colour,
