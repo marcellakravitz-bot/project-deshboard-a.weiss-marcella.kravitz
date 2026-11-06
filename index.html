@@ -96,6 +96,8 @@ import {
   printSheetCss,
   printStaticPage,
   printedStampText,
+  setPrintPrefs,
+  getPrintPrefs,
   sanitizeFileNamePart,
   sbBuildPrintHtml,
   sbCatCode,
@@ -575,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 258";
+var APP_BUILD = "06.11.2026 · build 259";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2630,6 +2632,27 @@ var pdfViewer = `
         .dlFind { display: flex; justify-content: center; margin: 4px 0 12px; }
         .dlCatSecBody { padding: 4px 6px 12px; }
         .appsScreen { max-width: 640px; margin-inline: auto; }
+        .psScreen { max-width: 640px; margin-inline: auto; }
+        .psSwitches { display: flex; flex-direction: column; gap: 8px; width: min(380px, 100%); }
+        .psSwitchRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 13px; font-weight: 600; }
+        .psPvScrim { position: fixed; inset: 0; z-index: 900; background: rgba(16,17,20,.55); display: flex; align-items: center; justify-content: center; padding: 12px; overflow: hidden; }
+        .psPvWrap { display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
+        .psPvTop { display: flex; align-items: center; gap: 12px; color: #fff; font-weight: 800; font-size: 14px; flex: none; }
+        /* An A4 sheet, as tall as the window allows, never scrolled. */
+        .psSheet { flex: 1 1 auto; min-height: 0; aspect-ratio: 210 / 297; max-width: calc(100vw - 24px); background: #fff; box-shadow: 0 20px 60px rgba(0,0,0,.45); padding: 3.2%; display: flex; flex-direction: column; box-sizing: border-box; font-family: 'Assistant', sans-serif; }
+        .psFrame { flex: 1 1 auto; border: 1.5px solid; border-radius: 10px; padding: 3%; display: flex; flex-direction: column; min-height: 0; }
+        .psHdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; border-bottom: 2px solid #d5d9df; padding-bottom: 8px; }
+        .psHdr img { max-height: 34px; max-width: 110px; object-fit: contain; justify-self: start; }
+        .psClientLogo { justify-self: end; font-size: 10px; color: #9aa3af; border: 1px dashed #c7ccd4; border-radius: 6px; padding: 6px 10px; }
+        .psTtl { text-align: center; font-weight: 800; font-size: 14px; }
+        .psTtl small { display: block; font-size: 9.5px; font-weight: 600; margin-top: 2px; }
+        .psBody { flex: 1 1 auto; display: flex; flex-direction: column; gap: 10px; padding-top: 10px; }
+        .psTh { height: 16px; border-radius: 3px; opacity: .9; }
+        .psEmpty { flex: 1 1 auto; border: 1px dashed #e3e5ea; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: #c0c4cc; font-size: 12px; }
+        .psFoot { flex: none; padding-top: 6px; text-align: center; }
+        .psFoot img { width: 50%; height: auto; display: block; margin: 0 auto; }
+        .psFootText { font-size: 9px; color: #5b5e66; margin-bottom: 3px; }
+        .psStamp { font-size: 8px; color: #9aa3af; padding-top: 2px; }
         .appsList { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
         .appsItem { border: 1px solid var(--line); border-radius: 12px; background: #fff; }
         .appsHead { display: flex; align-items: center; gap: 10px; padding: 12px 14px; }
@@ -11369,6 +11392,8 @@ function boardXlsxPlain(opts) {
 // edge of the paper.
 
 function printPaginateJs(stampText) {
+  // 06.11.26 — page numbers, when they are switched on in the print settings.
+  const PN = getPrintPrefs().pageNumbers ? 1 : 0;
   return `<script>
 // 20.10.26 — the pages are dealt only once every picture and the fonts have
 // arrived. Measured before that, a row with a picture was measured as a row
@@ -11542,6 +11567,17 @@ window.__awPaged = false;
   // 22.10.26 — no longer: the heading stays at the top of the frame, so the
   // table starts as high as it can and more of it fits on the sheet.
   void SHORT;
+  if (${PN}) {
+    pages.forEach(function (rec, i) {
+      var ft = rec.pg.querySelector(".pgFoot");
+      if (!ft) return;
+      var pn = document.createElement("div");
+      pn.className = "pageNo";
+      pn.textContent = (document.documentElement.dir === "ltr" ? "Page " + (i + 1) + " of " + pages.length : "עמוד " + (i + 1) + " מתוך " + pages.length);
+      pn.style.cssText = "text-align:center;font-size:7.5px;font-weight:700;color:#9aa3af;padding-top:1mm";
+      ft.appendChild(pn);
+    });
+  }
   src.remove();
 });
 <\/script>`;
@@ -23568,66 +23604,103 @@ function AppsScreen({ isRTL, config, onChange, loaded }) {
           sbH("div", { className: "appsNotch" }),
           sbH("iframe", { key: src(preview), src: src(preview), title: "preview" })))), document.body) : null);
 }
-// 06.11.26 — the paper every document is printed on: logo, footer text, footer
-// picture and colour. Saved for the whole system; empty means the default.
+// 06.11.26 — "הגדרות הדפסת מסמכים": everything a printed sheet carries around
+// its content — logos, the frame, the footer (text and picture), the colour,
+// the printed-on date and the page numbers — set once for the whole system.
+// Every field is centred; "תצוגה מקדימה" shows an empty sheet with all of it.
 function PrintSettingsScreen({ isRTL, value, onSave, defaultLogo, defaultAccent }) {
   const v0 = value || {};
   const defFoot = typeof DEFAULT_PDF_FOOTER !== "undefined" ? DEFAULT_PDF_FOOTER : "";
-  const [footerText, setFooterText] = useState6(v0.footerText || "");
-  const [footerImg, setFooterImg] = useState6(v0.footerImg != null ? v0.footerImg : defFoot);
-  const [logo, setLogo] = useState6(v0.logoUrl || defaultLogo || "");
-  const [accent, setAccent] = useState6(v0.accent || defaultAccent || "#1A559E");
+  const init = () => ({
+    footerText: v0.footerText || "",
+    footerImg: v0.footerImg != null ? v0.footerImg : defFoot,
+    logoUrl: v0.logoUrl || defaultLogo || "",
+    accent: v0.accent || defaultAccent || "#1A559E",
+    frame: v0.frame !== false,
+    stamp: v0.stamp !== false,
+    pageNumbers: !!v0.pageNumbers,
+    clientLogo: v0.clientLogo !== false
+  });
+  const [d, setD] = useState6(init);
   const [saved, setSaved] = useState6(false);
-  useEffect5(() => {
-    setFooterText(v0.footerText || ""); setFooterImg(v0.footerImg != null ? v0.footerImg : defFoot);
-    setLogo(v0.logoUrl || defaultLogo || ""); setAccent(v0.accent || defaultAccent || "#1A559E");
-  }, [JSON.stringify(v0)]);
-  const readFile = (e, set) => {
+  const [pv, setPv] = useState6(false);
+  useEffect5(() => { setD(init()); }, [JSON.stringify(v0)]);
+  const set = (k, val) => setD((x) => ({ ...x, [k]: val }));
+  const readFile = (e, k) => {
     const f = e.target.files && e.target.files[0];
     if (!f) return;
     const r = new FileReader();
-    r.onload = () => set(r.result);
+    r.onload = () => set(k, r.result);
     r.readAsDataURL(f);
     e.target.value = "";
   };
-  const lbl = { display: "block", fontSize: 12.5, fontWeight: 800, marginBottom: 6 };
-  const box = { marginTop: 14 };
   const save = () => {
     onSave({
-      footerText: footerText.trim(),
-      footerImg: footerImg === defFoot ? null : footerImg,
-      logoUrl: logo && logo !== defaultLogo ? logo : "",
-      accent: accent && accent !== defaultAccent ? accent : ""
+      footerText: d.footerText.trim(),
+      footerImg: d.footerImg === defFoot ? null : d.footerImg,
+      logoUrl: d.logoUrl && d.logoUrl !== defaultLogo ? d.logoUrl : "",
+      accent: d.accent && d.accent !== defaultAccent ? d.accent : "",
+      frame: d.frame, stamp: d.stamp, pageNumbers: d.pageNumbers, clientLogo: d.clientLogo
     });
     setSaved(true); setTimeout(() => setSaved(false), 2200);
   };
-  return sbH("section", { className: "panel", dir: isRTL ? "rtl" : "ltr", style: { maxWidth: 620, marginInline: "auto" } },
+  const lbl = { display: "block", fontSize: 12.5, fontWeight: 800, marginBottom: 8, textAlign: "center" };
+  const box = { marginTop: 16, display: "flex", flexDirection: "column", alignItems: "center" };
+  const row = { display: "flex", alignItems: "center", justifyContent: "center", gap: 12, flexWrap: "wrap" };
+  const sw = (k, he) => sbH("label", { key: k, className: "psSwitchRow" },
+    sbH("span", null, he),
+    sbH("button", { type: "button", className: `permSwitch ${d[k] ? "on" : ""}`, role: "switch", "aria-checked": !!d[k], onClick: () => set(k, !d[k]) }, sbH("span", null)));
+  const today = (() => { const t = new Date(); const p2 = (n) => String(n).padStart(2, "0"); return `${p2(t.getDate())}/${p2(t.getMonth() + 1)}/${t.getFullYear()}`; })();
+  return sbH("section", { className: "panel psScreen", dir: isRTL ? "rtl" : "ltr" },
     sbH("h2", { className: "panelTitle", style: { textAlign: "center" } }, isRTL ? "הגדרות הדפסת מסמכים" : "Document print settings"),
     sbH("p", { className: "panelSub", style: { textAlign: "center" } }, isRTL ? "חל על כל המסמכים שמודפסים מהמערכת" : "Applies to every printed document"),
-    sbH("div", { style: box }, sbH("span", { style: lbl }, isRTL ? "לוגו" : "Logo"),
-      sbH("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } },
-        logo ? sbH("img", { src: logo, alt: "", style: { height: 40, maxWidth: 160, objectFit: "contain" } }) : null,
-        sbH("label", { className: "ghostBtn small", style: { cursor: "pointer" } }, sbH(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת לוגו" : "Change logo",
-          sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => readFile(e, setLogo) })),
-        logo !== defaultLogo ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setLogo(defaultLogo || "") }, isRTL ? "חזרה ללוגו המקורי" : "Default") : null)),
-    sbH("div", { style: box }, sbH("span", { style: lbl }, isRTL ? "כותרת תחתונה (טקסט)" : "Footer text"),
-      sbH("textarea", { value: footerText, onChange: (e) => setFooterText(e.target.value), rows: 2, placeholder: isRTL ? "טקסט שיופיע בתחתית המסמך" : "Text at the foot of the document",
-        style: { width: "100%", boxSizing: "border-box", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical" } })),
-    sbH("div", { style: box }, sbH("span", { style: lbl }, isRTL ? "כותרת תחתונה (תמונה)" : "Footer image"),
-      sbH("div", { style: { display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" } },
-        footerImg ? sbH("img", { src: footerImg, alt: "", style: { height: 40, maxWidth: 260, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null,
-        sbH("label", { className: "ghostBtn small", style: { cursor: "pointer" } }, sbH(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "החלפת כותרת תחתונה" : "Change footer",
-          sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => readFile(e, setFooterImg) })),
-        footerImg !== defFoot ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setFooterImg(defFoot) }, isRTL ? "חזרה למקורית" : "Default") : null,
-        footerImg ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setFooterImg("") }, isRTL ? "ללא תמונה" : "None") : null)),
-    sbH("div", { style: box }, sbH("span", { style: lbl }, isRTL ? "גוון המסמך" : "Document colour"),
-      sbH("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } }, BRAND_PALETTES.map((pal) => sbH("button", {
-        key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setAccent(pal.accent),
-        style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 }
+    sbH("div", { style: box }, sbH("span", { style: lbl }, "לוגו החברה"),
+      sbH("div", { style: row },
+        d.logoUrl ? sbH("img", { src: d.logoUrl, alt: "", style: { height: 40, maxWidth: 160, objectFit: "contain" } }) : null,
+        sbH("label", { className: "ghostBtn small", style: { cursor: "pointer" } }, sbH(Upload4, { size: 14, strokeWidth: 2 }), " החלפת לוגו",
+          sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => readFile(e, "logoUrl") })),
+        d.logoUrl !== defaultLogo ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => set("logoUrl", defaultLogo || "") }, "חזרה ללוגו המקורי") : null)),
+    sbH("div", { style: box }, sbH("span", { style: lbl }, "כותרת תחתונה (טקסט)"),
+      sbH("textarea", { value: d.footerText, onChange: (e) => set("footerText", e.target.value), rows: 2, placeholder: "טקסט שיופיע בתחתית המסמך",
+        style: { width: "min(460px, 100%)", boxSizing: "border-box", padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 13, fontFamily: "inherit", resize: "vertical", textAlign: "center" } })),
+    sbH("div", { style: box }, sbH("span", { style: lbl }, "כותרת תחתונה (תמונה)"),
+      sbH("div", { style: row },
+        d.footerImg ? sbH("img", { src: d.footerImg, alt: "", style: { height: 40, maxWidth: 260, objectFit: "contain", border: "1px solid var(--line)", borderRadius: 6, background: "#fff", padding: 2 } }) : null,
+        sbH("label", { className: "ghostBtn small", style: { cursor: "pointer" } }, sbH(Upload4, { size: 14, strokeWidth: 2 }), " החלפת כותרת תחתונה",
+          sbH("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: (e) => readFile(e, "footerImg") })),
+        d.footerImg !== defFoot ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => set("footerImg", defFoot) }, "חזרה למקורית") : null,
+        d.footerImg ? sbH("button", { type: "button", className: "ghostBtn small", onClick: () => set("footerImg", "") }, "ללא תמונה") : null)),
+    sbH("div", { style: box }, sbH("span", { style: lbl }, "גוון המסמך"),
+      sbH("div", { style: { ...row, gap: 8 } }, BRAND_PALETTES.map((pal) => sbH("button", {
+        key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => set("accent", pal.accent),
+        style: { width: 28, height: 28, borderRadius: 999, background: pal.accent, cursor: "pointer", border: d.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 }
       })))),
-    sbH("div", { style: { display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 20 } },
-      sbH("button", { type: "button", onClick: save, style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, isRTL ? "שמירה" : "Save"),
-      saved ? sbH("span", { style: { color: "#1f7a3e", fontWeight: 700, fontSize: 12.5 } }, isRTL ? "נשמר ✓" : "Saved ✓") : null));
+    sbH("div", { style: box }, sbH("span", { style: lbl }, "מה יופיע בכל דף"),
+      sbH("div", { className: "psSwitches" },
+        sw("frame", "מסגרת בהיקף הדף"),
+        sw("clientLogo", "לוגו הלקוח בראש הדף"),
+        sw("stamp", "\"הודפס בתאריך\" בתחתית הדף"),
+        sw("pageNumbers", "מספור עמודים (עמוד X מתוך Y)"))),
+    sbH("div", { style: { display: "flex", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 22, flexWrap: "wrap" } },
+      sbH("button", { type: "button", onClick: save, style: { background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "9px 26px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, "שמירה"),
+      sbH("button", { type: "button", className: "ghostBtn", onClick: () => setPv(true) }, "תצוגה מקדימה"),
+      saved ? sbH("span", { style: { color: "#1f7a3e", fontWeight: 700, fontSize: 12.5 } }, "נשמר ✓") : null),
+    pv ? createPortal(sbH("div", { className: "psPvScrim", onClick: () => setPv(false) },
+      sbH("div", { className: "psPvWrap", onClick: (e) => e.stopPropagation() },
+        sbH("div", { className: "psPvTop" }, sbH("span", null, "תצוגה מקדימה — דף ריק עם כל האלמנטים"),
+          sbH("button", { type: "button", className: "appsPvX", onClick: () => setPv(false) }, "\u2715")),
+        sbH("div", { className: "psSheet", dir: "rtl" },
+          sbH("div", { className: "psFrame", style: { borderColor: d.frame ? d.accent : "transparent" } },
+            sbH("div", { className: "psHdr" },
+              d.logoUrl ? sbH("img", { src: d.logoUrl, alt: "" }) : sbH("span", null),
+              sbH("div", { className: "psTtl" }, sbH("div", { style: { color: d.accent } }, "שם הפרויקט"), sbH("small", { style: { color: d.accent } }, "שם המסמך · תאריך הנפקה")),
+              d.clientLogo ? sbH("span", { className: "psClientLogo" }, "לוגו לקוח") : sbH("span", null)),
+            sbH("div", { className: "psBody" }, sbH("div", { className: "psTh", style: { background: d.accent } }), sbH("div", { className: "psEmpty" }, "תוכן המסמך"))),
+          sbH("div", { className: "psFoot" },
+            d.footerText ? sbH("div", { className: "psFootText" }, d.footerText) : null,
+            d.footerImg ? sbH("img", { src: d.footerImg, alt: "" }) : null,
+            d.stamp ? sbH("div", { className: "psStamp" }, "הודפס בתאריך " + today) : null,
+            d.pageNumbers ? sbH("div", { className: "psStamp", style: { fontWeight: 700 } }, "עמוד 1 מתוך 1") : null)))), document.body) : null);
 }
 function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms, printSettings, subsByProject, onSubsChange }) {
   // 06.11.26 — the project an app-permissions list is shown for.
@@ -24912,6 +24985,8 @@ function ProjectDashboardApp() {
   // is stored; anything left empty keeps the house default.
   const [printSettings, setPrintSettings] = useState6({});
   const [printSettingsLoaded, setPrintSettingsLoaded] = useState6(false);
+  // What every sheet carries around its content, handed to the print helpers.
+  setPrintPrefs({ frame: printSettings.frame !== false, stamp: printSettings.stamp !== false, pageNumbers: !!printSettings.pageNumbers });
   useEffect5(() => {
     if (!isAuthenticated) return;
     (async () => {
@@ -26716,7 +26791,7 @@ function ProjectDashboardApp() {
           logoUrl: printSettings.logoUrl || DEFAULT_BRAND_LOGO_URL || activeContractor.logoUrl,
           // The client's own logo, as it was uploaded in the project settings.
           // A printed sheet that goes to the client carries both marks (29.8.26).
-          clientLogoUrl: (activeProject && activeProject.clientLogoUrl) || null,
+          clientLogoUrl: printSettings.clientLogo === false ? null : ((activeProject && activeProject.clientLogoUrl) || null),
           accent: printSettings.accent || viewData.accent && viewData.accent.accent || "#1A559E",
           footerImg: printSettings.footerImg != null ? printSettings.footerImg : (typeof DEFAULT_PDF_FOOTER !== "undefined" ? DEFAULT_PDF_FOOTER : ""),
           footerText: printSettings.footerText || ""

@@ -126,6 +126,7 @@ var PRINT_WIDE_MM = 297;
 // ---------------------------------------------------------------------------
 
 function printedStampText(lang) {
+  if (PRINT_PREFS.stamp === false) return "";
   const d = new Date();
   const p2 = (n) => String(n).padStart(2, "0");
   // The date, and not the hour. A sheet needs to say which day it is from;
@@ -144,6 +145,12 @@ function sanitizeFileNamePart(s) {
 // inside the record. The key is internal and nobody ever reads it, so it is
 // made of plain ASCII; the file keeps its real name in the record beside it
 // (29.8.26).
+// 06.11.26 — "הגדרות הדפסת מסמכים": what every printed sheet carries around
+// its content, set once for the whole system (frame, printed-on date, page
+// numbers). The dashboard hands them in with setPrintPrefs.
+let PRINT_PREFS = { frame: true, stamp: true, pageNumbers: false };
+function setPrintPrefs(p) { PRINT_PREFS = { ...PRINT_PREFS, ...(p || {}) }; }
+function getPrintPrefs() { return { ...PRINT_PREFS }; }
 function printSheetCss(o) {
   const opts = o || {};
   const wide = !!opts.landscape;
@@ -185,6 +192,7 @@ body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 /* Where the document is written before it is dealt into pages. */
 #src { position: absolute; left: -9999px; top: 0; width: ${w - 2 * m - 14}mm; }
+${PRINT_PREFS.frame === false ? ".frame { border-color: transparent !important; }" : ""}
 `;
 }
 // The whole sheet, for a document that is one page by design — the submittal
@@ -3584,6 +3592,8 @@ export {
   SubmittalSpecs,
   SignaturePad,
   printedStampText,
+  setPrintPrefs,
+  getPrintPrefs,
   sanitizeFileNamePart,
   printSheetCss,
   printStaticPage,
