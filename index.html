@@ -3270,11 +3270,14 @@ var pdfViewer = `
            the pill in the project cube, and being the later rule it was styling
            that pill too — which is how the pill drifted into the middle of its
            row (15.10.26). */
+        /* 06.11.26 — a search is always in the middle, its text too. */
         .contactsAdminSearch {
-          margin-inline-start: auto; display: flex; align-items: center; gap: 7px;
+          margin-inline: auto; display: flex; align-items: center; gap: 7px;
           border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px;
-          background: #fff; color: var(--mist); min-width: 240px;
+          background: #fff; color: var(--mist); min-width: 240px; width: min(380px, 100%);
         }
+        .contactsAdminSearch input { text-align: center; }
+        .contactsAdminSearch input::placeholder { text-align: center; }
         .contactsAdminSearch:focus-within { border-color: var(--accent); color: var(--steel); }
         .contactsAdminSearch input {
           border: none; outline: none; background: transparent; font: inherit; font-size: 13px;
