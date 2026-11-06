@@ -2613,6 +2613,9 @@ var pdfViewer = `
         /* 06.11.26 — the row of tools (statuses, add row, Excel, PDF) keeps a
            clear space under the summary squares. */
         .sbSumBar ~ .lliBar { margin-top: 18px; }
+        .dlFind { display: flex; justify-content: center; margin: 4px 0 12px; }
+        .dlFind input { width: min(380px, 100%); text-align: center; }
+        .dlFind input::placeholder { text-align: center; }
         .sbSumBox {
           display: inline-flex; align-items: baseline; justify-content: center; gap: 8px;
           min-width: 120px; padding: 8px 16px; border-radius: 10px;
@@ -9308,8 +9311,10 @@ function SupplierLibraryPanel({ isRTL }) {
   if (list == null) return sbH("p", { className: "panelSub" }, "טוען…");
   return sbH("div", { className: "dlSups" },
     err ? sbH("p", { className: "dlErr" }, /relation|does not exist|schema cache/i.test(err) ? "טבלת מאגר הספקים עדיין לא קיימת — היא תופעל בעדכון הבא." : "לא הצלחתי לפתוח את המאגר: " + err) : null,
+    // 06.11.26 — the search stands on its own, in the middle (her rule: a search is always centred).
+    sbH("div", { className: "dlFind" },
+      sbH("input", { className: "contactsInput contactsSearch", value: q, placeholder: isRTL ? "חיפוש ספק או מוצר" : "Search", onChange: (e) => setQ(e.target.value) })),
     sbH("div", { className: "dlAdd" },
-      sbH("input", { className: "contactsInput", value: q, placeholder: isRTL ? "חיפוש ספק או מוצר" : "Search", onChange: (e) => setQ(e.target.value) }),
       sbH("input", { className: "contactsInput", value: newName, placeholder: isRTL ? "שם ספק חדש" : "New supplier", onChange: (e) => setNewName(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") addSup(); } }),
       sbH("button", { type: "button", className: "functionEditBtn", onClick: addSup }, isRTL ? "+ ספק" : "+ Supplier")),
     !shown.length ? sbH("p", { className: "panelSub" }, isRTL ? "אין ספקים להצגה." : "No suppliers.") : null,
