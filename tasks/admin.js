@@ -28,7 +28,7 @@ import { supabase, PrintLangAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 8 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 9 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -206,6 +206,7 @@ const css = `
 .tsk .tskRfi{border:1px solid #7C3AED;color:#7C3AED;background:#fff;border-radius:6px;font:inherit;font-size:10.5px;font-weight:800;padding:1px 6px;cursor:pointer;white-space:nowrap}
 .tsk .tskRfi:hover{background:#f3edff}
 .tsk .tskRfi.on{background:#7C3AED;color:#fff}
+.tsk .tskBy{font-size:11px;color:#9aa0a8;margin-top:3px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tsk .tskEmpty{padding:22px;text-align:center;color:var(--mist,#9a9da5)}
 .tsk .tskErr{color:#b02a37;font-weight:600;font-size:13px;text-align:center;margin:10px 0}
 .tsk .tskSave{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:14px}
@@ -378,8 +379,19 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     patch(t.id, { rfi: { id: res.id, no: res.no }, updates: [...(t.updates || []), { id: uid("u"), date: today(), text: `נפתח RFI ${res.no}`, by: currentEmail || "" }] });
     flash(`נפתח RFI ${res.no} — בלחצן RFI`);
   };
+  // 06.11.26 — who did it: the name the signed-in user has among the
+  // contacts (by e-mail), or the e-mail itself. Kept on the task so the
+  // project managers' app shows the same.
+  const me = useMemo(() => {
+    const em = String(currentEmail || "").trim().toLowerCase();
+    if (!em) return null;
+    const pool = (contacts || []).concat((catalog || {}).people || []);
+    const hit = pool.find((c) => String(c.email || "").trim().toLowerCase() === em);
+    const nm = hit && hit.person && (hit.person.he || hit.person.en);
+    return { email: em, name: String(nm || "").trim() || em.split("@")[0] };
+  }, [currentEmail, contacts, catalog]);
   const create = (category, desc) => {
-    const t = { id: uid("t"), category: category || "", created: today(), desc: desc || "", owner: "", due: "", status: "open", notes: "", updates: [] };
+    const t = { id: uid("t"), category: category || "", created: today(), createdBy: me, desc: desc || "", owner: "", due: "", status: "open", notes: "", updates: [] };
     edit((d) => { d.tasks = [...d.tasks, t]; return d; });
     setOpenGrp((o) => ({ ...o, [category || NONE]: true }));
     setNewAsk(false);
@@ -527,16 +539,17 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
             ${k !== NONE && onCatalogChange && html`<button type="button" className="tskCatDel" title="מחיקת הקטגוריה מהמערכת" onClick=${() => deleteCat(k)}><${Trash2} size=${13} /></button>`}
           </div>
           ${open && html`<div className="tskTblWrap"><table>
-            <colgroup><col style=${{ width: "10%" }} /><col style=${{ width: "20%" }} /><col style=${{ width: "10%" }} /><col style=${{ width: "10%" }} />
-              <col style=${{ width: "9%" }} /><col style=${{ width: "10%" }} /><col style=${{ width: "16%" }} /><col style=${{ width: "9%" }} /><col style=${{ width: "6%" }} /></colgroup>
-            <thead><tr><th>תאריך הקמה</th><th>תיאור</th><th>אחריות</th><th>תאריך יעד</th><th>סטטוס</th><th>תאריך ביצוע</th><th>הערות / מידע נוסף</th><th>עדכונים</th><th></th></tr></thead>
-            <tbody>${list.length === 0 && html`<tr><td colSpan=${9} className="tskEmpty">אין משימות בקטגוריה — "+ משימה" בכותרת</td></tr>`}${list.map((t) => {
+            <colgroup><col style=${{ width: "10%" }} /><col style=${{ width: "19%" }} /><col style=${{ width: "10%" }} /><col style=${{ width: "10%" }} />
+              <col style=${{ width: "9%" }} /><col style=${{ width: "10%" }} /><col style=${{ width: "15%" }} /><col style=${{ width: "8%" }} /><col style=${{ width: "6%" }} /><col style=${{ width: "3%" }} /></colgroup>
+            <thead><tr><th>תאריך הקמה</th><th>תיאור</th><th>אחריות</th><th>תאריך יעד</th><th>סטטוס</th><th>תאריך ביצוע</th><th>הערות / מידע נוסף</th><th>עדכונים</th><th>RFI</th><th></th></tr></thead>
+            <tbody>${list.length === 0 && html`<tr><td colSpan=${10} className="tskEmpty">אין משימות בקטגוריה — "+ משימה" בכותרת</td></tr>`}${list.map((t) => {
               const st = ST[t.status] || ST.open;
               const late = t.due && t.status !== "done" && t.status !== "info" && t.due < nowIso;
               const ups = t.updates || [];
               const last = ups[ups.length - 1];
               return html`<tr key=${t.id} className=${`${t.status === "done" ? "done" : t.status === "info" ? "info" : ""} ${late ? "late" : ""}`.trim()}>
-                <td><input type="date" className="tskIn" value=${t.created || ""} onChange=${(e) => patch(t.id, { created: e.target.value })} /></td>
+                <td><input type="date" className="tskIn" value=${t.created || ""} onChange=${(e) => patch(t.id, { created: e.target.value })} />
+                  ${t.createdBy && t.createdBy.name && html`<div className="tskBy" title=${t.createdBy.email || ""}>${t.createdBy.name}</div>`}</td>
                 <td>${isFixed(t)
                   ? html`<div className="tskFixed" title="משימה קבועה בכל פרויקט">${t.desc}</div>`
                   : html`<${Area} value=${t.desc || ""} placeholder="תיאור המשימה" rows=${3} h=${(t.h || {}).desc}
@@ -544,9 +557,11 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
                 <td><input className="tskIn" list="tskPeople" value=${t.owner || ""} placeholder="אחראי/ת" onChange=${(e) => patch(t.id, { owner: e.target.value })} /></td>
                 <td className="due"><input type="date" className="tskIn" value=${t.due || ""} title=${late ? "עבר תאריך היעד" : ""} onChange=${(e) => patch(t.id, { due: e.target.value })} /></td>
                 <td><select className="tskIn tskSt" style=${{ color: st[2], background: st[3] }} value=${st[0]}
-                  onChange=${(e) => { const v = e.target.value; patch(t.id, { status: v, doneAt: v === "done" ? (t.status === "done" && t.doneAt ? t.doneAt : today()) : "" }); }}>
+                  onChange=${(e) => { const v = e.target.value; const was = t.status === "done";
+                    patch(t.id, { status: v, doneAt: v === "done" ? (was && t.doneAt ? t.doneAt : today()) : "", doneBy: v === "done" ? (was && t.doneBy ? t.doneBy : me) : null }); }}>
                   ${TASK_STATUS.map((s) => html`<option key=${s[0]} value=${s[0]}>${s[1]}</option>`)}</select></td>
-                <td><input type="date" className="tskIn" value=${t.doneAt || ""} title="נכתב לבד כשהסטטוס הופך ל'בוצע'" onChange=${(e) => patch(t.id, { doneAt: e.target.value })} /></td>
+                <td><input type="date" className="tskIn" value=${t.doneAt || ""} title="נכתב לבד כשהסטטוס הופך ל'בוצע'" onChange=${(e) => patch(t.id, { doneAt: e.target.value })} />
+                  ${t.status === "done" && t.doneBy && t.doneBy.name && html`<div className="tskBy" title=${t.doneBy.email || ""}>${t.doneBy.name}</div>`}</td>
                 <td><${Area} value=${t.notes || ""} placeholder="הערות / מידע נוסף" rows=${isFixed(t) ? 2 : 3} h=${(t.h || {}).notes}
                   onChange=${(v) => patch(t.id, { notes: v })} onH=${(px) => patch(t.id, { h: { ...(t.h || {}), notes: px } })} /></td>
                 <td><div className="tskUpd">
@@ -554,11 +569,9 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
                   <button type="button" className="tskBtn icon" title=${last ? `רשימת עדכונים · אחרון: ${fmt(last.date)}` : "רשימת עדכונים"} disabled=${!ups.length}
                     onClick=${() => setLogFor(t.id)}><${History} size=${14} />${ups.length ? html`<span style=${{ fontSize: 11.5 }}>${ups.length}</span>` : null}</button>
                 </div>${last && html`<div className="tskUpd"><span className="last" title=${last.text}>${fmt(last.date)}</span></div>`}</td>
-                <td><div className="tskEnd">
-                  ${onCreateRfi && html`<button type="button" className=${`tskRfi ${t.rfi ? "on" : ""}`} title=${t.rfi ? `נפתח RFI ${t.rfi.no} — לחיצה פותחת RFI נוסף` : "פתיחת שורה בלחצן RFI ללקוח / פיקוח"}
-                    onClick=${() => toRfi(t)}>${t.rfi ? `RFI ${t.rfi.no}` : "RFI"}</button>`}
-                  ${!(isFixed(t)) && html`<button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button>`}
-                </div></td>
+                <td>${onCreateRfi && html`<button type="button" className=${`tskRfi ${t.rfi ? "on" : ""}`} title=${t.rfi ? `נפתח RFI ${t.rfi.no} — לחיצה פותחת RFI נוסף` : "פתיחת שורה בלחצן RFI ללקוח / פיקוח"}
+                    onClick=${() => toRfi(t)}>${t.rfi ? `RFI ${t.rfi.no}` : "RFI"}</button>`}</td>
+                <td>${!(isFixed(t)) && html`<button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button>`}</td>
               </tr>`;
             })}</tbody>
           </table></div>`}
