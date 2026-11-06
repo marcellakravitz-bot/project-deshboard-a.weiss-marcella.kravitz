@@ -5843,8 +5843,9 @@ function SubsTradePicker({ value, disabled, onChange }) {
       disabled,
       onClick: () => (open ? setOpen(null) : openAt()),
       title: label,
-      style: { width: "100%", border: "1px solid var(--line)", borderRadius: 7, background: "#fff", padding: "4px 6px", font: "inherit", fontSize: 12, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
-    }, label),
+      // 06.11.26 — several picked: one under the other.
+      style: { width: "100%", border: "1px solid var(--line)", borderRadius: 7, background: "#fff", padding: "4px 6px", font: "inherit", fontSize: 12, lineHeight: 1.45, cursor: disabled ? "default" : "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }
+    }, picked.length === 0 ? "\u2014" : picked.map((k) => React9.createElement("span", { key: k, style: { whiteSpace: "nowrap" } }, subsPickLabel(k)))),
     open && !disabled && createPortal(React9.createElement("div", {
       ref: popRef, dir: "rtl",
       style: { position: "fixed", zIndex: 1000, left: Math.max(8, open.x - 230), top: open.y, width: 230, background: "#fff", border: "1px solid var(--line)", borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,.16)", padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6, fontFamily: "inherit" }
