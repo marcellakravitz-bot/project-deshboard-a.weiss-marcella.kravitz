@@ -2064,6 +2064,33 @@ var pdfViewer = `
         .lliFindStep:hover:not(:disabled) { background: var(--accent-soft, #eef2f8); }
         .lliFindStep:disabled { opacity: .4; cursor: default; }
         .lliTable .cImg { width: 196px; }
+        /* 06.11.26 — the four columns that say WHAT the product is (type mark,
+           description, supplier, picture) stay put while the board scrolls
+           sideways. The offsets are measured from the real headings, so they
+           follow the columns when the board is wider than its minimum. */
+        .lliFreeze th.cMark, .lliFreeze td.cMark,
+        .lliFreeze th.cDesc, .lliFreeze td.cDesc,
+        .lliFreeze th.cSup, .lliFreeze td.cSup,
+        .lliFreeze th.cImg, .lliFreeze td.cImg { position: sticky; }
+        .lliFreeze td.cMark, .lliFreeze td.cDesc, .lliFreeze td.cSup, .lliFreeze td.cImg { background: #fff; z-index: 3; }
+        .lliFreeze thead th.cMark, .lliFreeze thead th.cDesc, .lliFreeze thead th.cSup, .lliFreeze thead th.cImg { z-index: 8; }
+        .lliFreeze:dir(rtl) .cMark { right: var(--fz0, 0px); }
+        .lliFreeze:dir(rtl) .cDesc { right: var(--fz1, 120px); }
+        .lliFreeze:dir(rtl) .cSup { right: var(--fz2, 330px); }
+        .lliFreeze:dir(rtl) .cImg { right: var(--fz3, 445px); }
+        .lliFreeze:dir(ltr) .cMark { left: var(--fz0, 0px); }
+        .lliFreeze:dir(ltr) .cDesc { left: var(--fz1, 120px); }
+        .lliFreeze:dir(ltr) .cSup { left: var(--fz2, 330px); }
+        .lliFreeze:dir(ltr) .cImg { left: var(--fz3, 445px); }
+        /* The edge of the frozen block: a soft line, so the columns sliding
+           under it read as going underneath. */
+        .lliFreeze td.cImg, .lliFreeze th.cImg { box-shadow: inset 1px 0 0 var(--line), -4px 0 6px -4px rgba(15, 52, 96, .25); }
+        /* A row taken out of the order fades — but a frozen cell is opaque,
+           so its contents fade instead of the cell itself. */
+        .lliFreeze tr.lliOff td.cMark, .lliFreeze tr.lliOff td.cDesc,
+        .lliFreeze tr.lliOff td.cSup, .lliFreeze tr.lliOff td.cImg { opacity: 1; }
+        .lliFreeze tr.lliOff td.cMark > *, .lliFreeze tr.lliOff td.cDesc > *,
+        .lliFreeze tr.lliOff td.cSup > *, .lliFreeze tr.lliOff td.cImg > * { opacity: .45; }
         .lliTable .cQty { width: 75px; }
         .lliTable .cUnit { width: 55px; color: var(--steel); font-weight: 700; }
         .lliTable .cOrd { width: 90px; }
@@ -12099,6 +12126,25 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     autoScrollRef.current = setInterval(() => { el.scrollTop += step; }, 30);
   };
   useEffect5(() => autoScrollStop, []);
+  // 06.11.26 — where each frozen column sits: the width of the frozen columns
+  // before it. Measured, because the board stretches past its minimum width.
+  useEffect5(() => {
+    const wrap = wrapRef.current;
+    const tbl = wrap && wrap.querySelector("table.lliFreeze");
+    if (!tbl) return;
+    const measure = () => {
+      let acc = 0;
+      ["cMark", "cDesc", "cSup", "cImg"].forEach((c, i) => {
+        tbl.style.setProperty(`--fz${i}`, `${acc}px`);
+        const th = tbl.querySelector(`thead th.${c}`);
+        acc += th ? th.getBoundingClientRect().width : 0;
+      });
+    };
+    measure();
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    if (ro) ro.observe(tbl);
+    return () => { if (ro) ro.disconnect(); };
+  });
   const L = (k) => sbText(LLI_L[k] || { en: k, he: k }, lang);
   const t2 = (he, en) => (lang === "he" ? he : en);
 
@@ -12975,7 +13021,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
           { className: "lliTableWrap", ref: wrapRef },
           sbH(
             "table",
-            { className: "lliTable" },
+            { className: "lliTable lliFreeze" },
             sbH(
               "thead",
               null,
