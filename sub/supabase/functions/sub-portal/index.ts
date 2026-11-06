@@ -571,7 +571,7 @@ Deno.serve(async (req) => {
         submittalApprovals: sbApProbe[grant.projectId] || grant.extras.submittalApprovals || {},
         sdApprovals: sdApProbe[grant.projectId] || grant.extras.sdApprovals || {},
       };
-      const out = await boardFor(grant);
+      const out: any = await boardFor(grant);
       out.project = { id: grant.projectId, ...(meta[grant.projectId] || {}) };
       out.isPm = !!grant.isPm;
       out.canWrite = !!grant.canWrite;

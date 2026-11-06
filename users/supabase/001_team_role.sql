@@ -88,3 +88,7 @@ drop policy if exists "submittals library team" on storage.objects;
 create policy "submittals library team" on storage.objects for all to authenticated
   using (bucket_id = 'submittals' and (storage.foldername(name))[1] = 'library' and public.is_team())
   with check (bucket_id = 'submittals' and (storage.foldername(name))[1] = 'library' and public.is_team());
+
+-- profiles.role accepts "team" too.
+alter table public.profiles drop constraint if exists profiles_role_check;
+alter table public.profiles add constraint profiles_role_check check (role = any (array['admin','contractor','client','team']));
