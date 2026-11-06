@@ -14282,7 +14282,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 thS("category", "cCat", L("category")),
                 thS("typeMark", "cMark", L("typeMark")),
                 thS("desc", "cDesc", L("desc")),
-                thS("qty", "cQty", isRTL ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" : "Subcontractor"),
+                thS("qty", "cQty", isRTL ? "צפייה אפליקציה" : "App view"),
                 thS("dueAt", "cDate", L("dueAt")),
                 thS("toClient", "cReq", L("toClient")),
                 thS("status", "cStat", L("status")),
@@ -21591,7 +21591,7 @@ function sbSummaryText(sum) {
   return (sum || []).map((x) => `${x.label}: ${x.n}`).join("   \u00b7   ");
 }
 // The contractor column's name on this board (21.10.26).
-var SB_CONTRACTOR_L = { en: "Subcontractor", he: "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" };
+var SB_CONTRACTOR_L = { en: "App view", he: "צפייה אפליקציה" };
 // The trades a submittal is shown to in the subcontractor app (21.10.26).
 function sbTradesLabel(rec) {
   return ((rec && rec.subs) || []).map((k) => subsPickLabel(k)).join(", ");
