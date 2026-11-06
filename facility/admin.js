@@ -6,18 +6,19 @@
 //  used to be "Contacts". Contacts now live INSIDE it, as chapter 1 — the
 //  dashboard hands the existing contacts table in as `contactsNode`, unchanged.
 //
-//  Nine chapters, each a square button (her layout, 28.10.26):
-//    1 אנשי קשר                      the existing contacts table
-//    2 רשימת חומרי גמר               checklist
-//    3 ת"י 921 + אחריות ותחזוקה      suppliers she adds by hand; five ticks each,
-//                                     service-department details with a PDF,
-//                                     and the request text to e-mail or copy
-//    4 אישורי מכון התקנים            checklist + add
-//    5 אישורי מתכננים                checklist + add + e-mail
-//    6 אישורי קבלנים/מבצעים והצהרות  checklist + add + e-mail
-//    7 אישור כבאות לאכלוס            checklist
-//    8 תיקי מתקן – קבלני מערכות      checklist + add
-//    9 תוכניות AS MADE               one tick per floor
+//  The chapters, each a square button (her layout, 28.10.26; 06.11.26):
+//    אנשי קשר                       the project's contacts editor (consultants,
+//                                    subcontractors, suppliers…)
+//    רשימת חומרי גמר                products picked from LLI; per product the
+//                                    maintenance instructions, warranty, ת"י 755
+//                                    and the service department (kept in the
+//                                    suppliers' library); suppliers join contacts
+//    אישורי מכון התקנים             checklist + add (921 is one of its lines)
+//    אישורי מתכננים                 checklist + add + e-mail
+//    אישורי קבלנים/מבצעים והצהרות   checklist + add + e-mail
+//    אישור כבאות לאכלוס             checklist
+//    תיקי מתקן – קבלני מערכות       checklist + add
+//    תוכניות AS MADE                one tick per floor
 //
 //  Every row: V turns it green, "לא רלוונטי" greys it out and takes it out of
 //  the count.
@@ -31,54 +32,53 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
 import {
   Phone, Layers, ShieldCheck, BadgeCheck, PenTool, HardHat, Flame, FolderOpen, Map as MapIcon,
-  Plus, Mail, Copy, Trash2, Printer, Pencil, Save, ChevronDown, ChevronUp, X,
+  Plus, Mail, Copy, Trash2, Printer, Pencil, Save, ChevronDown, ChevronUp, X, ListPlus, Search,
 } from "lucide-react";
-import { supabase, printSheetCss, printedStampText } from "../sign.js";
+import { supabase, printSheetCss, printedStampText, supLibLoad, supLibFind, supLibSave, supLibHasService, supLibNorm } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;   // a template with more than one root returns an array without keys
-export const FACILITY_BUILD = "facility build 1 · 28.10.2026";
+export const FACILITY_BUILD = "facility build 2 · 06.11.2026";
 if (typeof console !== "undefined") console.info(FACILITY_BUILD);
 
 // ----------------------------------------------------------------------------- the chapters
+// 06.11.26 — no numbers on the folders; "ת"י 921 + אחריות ותחזוקה" is gone:
+// its four documents are columns of the finishes list (picked from LLI), and
+// 921 is a line of the standards institute's approvals.
 const CHAPTERS = [
-  { k: "contacts", n: 1, he: "אנשי קשר", icon: Phone, color: "#0EA5E9", kind: "contacts" },
-  { k: "finishes", n: 2, he: "רשימת חומרי גמר", icon: Layers, color: "#8B5E3C", kind: "check", items: [
-    ["fin-light", "גופי תאורה"], ["fin-sanitary", "כלים סניטריים"], ["fin-taps", "ברזי מים או סודה"],
-    ["fin-floor", "ריצופים"], ["fin-clad", "חיפויים"], ["fin-ceil", "תקרות"],
-    ["fin-fire", "אביזרי קצה – גילוי אש"], ["fin-sockets", "אביזרי קצה – שקעים ומתגים"], ["fin-hvac", "אביזרי קצה – מיזוג אוויר"],
-  ] },
-  { k: "warranty", n: 3, he: "ת\"י 921 + אחריות ותחזוקה", icon: ShieldCheck, color: "#1A7F4B", kind: "suppliers" },
-  { k: "standards", n: 4, he: "אישורי מכון התקנים", icon: BadgeCheck, color: "#2563EB", kind: "check", add: "הוספת אישור מכון תקנים", items: [
+  { k: "contacts", he: "אנשי קשר", icon: Phone, color: "#0EA5E9", kind: "contacts" },
+  { k: "finishes", he: "רשימת חומרי גמר", icon: Layers, color: "#8B5E3C", kind: "finishes" },
+  { k: "standards", he: "אישורי מכון התקנים", icon: BadgeCheck, color: "#2563EB", kind: "check", add: "הוספת אישור מכון תקנים", items: [
+    ["si-921", "921 – תגובה בשריפה של חומרי בנייה"],
     ["si-931", "931 – אטומי אש"], ["si-1001", "1001 – מיזוג אוויר"], ["si-1001-7", "1001-7 – מיזוג אוויר"],
     ["si-1212", "1212 – אישור התקנה"], ["si-1220", "1220 – גילוי אש"], ["si-1596", "1596 – ספרינקלרים"],
     ["si-1597", "1597 – כיבוי בגז"], ["si-2206", "2206 – גלגלונים"], ["si-integ", "אינטגרציה"],
     ["si-elec-run", "בדיקות חשמל להרצת מערכות"], ["si-ceil-load", "בדיקת העמסת תקרות"], ["si-hvac-water", "בדיקת מי מיזוג"],
   ] },
-  { k: "designers", n: 5, he: "אישורי מתכננים", icon: PenTool, color: "#7C3AED", kind: "check", add: "הוספת יועץ / מתכנן", mail: true, items: [
+  { k: "designers", he: "אישורי מתכננים", icon: PenTool, color: "#7C3AED", kind: "check", add: "הוספת יועץ / מתכנן", mail: true, items: [
     ["ds-arch", "אדריכל מבצע"], ["ds-plumb", "יועץ אינסטלציה"], ["ds-acou", "יועץ אקוסטיקה"], ["ds-fire", "יועץ בטיחות אש"],
     ["ds-elec", "יועץ חשמל"], ["ds-hvac", "יועץ מיזוג אוויר"], ["ds-access", "יועץ נגישות"],
     ["ds-struct", "יועץ קונסטרוקציה ומדרגות"], ["ds-sustain", "יועץ קיימות"], ["ds-light", "יועץ תאורה"],
   ] },
-  { k: "contractors", n: 6, he: "אישורי קבלנים/מבצעים והצהרות", icon: HardHat, color: "#E8B10A", kind: "check", add: "הוספת קבלן / מבצע", mail: true, items: [
+  { k: "contractors", he: "אישורי קבלנים/מבצעים והצהרות", icon: HardHat, color: "#E8B10A", kind: "check", add: "הוספת קבלן / מבצע", mail: true, items: [
     ["ct-main", "קבלן ראשי – א. וייס"], ["ct-water", "קבלן מערכות מים וביוב"], ["ct-elec", "קבלן חשמל, בודק חשמל ולוחות חשמל"],
     ["ct-hvac", "קבלן מיזוג אוויר"], ["ct-curtain", "קבלן וילונות אש"], ["ct-firestop", "מבצע אטומי אש"],
   ] },
-  { k: "fire", n: 7, he: "אישור כבאות לאכלוס", icon: Flame, color: "#C0392B", kind: "check", items: [
+  { k: "fire", he: "אישור כבאות לאכלוס", icon: Flame, color: "#C0392B", kind: "check", items: [
     ["fd-safety", "אישור יועץ בטיחות"], ["fd-ops", "משטר הפעלות"],
   ] },
-  { k: "systems", n: 8, he: "תיקי מתקן – קבלני מערכות", icon: FolderOpen, color: "#EA7317", kind: "check", add: "הוספת קבלן מערכות", items: [
+  { k: "systems", he: "תיקי מתקן – קבלני מערכות", icon: FolderOpen, color: "#EA7317", kind: "check", add: "הוספת קבלן מערכות", items: [
     ["sy-plumb", "תיק מתקן קבלן אינסטלציה"], ["sy-elec", "תיק מתקן קבלן חשמל"], ["sy-hvac", "תיק מתקן קבלן מיזוג אוויר"],
   ] },
-  { k: "asmade", n: 9, he: "תוכניות AS MADE", icon: MapIcon, color: "#0E7490", kind: "asmade", items: [
+  { k: "asmade", he: "תוכניות AS MADE", icon: MapIcon, color: "#0E7490", kind: "asmade", items: [
     ["am-build", "תוכניות בינוי"], ["am-fin", "תוכניות גמרים"], ["am-layout", "תוכניות העמדה"],
     ["am-ftc", "תוכניות FTC"], ["am-floor", "תוכניות ריצוף"], ["am-ceil", "תוכניות תקרה"],
   ] },
 ];
 const CH = Object.fromEntries(CHAPTERS.map((c) => [c.k, c]));
 
-// Chapter 3 — the five things asked of every supplier (her order).
-const SUP_COLS = [["s755", "ת\"י 755"], ["s921", "ת\"י 921"], ["warranty", "כתב אחריות"], ["service", "פרטי מחלקת בדק"], ["maint", "הוראות תחזוקה ואחזקה"]];
+// The finishes list — the four documents asked for every product (her order, 06.11.26).
+const FIN_COLS = [["maint", "הוראות תחזוקה ואחזקה"], ["warranty", "כתב אחריות"], ["s755", "ת\"י 755"], ["service", "פרטי מחלקת בדק"]];
 
 // Her text, word for word (28.10.26).
 const MSG_921 = `שלום
@@ -113,7 +113,7 @@ const MSG_DEFAULT = {
 בברכה,`,
 };
 
-const blank = () => ({ v: 1, items: {}, custom: {}, suppliers: [], floors: null, asMade: {}, msgs: {} });
+const blank = () => ({ v: 2, items: {}, custom: {}, finishes: [], floors: null, asMade: {}, msgs: {} });
 const uid = () => Math.random().toString(36).slice(2, 10);
 
 // Floors for AS MADE: the project's own range when it is short enough to be a
@@ -132,16 +132,24 @@ function chapterItems(data, ch) {
   const extra = ((data.custom || {})[ch.k] || []).map((x) => ({ id: x.id, label: x.label, custom: true }));
   return fixed.concat(extra);
 }
-function supRowState(s) {
-  const cells = SUP_COLS.map(([k]) => (s.cells || {})[k] || "");
+// A cell of the finishes list: what she ticked, or — for the service
+// department — V on its own when the supplier's library entry has the details.
+function finCell(row, k, lib) {
+  const v = (row.cells || {})[k] || "";
+  if (v) return v;
+  if (k === "service" && supLibHasService(supLibFind(lib, row.supplier))) return "auto";
+  return "";
+}
+function finRowState(row, lib) {
+  const cells = FIN_COLS.map(([k]) => finCell(row, k, lib));
   if (cells.every((c) => c === "na")) return "na";
-  if (cells.every((c) => c === "v" || c === "na")) return "done";
+  if (cells.every((c) => c === "v" || c === "auto" || c === "na")) return "done";
   return "open";
 }
-function progressOf(data, ch, floors, contactsCount) {
+function progressOf(data, ch, floors, contactsCount, lib) {
   if (ch.kind === "contacts") return { label: contactsCount ? `${contactsCount} אנשי קשר` : "", done: 0, total: 0 };
-  if (ch.kind === "suppliers") {
-    const rows = (data.suppliers || []).map(supRowState).filter((s) => s !== "na");
+  if (ch.kind === "finishes") {
+    const rows = (data.finishes || []).map((r) => finRowState(r, lib)).filter((s) => s !== "na");
     return { done: rows.filter((s) => s === "done").length, total: rows.length };
   }
   if (ch.kind === "asmade") {
@@ -211,7 +219,16 @@ const css = `
 .fac .chip button{border:0;background:none;cursor:pointer;padding:0;color:#8a8d94;display:flex}
 .fac .facEmpty{padding:22px;text-align:center;color:var(--mist,#9a9da5)}
 .fac .facToast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#101114;color:#fff;padding:9px 16px;border-radius:10px;font-weight:600;font-size:13px;z-index:900}
-@media (max-width:700px){.fac .facSvcGrid{grid-template-columns:1fr 1fr}}
+.fac .facPick{background:#fff;border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.fac .facPickBar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+.fac .facPickSearch{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line,#e6e6e9);border-radius:8px;padding:4px 8px}
+.fac .facPickSearch input{border:0;outline:0;font:inherit;font-size:13px;min-width:160px}
+.fac .facPickAll{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;cursor:pointer;margin-inline-start:auto}
+.fac .facPickList{max-height:340px;overflow:auto;border:1px solid var(--line,#e6e6e9);border-radius:10px}
+.fac .facPickRow{display:grid;grid-template-columns:22px 80px 1fr 130px 160px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid #f0f0f2;cursor:pointer;font-size:13px}
+.fac .facPickRow:hover{background:#f5f7fb}
+.fac .facPickRow .d{font-weight:600}.fac .facPickRow .c,.fac .facPickRow .s{color:#5b5e66;font-size:12.5px}
+@media (max-width:700px){.fac .facSvcGrid{grid-template-columns:1fr 1fr}.fac .facPickRow{grid-template-columns:22px 1fr}}
 `;
 
 // ----------------------------------------------------------------------------- mail / copy
@@ -232,7 +249,7 @@ async function copyText(t) {
 }
 
 // ----------------------------------------------------------------------------- the module
-export function FacilityFile({ projectId, project, projectName, contactsNode, contactsCount, supplierHints, printParts, currentEmail }) {
+export function FacilityFile({ projectId, project, projectName, contactsNode, contactsCount, supplierHints, printParts, currentEmail, lliItems, contacts, catalog, onAddContacts }) {
   const print = useMemo(() => makeFacilityPrint({ projectName, ...(printParts || {}) }), [projectName, printParts]);
   const [data, setData] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
@@ -247,6 +264,10 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
   dataRef.current = data;
   const openRef = useRef(null);
   openRef.current = open;
+  // The suppliers' library (shared by every project): the service departments.
+  const [lib, setLib] = useState([]);
+  const reloadLib = async (force) => { try { setLib((await supLibLoad(force)).slice()); } catch (e) { console.warn("[facility] supplier library", e); } };
+  useEffect(() => { reloadLib(false); }, []);
 
   // ---------------------------------------------------------------- load
   useEffect(() => {
@@ -264,7 +285,8 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
       }
       const d = { ...blank(), ...((row && row.data) || {}) };
       if (!Array.isArray(d.floors)) d.floors = floorsFromProject(project);
-      console.info("[facility] loaded", projectId, row ? "existing" : "new", { suppliers: d.suppliers.length });
+      if (!Array.isArray(d.finishes)) d.finishes = [];
+      console.info("[facility] loaded", projectId, row ? "existing" : "new", { finishes: d.finishes.length });
       setData(d); setLoadedFor(projectId);
     })();
     return () => { off = true; };
@@ -339,12 +361,12 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
       ${err && html`<p className="facErr">${err}</p>`}
       <div className=${`cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim()}>
         ${CHAPTERS.map((c) => {
-          const p = progressOf(data, c, floors, contactsCount);
+          const p = progressOf(data, c, floors, contactsCount, lib);
           const all = p.total > 0 && p.done === p.total;
           return html`<button key=${c.k} type="button" className=${`dashCard ${all ? "facAllDone" : ""}`} onClick=${() => goChapter(c.k)}>
             <div className="cardIcon" style=${{ color: c.color }}><${c.icon} size=${20} strokeWidth=${1.7} /></div>
             <div style=${{ width: "100%" }}>
-              <p className="cardTitle">${c.n}. ${c.he}</p>
+              <p className="cardTitle">${c.he}</p>
               ${p.total > 0 && html`<${F}><div className="facProg"><i style=${{ width: `${Math.round((p.done / p.total) * 100)}%` }} /></div>
                 <p className="facCount">${p.done}/${p.total}</p><//>`}
               ${p.label && html`<p className="facCount">${p.label}</p>`}
@@ -356,7 +378,7 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
   }
 
   const bar = (extra) => html`<div className="facBar">
-    <span className="facTitle"><${ch.icon} size=${18} strokeWidth=${1.9} color=${ch.color} /> ${ch.n}. ${ch.he}</span>
+    <span className="facTitle"><${ch.icon} size=${18} strokeWidth=${1.9} color=${ch.color} /> ${ch.he}</span>
     ${extra}
     <button type="button" className="facBtn" onClick=${goBack}>חזרה לתיק מתקן</button>
   </div>`;
@@ -364,7 +386,8 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
   let body = null;
   if (ch.kind === "contacts") body = html`<${F}>${bar(null)}${contactsNode}<//>`;
   else if (ch.kind === "check") body = html`<${F}><${CheckChapter} ch=${ch} data=${data} edit=${edit} bar=${bar} projectName=${projectName} flash=${flash} />${saveRow}<//>`;
-  else if (ch.kind === "suppliers") body = html`<${F}><${SupplierChapter} data=${data} edit=${edit} bar=${bar} projectName=${projectName} hints=${supplierHints} print=${print} flash=${flash} />${saveRow}<//>`;
+  else if (ch.kind === "finishes") body = html`<${F}><${FinishesChapter} data=${data} edit=${edit} bar=${bar} projectName=${projectName} print=${print} flash=${flash}
+    lliItems=${lliItems || []} contacts=${contacts || []} catalog=${catalog || {}} onAddContacts=${onAddContacts} lib=${lib} reloadLib=${reloadLib} />${saveRow}<//>`;
   else if (ch.kind === "asmade") body = html`<${F}><${AsMadeChapter} ch=${ch} data=${data} edit=${edit} bar=${bar} floors=${floors} />${saveRow}<//>`;
 
   return html`<div className="fac" dir="rtl"><style>${css}</style>
@@ -444,7 +467,7 @@ function CheckChapter({ ch, data, edit, bar, projectName, flash }) {
         const s = st[it.id] || {};
         const cls = s.na ? "na" : s.done ? "ok" : "";
         return html`<tr key=${it.id} className=${cls}>
-          <td className="num">${ch.n}.${i + 1}</td>
+          <td className="num">${i + 1}</td>
           <td className="lbl">${it.label}</td>
           <td><input type="checkbox" className="doneBox" checked=${!!s.done} disabled=${!!s.na} onChange=${(e) => set(it.id, { done: e.target.checked })} /></td>
           <td><input type="checkbox" className="naBox" checked=${!!s.na} onChange=${(e) => set(it.id, { na: e.target.checked })} /></td>
@@ -457,81 +480,172 @@ function CheckChapter({ ch, data, edit, bar, projectName, flash }) {
       <span>נותרו ${pending.length}</span></div><//>`;
 }
 
-// ----------------------------------------------------------------------------- chapter 3: suppliers
-const NEXT = { "": "v", v: "na", na: "" };
-function SupplierChapter({ data, edit, bar, projectName, hints, print, flash }) {
-  const [openSvc, setOpenSvc] = useState(null);
-  const sups = data.suppliers || [];
-  const patch = (id, fn) => edit((d) => { d.suppliers = (d.suppliers || []).map((s) => (s.id === id ? fn({ ...s }) : s)); return d; });
-  const addSup = () => edit((d) => { d.suppliers = [...(d.suppliers || []), { id: uid(), name: "", product: "", email: "", cells: {}, service: {} }]; return d; });
-  const remove = (s) => {
-    if (!confirm(`להסיר את ${s.name || "הספק"}?`)) return;
-    edit((d) => { d.suppliers = d.suppliers.filter((x) => x.id !== s.id); return d; });
+// ----------------------------------------------------------------------------- the finishes list
+// 06.11.26 — the products come from LLI (or are typed in); four documents per
+// product, each V / not relevant / open. Every supplier picked joins the
+// project's contacts (once, under "ספקים"), with what the catalogue knows
+// about it. The service department lives in the suppliers' library: once it is
+// there, the column is V by itself on every project.
+const NEXT = { "": "v", v: "na", na: "", auto: "na" };
+function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems, contacts, catalog, onAddContacts, lib, reloadLib }) {
+  const [picking, setPicking] = useState(false);
+  const [pick, setPick] = useState({});
+  const [q, setQ] = useState("");
+  const [svcFor, setSvcFor] = useState(null);     // supplier name whose service department is open
+  const rows = data.finishes || [];
+  const patch = (id, fn) => edit((d) => { d.finishes = (d.finishes || []).map((r) => (r.id === id ? fn({ ...r }) : r)); return d; });
+  const remove = (r) => {
+    if (!confirm(`להסיר את "${r.desc || r.mark || "השורה"}" מהרשימה?`)) return;
+    edit((d) => { d.finishes = (d.finishes || []).filter((x) => x.id !== r.id); return d; });
   };
-  const subject = `${projectName || ""} – תיק מתקן – אישורים, אחריות והוראות תחזוקה`.replace(/^ – /, "");
-  const openEmails = sups.filter((s) => supRowState(s) === "open" && String(s.email || "").includes("@")).map((s) => s.email.trim());
+  const have = new Set(rows.map((r) => r.code).filter(Boolean));
+  const avail = (lliItems || []).filter((it) => !have.has(it.code));
+  const qq = q.trim().toLowerCase();
+  const shownAvail = avail.filter((it) => !qq || `${it.mark} ${it.desc} ${it.supplier} ${it.categoryLabel}`.toLowerCase().includes(qq));
+
+  // The suppliers of the rows just added, into the project's contacts — once
+  // each, and filled from the catalogue when it knows the company.
+  const addSuppliersToContacts = (names) => {
+    if (!onAddContacts) return 0;
+    const inContacts = new Set((contacts || []).filter((c) => c.group === "suppliers")
+      .map((c) => supLibNorm((c.company && (c.company.he || c.company.en)) || ((catalog.companies || []).find((x) => x.id === c.companyId) || {}).he || "")));
+    const add = [];
+    Array.from(new Set(names.map((n) => String(n || "").trim()).filter(Boolean))).forEach((name) => {
+      if (inContacts.has(supLibNorm(name))) return;
+      const co = (catalog.companies || []).find((x) => supLibNorm(x.he) === supLibNorm(name) || supLibNorm(x.en) === supLibNorm(name));
+      const pp = co ? (catalog.people || []).find((x) => x.companyId === co.id) : null;
+      add.push({
+        id: `ct-${Date.now()}-${Math.round(Math.random() * 1e6)}`, group: "suppliers", disciplineId: null,
+        companyId: co ? co.id : null, company: { he: name, en: (co && co.en) || "" },
+        person: { ...((pp && pp.person) || { he: "", en: "" }) }, roleId: (pp && pp.roleId) || null,
+        phone: (pp && pp.phone) || "", email: (pp && pp.email) || ""
+      });
+      inContacts.add(supLibNorm(name));
+    });
+    if (add.length) onAddContacts(add);
+    return add.length;
+  };
+  const addPicked = () => {
+    const chosen = avail.filter((it) => pick[it.code]);
+    if (!chosen.length) { setPicking(false); return; }
+    edit((d) => {
+      d.finishes = (d.finishes || []).concat(chosen.map((it) => ({
+        id: uid(), code: it.code, mark: it.mark, desc: it.desc, supplier: it.supplier, category: it.categoryLabel, cells: {}
+      })));
+      return d;
+    });
+    const n = addSuppliersToContacts(chosen.map((it) => it.supplier));
+    setPick({}); setPicking(false); setQ("");
+    flash(n ? `נוספו ${chosen.length} מוצרים · ${n} ספקים נוספו לאנשי הקשר` : `נוספו ${chosen.length} מוצרים`);
+  };
+  const addManual = () => edit((d) => { d.finishes = (d.finishes || []).concat([{ id: uid(), code: "", mark: "", desc: "", supplier: "", category: "", cells: {} }]); return d; });
+  const subject = `${projectName || ""} – תיק מתקן – הוראות תחזוקה, אחריות, ת"י 755 ומחלקת בדק`.replace(/^ – /, "");
+  const suppliersOpen = Array.from(new Set(rows.filter((r) => finRowState(r, lib) === "open").map((r) => r.supplier).filter(Boolean)));
+  const mailOf = (name) => {
+    const c = (contacts || []).find((x) => x.group === "suppliers" && supLibNorm((x.company && (x.company.he || x.company.en)) || "") === supLibNorm(name));
+    return c && String(c.email || "").includes("@") ? c.email.trim() : "";
+  };
+  const openEmails = suppliersOpen.map(mailOf).filter(Boolean);
   const listId = "facSupHints";
+  const supNames = Array.from(new Set((lib || []).map((s) => s.name).concat(rows.map((r) => r.supplier)).filter(Boolean))).sort();
 
   return html`<${F}>
     ${bar(html`<${F}>
-      <button type="button" className="facBtn" onClick=${addSup}><${Plus} size=${15} strokeWidth=${2.4} /> ספק</button>
+      <button type="button" className="facBtn" onClick=${() => setPicking((x) => !x)}><${ListPlus} size=${15} strokeWidth=${2.2} /> בחירה מתוך LLI</button>
+      <button type="button" className="facBtn" onClick=${addManual}><${Plus} size=${15} strokeWidth=${2.4} /> שורה</button>
       <button type="button" className="facBtn icon" title=${openEmails.length ? `מייל לכל הספקים שעוד חסר אצלם (${openEmails.length})` : "פתיחת מייל עם הנוסח"}
         onClick=${() => openMail({ bcc: openEmails.join(","), subject, body: MSG_921 })}><${Mail} size=${16} /></button><//>`)}
     <${MessageBox} text=${MSG_921} editable=${false} subject=${subject} bcc=${openEmails.join(",")} flash=${flash} />
-    <datalist id=${listId}>${(hints || []).map((h) => html`<option key=${h} value=${h} />`)}</datalist>
+    ${picking && html`<div className="facPick">
+      <div className="facPickBar">
+        <span style=${{ fontWeight: 800 }}>מוצרים מתוך LLI (${avail.length})</span>
+        <span className="facPickSearch"><${Search} size=${14} /><input value=${q} placeholder="חיפוש" onChange=${(e) => setQ(e.target.value)} /></span>
+        <label className="facPickAll"><input type="checkbox" checked=${shownAvail.length > 0 && shownAvail.every((it) => pick[it.code])}
+          onChange=${(e) => { const n = { ...pick }; shownAvail.forEach((it) => { n[it.code] = e.target.checked; }); setPick(n); }} /> סימון הכול</label>
+        <button type="button" className="facBtn primary" onClick=${addPicked}>הוספה לרשימה (${avail.filter((it) => pick[it.code]).length})</button>
+        <button type="button" className="facBtn icon" title="סגירה" onClick=${() => setPicking(false)}><${X} size=${15} /></button>
+      </div>
+      ${avail.length === 0 && html`<p className="facEmpty">כל המוצרים של LLI כבר ברשימה.</p>`}
+      <div className="facPickList">${shownAvail.map((it) => html`<label key=${it.code} className="facPickRow">
+        <input type="checkbox" checked=${!!pick[it.code]} onChange=${(e) => setPick({ ...pick, [it.code]: e.target.checked })} />
+        <b dir="ltr">${it.mark || ""}</b><span className="d">${it.desc || it.code}</span>
+        <span className="c">${it.categoryLabel || ""}</span><span className="s">${it.supplier || "— ללא ספק —"}</span>
+      </label>`)}</div>
+    </div>`}
+    <datalist id=${listId}>${supNames.map((h) => html`<option key=${h} value=${h} />`)}</datalist>
     <div className="facWin"><table>
-      <thead><tr><th>#</th><th>ספק</th><th>מוצר / עבודה</th><th>מייל</th>
-        ${SUP_COLS.map(([k, l]) => html`<th key=${k}>${l}</th>`)}<th></th></tr></thead>
+      <thead><tr><th>#</th><th>סימון</th><th style=${{ textAlign: "start" }}>מוצר</th><th>קטגוריה</th><th>ספק</th>
+        ${FIN_COLS.map(([k, l]) => html`<th key=${k}>${l}</th>`)}<th></th></tr></thead>
       <tbody>
-        ${sups.length === 0 && html`<tr><td colSpan=${6 + SUP_COLS.length} className="facEmpty">עדיין לא נוספו ספקים — לחצי על "+ ספק"</td></tr>`}
-        ${sups.map((s, i) => {
-          const rs = supRowState(s);
-          const svc = s.service || {};
-          return html`<${React.Fragment} key=${s.id}>
-            <tr className=${rs === "done" ? "ok" : rs === "na" ? "na" : ""}>
-              <td className="num">3.${i + 1}</td>
-              <td><input className="facIn" list=${listId} value=${s.name || ""} placeholder="שם הספק" onChange=${(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} /></td>
-              <td><input className="facIn" value=${s.product || ""} onChange=${(e) => patch(s.id, (x) => ({ ...x, product: e.target.value }))} /></td>
-              <td><input className="facIn" dir="ltr" type="email" value=${s.email || ""} onChange=${(e) => patch(s.id, (x) => ({ ...x, email: e.target.value }))} /></td>
-              ${SUP_COLS.map(([k]) => {
-                const v = (s.cells || {})[k] || "";
-                return html`<td key=${k} className=${v === "v" ? "cellV" : v === "na" ? "cellNa" : ""}>
-                  <div style=${{ display: "flex", gap: 4, justifyContent: "center", alignItems: "center" }}>
-                    <button type="button" className=${`tri ${v}`} title="לחיצה: V ← לא רלוונטי ← ריק"
-                      onClick=${() => patch(s.id, (x) => ({ ...x, cells: { ...(x.cells || {}), [k]: NEXT[v] } }))}>${v === "v" ? "✓" : v === "na" ? "ל״ר" : ""}</button>
-                    ${k === "service" && html`<button type="button" className="facBtn icon" title="פרטי מחלקת בדק"
-                      onClick=${() => setOpenSvc(openSvc === s.id ? null : s.id)}><${Pencil} size=${13} /></button>`}
-                  </div></td>`;
-              })}
-              <td style=${{ whiteSpace: "nowrap" }}>
-                ${String(s.email || "").includes("@") && html`<button type="button" className="facBtn icon" title="מייל לספק"
-                  onClick=${() => openMail({ to: s.email.trim(), subject, body: MSG_921 })}><${Mail} size=${14} /></button>`}
-                <button type="button" className="facBtn icon" title="הסרה" onClick=${() => remove(s)}><${Trash2} size=${14} color="#b02a37" /></button>
-              </td>
-            </tr>
-            ${openSvc === s.id && html`<tr className="facSvc"><td colSpan=${6 + SUP_COLS.length}>
-              <div style=${{ fontWeight: 800, marginBottom: 8 }}>פרטי מחלקת הבדק והשירות — ${s.name || "ספק"}</div>
-              <div className="facSvcGrid">
-                ${[["name", "שם איש קשר"], ["phone", "מספר טלפון"], ["mobile", "מספר נייד"], ["email", "כתובת מייל"]].map(([k, l]) => html`
-                  <label key=${k}>${l}<input className="facIn" dir=${k === "name" ? "rtl" : "ltr"} value=${svc[k] || ""}
-                    onChange=${(e) => patch(s.id, (x) => ({ ...x, service: { ...(x.service || {}), [k]: e.target.value } }))} /></label>`)}
-              </div>
-              <div style=${{ display: "flex", gap: 8, justifyContent: "center", marginTop: 10 }}>
-                <button type="button" className="facBtn" onClick=${() => print && print.serviceSheet([s])}><${Printer} size=${15} /> PDF לספק הזה</button>
-                <button type="button" className="facBtn" onClick=${() => setOpenSvc(null)}><${X} size=${15} /> סגירה</button>
-              </div>
-            </td></tr>`}
-          <//>`;
+        ${rows.length === 0 && html`<tr><td colSpan=${6 + FIN_COLS.length} className="facEmpty">הרשימה ריקה — לחצי על "בחירה מתוך LLI"</td></tr>`}
+        ${rows.map((r, i) => {
+          const rs = finRowState(r, lib);
+          return html`<tr key=${r.id} className=${rs === "done" ? "ok" : rs === "na" ? "na" : ""}>
+            <td className="num">${i + 1}</td>
+            <td style=${{ width: 90 }}><input className="facIn" dir="ltr" style=${{ minWidth: 60 }} value=${r.mark || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, mark: e.target.value }))} /></td>
+            <td className="lbl"><input className="facIn" value=${r.desc || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, desc: e.target.value }))} /></td>
+            <td style=${{ fontSize: 12.5, color: "#5b5e66" }}>${r.category || ""}</td>
+            <td><input className="facIn" list=${listId} value=${r.supplier || ""} placeholder="שם הספק"
+              onChange=${(e) => patch(r.id, (x) => ({ ...x, supplier: e.target.value }))}
+              onBlur=${(e) => { if (e.target.value.trim()) addSuppliersToContacts([e.target.value]); }} /></td>
+            ${FIN_COLS.map(([k]) => {
+              const v = finCell(r, k, lib);
+              return html`<td key=${k} className=${v === "v" || v === "auto" ? "cellV" : v === "na" ? "cellNa" : ""}>
+                <div style=${{ display: "flex", gap: 4, justifyContent: "center", alignItems: "center" }}>
+                  <button type="button" className=${`tri ${v === "auto" ? "v" : v}`}
+                    title=${v === "auto" ? "פרטי מחלקת הבדק נמצאים במאגר הספקים" : "לחיצה: V ← לא רלוונטי ← ריק"}
+                    onClick=${() => patch(r.id, (x) => ({ ...x, cells: { ...(x.cells || {}), [k]: NEXT[v] } }))}>${v === "v" || v === "auto" ? "✓" : v === "na" ? "ל״ר" : ""}</button>
+                  ${k === "service" && r.supplier && html`<button type="button" className="facBtn icon" title="פרטי מחלקת בדק (במאגר הספקים)"
+                    onClick=${() => setSvcFor(svcFor === r.supplier ? null : r.supplier)}><${Pencil} size=${13} /></button>`}
+                </div></td>`;
+            })}
+            <td style=${{ whiteSpace: "nowrap" }}>
+              ${mailOf(r.supplier) && html`<button type="button" className="facBtn icon" title="מייל לספק"
+                onClick=${() => openMail({ to: mailOf(r.supplier), subject, body: MSG_921 })}><${Mail} size=${14} /></button>`}
+              <button type="button" className="facBtn icon" title="הסרה" onClick=${() => remove(r)}><${Trash2} size=${14} color="#b02a37" /></button>
+            </td>
+          </tr>`;
         })}
       </tbody>
     </table></div>
+    ${svcFor && html`<${ServiceBox} name=${svcFor} lib=${lib} reloadLib=${reloadLib} flash=${flash} print=${print} rows=${rows} onClose=${() => setSvcFor(null)} />`}
     <div className="facLegend">
       <span><i style=${{ background: "#e3f3e6" }} />V — התקבל</span>
       <span><i style=${{ background: "#f4f4f6" }} />לא רלוונטי</span>
-      <span>לחיצה על משבצת: V ← ל״ר (לא רלוונטי) ← ריק</span>
-      ${sups.some((s) => Object.values(s.service || {}).some(Boolean)) && html`<button type="button" className="facBtn" style=${{ padding: "3px 10px" }}
-        onClick=${() => print && print.serviceSheet(sups.filter((s) => Object.values(s.service || {}).some(Boolean)))}><${Printer} size=${14} /> PDF פרטי בדק — כל הספקים</button>`}
+      <span>פרטי מחלקת בדק שנמצאים במאגר הספקים מסומנים V מעצמם</span>
     </div><//>`;
+}
+
+// The service department of one supplier — kept in the suppliers' library, so
+// it is filled once and counts on every project.
+function ServiceBox({ name, lib, reloadLib, flash, print, rows, onClose }) {
+  const cur = supLibFind(lib, name);
+  const [v, setV] = useState(() => ({ ...(((cur || {}).data || {}).service || {}) }));
+  const [busy, setBusy] = useState(false);
+  const save = async () => {
+    setBusy(true);
+    try {
+      const base = cur || { name, data: {} };
+      await supLibSave({ ...base, name: base.name || name, data: { ...(base.data || {}), service: v } });
+      await reloadLib(true);
+      flash("פרטי מחלקת הבדק נשמרו במאגר הספקים");
+      onClose();
+    } catch (e) {
+      flash("השמירה במאגר נכשלה: " + ((e && e.message) || ""));
+    } finally { setBusy(false); }
+  };
+  return html`<div className="facMsg">
+    <div style=${{ fontWeight: 800, marginBottom: 8 }}>פרטי מחלקת הבדק והשירות — ${name}${cur ? "" : " (ספק חדש במאגר)"}</div>
+    <div className="facSvcGrid">
+      ${[["name", "שם איש קשר"], ["phone", "מספר טלפון"], ["mobile", "מספר נייד"], ["email", "כתובת מייל"]].map(([k, l]) => html`
+        <label key=${k}>${l}<input className="facIn" dir=${k === "name" ? "rtl" : "ltr"} value=${v[k] || ""} onChange=${(e) => setV({ ...v, [k]: e.target.value })} /></label>`)}
+    </div>
+    <div style=${{ display: "flex", gap: 8, justifyContent: "center", marginTop: 10 }}>
+      <button type="button" className="facBtn primary" disabled=${busy} onClick=${save}><${Save} size=${15} /> שמירה במאגר הספקים</button>
+      <button type="button" className="facBtn" onClick=${() => print && print.serviceSheet([{ name, product: rows.filter((r) => r.supplier === name).map((r) => r.desc).join(", "), service: v }])}><${Printer} size=${15} /> PDF</button>
+      <button type="button" className="facBtn" onClick=${onClose}><${X} size=${15} /> סגירה</button>
+    </div>
+  </div>`;
 }
 
 // ----------------------------------------------------------------------------- chapter 9: AS MADE per floor
@@ -568,7 +682,7 @@ function AsMadeChapter({ ch, data, edit, bar, floors }) {
         const s = am[id] || {};
         const all = floors.every((f) => (s.floors || {})[f]);
         return html`<tr key=${id} className=${s.na ? "na" : all ? "ok" : ""}>
-          <td className="num">9.${i + 1}</td>
+          <td className="num">${i + 1}</td>
           <td className="lbl">${label}</td>
           ${floors.map((f) => {
             const on = !!(s.floors || {})[f];

@@ -3121,6 +3121,73 @@ var signCss = `
 `;
 
 
+
+// ===========================================================================
+// The suppliers' library (מאגר ספקים) — 06.11.2026. One row per supplier in
+// public.supplier_library: the service department's details, and product
+// folders holding spec files (in the submittals bucket under library/…) with
+// what the AI read out of each file the first time.
+// ===========================================================================
+var supLibCache = null;
+async function supLibLoad(force) {
+  if (supLibCache && !force) return supLibCache;
+  const { data, error } = await supabase.from("supplier_library").select("id, name, data, updated_at").order("name");
+  if (error) throw error;
+  supLibCache = (data || []).map((r) => ({ id: r.id, name: r.name || "", data: r.data || {}, updated_at: r.updated_at }));
+  return supLibCache;
+}
+var supLibNorm = (x) => String(x || "").replace(/["'׳״`]/g, "").replace(/\s+/g, " ").trim().toLowerCase();
+function supLibFind(list, name) {
+  const n = supLibNorm(name);
+  if (!n) return null;
+  return (list || []).find((s) => supLibNorm(s.name) === n) || null;
+}
+async function supLibSave(row) {
+  let who = "";
+  try { const { data: u } = await supabase.auth.getUser(); who = (u && u.user && u.user.email) || ""; } catch (e) {}
+  const rec = { id: row.id || `sup-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, name: String(row.name || "").trim(), data: row.data || {}, updated_at: new Date().toISOString(), updated_by: who };
+  const { error } = await supabase.from("supplier_library").upsert(rec, { onConflict: "id" });
+  if (error) throw error;
+  if (supLibCache) {
+    const i = supLibCache.findIndex((x) => x.id === rec.id);
+    if (i >= 0) supLibCache[i] = rec; else supLibCache.push(rec);
+  }
+  return rec;
+}
+async function supLibRemove(id) {
+  const { error } = await supabase.from("supplier_library").delete().eq("id", id);
+  if (error) throw error;
+  if (supLibCache) supLibCache = supLibCache.filter((x) => x.id !== id);
+}
+async function supLibUpload(supplierId, file) {
+  const safe = String(file.name || "file").replace(/[^\w.\-]+/g, "_").slice(-80);
+  const path = `library/${supplierId}/${Date.now().toString(36)}-${safe}`;
+  const { error } = await supabase.storage.from(SUBMITTAL_BUCKET).upload(path, file, { contentType: file.type || "application/octet-stream", upsert: false });
+  if (error) throw error;
+  return { id: `f-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, name: file.name || safe, path, size: file.size || 0, type: file.type || "", addedAt: new Date().toISOString().slice(0, 10), ai: null };
+}
+async function supLibFileUrl(path) {
+  const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).createSignedUrl(path, 3600);
+  if (error) throw error;
+  return data && data.signedUrl;
+}
+async function supLibFileBlob(path) {
+  const { data, error } = await supabase.storage.from(SUBMITTAL_BUCKET).download(path);
+  if (error) throw error;
+  return data;
+}
+// Every spec file in the library, flat, for a picker: [{ supplier, product, file }].
+function supLibFiles(list) {
+  const out = [];
+  (list || []).forEach((s) => ((s.data || {}).products || []).forEach((p) => (p.files || []).forEach((f) => out.push({ supplier: s, product: p, file: f }))));
+  return out;
+}
+// A service department counts as filled when it has a name or a way to reach it.
+function supLibHasService(s) {
+  const v = ((s || {}).data || {}).service || {};
+  return !!(String(v.name || "").trim() || String(v.phone || "").trim() || String(v.mobile || "").trim() || String(v.email || "").trim());
+}
+
 // ===========================================================================
 // The picture library (מאגר תמונות) — 05.11.2026.
 //
@@ -3251,6 +3318,9 @@ var IMGLIB_CSS = `
 .ilMeta span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .ilMeta i { display: block; font-style: normal; color: #8a93a3; font-size: 10.5px; margin-top: 2px; }
 .ilEmpty { grid-column: 1 / -1; text-align: center; color: #5b6575; padding: 40px 0; font-size: 14px; }
+.ilInline { display: flex; flex-direction: column; min-height: 60vh; font-family: 'Assistant','Inter',sans-serif; }
+.ilInline .ilGrid { max-height: 70vh; }
+.ilInline .ilCell { cursor: default; }
 .ilFoot { text-align: center; font-size: 12px; color: #8a93a3; margin-top: 8px; }
 `;
 var imgLibHost = null;
@@ -3336,7 +3406,9 @@ function ImgPicker({ projectId, onFile, at, multiple }) {
 
 // The library itself: every picture the site holds, newest first. The list
 // comes without the pictures; the pictures load as they scroll into view.
-function ImgLibrary({ projectId, onPick, onClose }) {
+// 06.11.26 — `inline`: the same library as a page of the data-libraries
+// screen (no window, no picking; the X on a picture still removes it).
+function ImgLibrary({ projectId, onPick, onClose, inline }) {
   const [list, setList] = useState6(null);
   const [err, setErr] = useState6(null);
   const [src, setSrc] = useState6("all");
@@ -3415,11 +3487,16 @@ function ImgLibrary({ projectId, onPick, onClose }) {
     setDelNote(null);
     setList((l) => (l || []).filter((x) => x.id !== r.id));
   };
-  return sbH(
-    "div", { className: "ilScrim", onClick: onClose },
-    sbH("div", { className: "ilBox ilLib", dir: "rtl", onClick: (e) => e.stopPropagation() },
-      sbH("button", { type: "button", className: "ilX", "aria-label": "Close", onClick: onClose }, "×"),
-      sbH("h3", null, "מאגר התמונות"),
+  if (!document.getElementById("ilCss")) {
+    const st = document.createElement("style"); st.id = "ilCss"; st.textContent = IMGLIB_CSS; document.head.appendChild(st);
+  }
+  const wrap = (kids) => inline
+    ? sbH("div", { className: "ilInline", dir: "rtl" }, kids)
+    : sbH("div", { className: "ilScrim", onClick: onClose },
+        sbH("div", { className: "ilBox ilLib", dir: "rtl", onClick: (e) => e.stopPropagation() },
+          sbH("button", { type: "button", className: "ilX", "aria-label": "Close", onClick: onClose }, "\u00d7"),
+          sbH("h3", null, "מאגר התמונות"), kids));
+  return wrap(sbH(React15.Fragment, null,
       sbH("div", { className: "ilBar" },
         sbH("input", { type: "search", placeholder: "חיפוש לפי תיאור / סימון / פרויקט", value: q, onChange: (e) => setQ(e.target.value) }),
         sbH("select", { value: proj, onChange: (e) => setProj(e.target.value) },
@@ -3435,7 +3512,7 @@ function ImgLibrary({ projectId, onPick, onClose }) {
               key: r.id, role: "button", tabIndex: 0, className: "ilCell",
               onKeyDown: (e) => { if (e.key === "Enter") pick(r); }, "data-id": r.id, title: r.label || "",
               ref: (el) => { if (el && obs.current) obs.current.observe(el); else if (el) ask(r.id); },
-              onClick: () => pick(r)
+              onClick: () => { if (onPick) pick(r); }
             },
             sbH("button", { type: "button", className: "ilDel", title: "מחיקה מהמאגר", "aria-label": "Delete", onClick: (e) => drop(r, e) }, "\u00d7"),
             sbH("div", { className: "ilThumb" },
@@ -3446,12 +3523,22 @@ function ImgLibrary({ projectId, onPick, onClose }) {
               sbH("span", null, r.label || "—"),
               sbH("i", null, `${r.project_name || ""}${r.created_at ? " · " + sbFmtDate(String(r.created_at).slice(0, 10)) : ""}`))))),
       delNote ? sbH("p", { className: "ilNote", style: { textAlign: "center" } }, delNote) : null,
-      list ? sbH("div", { className: "ilFoot" }, `${shown.length} תמונות`) : null)
-  );
+      list ? sbH("div", { className: "ilFoot" }, `${shown.length} תמונות`) : null));
 }
 
 export {
   PrintLangAsk,
+  ImgLibrary,
+  supLibLoad,
+  supLibFind,
+  supLibSave,
+  supLibRemove,
+  supLibUpload,
+  supLibFileUrl,
+  supLibFileBlob,
+  supLibFiles,
+  supLibHasService,
+  supLibNorm,
   IMGLIB_SOURCES,
   imgLibAdd,
   imgLibDataUrlToFile,

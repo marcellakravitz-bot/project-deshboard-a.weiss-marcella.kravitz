@@ -131,7 +131,17 @@ import {
   imgLibAdd,
   openImagePicker,
   imgPickProps,
-  imgAsk
+  imgAsk,
+  ImgLibrary,
+  supLibLoad,
+  supLibFind,
+  supLibSave,
+  supLibRemove,
+  supLibUpload,
+  supLibFileUrl,
+  supLibFileBlob,
+  supLibFiles,
+  supLibHasService
 } from "./sign.js";
 import * as XLSX3 from "xlsx";
 import Papa3 from "papaparse";
@@ -159,7 +169,7 @@ import {
   Download as DownloadSd,
   PenLine as PenLineSd
 } from "lucide-react";
-import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon, Archive as ArchiveIcon, ClipboardX as RejectsIcon } from "lucide-react";
+import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon, Archive as ArchiveIcon, ClipboardX as RejectsIcon, FolderOpen as FolderOpen2, Database as DatabaseIcon } from "lucide-react";
 import {
   PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
   Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2, Cctv as Cctv2,
@@ -2475,6 +2485,42 @@ var pdfViewer = `
            struck through = left out; click to switch. A row without its print
            V: still editable, greyed. Same on LLI, submittals, SD, rejects, RFI. */
         th.prColTh, th.prAllTh { cursor: pointer; user-select: none; }
+        /* 06.11.26 — the data libraries screen. */
+        .panel.dlScreen { width: 125%; margin-inline: -12.5%; }
+        .panel.dlScreen > .panelTitle, .panel.dlScreen > .panelSub { text-align: center; }
+        .dlScreen .panel.contactsFree { box-shadow: none; border: 0; padding: 0; }
+        .panel.contactsFree { height: auto; max-height: none; min-height: 0; overflow: visible; }
+        .panel.contactsFree .contactsListWindow { max-height: none; overflow: visible; }
+        @media (max-width: 900px) { .panel.dlScreen { width: 100%; margin-inline: 0; } }
+        .dlTabs { justify-content: center; margin: 6px 0 14px; }
+        .dlH { font-size: 14px; font-weight: 800; margin: 16px 0 8px; color: var(--accent-ink, #103460); }
+        .dlAdd { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 6px 0 10px; }
+        .dlAdd .contactsInput { max-width: 280px; }
+        .dlCatRow { display: grid; grid-template-columns: 1fr 1fr 120px 90px; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--line); }
+        .dlCatRow.off { opacity: .5; }
+        .dlCatName { font-weight: 700; } .dlCatName.en { font-weight: 500; color: var(--steel); }
+        .dlCode.ro { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--steel); font-size: 12px; }
+        .dlShow { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; cursor: pointer; }
+        .dlErr { color: #b02a37; font-weight: 700; }
+        .dlSup { border: 1px solid var(--line); border-radius: 12px; margin-bottom: 8px; background: #fff; }
+        .dlSupHead { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; background: transparent; cursor: pointer; font-family: inherit; font-size: 14px; text-align: start; }
+        .dlSupHead b { flex: 1; }
+        .dlMeta { font-size: 12px; color: var(--steel); }
+        .dlTag { font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 8px; background: #f4f4f6; color: #8a8d94; white-space: nowrap; }
+        .dlTag.ok { background: #e3f3e6; color: #1f7a3e; }
+        .dlSupBody { padding: 4px 14px 14px; border-top: 1px solid var(--line); }
+        .dlField { display: flex; align-items: center; gap: 10px; margin-top: 10px; } .dlField span { font-weight: 700; font-size: 13px; }
+        .dlSvc { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 8px; }
+        .dlSvc label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; font-weight: 700; color: var(--steel); }
+        .dlBtns { display: flex; gap: 8px; margin-top: 10px; }
+        .dlFolder { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; margin-bottom: 8px; background: #fafbfc; }
+        .dlFolderHead { display: flex; align-items: center; gap: 8px; }
+        .dlFolderName { flex: 1; font-weight: 700; }
+        .dlUp { cursor: pointer; white-space: nowrap; }
+        .dlFile { display: flex; align-items: center; gap: 10px; padding: 6px 4px 0 4px; }
+        .dlFileName { border: 0; background: transparent; color: var(--accent, #1A559E); font-weight: 700; cursor: pointer; font-family: inherit; font-size: 13px; text-align: start; flex: 1; text-decoration: underline; }
+        .dlEmpty { margin: 6px 0 0; }
+        @media (max-width: 760px) { .dlCatRow { grid-template-columns: 1fr 1fr; } .dlSvc { grid-template-columns: 1fr 1fr; } }
         th.prPrintTh { color: #9aa2ad; }
         .rsBox { max-width: 560px; width: calc(100vw - 32px); text-align: start; }
         .rsBox h3 { padding-right: 28px; text-align: center; }
@@ -8058,6 +8104,8 @@ function CardView({
   contacts,
   contactsCatalog,
   onChangeBoardCats,
+  contactsEditorNode,
+  onAddContacts,
   contactGroupVisibility,
   contractorAccent,
   submittals,
@@ -8177,8 +8225,12 @@ function CardView({
     }
   ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
     projectId: project.id, project, projectName: project.name, currentEmail,
-    contactsNode: React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }),
+    contactsNode: contactsEditorNode || React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }),
     contactsCount: (contacts || []).length,
+    // 06.11.26 — the finishes list picks from LLI; its suppliers join the
+    // project's contacts.
+    lliItems: lliItemsFor(boqData, boqFlags, lliRows, contacts, contactsCatalog, "he"),
+    contacts, catalog: contactsCatalog, onAddContacts,
     supplierHints: Array.from(new Set(Object.values(lliRows || {}).map((v) => String((v && v.supplier) || "").trim()).filter(Boolean))).sort(),
     printParts: { brand: printBrand, accent: contractorAccent || CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
@@ -8251,6 +8303,8 @@ var CONTACT_GROUPS = [
   { key: "main", he: "קבלן ראשי", en: "Main Contractor" },
   { key: "supervision", he: "פיקוח", en: "Supervision" },
   { key: "consultants", he: "יועצים", en: "Consultants" },
+  // 06.11.26 — subcontractors, after the consultants and before the suppliers.
+  { key: "subcontractors", he: "קבלני משנה", en: "Subcontractors" },
   { key: "suppliers", he: "ספקים", en: "Suppliers" }
 ];
 // The client always sees these three groups and never the suppliers.
@@ -8547,6 +8601,7 @@ function mergeContactCatalog(stored, seed) {
   const out = { people: stored && stored.people || [] };
   // The board categories she added (20.10.26). Kept as they were stored.
   out.boardCats = stored && Array.isArray(stored.boardCats) ? stored.boardCats : [];
+  out.hiddenCats = stored && Array.isArray(stored.hiddenCats) ? stored.hiddenCats : [];
   const used = /* @__PURE__ */ new Set();
   ["disciplines", "roles", "companies"].forEach((key) => {
     const current = (stored && stored[key] || []).map((e) => ({ ...e }));
@@ -8574,6 +8629,11 @@ function mergeContactCatalog(stored, seed) {
 function catalogForGroup(list, group) {
   const all = list || [];
   if (!group) return all;
+  // Subcontractors pick from the same trades as the suppliers (06.11.26).
+  if (group === "subcontractors") {
+    const sub = all.filter((e) => e.groups && (e.groups.indexOf("subcontractors") !== -1 || e.groups.indexOf("suppliers") !== -1));
+    if (sub.length) return all.filter((e) => !e.groups || !e.groups.length || e.groups.indexOf("subcontractors") !== -1 || e.groups.indexOf("suppliers") !== -1);
+  }
   const own = all.filter((e) => e.groups && e.groups.indexOf(group) !== -1);
   if (!own.length) return all;
   return all.filter((e) => !e.groups || !e.groups.length || e.groups.indexOf(group) !== -1);
@@ -8806,7 +8866,7 @@ function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, 
   // Admin. Only the client is filtered — the main contractor always sees
   // everything, whatever the switches say.
   const vis = groupVisibility || {};
-  const groupShown = (key) => key === "suppliers" ? vis[key] === true : vis[key] !== false;
+  const groupShown = (key) => key === "suppliers" || key === "subcontractors" ? vis[key] === true : vis[key] !== false;
   const allowed = viewerRole === "client" ? CONTACT_GROUPS.filter((g) => groupShown(g.key)).map((g) => g.key) : CONTACT_GROUPS.map((g) => g.key);
   // This document is a company document, so it wears the main contractor's
   // colour — not the per-project colour used by the schedule.
@@ -9075,9 +9135,167 @@ function PersonField({ row, people, companies, roles, lang, isRTL, onChange, onP
     )
   );
 }
-function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, contactsByProject, onContactsChange, groupVisibility, onGroupVisibilityChange }) {
-  const [projectId, setProjectId] = useState6(projects.length ? projects[0].id : null);
-  const [tab, setTab] = useState6("document");
+// ===========================================================================
+// 06.11.26 — מאגרי מידע: the libraries the whole site shares, one screen, four
+// tabs — categories, pictures, suppliers (product folders with spec files and
+// the service department), and the contacts catalogue.
+// ===========================================================================
+function DataLibrariesScreen({ isRTL, catalog, onCatalogChange, contactsProps }) {
+  const [tab, setTab] = useState6("cats");
+  const tabs = [["cats", "קטגוריות", "Categories"], ["pics", "מאגר תמונות", "Pictures"], ["sups", "מאגר ספקים", "Suppliers"], ["contacts", "מאגרי אנשי קשר", "Contacts"]];
+  return sbH("section", { className: "panel dlScreen", dir: isRTL ? "rtl" : "ltr" },
+    sbH("h2", { className: "panelTitle" }, isRTL ? "מאגרי מידע" : "Data libraries"),
+    sbH("p", { className: "panelSub" }, isRTL ? "משותף לכל הפרויקטים" : "Shared by every project"),
+    sbH("div", { className: "contactsTabs dlTabs" }, tabs.map(([k, he, en]) => sbH("button", {
+      key: k, type: "button", className: `contactsTabBtn ${tab === k ? "on" : ""}`, onClick: () => setTab(k)
+    }, isRTL ? he : en))),
+    tab === "cats" ? sbH(CategoriesLibrary, { isRTL, catalog, onCatalogChange }) : null,
+    tab === "pics" ? sbH(ImgLibrary, { inline: true, projectId: null }) : null,
+    tab === "sups" ? sbH(SupplierLibraryPanel, { isRTL }) : null,
+    tab === "contacts" ? sbH(ProjectContactsScreen, { ...contactsProps, mode: "catalog" }) : null
+  );
+}
+function CategoriesLibrary({ isRTL, catalog, onCatalogChange }) {
+  const cat = catalog || {};
+  const mine = (cat.boardCats || []).filter((c) => c && c.key);
+  const hidden = new Set(cat.hiddenCats || []);
+  const [nHe, setNHe] = useState6("");
+  const save = (patch) => onCatalogChange({ ...cat, ...patch });
+  const setMine = (next) => { boardSetCustomCats(next, cat.hiddenCats || []); save({ boardCats: next }); };
+  const builtIn = BOARD_CATEGORIES.filter((c) => !c.custom);
+  const add = () => {
+    const v = nHe.trim();
+    if (!v) return;
+    if (BOARD_CATEGORIES.some((c) => [c.he, c.en].some((x) => String(x || "").trim().toLowerCase() === v.toLowerCase()))) { setNHe(""); return; }
+    setMine(mine.concat([{ key: `c-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, he: v, en: v, code: "" }]));
+    setNHe("");
+  };
+  const row = (c, custom) => sbH("div", { key: c.key, className: `dlCatRow ${hidden.has(c.key) ? "off" : ""}`.trim() },
+    custom
+      ? sbH(React15.Fragment, null,
+          sbH("input", { className: "contactsInput", dir: "rtl", value: c.he || "", onChange: (e) => setMine(mine.map((x) => x.key === c.key ? { ...x, he: e.target.value } : x)) }),
+          sbH("input", { className: "contactsInput", dir: "ltr", value: c.en || "", placeholder: "English", onChange: (e) => setMine(mine.map((x) => x.key === c.key ? { ...x, en: e.target.value } : x)) }),
+          sbH("input", { className: "contactsInput dlCode", dir: "ltr", value: c.code || "", placeholder: isRTL ? "קוד סבמיטל" : "Submittal code",
+            title: isRTL ? "הקוד שבמספור הסבמיטלים של התיקייה (למשל ELV)" : "The folder's code in submittal numbers (e.g. ELV)",
+            onChange: (e) => setMine(mine.map((x) => x.key === c.key ? { ...x, code: e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 8) } : x)) }),
+          sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "מחיקה מהמאגר" : "Delete",
+            onClick: () => { if (confirm(isRTL ? `למחוק את "${c.he}" מהמאגר? שורות שכבר מסומנות בה יישארו בלי קטגוריה.` : "Delete this category?")) setMine(mine.filter((x) => x.key !== c.key)); } }, "×"))
+      : sbH(React15.Fragment, null,
+          sbH("span", { className: "dlCatName" }, c.he),
+          sbH("span", { className: "dlCatName en", dir: "ltr" }, c.en),
+          sbH("span", { className: "dlCode ro", dir: "ltr" }, (SUBMITTAL_CATEGORIES.concat(SB_EXTRA_FOLDERS).find((x) => x.key === c.key) || {}).code || ""),
+          sbH("label", { className: "dlShow", title: isRTL ? "מוצגת ברשימות הבחירה" : "Offered in the pickers" },
+            sbH("input", { type: "checkbox", checked: !hidden.has(c.key), onChange: () => {
+              const next = new Set(hidden); if (next.has(c.key)) next.delete(c.key); else next.add(c.key);
+              boardSetCustomCats(mine, Array.from(next)); save({ hiddenCats: Array.from(next) });
+            } }), isRTL ? "בשימוש" : "In use")));
+  return sbH("div", { className: "dlCats" },
+    sbH("div", { className: "dlAdd" },
+      sbH("input", { className: "contactsInput", dir: "rtl", value: nHe, placeholder: isRTL ? "שם קטגוריה חדשה" : "New category", onChange: (e) => setNHe(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
+      sbH("button", { type: "button", className: "functionEditBtn", onClick: add }, isRTL ? "+ הוספה" : "+ Add")),
+    sbH("h4", { className: "dlH" }, isRTL ? `קטגוריות שנוספו (${mine.length})` : `Added categories (${mine.length})`),
+    mine.length ? mine.map((c) => row(c, true)) : sbH("p", { className: "panelSub" }, isRTL ? "עדיין לא נוספו קטגוריות. קטגוריה שמקלידים בעמודת הקטגוריה ב-LLI או ב-SD נוספת לכאן." : "None yet."),
+    sbH("h4", { className: "dlH" }, isRTL ? `קטגוריות המערכת (${builtIn.length})` : `Built-in categories (${builtIn.length})`),
+    builtIn.map((c) => row(c, false)));
+}
+function SupplierLibraryPanel({ isRTL }) {
+  const [list, setList] = useState6(null);
+  const [err, setErr] = useState6("");
+  const [q, setQ] = useState6("");
+  const [openId, setOpenId] = useState6(null);
+  const [busy, setBusy] = useState6(null);
+  const [newName, setNewName] = useState6("");
+  const load = async (force) => {
+    try { setList((await supLibLoad(force)).slice()); setErr(""); }
+    catch (e) { setErr((e && e.message) || String(e)); setList([]); }
+  };
+  useEffect5(() => { load(true); }, []);
+  const save = async (row) => {
+    setBusy(row.id || "new");
+    try { await supLibSave(row); await load(false); } catch (e) { alert("השמירה נכשלה: " + ((e && e.message) || "")); } finally { setBusy(null); }
+  };
+  const qq = q.trim().toLowerCase();
+  const shown = (list || []).filter((s) => !qq || `${s.name} ${(((s.data || {}).products) || []).map((p) => p.name).join(" ")}`.toLowerCase().includes(qq));
+  const addSup = async () => {
+    const n = newName.trim();
+    if (!n) return;
+    if (supLibFind(list, n)) { setOpenId(supLibFind(list, n).id); setNewName(""); return; }
+    const rec = await supLibSave({ name: n, data: { service: {}, products: [] } }).catch((e) => { alert("השמירה נכשלה: " + ((e && e.message) || "")); return null; });
+    setNewName("");
+    if (rec) { await load(false); setOpenId(rec.id); }
+  };
+  if (list == null) return sbH("p", { className: "panelSub" }, "טוען…");
+  return sbH("div", { className: "dlSups" },
+    err ? sbH("p", { className: "dlErr" }, /relation|does not exist|schema cache/i.test(err) ? "טבלת מאגר הספקים עדיין לא קיימת — היא תופעל בעדכון הבא." : "לא הצלחתי לפתוח את המאגר: " + err) : null,
+    sbH("div", { className: "dlAdd" },
+      sbH("input", { className: "contactsInput", value: q, placeholder: isRTL ? "חיפוש ספק או מוצר" : "Search", onChange: (e) => setQ(e.target.value) }),
+      sbH("input", { className: "contactsInput", value: newName, placeholder: isRTL ? "שם ספק חדש" : "New supplier", onChange: (e) => setNewName(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") addSup(); } }),
+      sbH("button", { type: "button", className: "functionEditBtn", onClick: addSup }, isRTL ? "+ ספק" : "+ Supplier")),
+    !shown.length ? sbH("p", { className: "panelSub" }, isRTL ? "אין ספקים להצגה." : "No suppliers.") : null,
+    shown.map((s) => sbH(SupplierLibraryRow, { key: s.id, s, isRTL, open: openId === s.id, onToggle: () => setOpenId(openId === s.id ? null : s.id), onSave: save, busy: busy === s.id, onRemove: async () => {
+      if (!confirm(`למחוק את ${s.name} מהמאגר, עם כל התיקיות והקבצים שבו?`)) return;
+      try { await supLibRemove(s.id); await load(false); } catch (e) { alert("המחיקה נכשלה: " + ((e && e.message) || "")); }
+    } })));
+}
+function SupplierLibraryRow({ s, isRTL, open, onToggle, onSave, busy, onRemove }) {
+  const d = s.data || {};
+  const [svc, setSvc] = useState6({ ...(d.service || {}) });
+  const [name, setName] = useState6(s.name);
+  const [folder, setFolder] = useState6("");
+  const [upFor, setUpFor] = useState6(null);
+  useEffect5(() => { setSvc({ ...(d.service || {}) }); setName(s.name); }, [s.updated_at]);
+  const products = d.products || [];
+  const put = (patch) => onSave({ ...s, name, data: { ...d, service: svc, ...patch } });
+  const fileCount = products.reduce((n, p) => n + (p.files || []).length, 0);
+  const upload = async (pid, files) => {
+    setUpFor(pid);
+    try {
+      const added = [];
+      for (const f of files) added.push(await supLibUpload(s.id, f));
+      await put({ products: products.map((p) => p.id === pid ? { ...p, files: (p.files || []).concat(added) } : p) });
+    } catch (e) { alert("ההעלאה נכשלה: " + ((e && e.message) || "")); }
+    finally { setUpFor(null); }
+  };
+  return sbH("div", { className: `dlSup ${open ? "open" : ""}`.trim() },
+    sbH("button", { type: "button", className: "dlSupHead", onClick: onToggle },
+      sbH(ChevronDown2, { size: 15, strokeWidth: 2.2, style: { transform: open ? "rotate(180deg)" : "none" } }),
+      sbH("b", null, s.name),
+      sbH("span", { className: "dlMeta" }, `${products.length} תיקיות · ${fileCount} קבצים`),
+      supLibHasService(s) ? sbH("span", { className: "dlTag ok" }, "פרטי מחלקת בדק ✓") : sbH("span", { className: "dlTag" }, "חסרים פרטי מחלקת בדק")),
+    open ? sbH("div", { className: "dlSupBody" },
+      sbH("div", { className: "dlField" }, sbH("span", null, "שם הספק"), sbH("input", { className: "contactsInput", value: name, onChange: (e) => setName(e.target.value) })),
+      sbH("h4", { className: "dlH" }, "פרטי מחלקת בדק ושירות"),
+      sbH("div", { className: "dlSvc" }, [["name", "שם איש קשר"], ["phone", "טלפון"], ["mobile", "נייד"], ["email", "מייל"]].map(([k, l]) =>
+        sbH("label", { key: k }, l, sbH("input", { className: "contactsInput", dir: k === "name" ? "rtl" : "ltr", value: svc[k] || "", onChange: (e) => setSvc({ ...svc, [k]: e.target.value }) })))),
+      sbH("div", { className: "dlBtns" },
+        sbH("button", { type: "button", className: "functionEditBtn", disabled: busy, onClick: () => put({}) }, busy ? "שומר…" : "שמירה"),
+        sbH("button", { type: "button", className: "ghostBtn small", onClick: onRemove }, "מחיקת הספק מהמאגר")),
+      sbH("h4", { className: "dlH" }, "תיקיות מוצרים ומפרטים"),
+      sbH("div", { className: "dlAdd" },
+        sbH("input", { className: "contactsInput", value: folder, placeholder: "שם מוצר / תיקייה", onChange: (e) => setFolder(e.target.value), onKeyDown: (e) => { if (e.key === "Enter" && folder.trim()) { put({ products: products.concat([{ id: `p-${Date.now().toString(36)}`, name: folder.trim(), files: [] }]) }); setFolder(""); } } }),
+        sbH("button", { type: "button", className: "functionEditBtn", onClick: () => { if (!folder.trim()) return; put({ products: products.concat([{ id: `p-${Date.now().toString(36)}`, name: folder.trim(), files: [] }]) }); setFolder(""); } }, "+ תיקייה")),
+      products.map((p) => sbH("div", { key: p.id, className: "dlFolder" },
+        sbH("div", { className: "dlFolderHead" },
+          sbH(FolderOpen2, { size: 15, strokeWidth: 2 }),
+          sbH("input", { key: `${p.id}:${p.name}`, className: "contactsInput dlFolderName", defaultValue: p.name, onBlur: (e) => { const v = e.target.value.trim(); if (v && v !== p.name) put({ products: products.map((x) => x.id === p.id ? { ...x, name: v } : x) }); } }),
+          sbH("label", { className: "functionEditBtn dlUp" }, upFor === p.id ? "מעלה…" : "+ מפרט",
+            sbH("input", { type: "file", multiple: true, accept: "application/pdf,image/*", style: { display: "none" }, onChange: (e) => { const fs = Array.from(e.target.files || []); e.target.value = ""; if (fs.length) upload(p.id, fs); } })),
+          sbH("button", { type: "button", className: "contactsRowDel", title: "מחיקת התיקייה", onClick: () => { if (confirm(`למחוק את התיקייה "${p.name}"?`)) put({ products: products.filter((x) => x.id !== p.id) }); } }, "×")),
+        (p.files || []).length ? (p.files || []).map((f) => sbH("div", { key: f.id, className: "dlFile" },
+          sbH("button", { type: "button", className: "dlFileName", onClick: async () => { try { const u = await supLibFileUrl(f.path); if (u) window.open(u, "_blank", "noopener"); } catch (e) { alert("לא הצלחתי לפתוח את הקובץ"); } } }, f.name),
+          sbH("span", { className: "dlMeta" }, `${f.addedAt || ""} · ${Math.max(1, Math.round((f.size || 0) / 1024))}KB`),
+          f.ai ? sbH("span", { className: "dlTag ok", title: "ה-AI כבר קרא את הקובץ — בחירה שלו בסבמיטל לא תפעיל AI שוב" }, "נותח ✓") : sbH("span", { className: "dlTag" }, "עוד לא נותח"),
+          sbH("button", { type: "button", className: "contactsRowDel", title: "מחיקת הקובץ", onClick: () => { if (confirm(`למחוק את ${f.name}?`)) put({ products: products.map((x) => x.id === p.id ? { ...x, files: (x.files || []).filter((y) => y.id !== f.id) } : x) }); } }, "×")))
+          : sbH("p", { className: "panelSub dlEmpty" }, "אין עדיין מפרטים בתיקייה.")))
+    ) : null);
+}
+// 06.11.26 — `mode`: "document" (inside the facility file, one project, no
+// catalogue) or "catalog" (the data libraries screen, the catalogue only).
+function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, contactsByProject, onContactsChange, groupVisibility, onGroupVisibilityChange, mode, fixedProjectId }) {
+  const [projectId, setProjectId] = useState6(fixedProjectId || (projects.length ? projects[0].id : null));
+  const [tab, setTab] = useState6(mode || "document");
+  // The people library, one group at a time (06.11.26).
+  const [peopleGrp, setPeopleGrp] = useState6("all");
   // Edits live in a local draft and only reach the server on Save. Without this
   // every keystroke was a write to the shared project state.
   const [draft, setDraft] = useState6([]);
@@ -9124,7 +9342,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     setCatalogDraft(catalog);
   }, [catalog]);
   const vis = groupVisibility || {};
-  const groupShown = (key) => key === "suppliers" ? vis[key] === true : vis[key] !== false;
+  const groupShown = (key) => key === "suppliers" || key === "subcontractors" ? vis[key] === true : vis[key] !== false;
   // Under Main Contractor and Supervision the discipline is always the same, so
   // it is filled in for you on every new row (still editable if ever needed).
   const GROUP_FIXED_DISCIPLINE = { main: "Main Contractor", supervision: "Supervision" };
@@ -9185,7 +9403,10 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
         person: { ...r.person || {} },
         roleId: r.roleId || null,
         phone: r.phone || "",
-        email: r.email || ""
+        email: r.email || "",
+        // 06.11.26 — which library the person belongs to (A. Weiss,
+        // supervision, consultants, subcontractors, suppliers).
+        group: r.group || (idx >= 0 ? people[idx].group : "") || ""
       };
       if (idx >= 0) people[idx] = entry;
       else people.push(entry);
@@ -9372,13 +9593,13 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
     null,
     /* @__PURE__ */ React15.createElement(
       "section",
-      { className: "panel adminPanel adminPanelFlex adminPanelTall adminPanelWide" },
-      /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "מסמך אנשי קשר בפרויקט" : "Project Contacts Document"),
+      { className: mode ? "panel adminPanelFlex contactsFree" : "panel adminPanel adminPanelFlex adminPanelTall adminPanelWide" },
+      mode ? null : /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "מסמך אנשי קשר בפרויקט" : "Project Contacts Document"),
       /* @__PURE__ */ React15.createElement(
         "div",
         { className: "contactsAdminBar" },
-        /* @__PURE__ */ React15.createElement("div", { className: "contactsTabs" }, tabBtn("document", "אנשי הקשר בפרויקט", "Project contacts"), tabBtn("catalog", "מאגר", "Catalog")),
-        tab === "document" && /* @__PURE__ */ React15.createElement(
+        mode ? null : /* @__PURE__ */ React15.createElement("div", { className: "contactsTabs" }, tabBtn("document", "אנשי הקשר בפרויקט", "Project contacts"), tabBtn("catalog", "מאגר", "Catalog")),
+        tab === "document" && !fixedProjectId && /* @__PURE__ */ React15.createElement(
           "select",
           { className: "contactsProjectPick", value: projectId || "", onChange: (e) => switchProject(e.target.value) },
           projects.map((p) => /* @__PURE__ */ React15.createElement("option", { key: p.id, value: p.id }, p.name))
@@ -9480,7 +9701,11 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
           isOpen && /* @__PURE__ */ React15.createElement("button", { type: "button", className: "contactsAddRow", onClick: () => addContact(g.key) }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת איש קשר" : "Add contact")
         ); }),
         tab === "catalog" && (() => {
-          const shown = (cat.people || []).filter((pp) => catMatch(
+          // 06.11.26 — the libraries: A. Weiss, supervision, consultants,
+          // subcontractors, suppliers. A person saved before groups were kept
+          // is placed by the company's own group.
+          const grpOf = (pp) => pp.group || (((catalogFind(cat.companies, pp.companyId) || {}).groups || [])[0]) || "";
+          const shown = (cat.people || []).filter((pp) => (peopleGrp === "all" || grpOf(pp) === peopleGrp) && catMatch(
             pp.person && pp.person.he, pp.person && pp.person.en,
             catalogLabel(catalogFind(cat.companies, pp.companyId), "he"),
             catalogLabel(catalogFind(cat.companies, pp.companyId), "en"),
@@ -9491,6 +9716,10 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
           "div",
           { className: "contactsAdminGroup" },
           secHead("people", isRTL ? "אנשי קשר במאגר" : "Contacts catalog", shown.length, isRTL ? "משותף לכל הפרויקטים" : "shared by every project"),
+          secOpen("people", true) && /* @__PURE__ */ React15.createElement("div", { className: "sbCatBar peopleGrpBar" },
+            [["all", "הכול", "All"]].concat(CONTACT_GROUPS.map((g) => [g.key, g.key === "main" ? "א. וייס" : g.he, g.key === "main" ? "A. Weiss" : g.en])).map(([k, he, en]) => /* @__PURE__ */ React15.createElement("button", {
+              key: k, type: "button", className: `sbCatBtn ${peopleGrp === k ? "on" : ""} ${k === "all" ? "all" : ""}`.trim(), onClick: () => setPeopleGrp(k)
+            }, isRTL ? he : en))),
           secOpen("people", shown.length > 0) && (cat.people || []).length === 0 && /* @__PURE__ */ React15.createElement("p", { className: "panelSub", style: { margin: 0 } }, isRTL ? "אנשי קשר שתשמרי ייכנסו לכאן ויוצעו אוטומטית בפרויקטים הבאים." : "Contacts you save land here and are offered automatically on the next project."),
           secOpen("people", shown.length > 0) && shown.length > 0 && /* @__PURE__ */ React15.createElement(
             "div",
@@ -11472,6 +11701,32 @@ var LLI_L = {
   }
 };
 
+// 06.11.26 — the LLI list as the facility file's finishes list picks from it:
+// one entry per product on the board (BOQ products routed to LLI and rows she
+// added by hand), with its mark, description, supplier and category.
+function lliItemsFor(boqData, boqFlags, lliRows, contacts, catalog, lang) {
+  const data = lliRows || {};
+  const auto = (boqData || {}).flags || {};
+  const out = [];
+  const push = (code, category, title) => {
+    const v = lliRowOf(data, code);
+    if (v.removed) return;
+    const cat = v.category || category || null;
+    out.push({
+      code,
+      mark: String(v.typeMark || "").trim(),
+      desc: String(v.desc || title || "").split("\n")[0].trim(),
+      supplier: String(v.supplier || boardTradeCompany(contacts, catalog, cat, lang) || "").trim(),
+      category: cat,
+      categoryLabel: cat ? sbText(boardCategoryOf(cat) || { he: "", en: "" }, lang) : ""
+    });
+  };
+  try {
+    boqProducts(boqData, auto, boqFlags, "lli").forEach((p) => push(p.code, p.category, boqText(p, lang)));
+  } catch (e) {}
+  Object.keys(data).filter((k) => k.indexOf("m-") === 0).forEach((k) => push(k, (data[k] || {}).category, (data[k] || {}).desc));
+  return out;
+}
 function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
@@ -17736,7 +17991,11 @@ function sbFoldersFor(boqData, boqFlags, lliRows, list) {
 // already reads BOARD_CATEGORIES sees them with no change of its own. The
 // submittal folders are not touched: a folder has a number and a form, and a
 // category typed in a box has neither.
-function boardSetCustomCats(list) {
+// 06.11.26 — built-in categories she took off the lists (data libraries).
+// A row that already carries one keeps it; it is just not offered any more.
+var BOARD_HIDDEN = new Set();
+function boardSetCustomCats(list, hidden) {
+  if (hidden !== void 0) BOARD_HIDDEN = new Set(Array.isArray(hidden) ? hidden : []);
   for (let i = BOARD_CATEGORIES.length - 1; i >= 0; i--) {
     if (BOARD_CATEGORIES[i].custom) BOARD_CATEGORIES.splice(i, 1);
   }
@@ -17745,7 +18004,7 @@ function boardSetCustomCats(list) {
     if (BOARD_CATEGORIES.some((x) => x.key === c.key)) return;
     BOARD_CATEGORIES.push({
       key: c.key, he: c.he || c.en, en: c.en || c.he,
-      icon: Hammer2, boardOnly: true, custom: true
+      icon: Hammer2, boardOnly: true, custom: true, code: c.code || ""
     });
   });
 }
@@ -17840,6 +18099,7 @@ function boardTradeCompany(contacts, catalog, categoryKey, lang) {
 function boardCatOptions(lang) {
   const out = [];
   BOARD_CATEGORIES.forEach((c) => {
+    if (BOARD_HIDDEN.has(c.key)) return;
     const name = sbText(c, lang);
     out.push({ cat: c.key, sub: "", label: name, full: name, names: [c.he, c.en], custom: !!c.custom });
     sbSubcats(c.key).forEach((row) => {
@@ -24009,7 +24269,7 @@ function ProjectDashboardApp() {
   SB_AI_RULES.set = setSbAiRules;
   const [catalogLoaded, setCatalogLoaded] = useState6(false);
   // Her own board categories join the list before anything renders with it.
-  boardSetCustomCats(contactsCatalog && contactsCatalog.boardCats);
+  boardSetCustomCats(contactsCatalog && contactsCatalog.boardCats, (contactsCatalog && contactsCatalog.hiddenCats) || []);
   // Only the LLI table writes them. The contacts screen hands back a catalogue
   // copied when it opened, so its list is never allowed to replace this one.
   const onChangeBoardCats = (next) => setContactsCatalog((cur) => ({ ...cur, boardCats: next }));
@@ -25714,6 +25974,18 @@ function ProjectDashboardApp() {
         contacts: activeExtras.contacts || [],
         contactsCatalog,
         onChangeBoardCats: appRole === "admin" ? onChangeBoardCats : null,
+        // 06.11.26 — the contacts editor lives inside the facility file now,
+        // for this project only; the catalogue moved to the data libraries.
+        contactsEditorNode: appRole === "admin" && activeProject ? React15.createElement(ProjectContactsScreen, {
+          isRTL, mode: "document", fixedProjectId: activeProject.id, projects: [activeProject],
+          catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [], hiddenCats: (cur && cur.hiddenCats) || [] })),
+          contactsByProject, onContactsChange: setProjectContacts,
+          groupVisibility: contactVisibilityByProject[activeProject.id] || {}, onGroupVisibilityChange: setContactGroupVisibility
+        }) : null,
+        onAddContacts: appRole === "admin" && activeProject ? (rows) => {
+          const cur = (contactsByProject && contactsByProject[activeProject.id]) || [];
+          setProjectContacts(activeProject.id, cur.concat(rows));
+        } : null,
         contactGroupVisibility: activeExtras.contactGroupVisibility || {},
         // Fixed navy, not the project colour and not the contractor's saved accent.
         contractorAccent: CONTACTS_DOC_ACCENT,
@@ -25780,7 +26052,11 @@ function ProjectDashboardApp() {
         }
       }
     );
-  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "contacts" && /* @__PURE__ */ React15.createElement(ProjectContactsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [] })), contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "libraries" && /* @__PURE__ */ React15.createElement(DataLibrariesScreen, {
+    isRTL, catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog(n),
+    // the contacts catalogue tab keeps the categories as they are
+    contactsProps: { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [], hiddenCats: (cur && cur.hiddenCats) || [] })), contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }
+  }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
@@ -26024,7 +26300,7 @@ function ProjectDashboardApp() {
           setPendingDisclaimer(false);
         }
       }
-    }), showDisclaimer && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), document.body), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: APP_FRAME_DIR, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("contacts") }, /* @__PURE__ */ React15.createElement(PhoneIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "אנשי קשר בפרויקט" : "Project Contacts Document"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
+    }), showDisclaimer && /* @__PURE__ */ createPortal(React15.createElement("div", { className: "scrim open", style: { display: "flex", alignItems: "center", justifyContent: "center", zIndex: 650, padding: 20 } }, /* @__PURE__ */ React15.createElement("div", { dir: discDir, style: { background: "#fff", borderRadius: 14, padding: "22px 26px", maxWidth: 600, width: "94%", maxHeight: "86vh", overflowY: "auto", textAlign: discAlign, color: "#103460", lineHeight: 1.7, boxShadow: "0 20px 60px rgba(0,0,0,0.3)" }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8, gap: 12 } }, /* @__PURE__ */ React15.createElement("h2", { style: { margin: 0, fontSize: 20 } }, disc.title), /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE"))), /* @__PURE__ */ React15.createElement("p", { style: { marginTop: 6 } }, disc.greeting), disc.paras.map((tx, i) => /* @__PURE__ */ React15.createElement("p", { key: i, style: { margin: "10px 0" } }, tx)), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "flex-start", gap: 10, margin: "18px 0", cursor: "pointer", fontWeight: 700 } }, /* @__PURE__ */ React15.createElement("input", { type: "checkbox", checked: disclaimerChecked, onChange: (e) => setDisclaimerChecked(e.target.checked), style: { marginTop: 4 } }), /* @__PURE__ */ React15.createElement("span", null, disc.check)), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", disabled: !disclaimerChecked, onClick: acceptDisclaimer, style: { opacity: disclaimerChecked ? 1 : 0.5, width: "100%" } }, disc.btn))), document.body), saveError && /* @__PURE__ */ React15.createElement("div", { className: "saveErrorBar", dir: APP_FRAME_DIR, role: "alert" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, saveError), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => setSaveError(null), "aria-label": t.close }, "\u2715")), authNotice && /* @__PURE__ */ React15.createElement("div", { className: "authToast", dir: "ltr", role: "status" }, /* @__PURE__ */ React15.createElement(AlertTriangle2, { size: 17, strokeWidth: 2.2 }), /* @__PURE__ */ React15.createElement("span", null, "Sign in required \u2014 use the menu button to log in as Main Contractor or Client.")), createPortal(/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: `scrim ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, onClick: closeMenu }), /* @__PURE__ */ React15.createElement("aside", { className: `drawer ${menuOpen ? "open" : ""}`, dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("div", { className: "drawerHead" }, /* @__PURE__ */ React15.createElement("h3", null, menuView === "options" ? t.menu : menuView === "systemAdminMenu" ? t.systemAdmin.title : t.login.title), /* @__PURE__ */ React15.createElement("button", { className: "drawerClose", onClick: closeMenu, "aria-label": t.close }, /* @__PURE__ */ React15.createElement(X4, { size: 16, strokeWidth: 2 }))), menuView === "options" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, isAuthenticated ? /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "drawerSupport", style: { borderTop: "none", paddingTop: 0, marginTop: 0 } }, /* @__PURE__ */ React15.createElement(ShieldCheck, { size: 15, strokeWidth: 2 }), t.menuOptions[authRole === "contractor" ? "mainContractor" : authRole === "subcontractor" ? "subcontractor" : "client"]), /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: goHome }, /* @__PURE__ */ React15.createElement(DashIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "לוח הפרויקטים" : "Project board"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerSep" }), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement(SettingsIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("users") }, /* @__PURE__ */ React15.createElement(Users2, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "הגדרת משתמשים" : "User settings"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), appRole === "admin" && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("libraries") }, /* @__PURE__ */ React15.createElement(DatabaseIcon, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מאגרי מידע" : "Data libraries"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("audit") }, /* @__PURE__ */ React15.createElement(FileCheck23, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "יומן אישורים" : "Acceptance log"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), false && /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => openSystemAdminSection("branding") }, /* @__PURE__ */ React15.createElement(Palette, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, isRTL ? "מיתוג וגוונים" : "Branding"), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })), /* @__PURE__ */ React15.createElement("div", { className: "drawerBottom" }, /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: handleLogout }, /* @__PURE__ */ React15.createElement(LogOut, { size: 16, strokeWidth: 1.9 }), /* @__PURE__ */ React15.createElement("span", { style: { flex: 1, marginInline: 8 } }, t.admin.logout), /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL })))) : /* @__PURE__ */ React15.createElement("div", { className: "drawerOption", onClick: () => setMenuView("login-unified") }, t.login.title, /* @__PURE__ */ React15.createElement(ChevronLeftRight, { isRTL }))), menuView === "systemAdminMenu" && /* @__PURE__ */ React15.createElement("div", { className: "drawerBody" }, /* @__PURE__ */ React15.createElement(
     "button",
     {
       className: "drawerAdminOption",
