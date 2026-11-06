@@ -194,7 +194,10 @@ const css = `
 .fac .facHead h2{font-size:19px;font-weight:800;margin:0}
 .fac .facHead .facSub{font-size:12.5px;color:var(--steel,#5b5e66);font-weight:600}
 .fac .cardGrid{padding-inline:0}
-.fac .facProg{width:100%;height:4px;border-radius:99px;background:var(--line-soft,#f0f0f2);overflow:hidden;margin-top:4px}
+.fac .dashCard{justify-content:center;min-height:84px;padding-bottom:20px}
+/* 06.11.26 — the cubes carry their name and a progress line at the foot that
+   turns green as the table is ticked; no counts. */
+.fac .facProg{position:absolute;left:12px;right:12px;bottom:7px;height:4px;border-radius:99px;background:var(--line-soft,#eceef1);overflow:hidden}
 .fac .facProg>i{display:block;height:100%;background:#43a06b}
 .fac .facCount{font-size:10.5px;color:var(--mist,#9a9da5);font-weight:600;margin-top:2px}
 .fac .dashCard.facAllDone{border-color:#9fd3ae;background:#f2faf4}
@@ -434,9 +437,8 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
             <div className="cardIcon" style=${{ color: c.color }}><${c.icon} size=${20} strokeWidth=${1.7} /></div>
             <div style=${{ width: "100%" }}>
               <p className="cardTitle">${c.he}</p>
-              ${p.total > 0 && html`<${F}><div className="facProg"><i style=${{ width: `${Math.round((p.done / p.total) * 100)}%` }} /></div>
-                <p className="facCount">${p.done}/${p.total}</p><//>`}
-              ${p.label && html`<p className="facCount">${p.label}</p>`}
+              ${c.kind !== "contacts" && html`<${F}><div className="facProg"><i style=${{ width: `${p.total ? Math.round((p.done / p.total) * 100) : 0}%` }} /></div>
+<//>`}
             </div>
           </button>`;
         })}
@@ -563,14 +565,13 @@ function CheckChapter({ ch, data, edit, bar, projectName, flash }) {
       <button type="button" className="facBtn" onClick=${() => setAdding(false)}>ביטול</button>
     </div>`}
     <div className="facWin"><table>
-      <thead><tr><th>#</th><th style=${{ textAlign: "start" }}>סעיף</th>
+      <thead><tr><th style=${{ textAlign: "start" }}>סעיף</th>
         ${ch.due && html`<th style=${{ lineHeight: 1.25 }}>מועד ביצוע<br />לו"ז פרויקט</th>`}
         <th>בוצע V</th><th>לא רלוונטי</th><th>הערה</th><th></th></tr></thead>
       <tbody>${items.map((it, i) => {
         const s = st[it.id] || {};
         const cls = s.na ? "na" : s.done ? "ok" : "";
         return html`<tr key=${it.id} className=${cls}>
-          <td className="num">${i + 1}</td>
           <td className="lbl">${it.label}</td>
           ${ch.due && html`<td style=${{ width: 150 }}><input type="date" className="facIn" style=${{ minWidth: 0, width: 140 }} value=${s.due || ""}
             disabled=${!!s.na} onChange=${(e) => set(it.id, { due: e.target.value })} /></td>`}
@@ -772,14 +773,13 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
     </div>`}
     <datalist id=${listId}>${supNames.map((h) => html`<option key=${h} value=${h} />`)}</datalist>
     <div className="facWin"><table className="finTbl">
-      <thead><tr><th>#</th><th>קטגוריה</th><th>איפיון</th><th style=${{ textAlign: "start" }}>תיאור הסעיף</th><th>ספק</th><th>תמונה</th>
+      <thead><tr><th>קטגוריה</th><th>איפיון</th><th style=${{ textAlign: "start" }}>תיאור הסעיף</th><th>ספק</th><th>תמונה</th>
         ${FIN_COLS.map(([k, l]) => html`<th key=${k}>${l}</th>`)}<th>הערות</th><th></th></tr></thead>
       <tbody>
-        ${rows.length === 0 && html`<tr><td colSpan=${8 + FIN_COLS.length} className="facEmpty">הרשימה ריקה — לחצי על "בחירה מתוך LLI"</td></tr>`}
+        ${rows.length === 0 && html`<tr><td colSpan=${7 + FIN_COLS.length} className="facEmpty">הרשימה ריקה — לחצי על "בחירה מתוך LLI"</td></tr>`}
         ${rows.map((r, i) => {
           const rs = finRowState(r, lib);
           return html`<tr key=${r.id} className=${rs === "done" ? "ok" : rs === "na" ? "na" : ""}>
-            <td className="num">${i + 1}</td>
             <td style=${{ width: 100 }}><input className="facIn" style=${{ fontSize: 12.5 }} value=${r.category || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, category: e.target.value }))} /></td>
             <td style=${{ width: 70 }}><input className="facIn" dir="ltr" value=${r.mark || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, mark: e.target.value }))} /></td>
             <td className="lbl"><input className="facIn" value=${r.desc || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, desc: e.target.value }))} /></td>
@@ -921,11 +921,11 @@ function ServiceChapter({ data, edit, bar, print, flash, contacts, catalog, lib,
       <button type="button" className="facBtn" onClick=${() => setAdding(false)}>ביטול</button>
     </div>`}
     <div className="facWin"><table className="svcTbl">
-      <thead><tr><th rowSpan=${2}>#</th><th rowSpan=${2}>לוגו</th><th rowSpan=${2}>ספק</th><th rowSpan=${2}>איש קשר בפרויקט</th>
+      <thead><tr><th rowSpan=${2}>לוגו</th><th rowSpan=${2}>ספק</th><th rowSpan=${2}>איש קשר בפרויקט</th>
         <th colSpan=${3} className="grp">מחלקת בדק ושירות (מאגר הספקים)</th><th rowSpan=${2}>כתבי אחריות שהתקבלו</th><th rowSpan=${2}>הערות</th><th rowSpan=${2}></th></tr>
         <tr><th className="grp">איש קשר</th><th className="grp">טלפון / נייד / מייל</th><th className="grp">מתי ולמה לפנות</th></tr></thead>
       <tbody>
-        ${names.length === 0 && html`<tr><td colSpan=${10} className="facEmpty">אין עדיין ספקים — הם נכנסים מעצמם מרשימת חומרי הגמר, או בלחיצה על "+ ספק"</td></tr>`}
+        ${names.length === 0 && html`<tr><td colSpan=${9} className="facEmpty">אין עדיין ספקים — הם נכנסים מעצמם מרשימת חומרי הגמר, או בלחיצה על "+ ספק"</td></tr>`}
         ${names.map((name, i) => html`<${SvcRow} key=${supLibNorm(name)} i=${i} name=${name} lib=${lib} reloadLib=${reloadLib} flash=${flash} projectId=${projectId}
           people=${peopleOf(name)} warranty=${warrantyOf(name)} note=${noteOf(name)}
           onNote=${(t) => edit((d) => { d.serviceNotes = { ...(d.serviceNotes || {}), [supLibNorm(name)]: t }; return d; })}
@@ -968,7 +968,6 @@ function SvcRow({ i, name, lib, reloadLib, flash, projectId, people, warranty, n
     onChange=${(e) => set(k, e.target.value)} onBlur=${commit} onKeyDown=${(e) => { if (e.key === "Enter") e.target.blur(); }} />`;
   const has = supLibHasService(entry);
   return html`<tr>
-    <td className="num">${i + 1}</td>
     <td style=${{ width: 76 }}><div className="svcLogo" title="לוגו הספק — לחיצה להעלאה · לחצן ימני: ספריית התמונות"
       onClick=${(e) => imgAsk(e, { projectId, onFile: putLogo })} ...${imgPickProps({ projectId, onFile: putLogo })}>
       ${logo ? html`<img src=${logo} alt="" />` : html`<${ImagePlus} size=${17} />`}
@@ -1022,13 +1021,12 @@ function AsMadeChapter({ ch, data, edit, bar, floors }) {
     </div>`)}
     ${floors.length === 0 && html`<p className="facEmpty">אין קומות לפרויקט — הוסיפי קומות למעלה, ולכל אחת יופיע סימון.</p>`}
     ${floors.length > 0 && html`<${F}><div className="facWin"><table>
-      <thead><tr><th>#</th><th style=${{ textAlign: "start" }}>סוג תוכנית</th>
+      <thead><tr><th style=${{ textAlign: "start" }}>סוג תוכנית</th>
         ${floors.map((f) => html`<th key=${f}>קומה ${f}</th>`)}<th>לא רלוונטי</th></tr></thead>
       <tbody>${(ch.items || []).map(([id, label], i) => {
         const s = am[id] || {};
         const all = floors.every((f) => (s.floors || {})[f]);
         return html`<tr key=${id} className=${s.na ? "na" : all ? "ok" : ""}>
-          <td className="num">${i + 1}</td>
           <td className="lbl">${label}</td>
           ${floors.map((f) => {
             const on = !!(s.floors || {})[f];
