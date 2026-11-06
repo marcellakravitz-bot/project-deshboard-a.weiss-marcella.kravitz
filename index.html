@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 267";
+var APP_BUILD = "06.11.2026 · build 268";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5796,36 +5796,64 @@ function SupervisionList({ kind, projectId, projectName, rows, onBack }) {
   );
 }
 
+// 06.11.26 — who sees the row in the apps: the trades, the project manager,
+// and the client / supervision. The list opens over the page (not inside the
+// table's scrolling frame, which used to cut it off).
+var SUBS_PICK_OPTIONS = [
+  { key: "electric", label: "\u05d7\u05e9\u05de\u05dc" },
+  { key: "hvac", label: "\u05de\u05d9\u05d6\u05d5\u05d2 \u05d0\u05d5\u05d5\u05d9\u05e8" },
+  { key: "plumbing", label: "\u05d0\u05d9\u05e0\u05e1\u05d8\u05dc\u05e6\u05d9\u05d4" },
+  { key: "drywall", label: "\u05d2\u05d1\u05e1" },
+  { key: "security", label: "\u05d1\u05d9\u05d8\u05d7\u05d5\u05df, \u05de\u05d5\u05dc\u05d8\u05d9\u05de\u05d3\u05d9\u05d4 \u05d5\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea" },
+  { key: "paint", label: "\u05e6\u05d1\u05e2" },
+  { key: "pm", label: "\u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8" },
+  { key: "client", label: "\u05dc\u05e7\u05d5\u05d7 / \u05e4\u05d9\u05e7\u05d5\u05d7" }
+];
+function subsPickLabel(k) {
+  const o = SUBS_PICK_OPTIONS.find((t) => t.key === k) || SUB_TRADES.find((t) => t.key === k);
+  return (o && o.label) || k;
+}
 function SubsTradePicker({ value, disabled, onChange }) {
   const picked = Array.isArray(value) ? value : [];
-  const [open, setOpen] = React9.useState(false);
+  const [open, setOpen] = React9.useState(null);   // the list's place on screen
   const boxRef = React9.useRef(null);
+  const popRef = React9.useRef(null);
   React9.useEffect(() => {
     if (!open) return;
-    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    const onDoc = (e) => {
+      if (boxRef.current && boxRef.current.contains(e.target)) return;
+      if (popRef.current && popRef.current.contains(e.target)) return;
+      setOpen(null);
+    };
+    const onScroll = (e) => { if (popRef.current && popRef.current.contains(e.target)) return; setOpen(null); };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    window.addEventListener("scroll", onScroll, true);
+    return () => { document.removeEventListener("mousedown", onDoc); window.removeEventListener("scroll", onScroll, true); };
   }, [open]);
   const toggle = (k) => onChange(picked.indexOf(k) >= 0 ? picked.filter((x) => x !== k) : picked.concat([k]));
-  const label = picked.length === 0
-    ? "\u2014"
-    : picked.map((k) => (SUB_TRADES.find((t) => t.key === k) || {}).label || k).join(", ");
+  const label = picked.length === 0 ? "\u2014" : picked.map(subsPickLabel).join(", ");
+  const openAt = () => {
+    const r = boxRef.current.getBoundingClientRect();
+    const h = 300, below = window.innerHeight - r.bottom > h;
+    setOpen({ x: r.right, y: below ? r.bottom + 4 : Math.max(8, r.top - h - 4) });
+  };
   return React9.createElement("div", { ref: boxRef, style: { position: "relative" } },
     React9.createElement("button", {
       type: "button",
       disabled,
-      onClick: () => setOpen(!open),
+      onClick: () => (open ? setOpen(null) : openAt()),
       title: label,
-      style: { width: "100%", border: "1px solid var(--line)", borderRadius: 7, background: "#fff", padding: "4px 6px", font: "inherit", fontSize: 12, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", color: picked.length ? "inherit" : "var(--mist)" }
+      style: { width: "100%", border: "1px solid var(--line)", borderRadius: 7, background: "#fff", padding: "4px 6px", font: "inherit", fontSize: 12, cursor: disabled ? "default" : "pointer", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }
     }, label),
-    open && !disabled && React9.createElement("div", {
-      style: { position: "absolute", zIndex: 40, insetInlineStart: 0, top: "calc(100% + 4px)", background: "#fff", border: "1px solid var(--line)", borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,0.15)", padding: 8, minWidth: 210, display: "flex", flexDirection: "column", gap: 4 }
-    }, SUB_TRADES.map((t) => React9.createElement("label", {
+    open && !disabled && createPortal(React9.createElement("div", {
+      ref: popRef, dir: "rtl",
+      style: { position: "fixed", zIndex: 1000, left: Math.max(8, open.x - 230), top: open.y, width: 230, background: "#fff", border: "1px solid var(--line)", borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,.16)", padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6, fontFamily: "inherit" }
+    }, SUBS_PICK_OPTIONS.map((t, i) => React9.createElement("label", {
       key: t.key,
-      style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap" }
+      style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer", whiteSpace: "nowrap", borderTop: t.key === "pm" ? "1px solid var(--line)" : "none", paddingTop: t.key === "pm" ? 6 : 0 }
     },
       React9.createElement("input", { type: "checkbox", checked: picked.indexOf(t.key) >= 0, onChange: () => toggle(t.key) }),
-      React9.createElement("span", null, t.label))))
+      React9.createElement("span", null, t.label)))), document.body)
   );
 }
 
@@ -21565,7 +21593,7 @@ function sbSummaryText(sum) {
 var SB_CONTRACTOR_L = { en: "Subcontractor", he: "\u05e0\u05d9\u05d4\u05d5\u05dc \u05e7\u05d1\u05dc\u05df" };
 // The trades a submittal is shown to in the subcontractor app (21.10.26).
 function sbTradesLabel(rec) {
-  return ((rec && rec.subs) || []).map((k) => (SUB_TRADES.find((t) => t.key === k) || {}).label || k).join(", ");
+  return ((rec && rec.subs) || []).map((k) => subsPickLabel(k)).join(", ");
 }
 var SB_PHOTO_L = { en: "Photo", he: "תמונה" };
 // The columns of the board, in the order she reads them, shared by the screen,
