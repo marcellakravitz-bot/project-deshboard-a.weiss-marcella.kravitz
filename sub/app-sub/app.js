@@ -7,6 +7,7 @@
 (function(){
 var E=AW.esc, S=AW.state;
 var IC={
+  finishes:"M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4",
   log:"M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 12h7M8 16h5",
   submittal:"M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9",
   sd:"M3 21l6-6M14 4l6 6M4 20l3-9 9-3 1 1-3 9-9 3z",
@@ -33,7 +34,7 @@ function home(){
     AW.timetable(wk, function(i){ var t=String(cells[i]||"").trim(); return t?'<span class="clamp">'+E(t)+'</span>':""; })+'</div>'+
     longBtn("log","יומן עדכונים")+longBtn("submittal","Submittal")+longBtn("sd","SD")+
     (rjN?longBtn("rj","ריג'קטים", String(rjN)):"")+
-    longBtn("standards","בדיקות ומכון התקנים");
+    longBtn("standards","בדיקות ומכון התקנים")+longBtn("finishes","רשימת חומרי גמר");
   app.innerHTML=h;
   var tp=document.getElementById("toProj"); if(tp) tp.onclick=AW.toEntry;
   Array.prototype.forEach.call(app.querySelectorAll("[data-w]"), function(el){
@@ -84,6 +85,12 @@ function standards(){
   AW.el().innerHTML=AW.head("בדיקות ומכון התקנים")+AW.standardsSimple(S.board.standards);
   AW.wireBack();
 }
+var fin={q:""};
+function finishes(){
+  fin.items=S.board.finishes||[];
+  AW.el().innerHTML=AW.head("רשימת חומרי גמר")+AW.finishes(fin);
+  AW.wireBack(); AW.wireFinishes(fin, function(){ AW.render(true); });
+}
 function draw(v){
   if(!S.board) return;
   switch(v.v){
@@ -91,6 +98,7 @@ function draw(v){
     case "submittal": return itemScreen("submittal");
     case "sd": return itemScreen("sd");
     case "standards": return standards();
+    case "finishes": return finishes();
     case "rj": return AW.rejects.draw(v);
     default: return home();
   }

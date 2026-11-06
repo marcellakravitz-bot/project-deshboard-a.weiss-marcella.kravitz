@@ -8,6 +8,7 @@
 (function(){
 var E=AW.esc, S=AW.state;
 var IC={
+  finishes:"M4 5h16v14H4zM4 15l5-5 4 4 3-3 4 4",
   tasks:"M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2",
   log:"M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zM8 12h7M8 16h5",
   rj:"M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9",
@@ -43,7 +44,7 @@ function home(){
     '<div class="wh"><b>לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
     AW.timetable(wk, function(i){ return dayCell(wk,i); })+'</button>';
   h+=longBtn("tasks","ניהול משימות")+longBtn("log","יומן עדכונים")+longBtn("rj","ריג'קטים")+
-     longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות מכון התקנים");
+     longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות מכון התקנים")+longBtn("finishes","רשימת חומרי גמר");
   app.innerHTML=h;
   var tp=document.getElementById("toProj"); if(tp) tp.onclick=AW.toEntry;
   Array.prototype.forEach.call(app.querySelectorAll("[data-k]"), function(el){
@@ -178,6 +179,12 @@ function standards(){
   AW.wireBack(); AW.wireStandards();
 }
 
+var fin={q:""};
+function finishes(){
+  fin.items=S.board.finishes||[];
+  AW.el().innerHTML=AW.head("רשימת חומרי גמר")+AW.finishes(fin);
+  AW.wireBack(); AW.wireFinishes(fin, function(){ AW.render(true); });
+}
 function draw(v){
   if(!S.board) return;
   switch(v.v){
@@ -188,6 +195,7 @@ function draw(v){
     case "submittal": return itemScreen("submittal");
     case "sd": return itemScreen("sd");
     case "standards": return standards();
+    case "finishes": return finishes();
     case "rj": return AW.rejects.draw(v);
     case "tasks": case "taskCat": case "taskStatus": case "task": return PMTasks.draw(v);
     default: return home();

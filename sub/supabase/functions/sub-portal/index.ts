@@ -516,6 +516,51 @@ async function pmBoard(grant: any) {
     },
   };
 }
+// ---------------------------------------------------------------------------
+// 06.11.26 — "רשימת חומרי גמר": the LLI rows ticked in "צפייה אפליקציה" for
+// this kind of user (a trade, "pm", or "client" for client / supervision):
+// category, type mark, description and picture.
+// ---------------------------------------------------------------------------
+const CAT_LABELS: Record<string, string> = {
+  architecture: "אדריכלות", flooring: "ריצוף", cladding: "גמרים", ceiling: "תקרה", electrical: "חשמל",
+  lighting: "תאורה", hvac: "מיזוג אוויר", plumbing: "אינסטלציה", security: "ביטחון, בקרה ותקשורת",
+  av: "מולטימדיה", fire: "גילוי אש", joinery: "נגרות",
+};
+async function finishesFor(projectId: string, role: string, trade: string) {
+  const want = role === "pm" ? "pm" : role === "sub" ? trade : "client";
+  if (!want) return [];
+  const [{ data: lliRow }, { data: boqRow }, catalog] = await Promise.all([
+    db.from("app_state").select("value").eq("key", `project-lli:${projectId}`).maybeSingle(),
+    db.from("app_state").select("value").eq("key", `project-boq:${projectId}`).maybeSingle(),
+    loadCatalog(),
+  ]);
+  const lli = parse(lliRow?.value) || {};
+  const boq = parse(boqRow?.value) || {};
+  const boqHe: Record<string, string> = {};
+  for (const ch of (boq.chapters || [])) for (const sb of (ch.subs || [])) for (const it of (sb.items || [])) {
+    if (it && it.code) boqHe[String(it.code)] = String(it.he || it.en || "");
+  }
+  const custom: Record<string, string> = {};
+  for (const c of (Array.isArray(catalog.boardCats) ? catalog.boardCats : [])) if (c && c.key) custom[c.key] = c.he || c.en || c.key;
+  const out: any[] = [];
+  for (const [code, r] of Object.entries<any>(lli)) {
+    if (!r || typeof r !== "object" || r.removed) continue;
+    if (!Array.isArray(r.subs) || r.subs.indexOf(want) < 0) continue;
+    let image: string | null = null;
+    if (typeof r.image === "string" && r.image) image = r.image;
+    else if (r.image && r.image.path) image = await signed(r.image.path);
+    out.push({
+      code,
+      category: r.category ? (CAT_LABELS[r.category] || custom[r.category] || r.category) : "",
+      typeMark: String(r.typeMark || "").trim(),
+      desc: String(r.desc || "").trim() || boqHe[code] || "",
+      image,
+    });
+  }
+  out.sort((a, b) => (a.category + "\u0000" + a.typeMark).localeCompare(b.category + "\u0000" + b.typeMark, "he"));
+  return out;
+}
+
 // 06.11.26 — the phones of a project's managers, for a new task.
 async function pmPhonesFor(projectId: string): Promise<string[]> {
   const projects = await loadProjects();
@@ -629,7 +674,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 44,
+    fn: "sub-portal", version: 45,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -840,6 +885,13 @@ Deno.serve(async (req) => {
         : { marks: {}, trade: "" };
       out.role = role;
       out.project = { id: grant.projectId, ...(meta[grant.projectId] || {}) };
+      try { out.finishes = await finishesFor(grant.projectId, role, grant.trade || ""); } catch (e) { console.error("[sub-portal] finishes", e); out.finishes = []; }
+      {
+        const str = JSON.stringify(out.finishes.map((x: any) => [x.code, x.category, x.typeMark, x.desc, (x.image || "").length]));
+        let h = 5381;
+        for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+        out.marks = { ...(out.marks || {}), finishes: out.finishes.length ? String(h >>> 0) : "" };
+      }
       out.isPm = !!grant.isPm;
       out.canWrite = !!grant.canWrite;
       out.preview = !!pv;

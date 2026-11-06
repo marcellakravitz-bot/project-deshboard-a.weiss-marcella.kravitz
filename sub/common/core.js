@@ -136,9 +136,9 @@ var AW = (function(){
   }
   function openFile(f){ if(!f||!f.url) return; if(isDoc(f)) openDoc(f.url); else window.open(f.url,"_blank","noopener"); }
   // A small window from the bottom of the screen.
-  function pop(title, html){
+  function pop(title, html, center){
     var box=document.createElement("div");
-    box.className="pop";
+    box.className="pop"+(center?" popC":"");
     box.innerHTML='<div class="popCard">'+(title?'<h3>'+title+'</h3>':'')+html+'<button class="x" type="button">סגירה</button></div>';
     document.body.appendChild(box);
     var close=function(){ box.remove(); };
@@ -422,6 +422,43 @@ AW.standardsSimple = function(list){
       (it.date?'<div style="font-size:12px;color:var(--steel);margin-top:4px">תאריך לביצוע - <span class="num">'+E(AW.fmt(it.date))+'</span></div>':'')+
     '</div>';
   }).join("");
+};
+// 06.11.26 — "רשימת חומרי גמר": what the LLI shows to this kind of user.
+// Free search, a table of type mark and picture; a row opens a card in the
+// middle of the screen — category and type mark, the description, the
+// picture, and a small close button back to the list.
+AW.finishes = function(o){
+  var E=AW.esc, items=o.items||[], needle=String(o.q||"").trim().toLowerCase();
+  var shown=items.filter(function(r){
+    return !needle || [r.category,r.typeMark,r.desc,r.code].join(" ").toLowerCase().indexOf(needle)>=0;
+  });
+  var h='<div class="find"><input id="fq" type="search" placeholder="חיפוש חופשי" value="'+E(o.q||"")+'"></div>';
+  if(!items.length) return h+AW.empty("טרם נבחרו חומרי גמר להצגה.");
+  if(!shown.length) return h+AW.empty("אין תוצאות לחיפוש.");
+  h+='<table class="finTable"><thead><tr><th>איפיון</th><th>תמונה</th></tr></thead><tbody>'+
+    shown.map(function(r){
+      return '<tr data-fin="'+E(r.code)+'"><td><b>'+E(r.typeMark||"—")+'</b>'+(r.category?'<span>'+E(r.category)+'</span>':'')+'</td>'+
+        '<td class="im">'+(r.image?'<img src="'+E(r.image)+'" alt="" loading="lazy">':'<span class="noIm">—</span>')+'</td></tr>';
+    }).join("")+'</tbody></table>';
+  return h;
+};
+AW.wireFinishes = function(o, onChange){
+  var E=AW.esc;
+  var q=document.getElementById("fq");
+  if(q) q.oninput=function(){ o.q=q.value; onChange(); var n=document.getElementById("fq"); if(n){ n.focus(); n.setSelectionRange(n.value.length,n.value.length); } };
+  Array.prototype.forEach.call(document.querySelectorAll("tr[data-fin]"), function(tr){
+    tr.onclick=function(){
+      var code=tr.getAttribute("data-fin");
+      var r=(o.items||[]).filter(function(x){ return x.code===code; })[0];
+      if(!r) return;
+      AW.pop("", '<div class="finCard">'+
+        '<div class="fr"><div><span class="lbl">קטגוריה</span><b>'+E(r.category||"—")+'</b></div>'+
+          '<div><span class="lbl">איפיון</span><b>'+E(r.typeMark||"—")+'</b></div></div>'+
+        '<div class="fd"><span class="lbl">תיאור</span><p>'+E(r.desc||"—")+'</p></div>'+
+        (r.image?'<img class="fi" src="'+E(r.image)+'" alt="">':'')+
+      '</div>', true);
+    };
+  });
 };
 AW.standards = function(list, withTrade){
   var E=AW.esc;

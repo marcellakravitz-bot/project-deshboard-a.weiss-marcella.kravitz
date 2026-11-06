@@ -266,6 +266,24 @@ body.isPv .pvBadge{display:block;position:sticky;top:var(--barH);z-index:4;backg
   padding:16px 14px calc(env(safe-area-inset-bottom) + 14px);scrollbar-width:none}
 .popCard::-webkit-scrollbar{display:none}
 .popCard h3{margin:0 0 10px;font-size:15px;text-align:center}
+/* 06.11.26 — a card in the middle of the screen (חומרי גמר). */
+.pop.popC{align-items:center;padding:16px}
+.pop.popC .popCard{border-radius:16px;max-height:86vh;padding:16px 14px 12px}
+.pop.popC .x{padding:4px 16px;font-size:12px;margin-top:10px}
+.finCard .fr{display:flex;gap:10px}
+.finCard .fr>div{flex:1;min-width:0;background:#f4f6f9;border-radius:10px;padding:8px 10px}
+.finCard .lbl{display:block;font-size:11px;color:var(--steel);font-weight:600;margin-bottom:2px}
+.finCard b{font-size:14px;color:var(--navy);word-break:break-word}
+.finCard .fd{margin-top:10px;background:#f4f6f9;border-radius:10px;padding:8px 10px}
+.finCard .fd p{margin:0;font-size:13.5px;line-height:1.65;white-space:pre-wrap}
+.finCard .fi{display:block;width:100%;max-height:50vh;object-fit:contain;margin-top:10px;border-radius:10px;background:#f4f6f9}
+.finTable{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.finTable th{background:#eef2f7;color:var(--navy);font-size:12.5px;padding:8px;text-align:right}
+.finTable td{padding:8px;border-top:1px solid var(--line);vertical-align:middle;font-size:13.5px;cursor:pointer}
+.finTable td span{display:block;font-size:11.5px;color:var(--steel);margin-top:2px}
+.finTable th:last-child,.finTable td.im{width:96px;text-align:center}
+.finTable td.im img{width:80px;height:60px;object-fit:cover;border-radius:8px;display:block;margin:0 auto}
+.finTable .noIm{color:#b8bbc2}
 .popCard .x{display:block;margin:12px auto 0;border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 22px;font:inherit;font-weight:700;color:var(--steel);cursor:pointer}
 
 /* 06.11.26 — editing the week for a trade: square buttons, three in a row. */

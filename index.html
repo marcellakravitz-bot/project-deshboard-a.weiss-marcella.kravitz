@@ -2316,6 +2316,7 @@ var pdfViewer = `
         .sdTable th, .sdTable td { padding-inline: 5px; }
         .sdTable .cRoom { width: 40px; }
         .sdTable .cCli { width: 64px; text-align: center; }
+        .lliTable .cApp { width: 120px; }
         .sdTable .cSec { width: 92px; text-align: center; }
         .sdTable .cCat { width: 96px; }
         .sdTable .cDesc { width: auto; text-align: start; }
@@ -12419,8 +12420,12 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       defaultHidden: false
     }));
   const all = boqRows.concat(manualRows);
+  // 06.11.26 — once "צפייה אפליקציה" is set on a row, it decides whether the
+  // client / supervision sees it; before that, the old show tick does.
   const isHidden = (r) => {
-    const saved = (data[r.code] || {}).hidden;
+    const own = data[r.code] || {};
+    if (Array.isArray(own.subs)) return own.subs.indexOf("client") < 0;
+    const saved = own.hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
   // The disciplines this board is actually using, in the catalogue's order.
@@ -13154,23 +13159,9 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                     setPrintOff(next);
                   });
                 })(),
-                // 05.11.26 — shown to the client / supervision: beside the printer.
-                // The title works like the printer: every row on, then all off.
-                (() => {
-                  if (!canEdit) return null;
-                  const allOn = groups.every((g) => g.rows.every((r) => !isHidden(r)));
-                  return sbH("th", {
-                    className: `cAct prAllTh clShowTh ${allOn ? "on" : ""}`.trim(),
-                    title: isRTL
-                      ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח")
-                      : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
-                    onClick: () => {
-                      const next = { ...data };
-                      groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = { ...lliRowOf(data, r.code), hidden: allOn }; }));
-                      onChangeRows(next);
-                    }
-                  }, isRTL ? "לקוח / פיקוח" : "Client / supervision");
-                })(),
+                // 06.11.26 — who sees the row in the apps ("רשימת חומרי גמר"):
+                // the trades, the project manager, client / supervision.
+                canEdit ? sbH("th", { className: "cApp" }, isRTL ? "צפייה אפליקציה" : "App view") : null,
                 canEdit ? sbH("th", { className: "cGrip" }, "") : null,
                 thT("section", "cSec", L("section")),
                 thT("category", "cCat", L("category")),
@@ -13272,12 +13263,10 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                           })
                         )
                       : null,
-                    // Shown to the client / supervision — what the "show" tick
-                    // always meant (29.8.26), now a send arrow beside the
-                    // printer (05.11.26).
+                    // 06.11.26 — who sees the row in the apps.
                     canEdit
-                      ? sbH("td", { className: "cAct prKeep" },
-                          sbH(ClientShowBtn, { on: !hidden, he: isRTL, onClick: () => patch(r.code, { hidden: !hidden }) }))
+                      ? sbH("td", { className: "cApp prKeep" },
+                          sbH(SubsTradePicker, { value: v.subs || [], disabled: !canEdit, onChange: (next) => patch(r.code, { subs: next }) }))
                       : null,
                     canEdit
                       ? sbH(
@@ -13894,8 +13883,12 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const lliDescOf = (r) => String(((lliRows || {})[r.code] || {}).desc || "").trim();
   const markOf = (r, v) => lliMarkOf(r) || String(v.typeMark || "").trim();
   const descOf = (r, v) => lliDescOf(r) || v.desc || r.title;
+  // 06.11.26 — the client / supervision see an SD row when "צפייה אפליקציה"
+  // has them ticked; rows never set keep the old show tick.
   const isHidden = (r) => {
-    const saved = (data[r.code] || {}).hidden;
+    const own = data[r.code] || {};
+    if (Array.isArray(own.subs) && own.subs.indexOf("client") >= 0) return false;
+    const saved = own.hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
   const inUseCats = boardCatChips(all.filter((r) => !(data[r.code] || {}).removed).map((r) => ({ category: r.category, subCategory: (data[r.code] || {}).subCategory || "" })), lang);
@@ -14264,20 +14257,6 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     setPrintOff(next);
                   });
                 })(),
-                // 06.11.26 — shown to the client / supervision, as on LLI.
-                (() => {
-                  if (!canEdit) return null;
-                  const allOn = groups.every((g) => g.rows.every((r) => !isHidden(r)));
-                  return sbH("th", {
-                    className: `cCli prAllTh ${allOn ? "on" : ""}`.trim(),
-                    title: isRTL ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח") : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
-                    onClick: () => {
-                      const next = { ...data };
-                      groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = { ...sdRowOf(data, r.code), hidden: allOn }; }));
-                      onChangeRows(next);
-                    }
-                  }, isRTL ? "לקוח / פיקוח" : "Client / supervision");
-                })(),
                 thS("section", "cSec", L("section")),
                 thS("category", "cCat", L("category")),
                 thS("typeMark", "cMark", L("typeMark")),
@@ -14295,7 +14274,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 12 : 9 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 11 : 9 }, g.title)),
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -14339,10 +14318,6 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                             onChange: () => setPrintOff({ ...printOff, [r.code]: !printOff[r.code] })
                           })
                         )
-                      : null,
-                    canEdit
-                      ? sbH("td", { className: "cCli prKeep" },
-                          sbH(ClientShowBtn, { on: !hidden, he: isRTL, onClick: () => patch(r.code, { hidden: !hidden }) }))
                       : null,
                     sbH(
                       "td",
