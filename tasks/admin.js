@@ -23,12 +23,12 @@
 // =============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
-import { Plus, X, Save, FileText, FileSpreadsheet, ChevronDown, ChevronLeft, Trash2, History, GripVertical } from "lucide-react";
+import { Plus, X, Save, FileText, FileSpreadsheet, ChevronDown, ChevronUp, ChevronLeft, Trash2, History, GripVertical } from "lucide-react";
 import { supabase, PrintLangAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 10 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 11 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -206,6 +206,10 @@ const css = `
    second line when needed and always centred; the tools on their own line, left. */
 .tsk .tskBar .sbCatBar{margin:0;flex:1 1 100%;display:flex;flex-wrap:wrap;justify-content:center;gap:4px 6px}
 .tsk .tskBar .sbCatBar .sbCatBtn{font-size:11.5px;font-weight:400;padding:4px 10px}
+/* 06.11.26 — the categories fill the bar from edge to edge, shared evenly
+   between the lines: 11 of them are 6 above and 5 below. */
+.tsk .tskBar .sbCatBar.even{gap:5px;max-width:none;width:100%;box-sizing:border-box}
+.tsk .tskBar .sbCatBar.even .sbCatBtn{flex:0 0 calc((100% - (var(--per) - 1) * 5px) / var(--per));box-sizing:border-box;margin:0;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tsk .tskBar .sbCatBar .sbCatBtn.on{font-weight:600}
 .tsk .tskTools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-inline-start:auto}
 .tsk .tskBtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:700;padding:6px 12px;border-radius:9px;border:1px solid var(--line,#e6e6e9);background:#fff;color:var(--ink,#17181c);cursor:pointer;white-space:nowrap}
@@ -414,6 +418,10 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     .concat(tasks.some((t) => catOf(t) === NONE) ? [NONE] : []);
   const inUse = cats.map((c) => c.key).concat(tasks.some((t) => catOf(t) === NONE) ? [NONE] : []);
   const shownGroups = cat === "all" ? inUse : inUse.filter((k) => k === cat);
+  const allOpen = inUse.length > 0 && inUse.every((k) => !!openGrp[k]);
+  // Even lines in the category bar: one line up to 7, else as few as fit.
+  const barN = inUse.length + 1;
+  const perRow = barN <= 7 ? barN : Math.ceil(barN / Math.ceil(barN / 7));
   useEffect(() => { if (cat !== "all" && !inUse.includes(cat)) setCat("all"); }, [inUse.join("|")]);
   const [newCat, setNewCat] = useState(null);         // the "+ קטגוריה" box
   const deleteCat = (k) => {
@@ -472,6 +480,16 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     t.fts = stampOf(t);
     edit((d) => { d.tasks = [...d.tasks, t]; return d; });
     setOpenGrp((o) => ({ ...o, [category || NONE]: true }));
+    // 06.11.26 — the project managers are told on their phones, once it is saved.
+    setTimeout(async () => {
+      try {
+        const { data: ses } = await supabase.auth.getSession();
+        const tok = ses && ses.session && ses.session.access_token;
+        if (!tok) return;
+        await fetch("https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/sub-portal", { method: "POST", headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "task-notify", accessToken: tok, projectId }) });
+      } catch (e) { console.warn("[tasks] notify failed", e); }
+    }, 2500);
     setNewAsk(false);
     flash("המשימה נוספה");
   };
@@ -568,10 +586,13 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   return html`<div className="tsk" dir="rtl"><style>${css}</style>
     ${err && html`<p className="tskErr">${err}</p>`}
     <div className="tskBar">
-      <div className="sbCatBar">
+      <div className="sbCatBar even" style=${{ "--per": perRow }}>
         <button type="button" className=${`sbCatBtn all ${cat === "all" ? "on" : ""}`} onClick=${() => setCat("all")}>כל הקטגוריות</button>
         ${inUse.map((k) => html`<button key=${k} type="button" className=${`sbCatBtn ${cat === k ? "on" : ""}`} onClick=${() => { setCat(k); setOpenGrp((o) => ({ ...o, [k]: true })); }}>${catName(k)}</button>`)}
       </div>
+      <button type="button" className="tskBtn" title=${allOpen ? "לכווץ את כל הקטגוריות" : "לפתוח את כל הקטגוריות"}
+        onClick=${() => setOpenGrp(allOpen ? {} : Object.fromEntries(inUse.map((k) => [k, true])))}>
+        ${allOpen ? html`<${ChevronUp} size=${15} /> כיווץ הכול` : html`<${ChevronDown} size=${15} /> פתיחת הכול`}</button>
       <div className="tskTools">
         <button type="button" className="tskBtn primary" title="משימה חדשה" onClick=${() => setNewAsk(true)}><${Plus} size=${16} strokeWidth=${2.6} /> משימה חדשה</button>
         ${onCatalogChange && html`<button type="button" className="tskBtn" title="קטגוריה חדשה (נשמרת במערכת לכל הפרויקטים)" onClick=${() => setNewCat(newCat === null ? "" : null)}><${Plus} size=${15} strokeWidth=${2.4} /> קטגוריה</button>`}

@@ -216,6 +216,17 @@ async function loadProjects() {
   }
   return Array.from(byId.values());
 }
+// 06.11.26 — four kinds of app user on a project's register (subsData.list):
+// "pm" (project manager), "sub" (subcontractor of one trade), "supervision"
+// and "client". Older rows carry only pm: true/false.
+const ROLE_ORDER = ["pm", "sub", "supervision", "client"];
+const roleOf = (s: any) => (s && ["pm", "sub", "supervision", "client"].indexOf(s.kind) >= 0) ? s.kind : (s && s.pm ? "pm" : "sub");
+// Only a project that has a name is a project: the empty slots of the first
+// template are never offered.
+function projOut(g: any, meta: Record<string, any>) {
+  return { id: g.projectId, trade: g.trade || "", role: g.role || (g.isPm ? "pm" : "sub"), isPm: !!g.isPm, ...(meta[g.projectId] || {}) };
+}
+const named = (meta: Record<string, any>) => (g: any) => !!(meta[g.projectId] && String(meta[g.projectId].name || "").trim());
 function grantsFor(projects: any[], phone: string, code: string | null) {
   const out: any[] = [];
   for (const p of projects) {
@@ -224,13 +235,15 @@ function grantsFor(projects: any[], phone: string, code: string | null) {
       if (s.active === false) continue;
       if (normPhone(s.phone) !== phone) continue;
       if (code !== null && normCode(s.code) !== code) continue;
+      const role = roleOf(s);
       out.push({
         projectId: p.id,
-        trade: s.trade,
+        trade: role === "sub" ? s.trade : "",
+        role,
         name: s.name || "",
         company: s.company || "",
-        canWrite: !!s.pm,
-        isPm: !!s.pm,
+        canWrite: role === "pm",
+        isPm: role === "pm",
         extras: p.extras,
       });
     }
@@ -239,8 +252,10 @@ function grantsFor(projects: any[], phone: string, code: string | null) {
   for (const g of out) {
     const prev = merged.get(g.projectId);
     if (!prev) { merged.set(g.projectId, g); continue; }
+    const role = ROLE_ORDER.indexOf(g.role) < ROLE_ORDER.indexOf(prev.role) ? g.role : prev.role;
     merged.set(g.projectId, {
       ...prev,
+      role,
       isPm: prev.isPm || g.isPm,
       canWrite: prev.canWrite || g.canWrite,
       name: prev.name || g.name,
@@ -303,6 +318,11 @@ async function boardFor(grant: any) {
       description,
       decision,
       submitted: !!rec,
+      // 06.11.26 — the picture and the produced submittal, as on the managers' list.
+      image: rec && rec.image && rec.image.path ? await signed(rec.image.path) : null,
+      doc: rec && (sbAp[rec.id] || {}).doc && (sbAp[rec.id] || {}).doc.path
+        ? { name: (sbAp[rec.id] || {}).doc.name || "submittal", type: (sbAp[rec.id] || {}).doc.type || "", url: await signed((sbAp[rec.id] || {}).doc.path) }
+        : null,
       files: rec && decision && APPROVED.indexOf(decision) >= 0
         ? await signAll(
             [(sbAp[rec.id] || {}).doc].filter(Boolean).concat(rec.attachments || []),
@@ -392,6 +412,117 @@ async function boardFor(grant: any) {
   };
 }
 
+// ---------------------------------------------------------------------------
+// 06.11.26 — what a project manager sees: every trade at once.
+//   weekly     { trade: { weekStart: [6 days] } } — the home screen shows each
+//              day split by trade
+//   logs       { trade: [entries] } — the log opens one trade at a time
+//   submittals every submittal of the project, latest revision, with its
+//              category, type, picture and the produced document
+//   sd         every SD row
+//   standards  every trade's checks
+// ---------------------------------------------------------------------------
+const ALL_TRADES = ["hvac", "electric", "plumbing", "drywall", "security", "paint"];
+async function pmBoard(grant: any) {
+  const ex = grant.extras || {};
+  const sdata = ex.subsData || {};
+  const sbAp = ex.submittalApprovals || {};
+  const decisionOfRec = (r: any) =>
+    ((sbAp[r?.id] || {}).review || {}).decision || ((r?.reviews || [])[0] || {}).decision || null;
+  const sent = (ex.submittals || []).filter((r: any) => r && r.sent && !r.hidden);
+  const latest: Record<string, any> = {};
+  for (const r of sent) {
+    const k = r.boqCode ? "b:" + r.boqCode : "i:" + r.id;
+    if (!latest[k] || (Number(r.rev) || 0) > (Number(latest[k].rev) || 0)) latest[k] = r;
+  }
+  const submittals: any[] = [];
+  const seenCode: Record<string, boolean> = {};
+  for (const r of Object.values<any>(latest)) {
+    if (r.boqCode) seenCode[r.boqCode] = true;
+    const doc = (sbAp[r.id] || {}).doc;
+    submittals.push({
+      id: r.id,
+      no: `${String(r.category || "").toUpperCase()}-${String(r.seq || "").padStart(3, "0")}`,
+      category: r.category || "",
+      typeId: String(r.typeId || "").trim(),
+      description: r.itemDescription || r.scope || r.boqText || "",
+      decision: decisionOfRec(r),
+      submitted: true,
+      rev: Number(r.rev) || 0,
+      image: r.image && r.image.path ? await signed(r.image.path) : null,
+      doc: doc && doc.path ? { name: doc.name || "submittal", type: doc.type || "", url: await signed(doc.path) } : null,
+    });
+  }
+  const off = ex.submittalChkOff || {};
+  for (const line of (sdata.checklist || [])) {
+    if (!line || off[line.code] || seenCode[line.code]) continue;
+    submittals.push({ id: "c:" + line.code, no: "", category: line.category || "", typeId: "", description: line.title || line.code,
+      decision: null, submitted: false, rev: 0, image: null, doc: null });
+  }
+
+  const sd: any[] = [];
+  const sdAp = ex.sdApprovals || {};
+  for (const [code, row] of Object.entries<any>(ex.sdRows || {})) {
+    if (!row || row.removed) continue;
+    const approvedByClient = !!sdAp[code];
+    const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
+    sd.push({
+      code,
+      description: row.desc || "",
+      category: row.category || "",
+      typeId: String(row.typeMark || row.typeId || "").trim(),
+      status: approvedByClient ? "approved" : (row.status || "required"),
+      subs: Array.isArray(row.subs) ? row.subs : [],
+      files: ok ? await signAll([(sdAp[code] || {}).file || row.file].filter(Boolean)) : [],
+    });
+  }
+
+  const logs: Record<string, any[]> = {};
+  for (const t of ALL_TRADES) {
+    logs[t] = [];
+    for (const u of ((sdata.logs || {})[t] || [])) {
+      logs[t].push({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) });
+    }
+  }
+  const standards: any[] = [];
+  for (const t of ALL_TRADES) {
+    for (const x of ((sdata.standards || {})[t] || [])) {
+      standards.push({ trade: t, text: x.text, done: !!x.done, date: x.date || "", note: x.note || "",
+        cert: x.cert && x.cert.path ? (await signAll([x.cert]))[0] || null : null });
+    }
+  }
+  const weekly: Record<string, any> = {};
+  for (const t of ALL_TRADES) weekly[t] = (sdata.weekly || {})[t] || {};
+  const sign = (v: unknown) => {
+    const str = JSON.stringify(v ?? null);
+    let h = 5381;
+    for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
+    return String(h >>> 0);
+  };
+  return {
+    pm: true,
+    trade: "",
+    weekly,
+    logs,
+    submittals,
+    sd,
+    standards,
+    marks: {
+      weekly: sign(weekly),
+      log: sign(Object.values(logs).map((l: any) => l.map((x: any) => [x.date, x.subject, x.body]))),
+      submittal: sign(submittals.map((x: any) => [x.no, x.decision, x.submitted])),
+      sd: sign(sd.map((x: any) => [x.code, x.status])),
+      standards: sign(standards.map((x: any) => [x.text, x.done, x.date])),
+    },
+  };
+}
+// 06.11.26 — the phones of a project's managers, for a new task.
+async function pmPhonesFor(projectId: string): Promise<string[]> {
+  const projects = await loadProjects();
+  const p = projects.filter((x: any) => x.id === projectId)[0];
+  const list = ((p?.extras?.subsData || {}).list) || [];
+  return list.filter((s: any) => s && s.active !== false && roleOf(s) === "pm").map((s: any) => normPhone(s.phone));
+}
 
 // ---------------------------------------------------------------------------
 // 06.11.26 — the dashboard's live preview ("אפליקציות" > תצוגה מקדימה).
@@ -415,14 +546,14 @@ async function previewOf(body: any): Promise<any> {
     const { data } = await db.from("project_access").select("project_id").eq("user_id", u.id);
     allowed = (data || []).map((r: any) => String(r.project_id));
   }
-  return { as: pv.as === "pm" ? "pm" : "sub", allowed, email };
+  return { as: ["pm", "sub", "supervision", "client"].indexOf(pv.as) >= 0 ? pv.as : "sub", allowed, email };
 }
 function previewGrant(pv: any, projects: any[], meta: Record<string, any>, projectId: string, trade: string) {
   if (!projectId || (pv.allowed && pv.allowed.indexOf(projectId) < 0)) return null;
   const p = projects.filter((x: any) => x.id === projectId)[0];
   if (!p && !meta[projectId]) return null;
   return {
-    projectId, trade: trade || "", name: "תצוגה מקדימה", company: "",
+    projectId, trade: pv.as === "sub" ? (trade || "electric") : "", role: pv.as, name: "תצוגה מקדימה", company: "",
     canWrite: pv.as === "pm", isPm: pv.as === "pm", extras: (p && p.extras) || {}, preview: true,
   };
 }
@@ -498,7 +629,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 43,
+    fn: "sub-portal", version: 44,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -534,7 +665,7 @@ Deno.serve(async (req) => {
         token: await makeToken(phone),
         hasPin: !!existing || viaPin,
         isPm: grants.some((g: any) => g.isPm),
-        projects: grants.map((g) => ({ id: g.projectId, trade: g.trade, isPm: !!g.isPm, ...(meta[g.projectId] || {}) })),
+        projects: grants.filter(named(meta)).map((g) => projOut(g, meta)),
       });
     }
 
@@ -643,17 +774,32 @@ Deno.serve(async (req) => {
     if (body.action === "announce") {
       const { data: who } = await db.auth.getUser(String(body.accessToken || ""));
       const role = who?.user?.app_metadata?.role || who?.user?.user_metadata?.role;
-      if (!who?.user || role !== "admin") return json({ error: "unauthorised" }, 401);
+      if (!who?.user || (role !== "admin" && role !== "team")) return json({ error: "unauthorised" }, 401);
       const report = await notifyPhones(await phonesFor(String(body.projectId || ""), String(body.trade || "")), String(body.projectId || ""));
+      return json({ ok: true, report });
+    }
+
+    // 06.11.26 — a task opened on the dashboard: the project's managers are told.
+    if (body.action === "task-notify") {
+      const { data: who } = await db.auth.getUser(String(body.accessToken || ""));
+      const u: any = who?.user;
+      const role = u?.app_metadata?.role;
+      if (!u || (role !== "admin" && role !== "team")) return json({ error: "unauthorised" }, 401);
+      const projectId = String(body.projectId || "");
+      if (role === "team" || String(u.email || "").toLowerCase() !== OWNER_EMAIL) {
+        const { data } = await db.from("project_access").select("project_id").eq("user_id", u.id).eq("project_id", projectId);
+        if (!data || !data.length) return json({ error: "unauthorised" }, 401);
+      }
+      const report = await notifyPhones(await pmPhonesFor(projectId), projectId);
       return json({ ok: true, report });
     }
 
     if (body.action === "projects" && pv) {
       const meta = await loadMeta();
-      const ids = Object.keys(meta).filter((id) => !pv.allowed || pv.allowed.indexOf(id) >= 0);
+      const ids = Object.keys(meta).filter((id) => (!pv.allowed || pv.allowed.indexOf(id) >= 0) && String((meta[id] || {}).name || "").trim());
       return json({
         preview: true,
-        projects: ids.map((id) => ({ id, trade: "", isPm: pv.as === "pm", ...(meta[id] || {}) }))
+        projects: ids.map((id) => ({ id, trade: pv.as === "sub" ? "electric" : "", role: pv.as, isPm: pv.as === "pm", ...(meta[id] || {}) }))
           .sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""), "he")),
       });
     }
@@ -665,7 +811,7 @@ Deno.serve(async (req) => {
       const grants = grantsFor(projects, phone, null as any);
       if (!grants.length) return json({ error: "not-granted" }, 401);
       return json({
-        projects: grants.map((g) => ({ id: g.projectId, trade: g.trade, isPm: !!g.isPm, ...(meta[g.projectId] || {}) })),
+        projects: grants.filter(named(meta)).map((g) => projOut(g, meta)),
       });
     }
 
@@ -680,7 +826,7 @@ Deno.serve(async (req) => {
         ? previewGrant(pv, projects, meta, String(body.projectId || ""), String(body.trade || ""))
         : grantsFor(projects, phone as string, null as any).filter((g) => g.projectId === body.projectId)[0];
       if (!grant) return json({ error: "unauthorised" }, 401);
-      if (!pv && grant.isPm && body.trade) grant.trade = String(body.trade);
+
       grant.extras = {
         ...grant.extras,
         sdRows: sdParts[grant.projectId] || grant.extras.sdRows || {},
@@ -688,7 +834,11 @@ Deno.serve(async (req) => {
         submittalApprovals: sbApProbe[grant.projectId] || grant.extras.submittalApprovals || {},
         sdApprovals: sdApProbe[grant.projectId] || grant.extras.sdApprovals || {},
       };
-      const out: any = await boardFor(grant);
+      const role = grant.role || (grant.isPm ? "pm" : "sub");
+      const out: any = role === "pm" ? await pmBoard(grant)
+        : role === "sub" ? await boardFor(grant)
+        : { marks: {}, trade: "" };
+      out.role = role;
       out.project = { id: grant.projectId, ...(meta[grant.projectId] || {}) };
       out.isPm = !!grant.isPm;
       out.canWrite = !!grant.canWrite;
@@ -789,6 +939,9 @@ Deno.serve(async (req) => {
         return doc;
       });
       if (refused) return json({ error: refused }, refused === "not-yours" ? 403 : 400);
+      if (op === "add") {
+        try { await notifyPhones(await pmPhonesFor(projectId), projectId, phone as string); } catch (e) { console.error("[sub-portal] task push", e); }
+      }
       return json({ ok: true, task: result ? taskOut(result, phone as string) : null });
     }
 

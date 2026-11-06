@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 261";
+var APP_BUILD = "06.11.2026 · build 262";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2715,8 +2715,8 @@ var pdfViewer = `
         .awPvDock.drag iframe { pointer-events: none; }
         .awPvBar .grip { cursor: grab; color: #8b919c; font-size: 15px; padding: 6px 8px; user-select: none; touch-action: none; }
         .awPvDock.drag .awPvBar .grip { cursor: grabbing; }
-        .awPvBar { pointer-events: auto; display: flex; align-items: center; gap: 4px; background: #14181f; color: #fff; border-radius: 999px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.28); flex: none; direction: rtl; }
-        .awPvBar button { border: 0; background: transparent; color: #cfd3da; font: inherit; font-size: 12.5px; font-weight: 800; padding: 6px 11px; border-radius: 999px; cursor: pointer; line-height: 1; }
+        .awPvBar { pointer-events: auto; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px; max-width: 100%; background: #14181f; color: #fff; border-radius: 18px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.28); flex: none; direction: rtl; }
+        .awPvBar button { border: 0; background: transparent; color: #cfd3da; font: inherit; font-size: 12px; font-weight: 800; padding: 6px 6px; border-radius: 999px; cursor: pointer; line-height: 1; }
         .awPvBar button.on { background: #fff; color: #14181f; }
         .awPvBar button:hover:not(.on) { background: rgba(255,255,255,.12); color: #fff; }
         .awPvBar .sep { width: 1px; height: 18px; background: rgba(255,255,255,.2); margin: 0 2px; }
@@ -6922,21 +6922,9 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     });
   }
 
-  if (view === "access") {
-    const isPmView = accessKind === "pm";
-    const rows = list.filter((r) => !!r.pm === isPmView);
-    return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-      React9.createElement("h3", { style: { margin: 0, textAlign: "center" } },
-        isPmView
-          ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05de\u05e0\u05d4\u05dc\u05d9 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd"
-          : "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
-      React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center", maxWidth: 620 } },
-        isPmView
-          // The one account here that writes. Everything else on this cube is
-          // read-only by design, so it is worth saying so out loud. (11.9.26)
-          ? "\u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd, \u05d5\u05e8\u05e9\u05d0\u05d9 \u05dc\u05db\u05ea\u05d5\u05d1 \u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd \u05d5\u05d1\u05dc\u05d5\"\u05d6 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05d1\u05dc\u05d1\u05d3."
-          : "\u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05db\u05e0\u05e1 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9, \u05d5\u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05d4\u05ea\u05d7\u05d5\u05dd \u05e9\u05dc\u05d5 \u05d1\u05dc\u05d1\u05d3."),
-      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key, pm: accessKind === "pm" })) }, isPmView ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8" : "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4"),
+  // 06.11.26 — the form that adds an app user, and the table of them.
+  const accessForm = (other) => React9.createElement(React9.Fragment, null,
+      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key, pm: accessKind === "pm", kind: accessKind })) }, accessKind === "pm" ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8" : accessKind === "sub" ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4" : "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e9\u05ea\u05de\u05e9"),
       // Nothing is granted until Save is pressed.
       canEdit && draft && React9.createElement("div", { style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 520 } },
         React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
@@ -6946,16 +6934,17 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
             React9.createElement("input", { style: inputS, value: draft.company, onChange: (e) => setDraft({ ...draft, company: e.target.value }) })),
           React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05d8\u05dc\u05e4\u05d5\u05df",
             React9.createElement("input", { style: { ...inputS, direction: "ltr" }, inputMode: "tel", value: draft.phone, onChange: (e) => setDraft({ ...draft, phone: e.target.value }) })),
-          !draft.pm && React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d7\u05d5\u05dd",
+          (draft.kind || (draft.pm ? "pm" : "sub")) === "sub" && React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d7\u05d5\u05dd",
             React9.createElement("select", { style: inputS, value: draft.trade, onChange: (e) => setDraft({ ...draft, trade: e.target.value }) },
               SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label))))),
         React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: !(draft.name.trim() || draft.company.trim()) || !draft.phone.trim(), onClick: () => {
-            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: draft.pm ? "" : draft.trade, pm: !!draft.pm, active: true }]));
+            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: (draft.kind || "sub") === "sub" ? draft.trade : "", pm: !!draft.pm, kind: draft.kind || (draft.pm ? "pm" : "sub"), active: true }]));
             goBack();
           } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
-          React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
-      React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
+          React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))));
+  const accessTable = (rows, kindLabel) =>
+React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", minWidth: 720, margin: "0 auto" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
             ["\u05e9\u05dd", "\u05ea\u05e4\u05e7\u05d9\u05d3", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05d4\u05d6\u05de\u05e0\u05d4", "\u05e4\u05e2\u05d9\u05dc", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
@@ -6969,7 +6958,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
                   React9.createElement("td", { style: { ...cellS, direction: "ltr", whiteSpace: "nowrap" } },
                     React9.createElement("span", { style: { fontWeight: 800, letterSpacing: 1 } }, r.code || "\u2014"),
                     canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginInlineStart: 8, padding: "2px 8px", fontSize: 11 }, onClick: () => setField(r.id, "code", makeSubCode()) }, "\u05d7\u05d3\u05e9")),
-                  React9.createElement("td", { style: cellS }, r.pm ? "\u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd" : (tradeOf(r.trade).label || "\u2014")),
+                  React9.createElement("td", { style: cellS }, kindLabel || (r.pm ? "\u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd" : (tradeOf(r.trade).label || "\u2014"))),
                   React9.createElement("td", { style: { ...cellS, whiteSpace: "nowrap" } },
                     React9.createElement("button", {
                       type: "button",
@@ -6989,8 +6978,36 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
                       r.active === false ? "\u05db\u05d1\u05d5\u05d9" : "\u05e4\u05e2\u05d9\u05dc")),
                   React9.createElement("td", { style: cellS },
                     canEdit && React9.createElement("button", { type: "button", onClick: () => removeSub(r.id), title: "\u05de\u05d7\u05d9\u05e7\u05d4", style: { border: "none", background: "transparent", color: "#c0392b", cursor: "pointer", fontWeight: 900, fontSize: 15 } }, "\u2715"))
-                )))))
+                )))));
+  if (view === "access") {
+    // 06.11.26 — four kinds of app user, each managed from its own button in
+    // User settings: subcontractor, project manager, supervision, client /
+    // architects. All sign in to the app the same way (phone + code).
+    const isPmView = accessKind === "pm";
+    const kindOfRow = (r) => r.kind || (r.pm ? "pm" : "sub");
+    const rows = list.filter((r) => kindOfRow(r) === accessKind);
+    const otherKind = accessKind === "supervision" || accessKind === "client";
+    const KIND_HE = { supervision: "\u05e4\u05d9\u05e7\u05d5\u05d7", client: "\u05d0\u05d3\u05e8\u05d9\u05db\u05dc\u05d9\u05dd / \u05dc\u05e7\u05d5\u05d7" };
+    if (otherKind) return React9.createElement("div", { className: "functionPageBody", style: wrapS },
+      React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "\u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd " + KIND_HE[accessKind]),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center", maxWidth: 620 } }, "\u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05e7\u05d5\u05d3 \u05d6\u05de\u05e0\u05d9; \u05d1\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05d1\u05d5\u05d7\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3 \u05e7\u05d1\u05d5\u05e2."),
+      accessForm(true),
+      accessTable(rows, KIND_HE[accessKind])
     );
+    return React9.createElement("div", { className: "functionPageBody", style: wrapS },
+      React9.createElement("h3", { style: { margin: 0, textAlign: "center" } },
+        isPmView
+          ? "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05de\u05e0\u05d4\u05dc\u05d9 \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8\u05d9\u05dd"
+          : "\u05e0\u05d9\u05d4\u05d5\u05dc \u05d4\u05e8\u05e9\u05d0\u05d5\u05ea \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
+      React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center", maxWidth: 620 } },
+        isPmView
+          // The one account here that writes. Everything else on this cube is
+          // read-only by design, so it is worth saying so out loud. (11.9.26)
+          ? "\u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd, \u05d5\u05e8\u05e9\u05d0\u05d9 \u05dc\u05db\u05ea\u05d5\u05d1 \u05d1\u05d9\u05d5\u05de\u05df \u05d4\u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd \u05d5\u05d1\u05dc\u05d5\"\u05d6 \u05d4\u05e9\u05d1\u05d5\u05e2\u05d9 \u05d1\u05dc\u05d1\u05d3."
+          : "\u05d4\u05e7\u05d1\u05dc\u05df \u05e0\u05db\u05e0\u05e1 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d4\u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05d4\u05e7\u05d5\u05d3 \u05d4\u05d0\u05d9\u05e9\u05d9, \u05d5\u05e8\u05d5\u05d0\u05d4 \u05d0\u05ea \u05d4\u05ea\u05d7\u05d5\u05dd \u05e9\u05dc\u05d5 \u05d1\u05dc\u05d1\u05d3."),
+      accessForm(false),
+      accessTable(rows, null))
+    ;
   }
 
   return React9.createElement("div", { className: "functionPageBody", style: wrapS },
@@ -23631,8 +23648,10 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
 // the switches from the server (sub-portal, app-config).
 var AW_OWNER_EMAIL = "marcella.kravitz@gmail.com";
 var APP_DEFS = [
-  { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "קבלני משנה, לו\"ז, יומן ועוד — כפי שמנהל פרויקט רואה" },
-  { key: "sub", he: "אפליקציית קבלן משנה", sub: "מה שקבלן משנה רואה במקצוע שלו" }
+  { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "משימות, יומן עדכונים, ריג'קטים ועוד — כפי שמנהל פרויקט רואה", tab: "מנהל" },
+  { key: "sub", he: "אפליקציית קבלן משנה", sub: "מה שקבלן משנה רואה בתחום שלו (בתצוגה: קבלן חשמל)", tab: "קבלן" },
+  { key: "client", he: "אפליקציית לקוח", sub: "לקוח ואדריכלים", tab: "לקוח" },
+  { key: "supervision", he: "אפליקציית פיקוח", sub: "פיקוח", tab: "פיקוח" }
 ];
 // 06.11.26 — the app's home screen: the long buttons (switched on and off) and
 // the row of four icons at the bottom (picked from every option).
@@ -23720,10 +23739,10 @@ function AppPreviewDock({ appConfig }) {
   const refresh = () => { const w = frameRef.current && frameRef.current.contentWindow; if (w) try { w.postMessage({ type: "aw-preview", refresh: true }, window.location.origin); } catch (e) {} };
   return createPortal(sbH(React15.Fragment, null,
     sbH("div", { ref: dockRef, className: `awPvDock ${pos ? "free" : side} ${min ? "min" : ""} ${dragging ? "drag" : ""}`,
-      style: pos ? { left: pos.x, top: pos.y, height: phoneH + 48 } : { height: phoneH + 48, bottom: "auto" } },
+      style: pos ? { left: pos.x, top: pos.y, height: phoneH + 48, width: Math.round(phoneH * 9 / 19.5) } : { height: phoneH + 48, bottom: "auto", width: Math.round(phoneH * 9 / 19.5) } },
       sbH("div", { className: "awPvBar" },
         sbH("span", { className: "grip", title: "גרירה — להזיז את התצוגה לכל מקום במסך", onPointerDown: startDrag }, "⠇⠇"),
-        APP_DEFS.map((a) => sbH("button", { key: a.key, type: "button", className: kind === a.key ? "on" : "", onClick: () => setKind(a.key) }, a.key === "pm" ? "מנהל פרויקט" : "קבלן משנה")),
+        APP_DEFS.map((a) => sbH("button", { key: a.key, type: "button", className: kind === a.key ? "on" : "", onClick: () => setKind(a.key) }, a.tab)),
         sbH("span", { className: "sep" }),
         sbH("button", { type: "button", title: "רענון הנתונים", onClick: refresh }, "⟳"),
         sbH("button", { type: "button", title: "מההתחלה (בחירת פרויקט)", onClick: () => setNonce((n) => n + 1) }, "⌂"),
@@ -23736,49 +23755,19 @@ function AppPreviewDock({ appConfig }) {
     min ? sbH("button", { type: "button", className: `awPvPill ${side}`, onClick: () => setMin(false) }, sbH(SmartphoneIcon, { size: 16, strokeWidth: 2 }), "תצוגת אפליקציה") : null
   ), document.body);
 }
-function AppsScreen({ isRTL, config, onChange, loaded }) {
-  const [edit, setEdit] = useState6(null);
-  const cfg = config || {};
-  const hiddenOf = (k) => ((cfg[k] || {}).hidden || []);
-  const toggle = (k, b) => {
-    const h = hiddenOf(k);
-    const next = h.indexOf(b) >= 0 ? h.filter((x) => x !== b) : h.concat([b]);
-    onChange({ ...cfg, [k]: { ...(cfg[k] || {}), hidden: next } });
-  };
-  const bottomOf = (k) => {
-    const b = (cfg[k] || {}).bottom;
-    return Array.isArray(b) ? b : ["submittal", "sd", "standards", "specs"].filter((x) => hiddenOf(k).indexOf(x) < 0);
-  };
-  const toggleBottom = (k, b) => {
-    const cur = bottomOf(k);
-    const next = cur.indexOf(b) >= 0 ? cur.filter((x) => x !== b) : cur.length >= 4 ? cur : cur.concat([b]);
-    onChange({ ...cfg, [k]: { ...(cfg[k] || {}), bottom: next } });
-  };
+function AppsScreen({ isRTL }) {
+  // 06.11.26 — four apps, each previewed as it is (the buttons are fixed for
+  // now; the choice of buttons may come back later).
   const setPreview = (k) => { try { window.dispatchEvent(new CustomEvent("aw-app-preview", { detail: k })); } catch (e) {} };
   return sbH("section", { className: "panel appsScreen", dir: isRTL ? "rtl" : "ltr" },
     sbH("h2", { className: "panelTitle", style: { textAlign: "center" } }, isRTL ? "אפליקציות" : "Apps"),
-    sbH("p", { className: "panelSub", style: { textAlign: "center" } }, isRTL ? "תצוגה מקדימה ובחירת הלחצנים שכל משתמש רואה" : "Preview and choose the buttons each user sees"),
-    sbH("p", { className: "panelSub", style: { textAlign: "center", fontSize: 12 } }, "התצוגה המקדימה היא האפליקציה עצמה עם הנתונים החיים של הפרויקט שתבחרי — נשארת פתוחה בצד המסך גם כשעוברים בין מסכים באתר, ושינויים בה לא נשמרים."),
-    !loaded ? sbH("p", { className: "panelSub", style: { textAlign: "center" } }, "טוען…") : null,
+    sbH("p", { className: "panelSub", style: { textAlign: "center", fontSize: 12 } }, "התצוגה המקדימה היא האפליקציה עצמה עם הנתונים החיים של הפרויקט שתבחרי — נשארת פתוחה על המסך גם כשעוברים בין מסכים באתר, ושינויים בה לא נשמרים."),
     sbH("div", { className: "appsList" }, APP_DEFS.map((a) => sbH("div", { key: a.key, className: "appsItem" },
       sbH("div", { className: "appsHead" },
         sbH("span", { className: "appsIcon" }, sbH(SmartphoneIcon, { size: 18, strokeWidth: 1.9 })),
         sbH("div", { className: "appsName" }, sbH("b", null, a.he), sbH("span", null, a.sub)),
         sbH("div", { className: "appsBtns" },
-          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPreview(a.key) }, isRTL ? "תצוגה מקדימה" : "Preview"),
-          sbH("button", { type: "button", className: `ghostBtn small ${edit === a.key ? "on" : ""}`, onClick: () => setEdit(edit === a.key ? null : a.key) }, isRTL ? "עריכה" : "Edit"))),
-      edit === a.key ? sbH("div", { className: "appsEdit" },
-        sbH("p", { className: "appsEditHint" }, "לחצנים ראשיים במסך הבית:"),
-        sbH("div", { className: "appsFolder" }, APP_MAIN.filter((x) => !x[2] || a.key === "pm").map(([b, label]) => sbH("label", { key: b, className: "appsTick" },
-          sbH("input", { type: "checkbox", checked: hiddenOf(a.key).indexOf(b) < 0, onChange: () => toggle(a.key, b) }), label))),
-        sbH("p", { className: "appsEditHint", style: { marginTop: 14 } }, `שורת האייקונים התחתונה — לבחור עד 4 (${bottomOf(a.key).length}/4):`),
-        sbH("div", { className: "appsFolder" }, APP_BOTTOM_OPTS.map(([b, label, soon]) => {
-          const on = bottomOf(a.key).indexOf(b) >= 0;
-          const full = !on && bottomOf(a.key).length >= 4;
-          return sbH("label", { key: b, className: `appsTick ${soon || full ? "off" : ""}`, title: soon ? "המסך הזה עוד לא קיים באפליקציה" : full ? "כבר נבחרו 4 — יש להוריד אחד קודם" : "" },
-            sbH("input", { type: "checkbox", disabled: !!soon || full, checked: on, onChange: () => toggleBottom(a.key, b) }), label,
-            soon ? sbH("span", { className: "soonTag" }, "בקרוב") : null);
-        }))) : null))));
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPreview(a.key) }, isRTL ? "תצוגה מקדימה" : "Preview")))))));
 }
 // 06.11.26 — "הגדרות הדפסת מסמכים": everything a printed sheet carries around
 // its content — logos, the frame, the footer (text and picture), the colour,
@@ -23890,11 +23879,9 @@ function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatur
   if (view === "add") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, backBtn, /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects, setUserPerms,
     fixedRole: "team", kind: "team", title: isRTL ? "הוספת משתמש לדשבורד" : "Add a dashboard user",
     note: isRTL ? "מזינים מייל ובוחרים פרויקטים. המשתמש יעבוד בדשבורד כמו מנהלת המערכת, רק בפרויקטים שנבחרו ובלי התפריט השחור. תישלח הזמנה במייל." : "Email and projects. The user works like the administrator on those projects, without the system menu." }));
-  if (view === "supervision" || view === "clients") return React15.createElement(React15.Fragment, null, backBtn, React15.createElement(AddUserPanel, { isRTL, projects, setUserPerms,
-    fixedRole: "client", kind: view === "supervision" ? "supervision" : "client",
-    title: view === "supervision" ? "ניהול משתמשים פיקוח" : "ניהול משתמשים אדריכלים / לקוח",
-    note: "מזינים מייל ובוחרים פרויקטים; תישלח הזמנה במייל. מה המשתמשים האלה יראו בדשבורד ייבחר מתוך תצוגה מקדימה ועריכה — בשלב הבא." }));
-  if (view === "subsAccess" || view === "pmAccess") {
+  // 06.11.26 — the four kinds of app user, each in a folder of its own: who
+  // may enter (phone + code) per project, added at the top, listed below.
+  if (view === "subsAccess" || view === "pmAccess" || view === "supervision" || view === "clients") {
     const pid = subsPid || (projects[0] || {}).id || "";
     const proj = projects.find((p) => p.id === pid) || {};
     return React15.createElement(React15.Fragment, null, backBtn,
@@ -23904,7 +23891,7 @@ function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatur
           React15.createElement("select", { value: pid, onChange: (e) => setSubsPid(e.target.value), style: { padding: "7px 10px", border: "1px solid var(--line)", borderRadius: 8, fontFamily: "inherit", fontSize: 13, minWidth: 220 } },
             projects.map((p) => React15.createElement("option", { key: p.id, value: p.id }, p.name)))),
         pid ? React15.createElement(SubcontractorsCard, {
-          key: view + ":" + pid, accessOnly: view === "pmAccess" ? "pm" : "sub",
+          key: view + ":" + pid, accessOnly: view === "pmAccess" ? "pm" : view === "supervision" ? "supervision" : view === "clients" ? "client" : "sub",
           subsData: (subsByProject || {})[pid] || {}, onChangeSubsData: (next) => onSubsChange && onSubsChange(pid, next),
           canEdit: true, projectId: pid, projectName: proj.name || "", isRTL
         }) : React15.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, "אין פרויקטים.")));
@@ -24949,14 +24936,6 @@ function ProjectDashboardApp() {
       // derived from the logo's navy
       projects: [
         { id: "p-default", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p2", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p3", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p4", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p5", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p6", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p7", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p8", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} },
-        { id: "p9", slug: null, published: false, name: null, floorsFrom: null, floorsTo: null, startDate: null, endDate: null, clientLogoUrl: null, contractorAccounts: [], clientAccounts: [], subcontractorAccounts: [], functionContent: {} }
       ]
     }
   ]);

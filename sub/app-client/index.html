@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e8eef6">
+<title>לקוח ופיקוח · א. וייס</title>
+<link rel="manifest" href="../manifest.json">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../common/core.css?v=40">
+</head>
+<body class="navyBar">
+<!-- 06.11.26 — the client's and the supervision's app. -->
+<div class="bar">
+  <img src="../brand-logo.svg" alt="A. Weiss" class="logo">
+  <button id="out" class="outBtn" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></svg><span>יציאה</span></button>
+</div>
+<div class="pvBadge">תצוגה מקדימה · נתונים חיים · שינויים לא נשמרים</div>
+<main id="app" class="wrap"></main>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr">06.11.2026 · build 40 · client</span></footer>
+<script>document.getElementById("yr").textContent=new Date().getFullYear();</script>
+<script src="../common/core.js?v=40"></script>
+<script src="app.js?v=40"></script>
+</body>
+</html>

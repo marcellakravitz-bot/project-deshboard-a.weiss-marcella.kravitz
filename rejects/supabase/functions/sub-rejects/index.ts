@@ -54,6 +54,8 @@ function parse(v: any) {
   return v || {};
 }
 
+// 06.11.26 — the kind of app user: pm, sub, supervision, client (older rows: pm flag).
+const roleOf = (s: any) => (s && ["pm", "sub", "supervision", "client"].indexOf(s.kind) >= 0) ? s.kind : (s && s.pm ? "pm" : "sub");
 // Who this phone is on this project: the rows of the register that carry it.
 async function whoOn(projectId: string, phone: string) {
   const keys = [`project-subs:${projectId}`, `project-extras:${projectId}`, "project-extras"];
@@ -67,8 +69,9 @@ async function whoOn(projectId: string, phone: string) {
   const mine = (list || []).filter((s: any) => s && s.active !== false && normPhone(s.phone) === phone);
   if (!mine.length) return null;
   return {
-    isPm: mine.some((s: any) => !!s.pm),
+    isPm: mine.some((s: any) => roleOf(s) === "pm"),
     ids: mine.map((s: any) => String(s.id || "")).filter(Boolean),
+    trades: mine.filter((s: any) => roleOf(s) === "sub").map((s: any) => String(s.trade || "")).filter(Boolean),
     name: mine.map((s: any) => s.name || s.company || "").filter(Boolean)[0] || "",
   };
 }
@@ -88,21 +91,14 @@ async function previewWho(body: any, projectId: string) {
     if (!data || !data.length) return { bad: true };
   }
   const isPm = pv.as === "pm";
-  let ids: string[] = [];
-  if (!isPm) {
-    const keys = [`project-subs:${projectId}`, `project-extras:${projectId}`, "project-extras"];
-    const { data } = await db.from("app_state").select("key, value").in("key", keys);
-    const by: Record<string, any> = {};
-    for (const r of (data || [])) by[r.key] = parse(r.value);
-    const list = (by[`project-subs:${projectId}`] || {}).list
-      || ((by[`project-extras:${projectId}`] || {}).subsData || {}).list
-      || (((by["project-extras"] || {})[projectId] || {}).subsData || {}).list || [];
-    const trade = String(body.trade || "");
-    ids = (list || []).filter((s: any) => s && !s.pm && (!trade || s.trade === trade)).map((s: any) => String(s.id || "")).filter(Boolean);
-  }
-  return { isPm, ids, name: "תצוגה מקדימה", preview: true };
+  // A subcontractor's view is the electrician's unless another trade is asked for.
+  const trades = pv.as === "sub" ? [String(body.trade || "electric")] : [];
+  return { isPm, ids: [], trades, name: "תצוגה מקדימה", preview: true };
 }
-const canSee = (who: any, l: any) => who.isPm || (Array.isArray(l.viewers) && l.viewers.some((v: string) => who.ids.indexOf(String(v)) >= 0));
+// 06.11.26 — a list is shown to the subcontractors of the trades ticked on it
+// ("trade:<key>"), or to a person ticked by name in the past.
+const canSee = (who: any, l: any) => who.isPm || (Array.isArray(l.viewers) && l.viewers.some((v: string) =>
+  who.ids.indexOf(String(v)) >= 0 || (String(v).indexOf("trade:") === 0 && (who.trades || []).indexOf(String(v).slice(6)) >= 0)));
 
 async function signedPhotos(arr: any[]) {
   const out: any[] = [];
@@ -133,7 +129,7 @@ const today = () => new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (req.method === "GET") return json({ fn: "sub-rejects", version: 2 });
+  if (req.method === "GET") return json({ fn: "sub-rejects", version: 3 });
   if (req.method !== "POST") return json({ error: "method" }, 405);
   let body: any = {};
   try { body = await req.json(); } catch { return json({ error: "bad body" }, 400); }
@@ -155,7 +151,8 @@ Deno.serve(async (req) => {
       if (error) throw error;
       const lists = (data || []).filter((l: any) => canSee(who, l)).map((l: any) => {
         const rows = Array.isArray(l.rows) ? l.rows : [];
-        return { id: l.id, name: l.name || "", list_date: l.list_date || "", count: rows.length, done: rows.filter((r: any) => r && r.done).length };
+        return { id: l.id, name: l.name || "", list_date: l.list_date || "", count: rows.length, done: rows.filter((r: any) => r && r.done).length,
+          trades: (Array.isArray(l.viewers) ? l.viewers : []).filter((v: string) => String(v).indexOf("trade:") === 0).map((v: string) => String(v).slice(6)) };
       });
       return json({ isPm: who.isPm, lists });
     }
@@ -172,7 +169,8 @@ Deno.serve(async (req) => {
     if (body.action === "new-list") {
       const l = {
         id: uid("rl"), project_id: projectId, name: String(body.name || "").trim(), list_date: String(body.list_date || "").slice(0, 10) || today(),
-        attendees: String(body.attendees || "").trim(), rows: [], cols: {}, viewers: [], updated_by: who.name || phone,
+        attendees: String(body.attendees || "").trim(), rows: [], cols: {},
+        viewers: (Array.isArray(body.trades) ? body.trades : []).map((t: any) => "trade:" + String(t)).slice(0, 10), updated_by: who.name || phone,
       };
       const { error } = await db.from("rejects_lists").insert(l);
       if (error) throw error;

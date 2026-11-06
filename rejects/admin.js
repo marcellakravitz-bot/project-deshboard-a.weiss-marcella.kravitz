@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from 
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 10 · 05.11.2026";
+export const REJECTS_BUILD = "rejects build 11 · 06.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -365,7 +365,7 @@ function ListEditor({ list, projectId, projectName, subs, edit, flash, off, setO
       <label>תאריך<input className="lliIn" style=${{ fontSize: 13 }} type="date" value=${list.list_date || ""} onChange=${(e) => edit((l) => ({ ...l, list_date: e.target.value }))} /></label>
       <label>נוכחים בסיור<input className="lliIn" style=${{ textAlign: "start", fontSize: 13 }} value=${list.attendees || ""} onChange=${(e) => edit((l) => ({ ...l, attendees: e.target.value }))} /></label>
     </div>
-    <${Viewers} subs=${subs} value=${list.viewers || []} onChange=${(v) => edit((l) => ({ ...l, viewers: v }))} />
+    <${Viewers} value=${list.viewers || []} onChange=${(v) => edit((l) => ({ ...l, viewers: v }))} />
     <div className="lliTableWrap rjTableWrap"><table className="lliTable rjRows">
       <colgroup><col style=${{ width: 44 }} /><col style=${{ width: 62 }} /><col style=${{ width: 70 }} /><col style=${{ width: 230 }} />
         <col style=${{ width: 130 }} /><col style=${{ width: 140 }} /><col style=${{ width: 210 }} /><col style=${{ width: 120 }} />
@@ -415,25 +415,27 @@ function ListEditor({ list, projectId, projectName, subs, edit, flash, off, setO
 }
 
 // ----------------------------------------------------------------------------- who may view this list in the app
-// 03.11.26 — a list made for a subcontractor (say the electrician) is shown to
-// the users ticked here, view only, in the subcontractor app. Project managers
-// see every list anyway, and can edit.
-function Viewers({ subs, value, onChange }) {
-  const [open, setOpen] = useState(false);
-  // Every user of the subcontractor app on this project. A project manager sees
-  // every list in any case, so he is shown, ticked and fixed.
-  const people = (subs || []).filter((s) => s && s.active !== false);
-  const on = (id) => value.indexOf(id) >= 0;
-  const label = (s) => [s.name, s.company].filter(Boolean).join(" · ") || s.phone || "";
-  const chosen = people.filter((s) => !s.pm && on(s.id)).map(label);
+// 06.11.26 — a list is made for a kind of subcontractor (the electrician, the
+// HVAC contractor…), or for nobody: an internal list of ours. Every
+// subcontractor of a ticked trade sees it in the app, view only. Project
+// managers see every list anyway. The choice is kept in "viewers" as
+// "trade:<key>", beside any person ticked by name in the past.
+export const REJECT_TRADES = [
+  ["hvac", "מיזוג אוויר"], ["electric", "חשמל"], ["plumbing", "אינסטלציה"],
+  ["drywall", "גבס"], ["security", "ביטחון, מולטימדיה ותקשורת"], ["paint", "צבע"],
+];
+function Viewers({ value, onChange }) {
+  const v = Array.isArray(value) ? value : [];
+  const on = (k) => v.indexOf("trade:" + k) >= 0;
+  const anyTrade = REJECT_TRADES.some(([k]) => on(k));
+  const people = v.filter((x) => String(x).indexOf("trade:") !== 0);
+  const toggle = (k) => onChange(on(k) ? v.filter((x) => x !== "trade:" + k) : v.concat(["trade:" + k]));
   return html`<div className="rjView">
-    <button type="button" className="rjBtn" onClick=${() => setOpen((o) => !o)}>הרשאות צפייה ${open ? "▴" : "▾"}</button>
-    ${!open && html`<span style=${{ fontSize: 12.5, color: "#5b5e66", alignSelf: "center" }}>${chosen.length ? chosen.join(", ") : "לא ניתנה הרשאה לקבלני משנה"}</span>`}
-    ${open && people.length === 0 && html`<span style=${{ fontSize: 12.5, color: "#9a9da5", alignSelf: "center" }}>אין עדיין משתמשים באפליקציה לפרויקט הזה — מוסיפים ב"ניהול קבלני משנה"</span>`}
-    ${open && people.map((s) => s.pm
-      ? html`<span key=${s.id} className="who pm" title="מנהל פרויקט רואה ועורך את כל הרשימות"><input type="checkbox" checked disabled />${label(s)} · מנהל פרויקט</span>`
-      : html`<label key=${s.id} className=${`who ${on(s.id) ? "on" : ""}`}>
-          <input type="checkbox" checked=${on(s.id)} onChange=${(e) => onChange(e.target.checked ? value.concat([s.id]) : value.filter((x) => x !== s.id))} />${label(s)}</label>`)}
+    <span style=${{ fontSize: 12.5, fontWeight: 800, color: "#14181f", alignSelf: "center" }}>סוג קבלן:</span>
+    <label className=${`who ${!anyTrade ? "on" : ""}`}>
+      <input type="checkbox" checked=${!anyTrade} onChange=${() => onChange(people)} />ללא קבלן — רשימה פנימית</label>
+    ${REJECT_TRADES.map(([k, he]) => html`<label key=${k} className=${`who ${on(k) ? "on" : ""}`}>
+      <input type="checkbox" checked=${on(k)} onChange=${() => toggle(k)} />${he}</label>`)}
   </div>`;
 }
 
