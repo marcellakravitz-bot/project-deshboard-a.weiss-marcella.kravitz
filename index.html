@@ -171,7 +171,7 @@ import {
   Download as DownloadSd,
   PenLine as PenLineSd
 } from "lucide-react";
-import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon, Archive as ArchiveIcon, ClipboardX as RejectsIcon, ListTodo as TasksIcon, FolderOpen as FolderOpen2, Database as DatabaseIcon } from "lucide-react";
+import { Settings as SettingsIcon, LayoutDashboard as DashIcon, Heart as Heart3, Phone as PhoneIcon, Archive as ArchiveIcon, ClipboardX as RejectsIcon, ListTodo as TasksIcon, History as HistoryIcon, FolderOpen as FolderOpen2, Database as DatabaseIcon } from "lucide-react";
 import {
   PanelTop as PanelTop2, Grid3x3 as Grid3x32, Building2 as Building23, Layers as Layers2,
   Zap as Zap2, Lightbulb as Lightbulb2, AirVent as AirVent2, Droplets as Droplets2, Cctv as Cctv2,
@@ -2254,17 +2254,33 @@ var pdfViewer = `
         /* The ordering board is the widest thing on the site. It gets the same
            narrow gutter the drawings board has (7.9.26). */
         .functionPage.wide:has(.lliTable) { padding-inline: 12px; }
-        .sdTable th, .sdTable td { padding-inline: 10px; }
-        .sdTable .cSec { width: 108px; text-align: center; }
-        .sdTable .cCat { width: 104px; }
+        /* 06.11.26 — every column takes what it needs and no more; the
+           description keeps the rest. Fields never touch: each sits inside its
+           own cell with air on both sides. */
+        .sdTable th, .sdTable td { padding-inline: 5px; }
+        .sdTable .cRoom { width: 40px; }
+        .sdTable .cCli { width: 64px; text-align: center; }
+        .sdTable .cSec { width: 92px; text-align: center; }
+        .sdTable .cCat { width: 96px; }
         .sdTable .cDesc { width: auto; text-align: start; }
-        .sdTable .cQty { width: 88px; }
-        .sdTable .cReq { width: 96px; }
-        .sdTable .cStat { width: 140px; }
-        .sdTable .cDate { width: 112px; }
+        .sdTable .cQty { width: 84px; }
+        .sdTable .cReq { width: 62px; }
+        .sdTable .cStat { width: 128px; }
+        .sdTable .cDate { width: 118px; }
         .sdTable .cFile { width: 104px; }
-        .sdTable .cAct { width: 112px; }
-        .sdTable .cMark { width: 96px; }
+        .sdTable .cUpd { width: 92px; text-align: center; }
+        .sdTable .cAct { width: 64px; }
+        .sdTable .cMark { width: 80px; }
+        .sdTable td > input.lliIn, .sdTable td > select.lliIn, .sdTable .cCat .lliIn { width: 100%; box-sizing: border-box; min-width: 0; }
+        /* "הוגש ללקוח": the same square-cornered box as every field on the row. */
+        .sdTable .cReq .lliOrd { border-radius: 7px; padding: 5px 8px; min-width: 40px; }
+        .sdUpd { display: flex; justify-content: center; gap: 4px; }
+        .sdUpd .sbSq:disabled { opacity: .4; cursor: default; }
+        .sdUpd .sbSq { width: auto; min-width: 26px; padding-inline: 4px; display: inline-flex; align-items: center; gap: 2px; }
+        .sdUpdN { font-size: 10.5px; margin-inline-start: 2px; }
+        .sdUpdSub { text-align: center; font-size: 12.5px; color: var(--steel); margin: -4px 0 10px; }
+        .sdUpdLbl { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 800; color: var(--steel); margin-bottom: 10px; text-align: start; }
+        .sdUpdLbl textarea { width: 100%; box-sizing: border-box; resize: vertical; font-family: inherit; }
         .sdDlBtn {
           border: none; background: none; color: var(--steel); cursor: pointer;
           padding: 2px; line-height: 0; border-radius: 5px;
@@ -13406,8 +13422,7 @@ var SD_L = {
   histSent: { en: "Submitted to the client", he: "\u05d4\u05d5\u05d2\u05e9 \u05dc\u05dc\u05e7\u05d5\u05d7" },
   histUnsent: { en: "Submission taken back", he: "\u05d4\u05d4\u05d2\u05e9\u05d4 \u05d1\u05d5\u05d8\u05dc\u05d4" },
   histMail: { en: "E-mailed to the supervision", he: "\u05e0\u05e9\u05dc\u05d7 \u05d1\u05de\u05d9\u05d9\u05dc \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7" },
-  histStatus: { en: "Status", he: "\u05e1\u05d8\u05d8\u05d5\u05e1" },
-  sendMail: { en: "E-mail to the supervision", he: "\u05e9\u05dc\u05d9\u05d7\u05d4 \u05d1\u05de\u05d9\u05d9\u05dc \u05dc\u05e4\u05d9\u05e7\u05d5\u05d7" }
+  histStatus: { en: "Status", he: "\u05e1\u05d8\u05d8\u05d5\u05e1" }
 };
 // 21.10.26 — what happened to a drawing, newest last: every submission to the
 // client and every change of status, each with its date.
@@ -13440,6 +13455,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const [statusFilter, setStatusFilter] = useState6("all");
   // The drawing whose history is open (21.10.26).
   const [histFor, setHistFor] = useState6(null);
+  // 06.11.26 — the updates column: the "+" window and the list.
+  const [updFor, setUpdFor] = useState6(null);
+  const [updLog, setUpdLog] = useState6(null);
+  const [updText, setUpdText] = useState6("");
 
   const [busyRow, setBusyRow] = useState6(null);
   const [printAsk, setPrintAsk] = useState6(null);
@@ -13788,36 +13807,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // The mark of a row: her own, or the one on the ordering board for a row
   // that came from there.
   // markOf / descOf: defined with the rows, above (02.11.26).
-  // E-mail to the supervision (21.10.26): her standing message, in the new
-  // Outlook. Sending it is submitting it to the client, so the row says so.
-  const sendMail = (r, v) => {
-    const mark = markOf(r, v) || String(descOf(r, v) || "").trim();
-    const back = new Date();
-    back.setDate(back.getDate() + 7);
-    const to = (contacts || [])
-      .filter((c) => c && c.group === "supervision" && /\S+@\S+/.test(String(c.email || "")))
-      .map((c) => String(c.email).trim());
-    const subject = `פרויקט ${projectName || ""} - SD ${mark}`;
-    const body = [
-      "פיקוח שלום",
-      "",
-      `מצ"ב סבמיטל עבור - ${mark}`,
-      `נא להחזיר SD חתום / הערות להגשה מחדש לא יאוחר מתאריך ${sbFmtDate(back.toISOString().slice(0, 10))}`,
-      "",
-      "תודה על שיתוף הפעולה.",
-      "בברכה,"
-    ].join("\r\n");
-    const href = "https://outlook.office.com/mail/deeplink/compose?"
-      + (to.length ? `to=${encodeURIComponent(to.join(";"))}&` : "")
-      + `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-    const now = new Date().toISOString();
-    const p = { toClient: true, toClientAt: now, submittedAt: now.slice(0, 10), history: sdHistAdd(v, { kind: "mail" }) };
-    if (v.status === "required") { p.status = "submitted"; p.statusAt = now; }
-    patch(r.code, p);
-    const w = window.open(href, "_blank");
-    if (w) { try { w.opener = null; } catch (e) {} }
-    else { try { window.location.href = href; } catch (e) {} }
-  };
+  // 06.11.26 — the e-mail to the supervision is gone from the board (her call).
+
 
   return sbH(
     "div",
@@ -13932,7 +13923,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                   if (!canEdit) return null;
                   const allOn = groups.every((g) => g.rows.every((r) => !isHidden(r)));
                   return sbH("th", {
-                    className: `cAct prAllTh ${allOn ? "on" : ""}`.trim(),
+                    className: `cCli prAllTh ${allOn ? "on" : ""}`.trim(),
                     title: isRTL ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח") : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
                     onClick: () => {
                       const next = { ...data };
@@ -13949,6 +13940,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 thS("dueAt", "cDate", L("dueAt")),
                 thS("toClient", "cReq", L("toClient")),
                 thS("status", "cStat", L("status")),
+                // 06.11.26 — where the drawing's process stands: dated notes.
+                sbH("th", { className: "cUpd" }, isRTL ? "עדכונים" : "Updates"),
                 canEdit ? sbH("th", { className: "cAct" }, "") : null
               )
             ),
@@ -13956,7 +13949,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 11 : 8 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 12 : 9 }, g.title)),
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -14002,7 +13995,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         )
                       : null,
                     canEdit
-                      ? sbH("td", { className: "cAct prKeep" },
+                      ? sbH("td", { className: "cCli prKeep" },
                           sbH(ClientShowBtn, { on: !hidden, he: isRTL, onClick: () => patch(r.code, { hidden: !hidden }) }))
                       : null,
                     sbH(
@@ -14169,6 +14162,18 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     // the AI classified she decides a line needs no shop drawing
                     // — so she deletes it. It comes back from the bar at the top
                     // of the board if she was wrong. (7.9.26)
+                    (() => {
+                      const ups = Array.isArray(v.updates) ? v.updates : [];
+                      const last = ups[ups.length - 1];
+                      return sbH("td", { className: "cUpd" },
+                        sbH("div", { className: "sdUpd" },
+                          canEdit ? sbH("button", { type: "button", className: "sbSq", title: isRTL ? "עדכון חדש" : "New update", onClick: () => setUpdFor(r.code) },
+                            sbH(Plus2, { size: 14, strokeWidth: 2.4 })) : null,
+                          sbH("button", { type: "button", className: "sbSq", disabled: !ups.length,
+                            title: isRTL ? "רשימת עדכונים" : "Updates", onClick: () => setUpdLog(r.code) },
+                            sbH(HistoryIcon, { size: 14, strokeWidth: 2.1 }), ups.length ? sbH("b", { className: "sdUpdN" }, ups.length) : null)),
+                        last ? sbH("span", { className: "lliStamp", dir: "ltr", title: last.text }, sbFmtDate(String(last.at).slice(0, 10))) : null);
+                    })(),
                     canEdit
                       ? sbH(
                           "td",
@@ -14176,8 +14181,6 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                           sbH(
                             "div",
                             { className: "sdActs" },
-                            sbH("button", { type: "button", className: "sbSq send", title: L("sendMail"), "aria-label": L("sendMail"), onClick: () => sendMail(r, v) },
-                              sbH(SendIcon2, { size: 14, strokeWidth: 2.1 })),
                             sbH("button", { type: "button", className: "sbSq", title: L("history"), "aria-label": L("history"), onClick: () => setHistFor(r.code) },
                               sbH(ArchiveIcon, { size: 14, strokeWidth: 2.1 })),
                             sbH("button", { type: "button", className: "sbSq del", title: L("removeRow"), "aria-label": L("removeRow"), onClick: () => patch(r.code, { removed: true }) },
@@ -14191,6 +14194,45 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
             )
           )
         ),
+    // 06.11.26 — a new update: today's date by itself, and the text.
+    updFor
+      ? createPortal(sbH("div", { className: "printAskScrim", onClick: () => { setUpdFor(null); setUpdText(""); } },
+          sbH("div", { className: "printAskBox", dir: isRTL ? "rtl" : "ltr", style: { maxWidth: 440, width: "calc(100vw - 32px)" }, onClick: (e) => e.stopPropagation() },
+            sbH("h3", null, isRTL ? "עדכון חדש" : "New update"),
+            sbH("p", { className: "sdUpdSub" }, (() => { const r = all.find((x) => x.code === updFor) || {}; const v = sdRowOf(data, updFor); return markOf(r, v) || String(descOf(r, v) || "").split("\n")[0]; })()),
+            sbH("label", { className: "sdUpdLbl" }, isRTL ? "תאריך העדכון" : "Date",
+              sbH("input", { className: "lliIn", readOnly: true, dir: "ltr", value: sbFmtDate(new Date().toISOString().slice(0, 10)), style: { background: "#f4f6f9", fontWeight: 800 } })),
+            sbH("label", { className: "sdUpdLbl" }, isRTL ? "העדכון" : "Update",
+              sbH("textarea", { className: "lliIn", rows: 4, autoFocus: true, value: updText, onChange: (e) => setUpdText(e.target.value), placeholder: isRTL ? "איפה התהליך נמצא" : "Where the process stands" })),
+            sbH("div", { className: "printAskBtns" },
+              sbH("button", { type: "button", className: "ghostBtn small", disabled: !updText.trim(), onClick: () => {
+                const v = sdRowOf(data, updFor);
+                const d = new Date(); const at = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                patch(updFor, { updates: [...(Array.isArray(v.updates) ? v.updates : []), { at, text: updText.trim(), by: currentEmail || "" }] });
+                setUpdFor(null); setUpdText("");
+              } }, isRTL ? "שמירת עדכון" : "Save"),
+              sbH("button", { type: "button", className: "ghostBtn small", onClick: () => { setUpdFor(null); setUpdText(""); } }, isRTL ? "ביטול" : "Cancel")))),
+          document.body)
+      : null,
+    updLog
+      ? createPortal(sbH("div", { className: "printAskScrim", onClick: () => setUpdLog(null) },
+          sbH("div", { className: "printAskBox", dir: isRTL ? "rtl" : "ltr", style: { maxWidth: 460, width: "calc(100vw - 32px)" }, onClick: (e) => e.stopPropagation() },
+            sbH("h3", null, isRTL ? "רשימת עדכונים" : "Updates"),
+            (() => {
+              const v = sdRowOf(data, updLog);
+              const ups = (Array.isArray(v.updates) ? v.updates : []).map((u, i) => ({ ...u, i })).reverse();
+              return sbH("ul", { className: "sdHist" }, ups.map((u) => sbH("li", { key: u.i },
+                sbH("span", { className: "sdHistAt", dir: "ltr" }, sbFmtDate(String(u.at).slice(0, 10))),
+                sbH("span", { style: { whiteSpace: "pre-wrap", flex: 1 } }, u.text),
+                canEdit ? sbH("button", { type: "button", className: "sdDlBtn", title: isRTL ? "מחיקה" : "Delete", onClick: () => {
+                  if (!confirm(isRTL ? "למחוק את העדכון?" : "Delete this update?")) return;
+                  patch(updLog, { updates: (Array.isArray(v.updates) ? v.updates : []).filter((_, k) => k !== u.i) });
+                } }, sbH(Trash2, { size: 13 })) : null)));
+            })(),
+            sbH("div", { className: "printAskBtns" },
+              sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setUpdLog(null) }, isRTL ? "סגירה" : "Close")))),
+          document.body)
+      : null,
     // The history of one drawing: when it went to the client, and every status
     // it was given, with the day (21.10.26).
     histFor
