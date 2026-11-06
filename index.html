@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 266";
+var APP_BUILD = "06.11.2026 · build 267";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6715,7 +6715,10 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   // into an e-mail by hand can no longer be the wrong one. (13.9.26)
   const inviteText = (r) => {
     const who = [r.name, r.company].filter((x) => x && String(x).trim()).join(", ");
-    const appUrl = location.href.split("?")[0].replace(/[^/]*$/, "") + "sub/";
+    // 06.11.26 — a link of its own per kind of user, so WhatsApp shows the
+    // right title ("דשבורד ניהול פרויקט" / "דשבורד קבלני משנה").
+    const kindR = r.kind || (r.pm ? "pm" : "sub");
+    const appUrl = location.href.split("?")[0].replace(/[^/]*$/, "") + "sub/" + (kindR === "pm" ? "pm.html" : kindR === "sub" ? "subs.html" : "");
     return [
       "\u05e9\u05dc\u05d5\u05dd " + who,
       "\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 - " + (projectName || ""),
