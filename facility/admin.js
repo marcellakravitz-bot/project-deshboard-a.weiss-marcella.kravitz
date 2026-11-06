@@ -250,25 +250,34 @@ const css = `
 .fac .facMailOpts .facBtn.on{border-color:var(--accent,#17181c);background:#f4f6f9}
 .fac .facMailWin pre{white-space:pre-wrap;font:inherit;font-size:13px;line-height:1.55;background:#fafbfc;border:1px solid var(--line,#e6e6e9);border-radius:10px;padding:10px;margin:12px 0 0}
 .fac .facMailWin textarea{width:100%;min-height:240px;font:inherit;font-size:13px;border:1px solid var(--line,#e6e6e9);border-radius:10px;padding:10px;line-height:1.55;margin-top:12px;box-sizing:border-box}
+.fac table.svcTbl{table-layout:fixed}
 .fac table.svcTbl th{white-space:normal;line-height:1.2;padding:7px 5px;font-size:12px}
-.fac table.svcTbl td{padding:5px 4px;vertical-align:top}
-.fac table.svcTbl .facIn{min-width:0;padding:4px 6px;font-size:12.5px;margin-bottom:3px}
-.fac table.svcTbl th.grp{background:#e8f4ec;color:#15803D}
+.fac table.svcTbl td{padding:8px 6px;vertical-align:middle;text-align:center}
+.fac table.svcTbl .facIn{min-width:0;padding:4px 6px;font-size:12.5px;text-align:center}
+.fac table.svcTbl .facIn::placeholder{text-align:center}
+/* 06.11.26 — the service department in greys, apart from the rest. */
+.fac table.svcTbl th.grp{background:#e4e6ea;color:#3f434b}
+.fac table.svcTbl td.svcCell{background:#f6f7f9}
+.fac .svcName2{margin-bottom:5px}
+.fac .svcLine{display:grid;grid-template-columns:42px 1fr;align-items:center;gap:6px;margin-top:4px}
+.fac .svcLine span{font-size:11.5px;font-weight:700;color:#5b5e66;text-align:start}
+.fac td.svcNoteCell{padding:8px 6px}
+.fac textarea.svcNote{display:block;width:100%;min-height:118px;resize:vertical;box-sizing:border-box;text-align:start}
 .fac .svcLogo{width:64px;height:44px;border-radius:7px;border:1px dashed #cfd3da;background:#fafbfc;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;color:#a6a9b0;position:relative;margin:0 auto}
 .fac .svcLogo img{max-width:100%;max-height:100%;object-fit:contain}
 .fac .svcLogo:hover{border-color:#8a8d94}
 .fac .svcLogo:hover .finPicX{display:flex}
-.fac .svcName{font-weight:800;font-size:13.5px;text-align:start}
-.fac .svcLib{font-size:11px;font-weight:700;color:#15803D;margin-top:3px;text-align:start}
+.fac .svcName{font-weight:800;font-size:13.5px;text-align:center}
+.fac .svcLib{font-size:11px;font-weight:700;color:#15803D;margin-top:3px;text-align:center}
 .fac .svcLib.new{color:#b26b00}
-.fac .svcPpl{font-size:12px;text-align:start;line-height:1.45}
+.fac .svcPpl{font-size:12px;text-align:center;line-height:1.45}
 .fac .svcPpl .p{padding:2px 0;border-bottom:1px solid #f0f0f2}
 .fac .svcPpl .p:last-child{border-bottom:0}
 .fac .svcPpl b{font-size:12.5px}
 .fac .svcPpl a{color:inherit;text-decoration:none}
-.fac .svcWar{font-size:12.5px;text-align:start}
+.fac .svcWar{font-size:12.5px;text-align:center}
 .fac .svcWar .ok{display:inline-flex;align-items:center;gap:4px;color:#1f7a3e;font-weight:800;margin-bottom:3px}
-.fac .svcWar div.m{direction:ltr;text-align:right;font-weight:700;line-height:1.5}
+.fac .svcWar div.m{direction:ltr;text-align:center;font-weight:700;line-height:1.5}
 .fac td.svcWarOn{background:#e3f3e6}
 .fac .facSvc td{background:#fafbfc;padding:10px}
 .fac .facSvcGrid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;align-items:end;max-width:820px;margin:0 auto}
@@ -874,6 +883,12 @@ function ServiceChapter({ data, edit, bar, print, flash, contacts, catalog, lib,
     .filter((p) => p.name || p.phone || p.email);
   const mine = (name) => rows.filter((r) => supLibNorm(r.supplier) === supLibNorm(name));
   const warrantyOf = (name) => mine(name).filter((r) => ((r.cells || {}).warranty || "") === "v");
+  // 06.11.26 — the cell turns green only once every product of the supplier
+  // has its warranty V in the finishes list ("ל״ר" products do not count).
+  const warrantyAll = (name) => {
+    const need = mine(name).filter((r) => ((r.cells || {}).warranty || "") !== "na");
+    return need.length > 0 && need.every((r) => ((r.cells || {}).warranty || "") === "v");
+  };
   const noteOf = (name) => ((data.serviceNotes || {})[supLibNorm(name)] || "");
   const add = () => {
     const v = nm.trim();
@@ -920,23 +935,21 @@ function ServiceChapter({ data, edit, bar, print, flash, contacts, catalog, lib,
       <button type="button" className="facBtn" onClick=${() => setAdding(false)}>ביטול</button>
     </div>`}
     <div className="facWin"><table className="svcTbl">
-      <thead><tr><th rowSpan=${2}>לוגו</th><th rowSpan=${2}>ספק</th><th rowSpan=${2}>איש קשר בפרויקט</th>
-        <th colSpan=${3} className="grp">מחלקת בדק ושירות (מאגר הספקים)</th><th rowSpan=${2}>כתבי אחריות שהתקבלו</th><th rowSpan=${2}>הערות</th><th rowSpan=${2}></th></tr>
-        <tr><th className="grp">איש קשר</th><th className="grp">טלפון / נייד / מייל</th><th className="grp">מתי ולמה לפנות</th></tr></thead>
+      <colgroup><col style=${{ width: "9%" }} /><col style=${{ width: "13%" }} /><col style=${{ width: "17%" }} /><col style=${{ width: "24%" }} />
+        <col style=${{ width: "14%" }} /><col style=${{ width: "19%" }} /><col style=${{ width: "4%" }} /></colgroup>
+      <thead><tr><th>לוגו</th><th>ספק</th><th>איש קשר בפרויקט</th>
+        <th className="grp">מחלקת בדק ושירות</th><th>כתבי אחריות שהתקבלו</th><th>הערות</th><th></th></tr></thead>
       <tbody>
-        ${names.length === 0 && html`<tr><td colSpan=${9} className="facEmpty">אין עדיין ספקים — הם נכנסים מעצמם מרשימת חומרי הגמר, או בלחיצה על "+ ספק"</td></tr>`}
+        ${names.length === 0 && html`<tr><td colSpan=${7} className="facEmpty">אין עדיין ספקים — הם נכנסים מעצמם מרשימת חומרי הגמר, או בלחיצה על "+ ספק"</td></tr>`}
         ${names.map((name, i) => html`<${SvcRow} key=${supLibNorm(name)} i=${i} name=${name} lib=${lib} reloadLib=${reloadLib} flash=${flash} projectId=${projectId}
-          people=${peopleOf(name)} warranty=${warrantyOf(name)} note=${noteOf(name)}
+          people=${peopleOf(name)} warranty=${warrantyOf(name)} warrantyAll=${warrantyAll(name)} note=${noteOf(name)}
           onNote=${(t) => edit((d) => { d.serviceNotes = { ...(d.serviceNotes || {}), [supLibNorm(name)]: t }; return d; })}
           onHide=${() => hide(name)} />`)}
       </tbody>
     </table></div>
-    <div className="facLegend">
-      <span>פרטי מחלקת הבדק והלוגו נשמרים במאגר הספקים ומתמלאים מעצמם בכל פרויקט</span>
-      <span><i style=${{ background: "#e3f3e6" }} />התקבל כתב אחריות (מרשימת חומרי הגמר)</span>
-    </div><//>`;
+<//>`;
 }
-function SvcRow({ i, name, lib, reloadLib, flash, projectId, people, warranty, note, onNote, onHide }) {
+function SvcRow({ i, name, lib, reloadLib, flash, projectId, people, warranty, warrantyAll, note, onNote, onHide }) {
   const entry = supLibFind(lib, name);
   const libSvc = ((entry || {}).data || {}).service || {};
   const logo = ((entry || {}).data || {}).logo || null;
@@ -963,32 +976,32 @@ function SvcRow({ i, name, lib, reloadLib, flash, projectId, people, warranty, n
     try { const t = await finThumb(f, 400); if (await saveLib(() => ({ logo: t }))) flash("הלוגו נשמר במאגר הספקים"); }
     catch (e) { flash("טעינת הלוגו נכשלה"); }
   };
-  const inp = (k, ph, dir) => html`<input className="facIn" dir=${dir || "rtl"} placeholder=${ph} value=${v[k] || ""}
+  const inp = (k, ph, dir) => html`<input className="facIn svcIn" dir=${dir || "rtl"} placeholder=${ph} value=${v[k] || ""}
     onChange=${(e) => set(k, e.target.value)} onBlur=${commit} onKeyDown=${(e) => { if (e.key === "Enter") e.target.blur(); }} />`;
   const has = supLibHasService(entry);
   return html`<tr>
-    <td style=${{ width: 76 }}><div className="svcLogo" title="לוגו הספק — לחיצה להעלאה · לחצן ימני: ספריית התמונות"
+    <td><div className="svcLogo" title="לוגו הספק — לחיצה להעלאה · לחצן ימני: ספריית התמונות"
       onClick=${(e) => imgAsk(e, { projectId, onFile: putLogo })} ...${imgPickProps({ projectId, onFile: putLogo })}>
       ${logo ? html`<img src=${logo} alt="" />` : html`<${ImagePlus} size=${17} />`}
       ${logo && html`<button type="button" className="finPicX" title="הסרת הלוגו"
         onClick=${async (e) => { e.stopPropagation(); if (await saveLib(() => ({ logo: null }))) flash("הלוגו הוסר"); }}><${X} size=${11} /></button>`}
     </div></td>
-    <td style=${{ minWidth: 120 }}><div className="svcName">${name}</div>
+    <td><div className="svcName">${name}</div>
       <div className=${`svcLib ${entry ? "" : "new"}`}>${entry ? (has ? "✓ במאגר הספקים" : "במאגר — חסרים פרטי בדק") : "ספק חדש במאגר"}</div></td>
-    <td style=${{ minWidth: 150 }}><div className="svcPpl">${people.length ? people.map((p, k) => html`<div key=${k} className="p">
-      <b>${p.name}</b>${p.phone && html`<div dir="ltr" style=${{ textAlign: "right" }}><a href=${"tel:" + p.phone.replace(/[^0-9+]/g, "")}>${p.phone}</a></div>`}
-      ${p.email && html`<div dir="ltr" style=${{ textAlign: "right" }}><a href=${"mailto:" + p.email}>${p.email}</a></div>`}</div>`)
+    <td><div className="svcPpl">${people.length ? people.map((p, k) => html`<div key=${k} className="p">
+      <b>${p.name}</b>${p.phone && html`<div dir="ltr" style=${{ textAlign: "center" }}><a href=${"tel:" + p.phone.replace(/[^0-9+]/g, "")}>${p.phone}</a></div>`}
+      ${p.email && html`<div dir="ltr" style=${{ textAlign: "center" }}><a href=${"mailto:" + p.email}>${p.email}</a></div>`}</div>`)
       : html`<span style=${{ color: "#a6a9b0" }}>אין איש קשר לספק באנשי הקשר של הפרויקט</span>`}</div></td>
-    <td style=${{ minWidth: 120 }}>${inp("name", "שם איש קשר")}</td>
-    <td style=${{ minWidth: 150 }}>${inp("phone", "טלפון", "ltr")}${inp("mobile", "נייד", "ltr")}${inp("email", "מייל", "ltr")}</td>
-    <td style=${{ minWidth: 150 }}><textarea className="facIn" rows=${3} style=${{ resize: "vertical" }} placeholder="שעות, ימים, תקופת אחריות, למה לפנות" value=${v.when || ""}
-      onChange=${(e) => set("when", e.target.value)} onBlur=${commit} /></td>
-    <td className=${warranty.length ? "svcWarOn" : ""} style=${{ minWidth: 120 }}><div className="svcWar">
-      ${warranty.length ? html`<span className="ok">✓ יש כתב אחריות</span>${warranty.map((r) => html`<div key=${r.id} className="m" title=${r.desc || ""}>${r.mark || r.desc || "—"}</div>`)}`
+    <td className="svcCell">
+      <div className="svcName2">${inp("name", "איש קשר")}</div>
+      ${[["phone", "טלפון"], ["mobile", "נייד"], ["email", "מייל"]].map(([k, l]) => html`<div key=${k} className="svcLine"><span>${l}</span>${inp(k, l, "ltr")}</div>`)}
+    </td>
+    <td className=${warrantyAll ? "svcWarOn" : ""}><div className="svcWar">
+      ${warranty.length ? html`${warrantyAll && html`<span className="ok">✓ התקבל כתב אחריות</span>`}${warranty.map((r) => html`<div key=${r.id} className="m" title=${r.desc || ""}>${r.mark || r.desc || "—"}</div>`)}`
         : html`<span style=${{ color: "#a6a9b0" }}>—</span>`}</div></td>
-    <td style=${{ minWidth: 130 }}><textarea className="facIn" rows=${2} style=${{ resize: "vertical" }} placeholder="הערות" value=${note}
+    <td className="svcNoteCell"><textarea className="facIn svcNote" placeholder="הערות" value=${note}
       onChange=${(e) => onNote(e.target.value)} /></td>
-    <td style=${{ width: 36 }}><button type="button" className="facBtn icon" title="הורדה מהרשימה" onClick=${onHide}><${Trash2} size=${14} color="#b02a37" /></button></td>
+    <td><button type="button" className="facBtn icon" title="הורדה מהרשימה" onClick=${onHide}><${Trash2} size=${14} color="#b02a37" /></button></td>
   </tr>`;
 }
 
