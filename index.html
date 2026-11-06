@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 260";
+var APP_BUILD = "06.11.2026 · build 261";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2711,6 +2711,10 @@ var pdfViewer = `
         .awPvDock { position: fixed; top: 64px; bottom: 14px; z-index: 880; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; font-family: 'Assistant','Inter',sans-serif; }
         .awPvDock.l { left: 14px; } .awPvDock.r { right: 14px; }
         .awPvDock.min { display: none; }
+        .awPvDock.free { bottom: auto; }
+        .awPvDock.drag iframe { pointer-events: none; }
+        .awPvBar .grip { cursor: grab; color: #8b919c; font-size: 15px; padding: 6px 8px; user-select: none; touch-action: none; }
+        .awPvDock.drag .awPvBar .grip { cursor: grabbing; }
         .awPvBar { pointer-events: auto; display: flex; align-items: center; gap: 4px; background: #14181f; color: #fff; border-radius: 999px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.28); flex: none; direction: rtl; }
         .awPvBar button { border: 0; background: transparent; color: #cfd3da; font: inherit; font-size: 12.5px; font-weight: 800; padding: 6px 11px; border-radius: 999px; cursor: pointer; line-height: 1; }
         .awPvBar button.on { background: #fff; color: #14181f; }
@@ -23655,6 +23659,36 @@ function AppPreviewDock({ appConfig }) {
   const [side, setSide] = useState6(() => { try { return window.localStorage.getItem("aw.pvSide") || "l"; } catch (e) { return "l"; } });
   const [nonce, setNonce] = useState6(0);
   const frameRef = useRef5(null);
+  // 06.11.26 — dragged anywhere on the screen by the handle in its bar; the
+  // place is remembered in this browser.
+  const [pos, setPos] = useState6(() => { try { const v = JSON.parse(window.localStorage.getItem("aw.pvPos") || "null"); return v && typeof v.x === "number" ? v : null; } catch (e) { return null; } });
+  const [dragging, setDragging] = useState6(false);
+  const dockRef = useRef5(null);
+  const clampPos = (x, y) => {
+    const el = dockRef.current;
+    const w = el ? el.offsetWidth : 380, h = el ? el.offsetHeight : 700;
+    return { x: Math.max(0, Math.min(window.innerWidth - w, x)), y: Math.max(0, Math.min(window.innerHeight - h, y)) };
+  };
+  const startDrag = (e) => {
+    if (e.button != null && e.button !== 0) return;
+    const el = dockRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const box = el.getBoundingClientRect();
+    const dx = e.clientX - box.left, dy = e.clientY - box.top;
+    setDragging(true);
+    let last = null;
+    const move = (ev) => { last = clampPos(ev.clientX - dx, ev.clientY - dy); setPos(last); };
+    const up = () => {
+      window.removeEventListener("pointermove", move);
+      window.removeEventListener("pointerup", up);
+      setDragging(false);
+      if (last) try { window.localStorage.setItem("aw.pvPos", JSON.stringify(last)); } catch (e2) {}
+    };
+    window.addEventListener("pointermove", move);
+    window.addEventListener("pointerup", up);
+  };
+  const phoneH = Math.min(780, (typeof window !== "undefined" ? window.innerHeight : 900) - 120);
   useEffect5(() => {
     const on = (e) => { setKind((e && e.detail) || "pm"); setMin(false); };
     window.addEventListener("aw-app-preview", on);
@@ -23682,19 +23716,21 @@ function AppPreviewDock({ appConfig }) {
   // the open app, so it does not start over at the projects.
   const src = React15.useMemo(() => kind ? `sub/index.html?preview=${kind}&hide=${encodeURIComponent(hide.join(","))}${bottom ? "&bottom=" + encodeURIComponent(bottom.join(",")) : ""}` : "", [kind, nonce]);
   if (!kind) return null;
-  const flip = () => { const n = side === "l" ? "r" : "l"; setSide(n); try { window.localStorage.setItem("aw.pvSide", n); } catch (e) {} };
+  const flip = () => { const n = side === "l" ? "r" : "l"; setSide(n); setPos(null); try { window.localStorage.setItem("aw.pvSide", n); window.localStorage.removeItem("aw.pvPos"); } catch (e) {} };
   const refresh = () => { const w = frameRef.current && frameRef.current.contentWindow; if (w) try { w.postMessage({ type: "aw-preview", refresh: true }, window.location.origin); } catch (e) {} };
   return createPortal(sbH(React15.Fragment, null,
-    sbH("div", { className: `awPvDock ${side} ${min ? "min" : ""}` },
+    sbH("div", { ref: dockRef, className: `awPvDock ${pos ? "free" : side} ${min ? "min" : ""} ${dragging ? "drag" : ""}`,
+      style: pos ? { left: pos.x, top: pos.y, height: phoneH + 48 } : { height: phoneH + 48, bottom: "auto" } },
       sbH("div", { className: "awPvBar" },
+        sbH("span", { className: "grip", title: "גרירה — להזיז את התצוגה לכל מקום במסך", onPointerDown: startDrag }, "⠇⠇"),
         APP_DEFS.map((a) => sbH("button", { key: a.key, type: "button", className: kind === a.key ? "on" : "", onClick: () => setKind(a.key) }, a.key === "pm" ? "מנהל פרויקט" : "קבלן משנה")),
         sbH("span", { className: "sep" }),
         sbH("button", { type: "button", title: "רענון הנתונים", onClick: refresh }, "⟳"),
         sbH("button", { type: "button", title: "מההתחלה (בחירת פרויקט)", onClick: () => setNonce((n) => n + 1) }, "⌂"),
-        sbH("button", { type: "button", title: "העברה לצד השני", onClick: flip }, "⇄"),
+        sbH("button", { type: "button", title: "חזרה לצד המסך / העברה לצד השני", onClick: flip }, "⇄"),
         sbH("button", { type: "button", title: "מזעור", onClick: () => setMin(true) }, "–"),
         sbH("button", { type: "button", title: "סגירה", onClick: () => setKind(null) }, "✕")),
-      sbH("div", { className: "appsPhone" },
+      sbH("div", { className: "appsPhone", style: { height: phoneH, flex: "none", width: Math.round(phoneH * 9 / 19.5) } },
         sbH("div", { className: "appsNotch" }),
         sbH("iframe", { key: src, ref: frameRef, src, title: "app preview" }))),
     min ? sbH("button", { type: "button", className: `awPvPill ${side}`, onClick: () => setMin(false) }, sbH(SmartphoneIcon, { size: 16, strokeWidth: 2 }), "תצוגת אפליקציה") : null

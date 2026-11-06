@@ -16,6 +16,10 @@
     --panel:#101114; --helmet:#e8b10a; --ok:#1a7f4b; --navy:#103460; --radius:14px;
   }
   *{box-sizing:border-box}
+  html,body{overflow-x:hidden;max-width:100%}
+  img,table,textarea,input,select{max-width:100%}
+  .rec p,.tt td,.tkTop .d,.tkUp,.rjVal{overflow-wrap:anywhere}
+  .chips.trades{justify-content:flex-start;margin-bottom:10px}
   html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
     font-family:'Assistant','Inter',sans-serif;-webkit-text-size-adjust:100%}
   .num{font-family:'Inter',sans-serif;font-variant-numeric:tabular-nums;direction:ltr;unicode-bidi:isolate}
@@ -307,7 +311,7 @@
 
 <div class="pvBadge">תצוגה מקדימה · נתונים חיים · שינויים לא נשמרים</div>
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">06.11.2026 · build 38</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">06.11.2026 · build 39</span></footer>
 
 <script>
 
@@ -695,7 +699,7 @@ function projHead(withTrade){
 // gesture and the button on screen do exactly the same thing.
 function canGoBack(){
   if(state.screen) return true;
-  if(PREVIEW&&state.trade) return true;
+  if(PREVIEW&&state.projects.length>1) return true;
   if(state.board&&state.board.isPm&&state.trade) return true;
   return !!state.project;
 }
@@ -742,7 +746,9 @@ function board(){
   out.hidden=!!PREVIEW;
   document.querySelector(".bar").classList.remove("guest");
   var hid=hiddenSet(), pm=!!state.board.isPm;
-  var h=navBar()+projHead(true);
+  var h=navBar()+projHead(!(pm||PREVIEW));
+  if(pm||PREVIEW) h+='<div class="chips trades">'+TRADES.map(function(t){
+    return '<button class="chip'+(state.trade===t.k?" on":"")+'" data-tr="'+t.k+'">'+esc(t.t)+'</button>'; }).join("")+'</div>';
   if(!hid.weekly) h+=weekCard();
   var rj = !hid.rejects && (pm || state.rjN)
     ? '<button class="longBtn" id="rjGo"><span class="ico">'+icon(RJ_ICON)+'</span><span class="t">ריג\'קטים</span>'+
@@ -766,6 +772,9 @@ function board(){
       if(state.screen==="tasks"){ tkLoad(); return; }
       render();
     };
+  });
+  Array.prototype.forEach.call(app.querySelectorAll("[data-tr]"), function(b){
+    b.onclick=function(){ var t=b.getAttribute("data-tr"); if(t===state.trade) return; state.trade=t; loadBoard(); };
   });
   rjWire();
   wireNav();
@@ -1557,7 +1566,11 @@ function render(){
   if(state.doc){ viewDoc(); return; }
   if(state.rj){ rjView(); window.scrollTo(0,0); return; }
   // A project manager sees every trade, so he says which one first.
-  if((state.board.isPm || PREVIEW) && !state.trade){ tradePicker(); return; }
+  // 06.11.26 — no separate "choose a trade" page: the home screen opens at
+  // once, on his own trade (or the first), and the trades are a row of chips.
+  if((state.board.isPm || PREVIEW) && !state.trade){
+    state.trade=state.board.trade||TRADES[0].k; loadBoard(); return;
+  }
   if(state.screen==="tasks"){ tkView(); return; }
   if(state.screen) screen(); else board();
   window.scrollTo(0,0);
@@ -1579,7 +1592,6 @@ window.addEventListener("popstate", function(){
   if(state.cat){ state.cat=null; render(); return; }
   if(state.screen==="tasks"&&tkOpen){ tkOpen=null; tkDraft=null; render(); return; }
   if(state.screen){ state.screen=null; tkOpen=null; tkDraft=null; render(); return; }
-  if(state.board&&(state.board.isPm||PREVIEW)&&state.trade){ state.trade=null; state.board.trade=null; render(); return; }
   if(state.project && state.projects.length>1){ state.project=null; state.board=null; render(); }
 });
 
