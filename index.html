@@ -8234,6 +8234,15 @@ function CardView({
     // project's contacts.
     lliItems: lliItemsFor(boqData, boqFlags, lliRows, contacts, contactsCatalog, "he"),
     contacts, catalog: contactsCatalog, onAddContacts,
+    // 06.11.26 — the finishes list prints in the boards' own design: the same
+    // PDF and the same workbook, pictures inside their cells.
+    boardExport: {
+      pdf: (o) => boardExportPdf({ ...o, accent: (printBrand || {}).accent, brand: printBrand, isRTL: true }),
+      xlsx: (o) => boardExportXlsx({ ...o, accent: (printBrand || {}).accent, isRTL: true }),
+      orderBy: boardOrderBy,
+      fileName: (t, ext) => boardFileName(project.name, t, ext),
+      fmtDate: (d) => sbFmtDate(d)
+    },
     printParts: { brand: printBrand, accent: contractorAccent || CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
@@ -11757,7 +11766,9 @@ function lliItemsFor(boqData, boqFlags, lliRows, contacts, catalog, lang) {
       desc: String(v.desc || title || "").split("\n")[0].trim(),
       supplier: String(v.supplier || boardTradeCompany(contacts, catalog, cat, lang) || "").trim(),
       category: cat,
-      categoryLabel: cat ? sbText(boardCategoryOf(cat) || { he: "", en: "" }, lang) : ""
+      categoryLabel: cat ? sbText(boardCategoryOf(cat) || { he: "", en: "" }, lang) : "",
+      // 06.11.26 — the product's picture travels with it into the finishes list.
+      image: v.image || null
     });
   };
   try {

@@ -33,12 +33,13 @@ import htm from "https://esm.sh/htm@3.1.1";
 import {
   Phone, Layers, ShieldCheck, BadgeCheck, PenTool, HardHat, Flame, FolderOpen, Map as MapIcon,
   Plus, Mail, Copy, Trash2, Printer, Pencil, Save, ChevronDown, ChevronUp, X, ListPlus, Search, ArrowRight,
+  FileText, FileSpreadsheet, ImagePlus,
 } from "lucide-react";
-import { supabase, printSheetCss, printedStampText, supLibLoad, supLibFind, supLibSave, supLibHasService, supLibNorm } from "../sign.js";
+import { supabase, printSheetCss, printedStampText, supLibLoad, supLibFind, supLibSave, supLibHasService, supLibNorm, PrintLangAsk, imgAsk, imgPickProps, imgLibAdd } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;   // a template with more than one root returns an array without keys
-export const FACILITY_BUILD = "facility build 3 · 06.11.2026";
+export const FACILITY_BUILD = "facility build 4 · 06.11.2026";
 if (typeof console !== "undefined") console.info(FACILITY_BUILD);
 
 // ----------------------------------------------------------------------------- the chapters
@@ -217,6 +218,15 @@ const css = `
 .fac .facMsg{background:#fff;border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .fac .facMsg pre{white-space:pre-wrap;font:inherit;font-size:13px;margin:6px 0 0;line-height:1.55}
 .fac .facMsg textarea{width:100%;min-height:200px;font:inherit;font-size:13px;border:1px solid var(--line,#e6e6e9);border-radius:8px;padding:8px;line-height:1.55}
+.fac .facScrim{position:fixed;inset:0;background:rgba(16,17,20,.32);z-index:880;display:flex;align-items:center;justify-content:center;padding:16px}
+.fac .facMailWin{background:#fff;border-radius:14px;box-shadow:0 18px 48px rgba(0,0,0,.22);width:min(560px,100%);max-height:86vh;overflow:auto;padding:14px 16px;position:relative}
+.fac .facMailWin h3{margin:0 0 12px;text-align:center;font-size:16px;font-weight:800}
+.fac .facMailWin .x{position:absolute;top:10px;inset-inline-end:10px;border:0;background:none;cursor:pointer;color:#8a8d94;display:flex}
+.fac .facMailOpts{display:flex;flex-direction:column;gap:8px;max-width:300px;margin:0 auto}
+.fac .facMailOpts .facBtn{justify-content:flex-start;padding:9px 14px;font-size:14px}
+.fac .facMailOpts .facBtn.on{border-color:var(--accent,#17181c);background:#f4f6f9}
+.fac .facMailWin pre{white-space:pre-wrap;font:inherit;font-size:13px;line-height:1.55;background:#fafbfc;border:1px solid var(--line,#e6e6e9);border-radius:10px;padding:10px;margin:12px 0 0}
+.fac .facMailWin textarea{width:100%;min-height:240px;font:inherit;font-size:13px;border:1px solid var(--line,#e6e6e9);border-radius:10px;padding:10px;line-height:1.55;margin-top:12px;box-sizing:border-box}
 .fac .facSvc td{background:#fafbfc;padding:10px}
 .fac .facSvcGrid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;align-items:end;max-width:820px;margin:0 auto}
 .fac .facSvcGrid label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--steel,#5b5e66);text-align:start}
@@ -231,10 +241,21 @@ const css = `
 .fac .facPickSearch input{border:0;outline:0;font:inherit;font-size:13px;min-width:160px}
 .fac .facPickAll{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:13px;cursor:pointer;margin-inline-start:auto}
 .fac .facPickList{max-height:340px;overflow:auto;border:1px solid var(--line,#e6e6e9);border-radius:10px}
-.fac .facPickRow{display:grid;grid-template-columns:22px 80px 1fr 130px 160px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid #f0f0f2;cursor:pointer;font-size:13px}
+.fac .facPickRow{display:grid;grid-template-columns:22px 130px 90px 1fr 150px 52px;gap:8px;align-items:center;padding:6px 10px;border-bottom:1px solid #f0f0f2;cursor:pointer;font-size:13px}
 .fac .facPickRow:hover{background:#f5f7fb}
+.fac .facPickRow .pic,.fac .finPic{width:46px;height:38px;border-radius:6px;border:1px solid #e3e5ea;background:#f6f7f9;display:flex;align-items:center;justify-content:center;overflow:hidden;margin:0 auto}
+.fac .facPickRow .pic img,.fac .finPic img{width:100%;height:100%;object-fit:contain;background:#fff}
+.fac .finPic{cursor:pointer;color:#a6a9b0;position:relative}
+.fac .finPic:hover{border-color:#8a8d94}
+.fac .finPicX{position:absolute;top:-1px;inset-inline-end:-1px;border:0;background:#fff;border-radius:0 6px 0 6px;padding:1px;cursor:pointer;display:none;color:#b02a37}
+.fac .finPic:hover .finPicX{display:flex}
+.fac td.finNote{min-width:150px}
+.fac table.finTbl th{white-space:normal;line-height:1.2;padding:7px 5px;font-size:12px}
+.fac table.finTbl td{padding:5px 4px}
+.fac table.finTbl .facIn{min-width:0;padding:5px 6px}
+.fac table.finTbl td.lbl{min-width:170px}
 .fac .facPickRow .d{font-weight:600}.fac .facPickRow .c,.fac .facPickRow .s{color:#5b5e66;font-size:12.5px}
-@media (max-width:700px){.fac .facSvcGrid{grid-template-columns:1fr 1fr}.fac .facPickRow{grid-template-columns:22px 1fr}}
+@media (max-width:700px){.fac .facSvcGrid{grid-template-columns:1fr 1fr}.fac .facPickRow{grid-template-columns:22px 1fr 52px}.fac .facPickRow .c,.fac .facPickRow .m,.fac .facPickRow .s{display:none}}
 `;
 
 // ----------------------------------------------------------------------------- mail / copy
@@ -255,7 +276,7 @@ async function copyText(t) {
 }
 
 // ----------------------------------------------------------------------------- the module
-export function FacilityFile({ projectId, project, projectName, contactsNode, contactsExportNode, printParts, currentEmail, lliItems, contacts, catalog, onAddContacts }) {
+export function FacilityFile({ projectId, project, projectName, contactsNode, contactsExportNode, printParts, currentEmail, lliItems, contacts, catalog, onAddContacts, boardExport }) {
   const print = useMemo(() => makeFacilityPrint({ projectName, ...(printParts || {}) }), [projectName, printParts]);
   const [data, setData] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
@@ -394,7 +415,8 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
   if (ch.kind === "contacts") body = html`<${F}>${bar(contactsExportNode || null)}${contactsNode}<//>`;
   else if (ch.kind === "check") body = html`<${F}><${CheckChapter} ch=${ch} data=${data} edit=${edit} bar=${bar} projectName=${projectName} flash=${flash} />${saveRow}<//>`;
   else if (ch.kind === "finishes") body = html`<${F}><${FinishesChapter} data=${data} edit=${edit} bar=${bar} projectName=${projectName} print=${print} flash=${flash}
-    lliItems=${lliItems || []} contacts=${contacts || []} catalog=${catalog || {}} onAddContacts=${onAddContacts} lib=${lib} reloadLib=${reloadLib} />${saveRow}<//>`;
+    lliItems=${lliItems || []} contacts=${contacts || []} catalog=${catalog || {}} onAddContacts=${onAddContacts} lib=${lib} reloadLib=${reloadLib}
+    projectId=${projectId} boardExport=${boardExport} />${saveRow}<//>`;
   else if (ch.kind === "asmade") body = html`<${F}><${AsMadeChapter} ch=${ch} data=${data} edit=${edit} bar=${bar} floors=${floors} />${saveRow}<//>`;
 
   // 06.11.26 — every chapter sits in the same white frame, the size of the
@@ -431,6 +453,33 @@ function MessageBox({ text, onSave, subject, bcc, flash, editable }) {
         <button type="button" className="facBtn" onClick=${() => { setDraft(text); setEditing(false); }}>ביטול</button>
       </div></div>`}
   </div>`;
+}
+
+// 06.11.26 — the envelope of the finishes list: one window, "נוסח ההודעה",
+// four choices one under the other — view, edit, copy, send.
+function MailMenu({ text, onSave, subject, bcc, flash, onClose }) {
+  const [mode, setMode] = useState("");          // "", "view", "edit"
+  const [draft, setDraft] = useState(text);
+  return html`<div className="facScrim" onClick=${onClose}>
+    <div className="facMailWin" dir="rtl" onClick=${(e) => e.stopPropagation()}>
+      <button type="button" className="x" title="סגירה" onClick=${onClose}><${X} size=${17} /></button>
+      <h3>נוסח ההודעה</h3>
+      <div className="facMailOpts">
+        <button type="button" className=${`facBtn ${mode === "view" ? "on" : ""}`} onClick=${() => setMode(mode === "view" ? "" : "view")}><${FileText} size=${16} /> 1. צפייה</button>
+        <button type="button" className=${`facBtn ${mode === "edit" ? "on" : ""}`} onClick=${() => { setDraft(text); setMode(mode === "edit" ? "" : "edit"); }}><${Pencil} size=${15} /> 2. עריכה</button>
+        <button type="button" className="facBtn" onClick=${async () => flash((await copyText(text)) ? "ההודעה הועתקה" : "ההעתקה נכשלה")}><${Copy} size=${15} /> 3. העתקה</button>
+        <button type="button" className="facBtn" title=${bcc ? "מייל לכל הספקים שעוד חסר אצלם (בעותק מוסתר)" : "פתיחת מייל עם הנוסח"}
+          onClick=${() => openMail({ bcc, subject, body: text })}><${Mail} size=${15} /> 4. שליחה</button>
+      </div>
+      ${mode === "view" && html`<pre>${text}</pre>`}
+      ${mode === "edit" && html`<div>
+        <textarea value=${draft} onChange=${(e) => setDraft(e.target.value)} />
+        <div style=${{ display: "flex", gap: 8, marginTop: 8, justifyContent: "center" }}>
+          <button type="button" className="facBtn primary" onClick=${() => { onSave(draft); setMode("view"); flash("הנוסח נשמר"); }}>שמירת נוסח</button>
+          <button type="button" className="facBtn" onClick=${() => { setDraft(text); setMode(""); }}>ביטול</button>
+          <button type="button" className="facBtn" title="חזרה לנוסח המקורי" onClick=${() => setDraft(MSG_921)}>נוסח מקורי</button>
+        </div></div>`}
+    </div></div>`;
 }
 
 // ----------------------------------------------------------------------------- chapters 2, 4–8: checklist
@@ -497,8 +546,31 @@ function CheckChapter({ ch, data, edit, bar, projectName, flash }) {
 // about it. The service department lives in the suppliers' library: once it is
 // there, the column is V by itself on every project.
 const NEXT = { "": "v", v: "na", na: "", auto: "na" };
-function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems, contacts, catalog, onAddContacts, lib, reloadLib }) {
+// A picture for a row: shrunk to fit the cell and the print (as LLI does).
+function finThumb(file, max) {
+  return new Promise((resolve, reject) => {
+    const fr = new FileReader();
+    fr.onerror = () => reject(fr.error);
+    fr.onload = () => {
+      const im = new Image();
+      im.onerror = () => reject(new Error("image"));
+      im.onload = () => {
+        const k = Math.min(1, max / Math.max(im.naturalWidth || 1, im.naturalHeight || 1));
+        const c = document.createElement("canvas");
+        c.width = Math.max(1, Math.round(im.naturalWidth * k)); c.height = Math.max(1, Math.round(im.naturalHeight * k));
+        const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, c.width, c.height); g.drawImage(im, 0, 0, c.width, c.height);
+        resolve(c.toDataURL("image/jpeg", 0.85));
+      };
+      im.src = fr.result;
+    };
+    fr.readAsDataURL(file);
+  });
+}
+function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems, contacts, catalog, onAddContacts, lib, reloadLib, projectId, boardExport }) {
   const [picking, setPicking] = useState(false);
+  const [exportAsk, setExportAsk] = useState(null);   // "pdf" | "xlsx" — the report-details window
+  const [mailOpen, setMailOpen] = useState(false);    // the envelope's window
+  const finMsg = (data.msgs || {}).finishes ?? MSG_921;
   const [pick, setPick] = useState({});
   const [q, setQ] = useState("");
   const [svcFor, setSvcFor] = useState(null);     // supplier name whose service department is open
@@ -512,6 +584,17 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
   const avail = (lliItems || []).filter((it) => !have.has(it.code));
   const qq = q.trim().toLowerCase();
   const shownAvail = avail.filter((it) => !qq || `${it.mark} ${it.desc} ${it.supplier} ${it.categoryLabel}`.toLowerCase().includes(qq));
+  // A row picked from LLI shows LLI's picture until one of its own is set.
+  const lliByCode = useMemo(() => { const m = {}; (lliItems || []).forEach((it) => { m[it.code] = it; }); return m; }, [lliItems]);
+  const imageOf = (r) => r.image || (r.code && !r.noImage && (lliByCode[r.code] || {}).image) || null;
+  const putImage = async (r, f) => {
+    if (!f) return;
+    try {
+      const thumb = await finThumb(f, 640);
+      patch(r.id, (x) => ({ ...x, image: thumb, noImage: false }));
+      try { imgLibAdd({ projectId, projectName, source: "facility", dataUrl: thumb, file: f, label: [r.mark, r.desc].filter(Boolean).join(" \u00b7 ") || "תיק מתקן" }); } catch (e) {}
+    } catch (e) { console.warn("[facility] image failed", e); flash("טעינת התמונה נכשלה"); }
+  };
 
   // The suppliers of the rows just added, into the project's contacts — once
   // each, and filled from the catalogue when it knows the company.
@@ -540,7 +623,7 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
     if (!chosen.length) { setPicking(false); return; }
     edit((d) => {
       d.finishes = (d.finishes || []).concat(chosen.map((it) => ({
-        id: uid(), code: it.code, mark: it.mark, desc: it.desc, supplier: it.supplier, category: it.categoryLabel, cells: {}
+        id: uid(), code: it.code, mark: it.mark, desc: it.desc, supplier: it.supplier, category: it.categoryLabel, image: it.image || null, note: "", cells: {}
       })));
       return d;
     });
@@ -548,7 +631,7 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
     setPick({}); setPicking(false); setQ("");
     flash(n ? `נוספו ${chosen.length} מוצרים · ${n} ספקים נוספו לאנשי הקשר` : `נוספו ${chosen.length} מוצרים`);
   };
-  const addManual = () => edit((d) => { d.finishes = (d.finishes || []).concat([{ id: uid(), code: "", mark: "", desc: "", supplier: "", category: "", cells: {} }]); return d; });
+  const addManual = () => edit((d) => { d.finishes = (d.finishes || []).concat([{ id: uid(), code: "", mark: "", desc: "", supplier: "", category: "", image: null, note: "", cells: {} }]); return d; });
   const subject = `${projectName || ""} – תיק מתקן – הוראות תחזוקה, אחריות, ת"י 755 ומחלקת בדק`.replace(/^ – /, "");
   const suppliersOpen = Array.from(new Set(rows.filter((r) => finRowState(r, lib) === "open").map((r) => r.supplier).filter(Boolean)));
   const mailOf = (name) => {
@@ -559,13 +642,69 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
   const listId = "facSupHints";
   const supNames = Array.from(new Set((lib || []).map((s) => s.name).concat(rows.map((r) => r.supplier)).filter(Boolean))).sort();
 
+  // ------------------------------------------------ PDF / Excel (06.11.26)
+  // The columns that came from LLI, the four documents and the notes — in the
+  // boards' print design, ordered by category with a heading for each, the
+  // pictures inside their cells, done rows in green.
+  const REPORT = "רשימת חומרי גמר – תיק מתקן";
+  const finTitles = () => ({
+    title: (projectName || "").trim() || REPORT,
+    subtitle: REPORT,
+    date: `תאריך הנפקת דוח ${boardExport && boardExport.fmtDate ? boardExport.fmtDate(new Date().toISOString().slice(0, 10)) : new Date().toLocaleDateString("he-IL")}`
+  });
+  const doExport = async (kind, hdr) => {
+    if (!boardExport || !rows.length) return;
+    const H = hdr || finTitles();
+    const head = ["קטגוריה", "איפיון", "תיאור הסעיף", "ספק", "תמונה"].concat(FIN_COLS.map(([, l]) => l)).concat(["הערות"]);
+    const imgCol = 4;
+    const widths = [13, 8, 24, 14, 11, 10, 9, 8, 10, 18];
+    const cellTxt = (v) => (v === "v" || v === "auto" ? "V" : v === "na" ? "ל״ר" : "");
+    const cats = [];
+    rows.forEach((r) => { const c = String(r.category || "").trim() || "ללא קטגוריה"; if (!cats.includes(c)) cats.push(c); });
+    const body = [], imgs = [], tone = [], secs = [], ranks = [];
+    rows.forEach((r) => {
+      const c = String(r.category || "").trim() || "ללא קטגוריה";
+      body.push([String(r.category || "").trim(), r.mark || "", r.desc || "", r.supplier || "", ""]
+        .concat(FIN_COLS.map(([k]) => cellTxt(finCell(r, k, lib)))).concat([r.note || ""]));
+      imgs.push(imageOf(r));
+      const st = finRowState(r, lib);
+      tone.push(st === "done" ? "ok" : "");
+      secs.push(c); ranks.push(cats.indexOf(c));
+    });
+    const O = boardExport.orderBy({ body, imgs, tone }, secs, ranks);
+    const toneRows = H.tones === false ? null : O.tone;
+    try {
+      if (kind === "pdf") {
+        boardExport.pdf({
+          title: H.title, subtitle: H.subtitle, issuedLabel: H.date,
+          fileName: boardExport.fileName(REPORT, ""),
+          head, body: O.body, widths, sections: O.secs, imgCol, imgs: O.imgs, toneRows, noStamp: true
+        });
+      } else {
+        const res = await boardExport.xlsx({
+          title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "),
+          sheetName: "חומרי גמר", fileName: boardExport.fileName(REPORT, "xlsx"),
+          head, body: O.body, sections: O.sections, widths, colTypes: head.map(() => "text"),
+          imgCol, imgs: O.imgs, toneRows
+        });
+        if (res && res.styled === false) flash("הקובץ נשמר ללא עיצוב");
+      }
+    } catch (e) { console.warn("[facility] export failed", e); flash("ההפקה נכשלה"); }
+  };
+
   return html`<${F}>
     ${bar(html`<${F}>
       <button type="button" className="facBtn" onClick=${() => setPicking((x) => !x)}><${ListPlus} size=${15} strokeWidth=${2.2} /> בחירה מתוך LLI</button>
       <button type="button" className="facBtn" onClick=${addManual}><${Plus} size=${15} strokeWidth=${2.4} /> שורה</button>
-      <button type="button" className="facBtn icon" title=${openEmails.length ? `מייל לכל הספקים שעוד חסר אצלם (${openEmails.length})` : "פתיחת מייל עם הנוסח"}
-        onClick=${() => openMail({ bcc: openEmails.join(","), subject, body: MSG_921 })}><${Mail} size=${16} /></button><//>`)}
-    <${MessageBox} text=${MSG_921} editable=${false} subject=${subject} bcc=${openEmails.join(",")} flash=${flash} />
+      <button type="button" className="facBtn icon" title="נוסח ההודעה לספקים"
+        onClick=${() => setMailOpen(true)}><${Mail} size=${16} /></button>
+      ${boardExport && html`<${F}>
+        <button type="button" className="facBtn" disabled=${!rows.length} title="הדפסת רשימת חומרי הגמר ל-PDF" onClick=${() => setExportAsk("pdf")}><${FileText} size=${15} /> PDF</button>
+        <button type="button" className="facBtn" disabled=${!rows.length} title="רשימת חומרי הגמר לאקסל, עם התמונות" onClick=${() => setExportAsk("xlsx")}><${FileSpreadsheet} size=${15} /> Excel</button><//>`}<//>`)}
+    ${exportAsk && html`<${PrintLangAsk} startLang="he" titles=${finTitles}
+      onPick=${(lg, who, hdr) => { const k = exportAsk; setExportAsk(null); doExport(k, hdr); }} onClose=${() => setExportAsk(null)} />`}
+    ${mailOpen && html`<${MailMenu} text=${finMsg} subject=${subject} bcc=${openEmails.join(",")} flash=${flash} onClose=${() => setMailOpen(false)}
+      onSave=${(t) => edit((d) => { d.msgs = d.msgs || {}; d.msgs.finishes = t; return d; })} />`}
     ${picking && html`<div className="facPick">
       <div className="facPickBar">
         <span style=${{ fontWeight: 800 }}>מוצרים מתוך LLI (${avail.length})</span>
@@ -576,28 +715,41 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
         <button type="button" className="facBtn icon" title="סגירה" onClick=${() => setPicking(false)}><${X} size=${15} /></button>
       </div>
       ${avail.length === 0 && html`<p className="facEmpty">כל המוצרים של LLI כבר ברשימה.</p>`}
+      ${shownAvail.length > 0 && html`<div className="facPickRow" style=${{ cursor: "default", fontWeight: 800, fontSize: 12, color: "#5b5e66", background: "#f4f6f9" }}>
+        <span></span><span className="c">קטגוריה</span><span className="m">איפיון</span><span>תיאור הסעיף</span><span className="s">ספק</span><span style=${{ textAlign: "center" }}>תמונה</span></div>`}
       <div className="facPickList">${shownAvail.map((it) => html`<label key=${it.code} className="facPickRow">
         <input type="checkbox" checked=${!!pick[it.code]} onChange=${(e) => setPick({ ...pick, [it.code]: e.target.checked })} />
-        <b dir="ltr">${it.mark || ""}</b><span className="d">${it.desc || it.code}</span>
-        <span className="c">${it.categoryLabel || ""}</span><span className="s">${it.supplier || "— ללא ספק —"}</span>
+        <span className="c">${it.categoryLabel || ""}</span><b className="m" dir="ltr">${it.mark || ""}</b><span className="d">${it.desc || it.code}</span>
+        <span className="s">${it.supplier || "— ללא ספק —"}</span>
+        <span className="pic">${it.image ? html`<img src=${it.image} alt="" />` : null}</span>
       </label>`)}</div>
     </div>`}
     <datalist id=${listId}>${supNames.map((h) => html`<option key=${h} value=${h} />`)}</datalist>
-    <div className="facWin"><table>
-      <thead><tr><th>#</th><th>סימון</th><th style=${{ textAlign: "start" }}>מוצר</th><th>קטגוריה</th><th>ספק</th>
-        ${FIN_COLS.map(([k, l]) => html`<th key=${k}>${l}</th>`)}<th></th></tr></thead>
+    <div className="facWin"><table className="finTbl">
+      <thead><tr><th>#</th><th>קטגוריה</th><th>איפיון</th><th style=${{ textAlign: "start" }}>תיאור הסעיף</th><th>ספק</th><th>תמונה</th>
+        ${FIN_COLS.map(([k, l]) => html`<th key=${k}>${l}</th>`)}<th>הערות</th><th></th></tr></thead>
       <tbody>
-        ${rows.length === 0 && html`<tr><td colSpan=${6 + FIN_COLS.length} className="facEmpty">הרשימה ריקה — לחצי על "בחירה מתוך LLI"</td></tr>`}
+        ${rows.length === 0 && html`<tr><td colSpan=${8 + FIN_COLS.length} className="facEmpty">הרשימה ריקה — לחצי על "בחירה מתוך LLI"</td></tr>`}
         ${rows.map((r, i) => {
           const rs = finRowState(r, lib);
           return html`<tr key=${r.id} className=${rs === "done" ? "ok" : rs === "na" ? "na" : ""}>
             <td className="num">${i + 1}</td>
-            <td style=${{ width: 90 }}><input className="facIn" dir="ltr" style=${{ minWidth: 60 }} value=${r.mark || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, mark: e.target.value }))} /></td>
+            <td style=${{ width: 100 }}><input className="facIn" style=${{ fontSize: 12.5 }} value=${r.category || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, category: e.target.value }))} /></td>
+            <td style=${{ width: 70 }}><input className="facIn" dir="ltr" value=${r.mark || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, mark: e.target.value }))} /></td>
             <td className="lbl"><input className="facIn" value=${r.desc || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, desc: e.target.value }))} /></td>
-            <td style=${{ fontSize: 12.5, color: "#5b5e66" }}>${r.category || ""}</td>
             <td><input className="facIn" list=${listId} value=${r.supplier || ""} placeholder="שם הספק"
               onChange=${(e) => patch(r.id, (x) => ({ ...x, supplier: e.target.value }))}
               onBlur=${(e) => { if (e.target.value.trim()) addSuppliersToContacts([e.target.value]); }} /></td>
+            <td style=${{ width: 60 }}>${(() => {
+              const src = imageOf(r);
+              return html`<div className="finPic" title="לחיצה: החלפת תמונה · לחצן ימני: ספריית התמונות"
+                onClick=${(e) => imgAsk(e, { projectId, onFile: (f) => putImage(r, f) })}
+                ...${imgPickProps({ projectId, onFile: (f) => putImage(r, f) })}>
+                ${src ? html`<img src=${src} alt="" />` : html`<${ImagePlus} size=${16} />`}
+                ${src && html`<button type="button" className="finPicX" title="הסרת התמונה"
+                  onClick=${(e) => { e.stopPropagation(); patch(r.id, (x) => ({ ...x, image: null, noImage: true })); }}><${X} size=${11} /></button>`}
+              </div>`;
+            })()}</td>
             ${FIN_COLS.map(([k]) => {
               const v = finCell(r, k, lib);
               return html`<td key=${k} className=${v === "v" || v === "auto" ? "cellV" : v === "na" ? "cellNa" : ""}>
@@ -609,9 +761,11 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
                     onClick=${() => setSvcFor(svcFor === r.supplier ? null : r.supplier)}><${Pencil} size=${13} /></button>`}
                 </div></td>`;
             })}
+            <td className="finNote"><input className="facIn" value=${r.note || ""} placeholder="הערות"
+              onChange=${(e) => patch(r.id, (x) => ({ ...x, note: e.target.value }))} /></td>
             <td style=${{ whiteSpace: "nowrap" }}>
               ${mailOf(r.supplier) && html`<button type="button" className="facBtn icon" title="מייל לספק"
-                onClick=${() => openMail({ to: mailOf(r.supplier), subject, body: MSG_921 })}><${Mail} size=${14} /></button>`}
+                onClick=${() => openMail({ to: mailOf(r.supplier), subject, body: finMsg })}><${Mail} size=${14} /></button>`}
               <button type="button" className="facBtn icon" title="הסרה" onClick=${() => remove(r)}><${Trash2} size=${14} color="#b02a37" /></button>
             </td>
           </tr>`;
