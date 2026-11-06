@@ -87,6 +87,8 @@ const css = `
 .tsk .tskHead{width:100%;box-sizing:border-box;gap:6px}
 .tsk .tskHead.drop{outline:2px dashed var(--accent,#14265e);outline-offset:-2px}
 .tsk .tskHeadBtn{flex:1 1 auto;display:flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;font:inherit;font-weight:800;color:inherit;text-align:start;padding:0}
+.tsk .tskAddIn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line,#e6e6e9);background:#fff;border-radius:7px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:2px 8px;color:#3f434b}
+.tsk .tskAddIn:hover{border-color:var(--accent,#14265e)}
 .tsk .tskGrip{cursor:grab;color:#8a8d94;display:flex}
 .tsk .tskMove{display:flex;gap:2px}
 .tsk .tskMove button{border:1px solid var(--line,#e6e6e9);background:#fff;border-radius:6px;cursor:pointer;display:flex;padding:2px 4px;color:#3f434b}
@@ -304,6 +306,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
               ${open ? html`<${ChevronDown} size=${16} className="contactsSecChev" />` : html`<${ChevronLeft} size=${16} className="contactsSecChev" />`}
               <span>${catName(k)}</span>
             </button>
+            <button type="button" className="tskAddIn" title=${`משימה נוספת ב"${catName(k)}"`} onClick=${() => setNewAsk(k === NONE ? true : k)}><${Plus} size=${14} strokeWidth=${2.6} /> משימה</button>
             ${k !== NONE && onCatalogChange && cat === "all" && html`<span className="tskMove">
               <button type="button" title="למעלה" disabled=${inUse.indexOf(k) === 0} onClick=${() => stepCat(k, -1)}><${ArrowUp} size=${14} /></button>
               <button type="button" title="למטה" disabled=${inUse.filter((x) => x !== NONE).indexOf(k) === inUse.filter((x) => x !== NONE).length - 1} onClick=${() => stepCat(k, 1)}><${ArrowDown} size=${14} /></button>
@@ -346,7 +349,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
       ${saveState === "saving" && html`<span className="tskSaved" style=${{ color: "#5b5e66" }}>שומר…</span>`}
       ${saveState === "saved" && html`<span className="tskSaved">נשמר ✓</span>`}
     </div>
-    ${newAsk && html`<${NewTask} cats=${cats} start=${cat !== "all" && cat !== NONE ? cat : ""} onAddCat=${addCat} onCreate=${create} onClose=${() => setNewAsk(false)} />`}
+    ${newAsk && html`<${NewTask} cats=${cats} start=${typeof newAsk === "string" ? newAsk : cat !== "all" && cat !== NONE ? cat : ""} onAddCat=${addCat} onCreate=${create} onClose=${() => setNewAsk(false)} />`}
     ${updTask && html`<${AddUpdate} task=${updTask} onClose=${() => setUpdFor(null)}
       onSave=${(u) => { patch(updTask.id, { updates: [...(updTask.updates || []), { id: uid("u"), by: currentEmail || "", ...u }] }); setUpdFor(null); flash("העדכון נשמר"); }} />`}
     ${logTask && html`<${UpdateLog} task=${logTask} onClose=${() => setLogFor(null)}
