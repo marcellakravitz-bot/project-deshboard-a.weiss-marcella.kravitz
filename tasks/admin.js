@@ -23,12 +23,12 @@
 // =============================================================================
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
-import { Plus, X, Save, ChevronDown, ChevronLeft, Trash2, History, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
-import { supabase } from "../sign.js";
+import { Plus, X, Save, FileText, FileSpreadsheet, ChevronDown, ChevronLeft, Trash2, History, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { supabase, PrintLangAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 6 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 7 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -158,6 +158,7 @@ const css = `
 .tsk{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;width:100%;box-sizing:border-box;max-width:1180px;margin:0 auto;padding:0 16px 28px}
 .tsk .tskBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:8px 12px;margin-bottom:10px}
 .tsk .tskBar .sbCatBar{margin:0;flex:1 1 auto}
+.tsk .tskTools{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-inline-start:auto}
 .tsk .tskBtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:700;padding:6px 12px;border-radius:9px;border:1px solid var(--line,#e6e6e9);background:#fff;color:var(--ink,#17181c);cursor:pointer;white-space:nowrap}
 .tsk .tskBtn:hover{border-color:var(--accent,#17181c)}
 .tsk .tskBtn.primary{background:var(--accent,#14265e);border-color:var(--accent,#14265e);color:#fff}
@@ -215,7 +216,8 @@ const css = `
 @media (max-width:760px){.tsk .tskTblWrap{overflow-x:auto}.tsk table{min-width:860px}}
 `;
 
-export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCatalogChange, contacts, onCreateRfi }) {
+export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCatalogChange, contacts, onCreateRfi, boardExport }) {
+  const [exportAsk, setExportAsk] = useState(null);   // "pdf" | "xlsx"
   const [data, setData] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
   const [err, setErr] = useState("");
@@ -403,6 +405,48 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     return key;
   };
 
+  // ------------------------------------------------ PDF / Excel (06.11.26)
+  // The groups on the screen (all, or the category picked in the bar), each
+  // under its heading, in the boards' print design; the status colours the
+  // row as on the screen (red / orange / green).
+  const REPORT = "ניהול משימות";
+  const tskTitles = () => ({
+    title: (projectName || "").trim() || REPORT,
+    subtitle: cat === "all" ? REPORT : `${REPORT} – ${catName(cat)}`,
+    date: `תאריך הנפקת דוח ${fmt(today())}`
+  });
+  const doExport = async (kind, hdr) => {
+    if (!boardExport) return;
+    const H = hdr || tskTitles();
+    const head = ["תאריך הקמה", "תיאור", "אחריות", "תאריך יעד", "סטטוס", "הערות / מידע נוסף", "עדכון אחרון"];
+    const widths = [9, 26, 11, 9, 9, 18, 18];
+    const body = [], tone = [], secs = [], ranks = [];
+    shownGroups.forEach((k, gi) => {
+      tasks.filter((t) => catOf(t) === k).forEach((t) => {
+        const st = ST[t.status] || ST.open;
+        const ups = t.updates || [];
+        const last = ups[ups.length - 1];
+        body.push([fmt(t.created), t.desc || "", t.owner || "", fmt(t.due), st[1], t.notes || "", last ? `${fmt(last.date)} – ${last.text}` : ""]);
+        tone.push(t.status === "done" ? "ok" : t.status === "progress" ? "wait" : t.status === "info" ? "" : "late");
+        secs.push(catName(k)); ranks.push(gi);
+      });
+    });
+    if (!body.length) { flash("אין משימות להפקה"); return; }
+    const O = boardExport.orderBy({ body, tone }, secs, ranks);
+    const toneRows = H.tones === false ? null : O.tone;
+    try {
+      if (kind === "pdf") {
+        boardExport.pdf({ title: H.title, subtitle: H.subtitle, issuedLabel: H.date, fileName: boardExport.fileName(REPORT, ""),
+          head, body: O.body, widths, sections: O.secs, toneRows, noStamp: true });
+      } else {
+        const res = await boardExport.xlsx({ title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "),
+          sheetName: "משימות", fileName: boardExport.fileName(REPORT, "xlsx"), head, body: O.body, sections: O.sections, widths,
+          colTypes: head.map(() => "text"), toneRows });
+        if (res && res.styled === false) flash("הקובץ נשמר ללא עיצוב");
+      }
+    } catch (e) { console.warn("[tasks] export failed", e); flash("ההפקה נכשלה"); }
+  };
+
   if (err && !data) return html`<div className="tsk" dir="rtl"><style>${css}</style><p className="tskErr">${err}</p></div>`;
   if (!data) return html`<div className="tsk" dir="rtl"><style>${css}</style><p className="tskEmpty">טוען…</p></div>`;
 
@@ -413,13 +457,20 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   return html`<div className="tsk" dir="rtl"><style>${css}</style>
     ${err && html`<p className="tskErr">${err}</p>`}
     <div className="tskBar">
-      <button type="button" className="tskBtn primary" title="משימה חדשה" onClick=${() => setNewAsk(true)}><${Plus} size=${16} strokeWidth=${2.6} /> משימה חדשה</button>
-      ${onCatalogChange && html`<button type="button" className="tskBtn" title="קטגוריה חדשה (נשמרת במערכת לכל הפרויקטים)" onClick=${() => setNewCat(newCat === null ? "" : null)}><${Plus} size=${15} strokeWidth=${2.4} /> קטגוריה</button>`}
       <div className="sbCatBar">
         <button type="button" className=${`sbCatBtn all ${cat === "all" ? "on" : ""}`} onClick=${() => setCat("all")}>כל הקטגוריות</button>
         ${withTasks.map((k) => html`<button key=${k} type="button" className=${`sbCatBtn ${cat === k ? "on" : ""}`} onClick=${() => { setCat(k); setOpenGrp((o) => ({ ...o, [k]: true })); }}>${catName(k)}</button>`)}
       </div>
+      <div className="tskTools">
+        <button type="button" className="tskBtn primary" title="משימה חדשה" onClick=${() => setNewAsk(true)}><${Plus} size=${16} strokeWidth=${2.6} /> משימה חדשה</button>
+        ${onCatalogChange && html`<button type="button" className="tskBtn" title="קטגוריה חדשה (נשמרת במערכת לכל הפרויקטים)" onClick=${() => setNewCat(newCat === null ? "" : null)}><${Plus} size=${15} strokeWidth=${2.4} /> קטגוריה</button>`}
+        ${boardExport && html`<${F}>
+          <button type="button" className="tskBtn" title="הדפסת המשימות ל-PDF" onClick=${() => setExportAsk("pdf")}><${FileText} size=${15} /> PDF</button>
+          <button type="button" className="tskBtn" title="המשימות לאקסל" onClick=${() => setExportAsk("xlsx")}><${FileSpreadsheet} size=${15} /> Excel</button><//>`}
+      </div>
     </div>
+    ${exportAsk && html`<${PrintLangAsk} startLang="he" titles=${tskTitles}
+      onPick=${(lg, who, hdr) => { const k = exportAsk; setExportAsk(null); doExport(k, hdr); }} onClose=${() => setExportAsk(null)} />`}
     ${newCat !== null && html`<div className="tskBar">
       <input className="tskIn" style=${{ maxWidth: 320 }} autoFocus placeholder="שם הקטגוריה החדשה" value=${newCat}
         onChange=${(e) => setNewCat(e.target.value)}

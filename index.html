@@ -8245,7 +8245,14 @@ function CardView({
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs && !isRejects && !isTasks;
   return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || isRejects || isTasks || showRooms ? "wide" : ""}` }, isTasks && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(TasksLazy, {
     projectId: project.id, projectName: project.name, currentEmail, contacts,
-    catalog: contactsCatalog, onCatalogChange: onChangeTaskCats, onCreateRfi })), isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
+    catalog: contactsCatalog, onCatalogChange: onChangeTaskCats, onCreateRfi,
+    // 06.11.26 — PDF and Excel in the boards' own design.
+    boardExport: {
+      pdf: (o) => boardExportPdf({ ...o, accent: (printBrand || {}).accent, brand: printBrand, isRTL: true }),
+      xlsx: (o) => boardExportXlsx({ ...o, accent: (printBrand || {}).accent, isRTL: true }),
+      orderBy: boardOrderBy,
+      fileName: (t, ext) => boardFileName(project.name, t, ext)
+    } })), isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
     projectId: project.id, projectName: project.name, projectEnd: project.endDate, currentEmail,
     subs: ((subsData || {}).list) || [],
     printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
