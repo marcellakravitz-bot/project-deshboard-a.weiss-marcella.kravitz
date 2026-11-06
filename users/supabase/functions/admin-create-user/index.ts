@@ -43,7 +43,10 @@ Deno.serve(async (req) => {
       const projectIds = Array.isArray(body.projectIds) ? body.projectIds : [];
       const projectNames = Array.isArray(body.projectNames) ? body.projectNames : [];
       if (!email) return json({ error: "Email is required" }, 400);
-      const { data: inv, error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: { role, projects: projectNames.join(", ") } });
+      // 06.11.26 — which list the account belongs to: "team", "supervision",
+      // "client" (architects / client). Kept beside the role.
+      const kind = String(body.kind || (role === "team" ? "team" : "")).slice(0, 30);
+      const { data: inv, error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo, data: { role, kind, projects: projectNames.join(", ") } });
       if (error) return json({ error: error.message }, 400);
       // The role, and the opening password, in one write.
       //   password      — their own address, exactly as the invitation says.
@@ -58,6 +61,7 @@ Deno.serve(async (req) => {
         email_confirm: true,
         user_metadata: {
           role,
+          kind,
           projects: projectNames.join(", "),
           must_change_password: true,
         },
@@ -97,6 +101,7 @@ Deno.serve(async (req) => {
         id: u.id,
         email: u.email,
         role: (u.app_metadata && u.app_metadata.role) || "client",
+        kind: (u.user_metadata && u.user_metadata.kind) || "",
         banned: !!(u.banned_until && new Date(u.banned_until).getTime() > now),
         created_at: u.created_at || u.invited_at || null,
         // So the user list can show who has not been in yet.
