@@ -33,13 +33,13 @@ import htm from "https://esm.sh/htm@3.1.1";
 import {
   Phone, Layers, ShieldCheck, BadgeCheck, PenTool, HardHat, Flame, FolderOpen, Map as MapIcon,
   Plus, Mail, Copy, Trash2, Printer, Pencil, Save, ChevronDown, ChevronUp, X, ListPlus, Search, ArrowRight,
-  FileText, FileSpreadsheet, ImagePlus,
+  FileText, FileSpreadsheet, ImagePlus, Wrench,
 } from "lucide-react";
 import { supabase, printSheetCss, printedStampText, supLibLoad, supLibFind, supLibSave, supLibHasService, supLibNorm, PrintLangAsk, imgAsk, imgPickProps, imgLibAdd } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;   // a template with more than one root returns an array without keys
-export const FACILITY_BUILD = "facility build 4 · 06.11.2026";
+export const FACILITY_BUILD = "facility build 5 · 06.11.2026";
 if (typeof console !== "undefined") console.info(FACILITY_BUILD);
 
 // ----------------------------------------------------------------------------- the chapters
@@ -49,6 +49,9 @@ if (typeof console !== "undefined") console.info(FACILITY_BUILD);
 const CHAPTERS = [
   { k: "contacts", he: "אנשי קשר", icon: Phone, color: "#0EA5E9", kind: "contacts" },
   { k: "finishes", he: "רשימת חומרי גמר", icon: Layers, color: "#8B5E3C", kind: "finishes" },
+  // 06.11.26 — who to call, and for what, once the keys are handed over: one
+  // line per supplier of the finishes list, filled from the suppliers' library.
+  { k: "service", he: "פרטי מחלקת בדק", icon: Wrench, color: "#15803D", kind: "service" },
   { k: "standards", he: "אישורי מכון התקנים", icon: BadgeCheck, color: "#2563EB", kind: "check", add: "הוספת אישור מכון תקנים", items: [
     ["si-921", "921 – תגובה בשריפה של חומרי בנייה"],
     ["si-931", "931 – אטומי אש"], ["si-1001", "1001 – מיזוג אוויר"], ["si-1001-7", "1001-7 – מיזוג אוויר"],
@@ -149,6 +152,10 @@ function finRowState(row, lib) {
 }
 function progressOf(data, ch, floors, lib) {
   if (ch.kind === "contacts") return { label: "", done: 0, total: 0 };
+  if (ch.kind === "service") {
+    const sup = serviceSuppliers(data);
+    return { done: sup.filter((n) => supLibHasService(supLibFind(lib, n))).length, total: sup.length };
+  }
   if (ch.kind === "finishes") {
     const rows = (data.finishes || []).map((r) => finRowState(r, lib)).filter((s) => s !== "na");
     return { done: rows.filter((s) => s === "done").length, total: rows.length };
@@ -165,6 +172,19 @@ function progressOf(data, ch, floors, lib) {
   const st = data.items || {};
   const rel = chapterItems(data, ch).filter((it) => !(st[it.id] || {}).na);
   return { done: rel.filter((it) => (st[it.id] || {}).done).length, total: rel.length };
+}
+
+// The suppliers of the service-department list: every supplier of the
+// finishes list, then the ones she added by hand, less the ones she took off.
+function serviceSuppliers(data) {
+  const out = [], seen = new Set();
+  const hidden = new Set((data.serviceHidden || []).map(supLibNorm));
+  (data.finishes || []).map((r) => r.supplier).concat(data.serviceExtra || []).forEach((n) => {
+    const name = String(n || "").trim(), k = supLibNorm(name);
+    if (!name || seen.has(k) || hidden.has(k)) return;
+    seen.add(k); out.push(name);
+  });
+  return out;
 }
 
 // ----------------------------------------------------------------------------- styles
@@ -227,6 +247,26 @@ const css = `
 .fac .facMailOpts .facBtn.on{border-color:var(--accent,#17181c);background:#f4f6f9}
 .fac .facMailWin pre{white-space:pre-wrap;font:inherit;font-size:13px;line-height:1.55;background:#fafbfc;border:1px solid var(--line,#e6e6e9);border-radius:10px;padding:10px;margin:12px 0 0}
 .fac .facMailWin textarea{width:100%;min-height:240px;font:inherit;font-size:13px;border:1px solid var(--line,#e6e6e9);border-radius:10px;padding:10px;line-height:1.55;margin-top:12px;box-sizing:border-box}
+.fac table.svcTbl th{white-space:normal;line-height:1.2;padding:7px 5px;font-size:12px}
+.fac table.svcTbl td{padding:5px 4px;vertical-align:top}
+.fac table.svcTbl .facIn{min-width:0;padding:4px 6px;font-size:12.5px;margin-bottom:3px}
+.fac table.svcTbl th.grp{background:#e8f4ec;color:#15803D}
+.fac .svcLogo{width:64px;height:44px;border-radius:7px;border:1px dashed #cfd3da;background:#fafbfc;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;color:#a6a9b0;position:relative;margin:0 auto}
+.fac .svcLogo img{max-width:100%;max-height:100%;object-fit:contain}
+.fac .svcLogo:hover{border-color:#8a8d94}
+.fac .svcLogo:hover .finPicX{display:flex}
+.fac .svcName{font-weight:800;font-size:13.5px;text-align:start}
+.fac .svcLib{font-size:11px;font-weight:700;color:#15803D;margin-top:3px;text-align:start}
+.fac .svcLib.new{color:#b26b00}
+.fac .svcPpl{font-size:12px;text-align:start;line-height:1.45}
+.fac .svcPpl .p{padding:2px 0;border-bottom:1px solid #f0f0f2}
+.fac .svcPpl .p:last-child{border-bottom:0}
+.fac .svcPpl b{font-size:12.5px}
+.fac .svcPpl a{color:inherit;text-decoration:none}
+.fac .svcWar{font-size:12.5px;text-align:start}
+.fac .svcWar .ok{display:inline-flex;align-items:center;gap:4px;color:#1f7a3e;font-weight:800;margin-bottom:3px}
+.fac .svcWar div.m{direction:ltr;text-align:right;font-weight:700;line-height:1.5}
+.fac td.svcWarOn{background:#e3f3e6}
 .fac .facSvc td{background:#fafbfc;padding:10px}
 .fac .facSvcGrid{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px;align-items:end;max-width:820px;margin:0 auto}
 .fac .facSvcGrid label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--steel,#5b5e66);text-align:start}
@@ -414,6 +454,8 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
   let body = null;
   if (ch.kind === "contacts") body = html`<${F}>${bar(contactsExportNode || null)}${contactsNode}<//>`;
   else if (ch.kind === "check") body = html`<${F}><${CheckChapter} ch=${ch} data=${data} edit=${edit} bar=${bar} projectName=${projectName} flash=${flash} />${saveRow}<//>`;
+  else if (ch.kind === "service") body = html`<${F}><${ServiceChapter} data=${data} edit=${edit} bar=${bar} print=${print} flash=${flash}
+    contacts=${contacts || []} catalog=${catalog || {}} lib=${lib} reloadLib=${reloadLib} projectId=${projectId} />${saveRow}<//>`;
   else if (ch.kind === "finishes") body = html`<${F}><${FinishesChapter} data=${data} edit=${edit} bar=${bar} projectName=${projectName} print=${print} flash=${flash}
     lliItems=${lliItems || []} contacts=${contacts || []} catalog=${catalog || {}} onAddContacts=${onAddContacts} lib=${lib} reloadLib=${reloadLib}
     projectId=${projectId} boardExport=${boardExport} />${saveRow}<//>`;
@@ -812,6 +854,142 @@ function ServiceBox({ name, lib, reloadLib, flash, print, rows, onClose }) {
   </div>`;
 }
 
+// ----------------------------------------------------------------------------- the service departments
+// 06.11.26 — the list handed over at the end of the project: for every
+// supplier, its logo, the person the project knows there (from the contacts),
+// its service department (kept in the suppliers' library — filled once, there
+// on every project), when to call, and the products whose warranty came in
+// (the V of "כתב אחריות" in the finishes list), one under the other.
+function ServiceChapter({ data, edit, bar, print, flash, contacts, catalog, lib, reloadLib, projectId }) {
+  const [adding, setAdding] = useState(false);
+  const [nm, setNm] = useState("");
+  const names = serviceSuppliers(data);
+  const rows = data.finishes || [];
+  const peopleOf = (name) => (contacts || []).filter((c) => c.group === "suppliers" && supLibNorm(
+    (c.company && (c.company.he || c.company.en)) || ((catalog.companies || []).find((x) => x.id === c.companyId) || {}).he || "") === supLibNorm(name))
+    .map((c) => ({ name: (c.person && (c.person.he || c.person.en)) || "", phone: c.phone || "", email: c.email || "" }))
+    .filter((p) => p.name || p.phone || p.email);
+  const mine = (name) => rows.filter((r) => supLibNorm(r.supplier) === supLibNorm(name));
+  const warrantyOf = (name) => mine(name).filter((r) => ((r.cells || {}).warranty || "") === "v");
+  const noteOf = (name) => ((data.serviceNotes || {})[supLibNorm(name)] || "");
+  const add = () => {
+    const v = nm.trim();
+    if (!v) return;
+    edit((d) => {
+      d.serviceHidden = (d.serviceHidden || []).filter((x) => supLibNorm(x) !== supLibNorm(v));
+      if (!serviceSuppliers(d).some((x) => supLibNorm(x) === supLibNorm(v))) d.serviceExtra = [...(d.serviceExtra || []), v];
+      return d;
+    });
+    setNm(""); setAdding(false);
+  };
+  const hide = (name) => {
+    if (!confirm(`להוריד את "${name}" מרשימת מחלקות הבדק של הפרויקט?\n(הפרטים נשארים במאגר הספקים)`)) return;
+    edit((d) => {
+      d.serviceExtra = (d.serviceExtra || []).filter((x) => supLibNorm(x) !== supLibNorm(name));
+      if (serviceSuppliers(d).some((x) => supLibNorm(x) === supLibNorm(name))) d.serviceHidden = [...(d.serviceHidden || []), name];
+      return d;
+    });
+  };
+  const doPrint = () => {
+    if (!names.length) return;
+    print.serviceBook(names.map((name) => {
+      const e = supLibFind(lib, name);
+      return {
+        name, logo: ((e || {}).data || {}).logo || null, people: peopleOf(name),
+        service: ((e || {}).data || {}).service || {},
+        warranty: warrantyOf(name).map((r) => ({ mark: r.mark || "", desc: r.desc || "" })),
+        products: mine(name).map((r) => ({ mark: r.mark || "", desc: r.desc || "" })),
+        note: noteOf(name)
+      };
+    }));
+  };
+  const supHints = Array.from(new Set((lib || []).map((x) => x.name).filter(Boolean))).sort();
+
+  return html`<${F}>
+    ${bar(html`<${F}>
+      <button type="button" className="facBtn" onClick=${() => setAdding((a) => !a)}><${Plus} size=${15} strokeWidth=${2.4} /> ספק</button>
+      <button type="button" className="facBtn" disabled=${!names.length} title="דף לכל ספק, עם כל פרטי מחלקת הבדק שלו" onClick=${doPrint}><${FileText} size=${15} /> PDF</button><//>`)}
+    ${adding && html`<div className="facBar">
+      <input className="facIn" style=${{ maxWidth: 320 }} autoFocus placeholder="שם הספק" list="svcSupHints" value=${nm}
+        onChange=${(e) => setNm(e.target.value)} onKeyDown=${(e) => { if (e.key === "Enter") add(); if (e.key === "Escape") setAdding(false); }} />
+      <datalist id="svcSupHints">${supHints.map((h) => html`<option key=${h} value=${h} />`)}</datalist>
+      <button type="button" className="facBtn primary" onClick=${add}>הוספה</button>
+      <button type="button" className="facBtn" onClick=${() => setAdding(false)}>ביטול</button>
+    </div>`}
+    <div className="facWin"><table className="svcTbl">
+      <thead><tr><th rowSpan=${2}>#</th><th rowSpan=${2}>לוגו</th><th rowSpan=${2}>ספק</th><th rowSpan=${2}>איש קשר בפרויקט</th>
+        <th colSpan=${3} className="grp">מחלקת בדק ושירות (מאגר הספקים)</th><th rowSpan=${2}>כתבי אחריות שהתקבלו</th><th rowSpan=${2}>הערות</th><th rowSpan=${2}></th></tr>
+        <tr><th className="grp">איש קשר</th><th className="grp">טלפון / נייד / מייל</th><th className="grp">מתי ולמה לפנות</th></tr></thead>
+      <tbody>
+        ${names.length === 0 && html`<tr><td colSpan=${10} className="facEmpty">אין עדיין ספקים — הם נכנסים מעצמם מרשימת חומרי הגמר, או בלחיצה על "+ ספק"</td></tr>`}
+        ${names.map((name, i) => html`<${SvcRow} key=${supLibNorm(name)} i=${i} name=${name} lib=${lib} reloadLib=${reloadLib} flash=${flash} projectId=${projectId}
+          people=${peopleOf(name)} warranty=${warrantyOf(name)} note=${noteOf(name)}
+          onNote=${(t) => edit((d) => { d.serviceNotes = { ...(d.serviceNotes || {}), [supLibNorm(name)]: t }; return d; })}
+          onHide=${() => hide(name)} />`)}
+      </tbody>
+    </table></div>
+    <div className="facLegend">
+      <span>פרטי מחלקת הבדק והלוגו נשמרים במאגר הספקים ומתמלאים מעצמם בכל פרויקט</span>
+      <span><i style=${{ background: "#e3f3e6" }} />התקבל כתב אחריות (מרשימת חומרי הגמר)</span>
+    </div><//>`;
+}
+function SvcRow({ i, name, lib, reloadLib, flash, projectId, people, warranty, note, onNote, onHide }) {
+  const entry = supLibFind(lib, name);
+  const libSvc = ((entry || {}).data || {}).service || {};
+  const logo = ((entry || {}).data || {}).logo || null;
+  const [v, setV] = useState(libSvc);
+  const [dirty, setDirty] = useState(false);
+  // What the library knows fills the row by itself; her typing wins until saved.
+  useEffect(() => { if (!dirty) setV(libSvc); }, [entry && entry.id, JSON.stringify(libSvc)]);
+  const saveLib = async (patch) => {
+    try {
+      const cur = supLibFind(lib, name);
+      const base = cur || { name, data: {} };
+      await supLibSave({ ...base, name: base.name || name, data: { ...(base.data || {}), ...patch(base.data || {}) } });
+      await reloadLib(true);
+      return true;
+    } catch (e) { flash("השמירה במאגר הספקים נכשלה: " + ((e && e.message) || "")); return false; }
+  };
+  const commit = async () => {
+    if (!dirty) return;
+    if (await saveLib((d) => ({ service: { ...(d.service || {}), ...v } }))) { setDirty(false); flash("נשמר במאגר הספקים"); }
+  };
+  const set = (k, val) => { setV((x) => ({ ...x, [k]: val })); setDirty(true); };
+  const putLogo = async (f) => {
+    if (!f) return;
+    try { const t = await finThumb(f, 400); if (await saveLib(() => ({ logo: t }))) flash("הלוגו נשמר במאגר הספקים"); }
+    catch (e) { flash("טעינת הלוגו נכשלה"); }
+  };
+  const inp = (k, ph, dir) => html`<input className="facIn" dir=${dir || "rtl"} placeholder=${ph} value=${v[k] || ""}
+    onChange=${(e) => set(k, e.target.value)} onBlur=${commit} onKeyDown=${(e) => { if (e.key === "Enter") e.target.blur(); }} />`;
+  const has = supLibHasService(entry);
+  return html`<tr>
+    <td className="num">${i + 1}</td>
+    <td style=${{ width: 76 }}><div className="svcLogo" title="לוגו הספק — לחיצה להעלאה · לחצן ימני: ספריית התמונות"
+      onClick=${(e) => imgAsk(e, { projectId, onFile: putLogo })} ...${imgPickProps({ projectId, onFile: putLogo })}>
+      ${logo ? html`<img src=${logo} alt="" />` : html`<${ImagePlus} size=${17} />`}
+      ${logo && html`<button type="button" className="finPicX" title="הסרת הלוגו"
+        onClick=${async (e) => { e.stopPropagation(); if (await saveLib(() => ({ logo: null }))) flash("הלוגו הוסר"); }}><${X} size=${11} /></button>`}
+    </div></td>
+    <td style=${{ minWidth: 120 }}><div className="svcName">${name}</div>
+      <div className=${`svcLib ${entry ? "" : "new"}`}>${entry ? (has ? "✓ במאגר הספקים" : "במאגר — חסרים פרטי בדק") : "ספק חדש במאגר"}</div></td>
+    <td style=${{ minWidth: 150 }}><div className="svcPpl">${people.length ? people.map((p, k) => html`<div key=${k} className="p">
+      <b>${p.name}</b>${p.phone && html`<div dir="ltr" style=${{ textAlign: "right" }}><a href=${"tel:" + p.phone.replace(/[^0-9+]/g, "")}>${p.phone}</a></div>`}
+      ${p.email && html`<div dir="ltr" style=${{ textAlign: "right" }}><a href=${"mailto:" + p.email}>${p.email}</a></div>`}</div>`)
+      : html`<span style=${{ color: "#a6a9b0" }}>אין איש קשר לספק באנשי הקשר של הפרויקט</span>`}</div></td>
+    <td style=${{ minWidth: 120 }}>${inp("name", "שם איש קשר")}</td>
+    <td style=${{ minWidth: 150 }}>${inp("phone", "טלפון", "ltr")}${inp("mobile", "נייד", "ltr")}${inp("email", "מייל", "ltr")}</td>
+    <td style=${{ minWidth: 150 }}><textarea className="facIn" rows=${3} style=${{ resize: "vertical" }} placeholder="שעות, ימים, תקופת אחריות, למה לפנות" value=${v.when || ""}
+      onChange=${(e) => set("when", e.target.value)} onBlur=${commit} /></td>
+    <td className=${warranty.length ? "svcWarOn" : ""} style=${{ minWidth: 120 }}><div className="svcWar">
+      ${warranty.length ? html`<span className="ok">✓ יש כתב אחריות</span>${warranty.map((r) => html`<div key=${r.id} className="m" title=${r.desc || ""}>${r.mark || r.desc || "—"}</div>`)}`
+        : html`<span style=${{ color: "#a6a9b0" }}>—</span>`}</div></td>
+    <td style=${{ minWidth: 130 }}><textarea className="facIn" rows=${2} style=${{ resize: "vertical" }} placeholder="הערות" value=${note}
+      onChange=${(e) => onNote(e.target.value)} /></td>
+    <td style=${{ width: 36 }}><button type="button" className="facBtn icon" title="הורדה מהרשימה" onClick=${onHide}><${Trash2} size=${14} color="#b02a37" /></button></td>
+  </tr>`;
+}
+
 // ----------------------------------------------------------------------------- chapter 9: AS MADE per floor
 function AsMadeChapter({ ch, data, edit, bar, floors }) {
   const [fl, setFl] = useState("");
@@ -866,6 +1044,75 @@ function AsMadeChapter({ ch, data, edit, bar, floors }) {
 export function makeFacilityPrint({ projectName, brand, accent, paginateJs, whenPaged }) {
   const esc = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   return {
+    // 06.11.26 — a page for every supplier: its logo and name, the person the
+    // project knows there, its service department, when to call, and the
+    // products whose warranty came in.
+    serviceBook(list) {
+      const b = brand || {};
+      const acc = accent || "#14265e";
+      const tel = (x) => (x ? `<a href="tel:${esc(String(x).replace(/[^0-9+]/g, ""))}">${esc(x)}</a>` : "");
+      const mail = (x) => (x ? `<a href="mailto:${esc(x)}">${esc(x)}</a>` : "");
+      const nl = (x) => esc(x).replace(/\n/g, "<br>");
+      const rows = [];
+      (list || []).forEach((s) => {
+        const sec = esc(s.name);
+        const v = s.service || {};
+        const R = (cls, inner) => rows.push(`<tr class="${cls}" data-sec="${sec}">${inner}</tr>`);
+        const kv = (k, val) => { if (String(val || "").trim()) R("kv", `<td class="k">${esc(k)}</td><td class="v">${val}</td>`); };
+        R("top", `<td colspan="2"><div class="supTop">${s.logo ? `<img src="${s.logo}" alt="">` : ""}<div class="supName">${esc(s.name)}</div></div></td>`);
+        R("grp", `<td colspan="2">מחלקת בדק ושירות</td>`);
+        const svcAny = ["name", "phone", "mobile", "email", "when"].some((k) => String(v[k] || "").trim());
+        if (!svcAny) R("kv", `<td class="k">פרטים</td><td class="v muted">טרם התקבלו</td>`);
+        kv("איש קשר", esc(v.name)); kv("טלפון", tel(v.phone)); kv("נייד", tel(v.mobile)); kv("מייל", mail(v.email)); kv("מתי ולמה לפנות", nl(v.when));
+        if ((s.people || []).length) {
+          R("grp", `<td colspan="2">איש קשר בפרויקט</td>`);
+          s.people.forEach((p) => R("kv", `<td class="k">${esc(p.name) || "—"}</td><td class="v">${[tel(p.phone), mail(p.email)].filter(Boolean).join(" &nbsp;·&nbsp; ")}</td>`));
+        }
+        R("grp", `<td colspan="2">כתבי אחריות שהתקבלו</td>`);
+        if ((s.warranty || []).length) s.warranty.forEach((w) => R("kv war", `<td class="k mk">${esc(w.mark) || "—"}</td><td class="v">${esc(w.desc)}</td>`));
+        else R("kv", `<td class="k">—</td><td class="v muted">לא התקבל כתב אחריות</td>`);
+        if ((s.products || []).length) {
+          R("grp", `<td colspan="2">מוצרים שסופקו לפרויקט</td>`);
+          s.products.forEach((w) => R("kv", `<td class="k mk">${esc(w.mark) || "—"}</td><td class="v">${esc(w.desc)}</td>`));
+        }
+        if (String(s.note || "").trim()) { R("grp", `<td colspan="2">הערות</td>`); R("kv", `<td colspan="2" class="v">${nl(s.note)}</td>`); }
+      });
+      const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "<span></span>";
+      const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
+      const footBlock = b.footerImg ? `<div class="footImg" id="footimg"><img src="${b.footerImg}" alt="footer"></div>` : "";
+      const title = "פרטי מחלקת בדק ושירות";
+      const doc = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>${esc(`${projectName || ""} - ${title}`)}</title><style>
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
+${printSheetCss({ landscape: false, accent: acc })}
+body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: rtl; }
+.hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 10px; margin-bottom: 12px; }
+.hdr img { max-height: 44px; max-width: 140px; object-fit: contain; justify-self: start; }
+.hdr img.clientLogo { justify-self: end; }
+.ttlWrap { grid-column: 2; text-align: center; }
+.ttlWrap .ttl { font-size: 19px; font-weight: 800; color: ${acc}; }
+.ttlWrap .sub { font-size: 11px; font-weight: 600; color: ${acc}; margin-top: 3px; }
+.pgSec { background: ${acc}; color: #fff; font-weight: 800; font-size: 12.5px; text-align: center; padding: 5px 8px; border-radius: 4px 4px 0 0; }
+table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+td { font-size: 10.5px; padding: 5px 8px; border-bottom: 1px solid #eceef1; vertical-align: top; word-break: break-word; text-align: right; }
+tr.top td { padding: 14px 8px 12px; border-bottom: 0; }
+.supTop { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.supTop img { max-height: 70px; max-width: 220px; object-fit: contain; }
+.supName { font-size: 20px; font-weight: 800; color: ${acc}; }
+tr.grp td { background: #eef1f6; color: ${acc}; font-weight: 800; font-size: 11.5px; padding: 5px 8px; border-bottom: 1.5px solid ${acc}; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+td.k { font-weight: 700; color: #3f434b; }
+td.mk { direction: ltr; text-align: right; }
+tr.war td { background: #f0f8f2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+td.muted { color: #9aa3af; }
+a { color: #17181c; text-decoration: none; }
+</style></head><body><div id="src">
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div></div>${clientLogo}</div>
+<table><colgroup><col style="width:30%"><col style="width:70%"></colgroup><tbody>${rows.join("")}</tbody></table>
+${footBlock}</div><div id="pages"></div>${paginateJs ? paginateJs(printedStampText("he")) : ""}</body></html>`;
+      const w = window.open("", "_blank");
+      if (!w) return;
+      w.document.open(); w.document.write(doc); w.document.close(); w.focus();
+      if (whenPaged) whenPaged(w, 300); else setTimeout(() => { try { w.print(); } catch (e) {} }, 600);
+    },
     serviceSheet(list) {
       const b = brand || {};
       const acc = accent || "#14265e";
