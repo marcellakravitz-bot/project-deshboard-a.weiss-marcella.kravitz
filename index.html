@@ -8624,6 +8624,7 @@ function mergeContactCatalog(stored, seed) {
   out.hiddenCats = stored && Array.isArray(stored.hiddenCats) ? stored.hiddenCats : [];
   // 06.11.26 — the task categories (ניהול משימות), kept as they were stored.
   out.taskCats = stored && Array.isArray(stored.taskCats) ? stored.taskCats : [];
+  out.taskSeeded = stored && Array.isArray(stored.taskSeeded) ? stored.taskSeeded : [];
   const used = /* @__PURE__ */ new Set();
   ["disciplines", "roles", "companies"].forEach((key) => {
     const current = (stored && stored[key] || []).map((e) => ({ ...e }));
@@ -9210,11 +9211,10 @@ function TaskCategoriesLibrary({ isRTL, catalog, onCatalogChange }) {
       sbH("input", { className: "contactsInput", dir: "rtl", value: c.he || "", onChange: (e) => setList(list.map((x) => x.key === c.key ? { ...x, he: e.target.value } : x)) }),
       sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "למעלה" : "Up", disabled: i === 0, onClick: () => move(i, -1) }, "\u25B2"),
       sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "למטה" : "Down", disabled: i === list.length - 1, onClick: () => move(i, 1) }, "\u25BC"),
-      // 06.11.26 — the fixed categories are on every project with their fixed tasks: they move, they do not go.
-      (c.fixed || c.key === "tc-site-open") ? sbH("span", { className: "dlCode ro", title: isRTL ? "קטגוריה קבועה" : "Fixed" }, isRTL ? "קבועה" : "Fixed") :
+      // 06.11.26 — every category is hers to add, rename, reorder and delete; a deleted one does not come back.
       sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "מחיקה מהמאגר" : "Delete",
-        onClick: () => { if (confirm(isRTL ? `למחוק את "${c.he}"? משימות שכבר בה יעברו ל"ללא קטגוריה".` : "Delete this category?")) setList(list.filter((x) => x.key !== c.key)); } }, sbH(Trash2, { size: 14 }))))
-      : sbH("p", { className: "panelSub" }, isRTL ? "עדיין אין קטגוריות משימות." : "No task categories yet."));
+        onClick: () => { if (confirm(isRTL ? `למחוק את "${c.he}" מהמערכת? משימות קבועות שלה יורדו, ומשימות שהוספת בה יעברו ל"ללא קטגוריה".` : "Delete this category?")) setList(list.filter((x) => x.key !== c.key)); } }, sbH(Trash2, { size: 14 }))))
+      : sbH("p", { className: "panelSub" }, isRTL ? "עדיין אין קטגוריות משימות — הקטגוריות הקבועות נכנסות בפתיחה הראשונה של \"ניהול משימות\"." : "No task categories yet."));
 }
 function CategoriesLibrary({ isRTL, catalog, onCatalogChange }) {
   const cat = catalog || {};
@@ -26217,7 +26217,7 @@ function ProjectDashboardApp() {
         contactsCatalog,
         onChangeBoardCats: appRole === "admin" ? onChangeBoardCats : null,
         // 06.11.26 — the task categories live in the same catalogue.
-        onChangeTaskCats: appRole === "admin" ? (n) => setContactsCatalog((cur) => ({ ...cur, taskCats: (n && n.taskCats) || [] })) : null,
+        onChangeTaskCats: appRole === "admin" ? (n) => setContactsCatalog((cur) => ({ ...cur, taskCats: (n && n.taskCats) || [], taskSeeded: (n && n.taskSeeded) || (cur && cur.taskSeeded) || [] })) : null,
         // 06.11.26 — the contacts editor lives inside the facility file now,
         // for this project only; the catalogue moved to the data libraries.
         contactsEditorNode: appRole === "admin" && activeProject ? React15.createElement(ProjectContactsScreen, {

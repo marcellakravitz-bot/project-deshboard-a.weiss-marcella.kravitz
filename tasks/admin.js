@@ -28,7 +28,7 @@ import { supabase } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 3 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 4 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -96,11 +96,23 @@ export const FIXED_CATS = [
   { key: "tc-approvals", he: "אישורים מהבניין / מהפיקוח", tasks: [
     ["fx-ap-plans", "אישור מהפיקוח עבור סט תוכניות בטיחות, מיזוג אוויר, אדריכלות, חשמל ואינסטלציה"],
     ["fx-ap-feed", "להעביר לבניין גודל הזנת לוח חשמל דיירים כנדרש - מתוך תכנון לוחות חשמל"],
+    ["fx-ap-carpentry", "קבלת רשימת נגרות"],
+    ["fx-ap-lights", "קבלת רשימת גופי תאורה"],
+    ["fx-ap-elec-products", "קבלת רשימת מוצרי חשמל"],
   ] },
   { key: "tc-purchase", he: "הזמנות רכש", tasks: [
     ["fx-po-frame", "הזמנת מסגרת"],
     ["fx-po-suppliers", "הוצאת הזמנות לכלל הספקים (לפי דוח LLI)"],
   ] },
+  // 06.11.26 — categories she listed with no fixed tasks yet.
+  { key: "tc-structural", he: "קונסטרוקטור", tasks: [] },
+  { key: "tc-mnm", he: "מנ\"מ", tasks: [] },
+  { key: "tc-comms-room", he: "חדר תקשורת", tasks: [] },
+  { key: "tc-plumbing", he: "אינסטלציה", tasks: [] },
+  { key: "tc-doors", he: "דלתות", tasks: [] },
+  { key: "tc-lighting", he: "תאורה", tasks: [] },
+  { key: "tc-skilled", he: "עובד מקצועי", tasks: [] },
+  { key: "tc-finish-guides", he: "הנחיות גמרים", tasks: [] },
 ];
 const FIXED_CAT_KEYS = new Set(FIXED_CATS.map((c) => c.key));
 const FIXED_DEFS = [];
@@ -145,6 +157,8 @@ const css = `
 .tsk .tskHeadBtn{flex:1 1 auto;display:flex;align-items:center;gap:8px;border:0;background:none;cursor:pointer;font:inherit;font-weight:800;color:inherit;text-align:start;padding:0}
 .tsk .tskAddIn{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line,#e6e6e9);background:#fff;border-radius:7px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;padding:2px 8px;color:#3f434b}
 .tsk .tskAddIn:hover{border-color:var(--accent,#14265e)}
+.tsk .tskCatDel{border:0;background:none;cursor:pointer;color:#b02a37;display:flex;padding:3px;border-radius:6px;opacity:.55}
+.tsk .tskCatDel:hover{opacity:1;background:#fff}
 .tsk .tskGrip{cursor:grab;color:#8a8d94;display:flex}
 .tsk .tskMove{display:flex;gap:2px}
 .tsk .tskMove button{border:1px solid var(--line,#e6e6e9);background:#fff;border-radius:6px;cursor:pointer;display:flex;padding:2px 4px;color:#3f434b}
@@ -262,25 +276,41 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   };
 
   // ---------------------------------------------------------------- categories
-  // The site-opening category is always in the library — first, until she moves it.
+  // 06.11.26 — her categories go into the library once ("taskSeeded" says
+  // which); after that the library is hers: she adds, deletes and reorders,
+  // and a category she deleted does not come back.
   useEffect(() => {
     if (!onCatalogChange || !catalog) return;
     const list = (catalog.taskCats || []);
-    const missing = FIXED_CATS.filter((f) => !list.some((c) => c && c.key === f.key)).map((f) => ({ key: f.key, he: f.he, fixed: true }));
-    if (missing.length) onCatalogChange({ ...catalog, taskCats: list.concat(missing) });
-  }, [catalog && (catalog.taskCats || []).length]);
-  const rawCats = ((catalog || {}).taskCats || []).filter((c) => c && c.key && String(c.he || "").trim());
-  const cats = rawCats.concat(FIXED_CATS.filter((f) => !rawCats.some((c) => c.key === f.key)).map((f) => ({ key: f.key, he: f.he, fixed: true })));
+    const seeded = new Set(catalog.taskSeeded || []);
+    const fresh = FIXED_CATS.filter((f) => !seeded.has(f.key));
+    if (!fresh.length) return;
+    const add = fresh.filter((f) => !list.some((c) => c && c.key === f.key)).map((f) => ({ key: f.key, he: f.he }));
+    onCatalogChange({ ...catalog, taskCats: list.concat(add), taskSeeded: Array.from(seeded).concat(fresh.map((f) => f.key)) });
+  }, [catalog && (catalog.taskCats || []).length, catalog && (catalog.taskSeeded || []).length]);
+  const cats = ((catalog || {}).taskCats || []).filter((c) => c && c.key && String(c.he || "").trim());
   const catName = (k) => (k === NONE ? "ללא קטגוריה" : ((cats.find((c) => c.key === k) || {}).he || "ללא קטגוריה"));
-  const tasks = (data && data.tasks) || [];
+  // A fixed task whose category she deleted goes with it.
+  const tasks = ((data && data.tasks) || []).filter((t) => !(FIXED_IDS.has(t.id) && !cats.some((c) => c.key === t.category)));
   const catOf = (t) => (t.category && cats.some((c) => c.key === t.category) ? t.category : NONE);
-  // The groups in the library's order; only the ones with tasks, as on the other boards.
-  // The categories with tasks — and the fixed ones always, even when empty
-  // ("הוראות שינוי"), so their "+ משימה" is there.
-  const inUse = cats.filter((c) => FIXED_CAT_KEYS.has(c.key) || tasks.some((t) => catOf(t) === c.key)).map((c) => c.key)
+  // Every category of the library is a group (closed until opened), so each
+  // has its "+ משימה"; the bar above carries only the ones with tasks.
+  const withTasks = cats.filter((c) => tasks.some((t) => catOf(t) === c.key)).map((c) => c.key)
     .concat(tasks.some((t) => catOf(t) === NONE) ? [NONE] : []);
+  const inUse = cats.map((c) => c.key).concat(tasks.some((t) => catOf(t) === NONE) ? [NONE] : []);
   const shownGroups = cat === "all" ? inUse : inUse.filter((k) => k === cat);
-  useEffect(() => { if (cat !== "all" && !inUse.includes(cat)) setCat("all"); }, [inUse.join("|")]);
+  useEffect(() => { if (cat !== "all" && !withTasks.includes(cat)) setCat("all"); }, [withTasks.join("|")]);
+  const [newCat, setNewCat] = useState(null);         // the "+ קטגוריה" box
+  const deleteCat = (k) => {
+    if (!onCatalogChange || k === NONE) return;
+    const n = tasks.filter((t) => catOf(t) === k);
+    const fixedN = n.filter((t) => FIXED_IDS.has(t.id)).length;
+    const own = n.length - fixedN;
+    if (!confirm(`למחוק את הקטגוריה "${catName(k)}" מהמערכת (מכל הפרויקטים)?`
+      + (fixedN ? `\nהמשימות הקבועות שלה יורדו.` : "")
+      + (own ? `\n${own} משימות שהוספת בפרויקט הזה יעברו ל"ללא קטגוריה".` : ""))) return;
+    onCatalogChange({ ...(catalog || {}), taskCats: ((catalog || {}).taskCats || []).filter((c) => c.key !== k) });
+  };
 
   const people = useMemo(() => {
     const out = new Set();
@@ -343,11 +373,19 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     ${err && html`<p className="tskErr">${err}</p>`}
     <div className="tskBar">
       <button type="button" className="tskBtn primary" title="משימה חדשה" onClick=${() => setNewAsk(true)}><${Plus} size=${16} strokeWidth=${2.6} /> משימה חדשה</button>
+      ${onCatalogChange && html`<button type="button" className="tskBtn" title="קטגוריה חדשה (נשמרת במערכת לכל הפרויקטים)" onClick=${() => setNewCat(newCat === null ? "" : null)}><${Plus} size=${15} strokeWidth=${2.4} /> קטגוריה</button>`}
       <div className="sbCatBar">
         <button type="button" className=${`sbCatBtn all ${cat === "all" ? "on" : ""}`} onClick=${() => setCat("all")}>כל הקטגוריות</button>
-        ${inUse.map((k) => html`<button key=${k} type="button" className=${`sbCatBtn ${cat === k ? "on" : ""}`} onClick=${() => { setCat(k); setOpenGrp((o) => ({ ...o, [k]: true })); }}>${catName(k)}</button>`)}
+        ${withTasks.map((k) => html`<button key=${k} type="button" className=${`sbCatBtn ${cat === k ? "on" : ""}`} onClick=${() => { setCat(k); setOpenGrp((o) => ({ ...o, [k]: true })); }}>${catName(k)}</button>`)}
       </div>
     </div>
+    ${newCat !== null && html`<div className="tskBar">
+      <input className="tskIn" style=${{ maxWidth: 320 }} autoFocus placeholder="שם הקטגוריה החדשה" value=${newCat}
+        onChange=${(e) => setNewCat(e.target.value)}
+        onKeyDown=${(e) => { if (e.key === "Enter") { const k = addCat(newCat); if (k) setOpenGrp((o) => ({ ...o, [k]: true })); setNewCat(null); } if (e.key === "Escape") setNewCat(null); }} />
+      <button type="button" className="tskBtn primary" disabled=${!String(newCat).trim()} onClick=${() => { const k = addCat(newCat); if (k) setOpenGrp((o) => ({ ...o, [k]: true })); setNewCat(null); }}>הוספה</button>
+      <button type="button" className="tskBtn" onClick=${() => setNewCat(null)}>ביטול</button>
+    </div>`}
     <div className="tskWin">
       ${tasks.length === 0 && html`<p className="tskEmpty">אין עדיין משימות — לחצי על "+ משימה חדשה"</p>`}
       ${shownGroups.map((k) => {
@@ -366,6 +404,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
               <span>${catName(k)}</span>
             </button>
             <button type="button" className="tskAddIn" title=${`משימה נוספת ב"${catName(k)}"`} onClick=${() => setNewAsk(k === NONE ? true : k)}><${Plus} size=${14} strokeWidth=${2.6} /> משימה</button>
+            ${k !== NONE && onCatalogChange && html`<button type="button" className="tskCatDel" title="מחיקת הקטגוריה מהמערכת" onClick=${() => deleteCat(k)}><${Trash2} size=${13} /></button>`}
             ${k !== NONE && onCatalogChange && cat === "all" && html`<span className="tskMove">
               <button type="button" title="למעלה" disabled=${inUse.indexOf(k) === 0} onClick=${() => stepCat(k, -1)}><${ArrowUp} size=${14} /></button>
               <button type="button" title="למטה" disabled=${inUse.filter((x) => x !== NONE).indexOf(k) === inUse.filter((x) => x !== NONE).length - 1} onClick=${() => stepCat(k, 1)}><${ArrowDown} size=${14} /></button>
