@@ -113,6 +113,11 @@ export const FIXED_CATS = [
   { key: "tc-lighting", he: "תאורה", tasks: [] },
   { key: "tc-skilled", he: "עובד מקצועי", tasks: [] },
   { key: "tc-finish-guides", he: "הנחיות גמרים", tasks: [] },
+  { key: "tc-fire-safety", he: "בטיחות אש - יועץ בטיחות", tasks: [
+    ["fx-fs-submit", "הגשת תוכניות בטיחות לכבאות"],
+    ["fx-fs-ops", "קבלת משטר הפעלות"],
+  ] },
+  { key: "tc-admin", he: "מנהלות", tasks: [] },
 ];
 const FIXED_CAT_KEYS = new Set(FIXED_CATS.map((c) => c.key));
 const FIXED_DEFS = [];
