@@ -18,8 +18,7 @@ var lists={ submittal:{filter:{}, simple:true}, sd:{filter:{}, simple:true} };
 var rjN=null, weekShown=null;
 
 function longBtn(k, title, extra){
-  return '<button class="longBtn" data-k="'+k+'">'+(AW.isNew(k)?'<span class="dot"></span>':'')+
-    '<span class="ico">'+AW.icon(IC[k])+'</span><span class="t">'+E(title)+'</span>'+(extra?'<span class="n">'+E(extra)+'</span>':'')+'</button>';
+  return '<button class="longBtn" data-k="'+k+'">'+'<span class="ico">'+AW.icon(IC[k])+'</span><span class="t">'+E(title)+'</span>'+(AW.isNew(k)?'<span class="newStar">★ עדכון חדש</span>':'')+(extra?'<span class="n">'+E(extra)+'</span>':'')+'</button>';
 }
 function home(){
   var b=S.board, app=AW.el();
@@ -27,7 +26,7 @@ function home(){
   var h=((S.projects||[]).length>1||AW.PREVIEW?'<button class="backArrow" id="toProj" aria-label="פרויקטים">'+AW.icon("M15 6l-6 6 6 6")+'</button>':'')+
     AW.projHead("קבלן "+AW.tradeHe(b.trade))+
     '<button class="wkCard" data-k="weekly">'+
-    '<div class="wh"><b>'+AW.icon(IC.weekly)+'לו״ז שבועי</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
+    '<div class="wh"><b>'+AW.icon(IC.weekly)+'לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
     AW.timetable(wk, function(i){ var t=String(cells[i]||"").trim(); return t?E(t):""; })+'</button>'+
     longBtn("log","יומן עדכונים")+longBtn("submittal","Submittal")+longBtn("sd","SD")+
     (rjN?longBtn("rj","ריג'קטים", String(rjN)):"")+

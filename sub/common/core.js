@@ -258,7 +258,8 @@ var AW = (function(){
   function boot(opts){
     renderFn=opts.render;
     var out=document.getElementById("out");
-    if(PREVIEW){ document.body.classList.add("isPv"); if(out) out.hidden=true; }
+    // In the preview "יציאה" goes back to the projects; nobody is signed out.
+    if(PREVIEW){ document.body.classList.add("isPv"); if(out){ out.hidden=false; out.onclick=toEntry; } }
     else if(out){ out.hidden=false; out.onclick=function(){ signOut(); }; }
     state.project=q.get("p")||"";
     state.token=PREVIEW ? "preview" : (function(){ try{ return localStorage.getItem(TOKEN_KEY); }catch(e){ return null; } })();

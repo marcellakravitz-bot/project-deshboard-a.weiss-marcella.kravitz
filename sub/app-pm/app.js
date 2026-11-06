@@ -21,8 +21,7 @@ var lists={ submittal:{filter:{}}, sd:{filter:{}} };
 var logDraft=null, weekBuf=null, weekShown=null;
 
 function longBtn(k, title, extra, id){
-  return '<button class="longBtn"'+(id?' id="'+id+'"':' data-k="'+k+'"')+'>'+(AW.isNew(k)?'<span class="dot"></span>':'')+
-    '<span class="ico">'+AW.icon(IC[k]||IC.log)+'</span><span class="t">'+E(title)+'</span>'+
+  return '<button class="longBtn"'+(id?' id="'+id+'"':' data-k="'+k+'"')+'>'+'<span class="ico">'+AW.icon(IC[k]||IC.log)+'</span><span class="t">'+E(title)+'</span>'+(AW.isNew(k)?'<span class="newStar">★ עדכון חדש</span>':'')+
     (extra?'<span class="n">'+E(extra)+'</span>':'')+'</button>';
 }
 // One day of the week, every trade that has work written for it.
@@ -40,8 +39,8 @@ function home(){
   var h=((S.projects||[]).length>1||AW.PREVIEW?'<button class="backArrow" id="toProj" aria-label="פרויקטים">'+AW.icon("M15 6l-6 6 6 6")+'</button>':'')+
     AW.projHead("מנהל פרויקט");
   var wk=AW.sundayOf(new Date()), days=AW.weekDays(wk);
-  h+='<button class="wkCard" data-k="weekly">'+(AW.isNew("weekly")?'<span class="dot" style="position:absolute;top:10px;left:10px;width:8px;height:8px;border-radius:50%;background:var(--navy)"></span>':'')+
-    '<div class="wh"><b>'+AW.icon(IC.weekly)+'לו״ז שבועי</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
+  h+='<button class="wkCard" data-k="weekly">'+
+    '<div class="wh"><b>'+AW.icon(IC.weekly)+'לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
     AW.timetable(wk, function(i){ return dayCell(wk,i); })+'</button>';
   h+=longBtn("tasks","ניהול משימות")+longBtn("log","יומן עדכונים")+longBtn("rj","ריג'קטים")+
      longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות מכון התקנים");
