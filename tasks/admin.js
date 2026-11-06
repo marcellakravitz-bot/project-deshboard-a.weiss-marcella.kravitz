@@ -28,7 +28,7 @@ import { supabase } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 5 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 6 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -122,18 +122,26 @@ export const FIXED_CATS = [
 const FIXED_CAT_KEYS = new Set(FIXED_CATS.map((c) => c.key));
 const FIXED_DEFS = [];
 FIXED_CATS.forEach((c) => c.tasks.forEach(([id, desc]) => FIXED_DEFS.push({ id, desc, category: c.key })));
-const FIXED_IDS = new Set(FIXED_DEFS.map((d) => d.id));
-// The fixed tasks a project does not have yet are added; the fixed ones come
-// first in their order, then hers as they were.
-function withFixed(tasks) {
-  const have = new Set(tasks.map((t) => t.id));
-  const add = FIXED_DEFS.filter((d) => !have.has(d.id)).map((d) => ({
-    id: d.id, fixed: true, category: d.category, created: today(), desc: d.desc, owner: "", due: "", status: "open", notes: "", updates: []
-  }));
-  if (!add.length) return tasks;
-  const all = add.concat(tasks);
-  const fx = FIXED_DEFS.map((d) => all.find((t) => t.id === d.id)).filter(Boolean);
-  return fx.concat(all.filter((t) => !FIXED_IDS.has(t.id)));
+// 06.11.26 — the fixed tasks live in the library ("מאגרי מידע" > משימות
+// קבועות) as catalog.taskFixed [{ id, category, desc }]: she adds, rewords,
+// moves to another category and deletes them there, for every project. The
+// lists above go in once each (taskSeeded / taskFixedSeeded remember which),
+// so one she deleted does not come back.
+export function taskSeedPatch(catalog) {
+  const c = catalog || {};
+  const list = c.taskCats || [];
+  const seeded = new Set(c.taskSeeded || []);
+  const freshCats = FIXED_CATS.filter((f) => !seeded.has(f.key));
+  const fixed = Array.isArray(c.taskFixed) ? c.taskFixed : [];
+  const fSeeded = new Set(Array.isArray(c.taskFixedSeeded) ? c.taskFixedSeeded : []);
+  const freshFixed = FIXED_DEFS.filter((d) => !fSeeded.has(d.id));
+  if (!freshCats.length && !freshFixed.length) return null;
+  return {
+    taskCats: list.concat(freshCats.filter((f) => !list.some((x) => x && x.key === f.key)).map((f) => ({ key: f.key, he: f.he }))),
+    taskSeeded: Array.from(seeded).concat(freshCats.map((f) => f.key)),
+    taskFixed: fixed.concat(freshFixed.filter((d) => !fixed.some((x) => x.id === d.id)).map((d) => ({ id: d.id, category: d.category, desc: d.desc }))),
+    taskFixedSeeded: Array.from(fSeeded).concat(freshFixed.map((d) => d.id)),
+  };
 }
 
 // 06.11.26 — a traffic light: a new task starts "טרם בוצע" in red, "בטיפול"
@@ -241,7 +249,6 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
       }
       const d = { tasks: [], ...((row && row.data) || {}) };
       if (!Array.isArray(d.tasks)) d.tasks = [];
-      d.tasks = withFixed(d.tasks);
       console.info("[tasks] loaded", projectId, d.tasks.length);
       setData(d); setLoadedFor(projectId);
     })();
@@ -290,17 +297,27 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   // and a category she deleted does not come back.
   useEffect(() => {
     if (!onCatalogChange || !catalog) return;
-    const list = (catalog.taskCats || []);
-    const seeded = new Set(catalog.taskSeeded || []);
-    const fresh = FIXED_CATS.filter((f) => !seeded.has(f.key));
-    if (!fresh.length) return;
-    const add = fresh.filter((f) => !list.some((c) => c && c.key === f.key)).map((f) => ({ key: f.key, he: f.he }));
-    onCatalogChange({ ...catalog, taskCats: list.concat(add), taskSeeded: Array.from(seeded).concat(fresh.map((f) => f.key)) });
-  }, [catalog && (catalog.taskCats || []).length, catalog && (catalog.taskSeeded || []).length]);
+    const p = taskSeedPatch(catalog);
+    if (p) onCatalogChange({ ...catalog, ...p });
+  }, [catalog && (catalog.taskSeeded || []).length, catalog && (catalog.taskFixedSeeded || []).length]);
   const cats = ((catalog || {}).taskCats || []).filter((c) => c && c.key && String(c.he || "").trim());
   const catName = (k) => (k === NONE ? "ללא קטגוריה" : ((cats.find((c) => c.key === k) || {}).he || "ללא קטגוריה"));
-  // A fixed task whose category she deleted goes with it.
-  const tasks = ((data && data.tasks) || []).filter((t) => !(FIXED_IDS.has(t.id) && !cats.some((c) => c.key === t.category)));
+  // The fixed tasks, from the library (or the built-in lists until it is filled).
+  const defs = (Array.isArray((catalog || {}).taskFixed) ? catalog.taskFixed : FIXED_DEFS).filter((d) => d && d.id && String(d.desc || "").trim());
+  const defIds = new Set(defs.map((d) => d.id));
+  const isFixed = (t) => defIds.has(t.id);
+  // What the board shows: every fixed task of the library — the project's own
+  // record of it, or a fresh one not yet written — with the library's wording
+  // and category, in the library's order; then her own tasks. A fixed task
+  // deleted from the library, or whose category was deleted, is gone.
+  const own = (data && data.tasks) || [];
+  const byId = {};
+  own.forEach((t) => { byId[t.id] = t; });
+  const nowDay = today();
+  const tasks = defs.filter((d) => cats.some((c) => c.key === d.category)).map((d) => ({
+    ...(byId[d.id] || { id: d.id, created: nowDay, owner: "", due: "", status: "open", notes: "", updates: [] }),
+    fixed: true, desc: d.desc, category: d.category,
+  })).concat(own.filter((t) => !defIds.has(t.id) && !t.fixed));
   const catOf = (t) => (t.category && cats.some((c) => c.key === t.category) ? t.category : NONE);
   // Every category of the library is a group (closed until opened), so each
   // has its "+ משימה"; the bar above carries only the ones with tasks.
@@ -313,7 +330,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   const deleteCat = (k) => {
     if (!onCatalogChange || k === NONE) return;
     const n = tasks.filter((t) => catOf(t) === k);
-    const fixedN = n.filter((t) => FIXED_IDS.has(t.id)).length;
+    const fixedN = n.filter((t) => isFixed(t)).length;
     const own = n.length - fixedN;
     if (!confirm(`למחוק את הקטגוריה "${catName(k)}" מהמערכת (מכל הפרויקטים)?`
       + (fixedN ? `\nהמשימות הקבועות שלה יורדו.` : "")
@@ -328,9 +345,13 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     return Array.from(out).sort();
   }, [contacts, tasks]);
 
-  const patch = (id, p) => edit((d) => { d.tasks = d.tasks.map((t) => (t.id === id ? { ...t, ...p } : t)); return d; });
+  const patch = (id, p) => edit((d) => {
+    if (d.tasks.some((t) => t.id === id)) d.tasks = d.tasks.map((t) => (t.id === id ? { ...t, ...p } : t));
+    else { const v = tasks.find((t) => t.id === id); if (v) d.tasks = [...d.tasks, { ...v, ...p }]; }
+    return d;
+  });
   const remove = (t) => {
-    if (t.fixed || FIXED_IDS.has(t.id)) return;
+    if (isFixed(t)) return;
     if (!confirm(`למחוק את המשימה "${String(t.desc || "").slice(0, 60) || "ללא תיאור"}"?`)) return;
     edit((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; });
   };
@@ -441,7 +462,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
               const last = ups[ups.length - 1];
               return html`<tr key=${t.id} className=${`${t.status === "done" ? "done" : t.status === "info" ? "info" : ""} ${late ? "late" : ""}`.trim()}>
                 <td><input type="date" className="tskIn" value=${t.created || ""} onChange=${(e) => patch(t.id, { created: e.target.value })} /></td>
-                <td>${t.fixed || FIXED_IDS.has(t.id)
+                <td>${isFixed(t)
                   ? html`<div className="tskFixed" title="משימה קבועה בכל פרויקט">${t.desc}</div>`
                   : html`<textarea className="tskIn" rows=${1} value=${t.desc || ""} placeholder="תיאור המשימה" onChange=${(e) => patch(t.id, { desc: e.target.value })} />`}</td>
                 <td><input className="tskIn" list="tskPeople" value=${t.owner || ""} placeholder="אחראי/ת" onChange=${(e) => patch(t.id, { owner: e.target.value })} /></td>
@@ -457,7 +478,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
                 <td><div className="tskEnd">
                   ${onCreateRfi && html`<button type="button" className=${`tskRfi ${t.rfi ? "on" : ""}`} title=${t.rfi ? `נפתח RFI ${t.rfi.no} — לחיצה פותחת RFI נוסף` : "פתיחת שורה בלחצן RFI ללקוח / פיקוח"}
                     onClick=${() => toRfi(t)}>${t.rfi ? `RFI ${t.rfi.no}` : "RFI"}</button>`}
-                  ${!(t.fixed || FIXED_IDS.has(t.id)) && html`<button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button>`}
+                  ${!(isFixed(t)) && html`<button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button>`}
                 </div></td>
               </tr>`;
             })}</tbody>

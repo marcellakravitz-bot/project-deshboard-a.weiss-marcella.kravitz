@@ -2614,6 +2614,9 @@ var pdfViewer = `
            clear space under the summary squares. */
         .sbSumBar ~ .lliBar { margin-top: 18px; }
         .dlFind { display: flex; justify-content: center; margin: 4px 0 12px; }
+        .tfRow { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px solid var(--line-soft, #f0f0f2); }
+        .tfRow > input { flex: 1 1 auto; min-width: 0; }
+        .tfRow .contactsRowDel { flex: none; }
         .ulBar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 9px 14px; margin-bottom: 12px; }
         .ulBar .ulTitle { margin: 0; font-size: 15px; }
         .ulBar .ulBtns { margin-inline-start: auto; display: flex; gap: 8px; align-items: center; }
@@ -8654,6 +8657,9 @@ function mergeContactCatalog(stored, seed) {
   // 06.11.26 — the task categories (ניהול משימות), kept as they were stored.
   out.taskCats = stored && Array.isArray(stored.taskCats) ? stored.taskCats : [];
   out.taskSeeded = stored && Array.isArray(stored.taskSeeded) ? stored.taskSeeded : [];
+  // 06.11.26 — the fixed tasks of every project, and which built-in ones went in.
+  if (stored && Array.isArray(stored.taskFixed)) out.taskFixed = stored.taskFixed;
+  out.taskFixedSeeded = stored && Array.isArray(stored.taskFixedSeeded) ? stored.taskFixedSeeded : [];
   const used = /* @__PURE__ */ new Set();
   ["disciplines", "roles", "companies"].forEach((key) => {
     const current = (stored && stored[key] || []).map((e) => ({ ...e }));
@@ -9202,7 +9208,19 @@ function PersonField({ row, people, companies, roles, lang, isRTL, onChange, onP
 // ===========================================================================
 function DataLibrariesScreen({ isRTL, catalog, onCatalogChange, contactsProps }) {
   const [tab, setTab] = useState6("cats");
-  const tabs = [["cats", "קטגוריות", "Categories"], ["tcats", "קטגוריות משימות", "Task categories"], ["pics", "מאגר תמונות", "Pictures"], ["sups", "מאגר ספקים", "Suppliers"], ["contacts", "מאגרי אנשי קשר", "Contacts"]];
+  // 06.11.26 — the task categories and fixed tasks she was given go into the
+  // library the first time it is opened (the lists live with the tasks cube).
+  useEffect5(() => {
+    if (tab !== "tcats" && tab !== "tfixed") return;
+    let off = false;
+    import("./tasks/admin.js" + MODULE_V).then((m) => {
+      if (off || !m || !m.taskSeedPatch) return;
+      const p = m.taskSeedPatch(catalog);
+      if (p) onCatalogChange({ ...(catalog || {}), ...p });
+    }).catch(() => {});
+    return () => { off = true; };
+  }, [tab, catalog && (catalog.taskFixedSeeded || []).length, catalog && (catalog.taskSeeded || []).length]);
+  const tabs = [["cats", "קטגוריות", "Categories"], ["tcats", "קטגוריות משימות", "Task categories"], ["tfixed", "משימות קבועות", "Fixed tasks"], ["pics", "מאגר תמונות", "Pictures"], ["sups", "מאגר ספקים", "Suppliers"], ["contacts", "מאגרי אנשי קשר", "Contacts"]];
   return sbH("section", { className: "panel dlScreen", dir: isRTL ? "rtl" : "ltr" },
     sbH("h2", { className: "panelTitle" }, isRTL ? "מאגרי מידע" : "Data libraries"),
     sbH("p", { className: "panelSub" }, isRTL ? "משותף לכל הפרויקטים" : "Shared by every project"),
@@ -9211,10 +9229,64 @@ function DataLibrariesScreen({ isRTL, catalog, onCatalogChange, contactsProps })
     }, isRTL ? he : en))),
     tab === "cats" ? sbH(CategoriesLibrary, { isRTL, catalog, onCatalogChange }) : null,
     tab === "tcats" ? sbH(TaskCategoriesLibrary, { isRTL, catalog, onCatalogChange }) : null,
+    tab === "tfixed" ? sbH(TaskFixedLibrary, { isRTL, catalog, onCatalogChange }) : null,
     tab === "pics" ? sbH(ImgLibrary, { inline: true, projectId: null }) : null,
     tab === "sups" ? sbH(SupplierLibraryPanel, { isRTL }) : null,
     tab === "contacts" ? sbH(ProjectContactsScreen, { ...contactsProps, mode: "catalog" }) : null
   );
+}
+// 06.11.26 — "משימות קבועות": the tasks every project carries, each under one of
+// the task categories. Reworded, moved, reordered or deleted here, for every
+// project at once.
+function TaskFixedLibrary({ isRTL, catalog, onCatalogChange }) {
+  const cat = catalog || {};
+  const cats = (cat.taskCats || []).filter((c) => c && c.key);
+  const list = Array.isArray(cat.taskFixed) ? cat.taskFixed : [];
+  const [nCat, setNCat] = useState6("");
+  const [nDesc, setNDesc] = useState6("");
+  const [open, setOpen] = useState6({});
+  const setList = (next) => onCatalogChange({ ...cat, taskFixed: next });
+  const add = () => {
+    const d = nDesc.trim();
+    const c = nCat || (cats[0] || {}).key;
+    if (!d || !c) return;
+    setList(list.concat([{ id: `fx-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, category: c, desc: d }]));
+    setNDesc(""); setOpen((o) => ({ ...o, [c]: true }));
+  };
+  const move = (id, d) => {
+    const it = list.find((x) => x.id === id);
+    if (!it) return;
+    const same = list.filter((x) => x.category === it.category);
+    const i = same.indexOf(it), j = i + d;
+    if (j < 0 || j >= same.length) return;
+    const a = list.indexOf(it), b = list.indexOf(same[j]);
+    const n = list.slice(); [n[a], n[b]] = [n[b], n[a]]; setList(n);
+  };
+  const patch = (id, p) => setList(list.map((x) => (x.id === id ? { ...x, ...p } : x)));
+  return sbH("div", { className: "dlCats" },
+    sbH("div", { className: "dlAdd" },
+      sbH("select", { className: "contactsInput", value: nCat || (cats[0] || {}).key || "", onChange: (e) => setNCat(e.target.value), style: { maxWidth: 220 } },
+        cats.map((c) => sbH("option", { key: c.key, value: c.key }, c.he))),
+      sbH("input", { className: "contactsInput", dir: "rtl", value: nDesc, placeholder: isRTL ? "משימה קבועה חדשה" : "New fixed task", onChange: (e) => setNDesc(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
+      sbH("button", { type: "button", className: "functionEditBtn", onClick: add, disabled: !cats.length }, isRTL ? "+ הוספה" : "+ Add")),
+    sbH("p", { className: "panelSub", style: { textAlign: "center" } }, isRTL ? "משימה קבועה מופיעה בכל הפרויקטים, בקטגוריה שלה. את הקטגוריות מגדירים בלשונית \"קטגוריות משימות\"." : "A fixed task appears on every project."),
+    cats.map((c) => {
+      const rows = list.filter((x) => x.category === c.key);
+      const isOpen = !!open[c.key];
+      return sbH("div", { key: c.key, className: "contactsAdminGroup" },
+        sbH("button", { type: "button", className: `contactsAdminGroupHead contactsSecHead ${isOpen ? "open" : ""}`, onClick: () => setOpen((o) => ({ ...o, [c.key]: !isOpen })) },
+          sbH(isOpen ? ChevronDown : ChevronLeft3, { size: 16, className: "contactsSecChev" }),
+          sbH("span", null, c.he), sbH("span", { className: "contactsSecCount" }, rows.length)),
+        isOpen ? (rows.length ? rows.map((x, i) => sbH("div", { key: x.id, className: "tfRow" },
+          sbH("input", { className: "contactsInput", dir: "rtl", value: x.desc || "", onChange: (e) => patch(x.id, { desc: e.target.value }), style: { flex: "1 1 auto" } }),
+          sbH("select", { className: "contactsInput", value: x.category, title: isRTL ? "העברה לקטגוריה אחרת" : "Move to category", onChange: (e) => patch(x.id, { category: e.target.value }), style: { maxWidth: 180 } },
+            cats.map((k) => sbH("option", { key: k.key, value: k.key }, k.he))),
+          sbH("button", { type: "button", className: "contactsRowDel", disabled: i === 0, title: isRTL ? "למעלה" : "Up", onClick: () => move(x.id, -1) }, "\u25B2"),
+          sbH("button", { type: "button", className: "contactsRowDel", disabled: i === rows.length - 1, title: isRTL ? "למטה" : "Down", onClick: () => move(x.id, 1) }, "\u25BC"),
+          sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "מחיקה מכל הפרויקטים" : "Delete",
+            onClick: () => { if (confirm(isRTL ? `למחוק את המשימה הקבועה "${x.desc}" מכל הפרויקטים?` : "Delete this fixed task from every project?")) setList(list.filter((y) => y.id !== x.id)); } }, sbH(Trash2, { size: 14 }))))
+          : sbH("p", { className: "panelSub", style: { textAlign: "center", margin: "4px 0 10px" } }, isRTL ? "אין משימות קבועות בקטגוריה." : "None.")) : null);
+    }));
 }
 // 06.11.26 — the categories of the task-management cube: a list of names in
 // her order; the order here is the order of the groups on the board.
@@ -9236,7 +9308,7 @@ function TaskCategoriesLibrary({ isRTL, catalog, onCatalogChange }) {
       sbH("input", { className: "contactsInput", dir: "rtl", value: nHe, placeholder: isRTL ? "שם קטגוריית משימות חדשה" : "New task category", onChange: (e) => setNHe(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
       sbH("button", { type: "button", className: "functionEditBtn", onClick: add }, isRTL ? "+ הוספה" : "+ Add")),
     sbH("h4", { className: "dlH" }, isRTL ? `קטגוריות ניהול משימות (${list.length})` : `Task categories (${list.length})`),
-    list.length ? list.map((c, i) => sbH("div", { key: c.key, className: "dlCatRow" },
+    list.length ? list.map((c, i) => sbH("div", { key: c.key, className: "tfRow" },
       sbH("input", { className: "contactsInput", dir: "rtl", value: c.he || "", onChange: (e) => setList(list.map((x) => x.key === c.key ? { ...x, he: e.target.value } : x)) }),
       sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "למעלה" : "Up", disabled: i === 0, onClick: () => move(i, -1) }, "\u25B2"),
       sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "למטה" : "Down", disabled: i === list.length - 1, onClick: () => move(i, 1) }, "\u25BC"),
@@ -26355,7 +26427,8 @@ function ProjectDashboardApp() {
         contactsCatalog,
         onChangeBoardCats: appRole === "admin" ? onChangeBoardCats : null,
         // 06.11.26 — the task categories live in the same catalogue.
-        onChangeTaskCats: appRole === "admin" ? (n) => setContactsCatalog((cur) => ({ ...cur, taskCats: (n && n.taskCats) || [], taskSeeded: (n && n.taskSeeded) || (cur && cur.taskSeeded) || [] })) : null,
+        onChangeTaskCats: appRole === "admin" ? (n) => setContactsCatalog((cur) => ({ ...cur, taskCats: (n && n.taskCats) || [], taskSeeded: (n && n.taskSeeded) || (cur && cur.taskSeeded) || [],
+          taskFixed: (n && Array.isArray(n.taskFixed)) ? n.taskFixed : (cur && cur.taskFixed), taskFixedSeeded: (n && n.taskFixedSeeded) || (cur && cur.taskFixedSeeded) || [] })) : null,
         // 06.11.26 — the contacts editor lives inside the facility file now,
         // for this project only; the catalogue moved to the data libraries.
         contactsEditorNode: appRole === "admin" && activeProject ? React15.createElement(ProjectContactsScreen, {
