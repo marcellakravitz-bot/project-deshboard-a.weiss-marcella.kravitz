@@ -8111,6 +8111,7 @@ function CardView({
   contactsCatalog,
   onChangeBoardCats,
   onChangeTaskCats,
+  onCreateRfi,
   contactsEditorNode,
   onAddContacts,
   contractorAccent,
@@ -8203,7 +8204,7 @@ function CardView({
   const hasEditModal = canEdit && !showRooms && !isPhotos && !isContacts && !isSubmittal && !isLli && !isSd && !isRfi && !isCi && !isMarcella && !isSubs && !isRejects && !isTasks;
   return /* @__PURE__ */ React14.createElement("div", { className: `functionPage ${isSchedule || isLook || isPhotos || isContacts || isSubmittal || isLli || isSd || isRfi || isCi || isMarcella || isSubs || isRejects || isTasks || showRooms ? "wide" : ""}` }, isTasks && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(TasksLazy, {
     projectId: project.id, projectName: project.name, currentEmail, contacts,
-    catalog: contactsCatalog, onCatalogChange: onChangeTaskCats })), isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
+    catalog: contactsCatalog, onCatalogChange: onChangeTaskCats, onCreateRfi })), isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
     projectId: project.id, projectName: project.name, projectEnd: project.endDate, currentEmail,
     subs: ((subsData || {}).list) || [],
     printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
@@ -26271,6 +26272,22 @@ function ProjectDashboardApp() {
         // Where an RFI, an LLI row or a submittal is sent when somebody ticks
         // "add to change instructions". The change-instructions register reads
         // this list; nothing here decides that a change is owed. (2.9.26)
+        // 06.11.26 — the "RFI" button on a task opens an RFI row, addressed to
+        // the supervision / client, carrying the task's text. Returns its number.
+        onCreateRfi: appRole === "admin" ? (task) => {
+          const pid = activeProject.id;
+          const r = rfiBlank(activeExtras.rfiRows || {}, loggedInEmail || "");
+          r.subject = String((task && task.desc) || "").split("\n")[0].slice(0, 160);
+          r.description = [task && task.desc, task && task.notes].filter((x) => String(x || "").trim()).join("\n\n");
+          r.responsibility = "supervisionClient";
+          r.source = { module: "tasks", id: (task && task.id) || "" };
+          r.timeline = [{ at: new Date().toISOString(), by: loggedInEmail || "", ev: "evCreated", detail: "ניהול משימות" }];
+          setProjectExtras((prev) => {
+            const ex = prev[pid] || {};
+            return { ...prev, [pid]: { ...ex, rfiRows: { ...(ex.rfiRows || {}), [r.id]: r } } };
+          });
+          return { id: r.id, no: r.no };
+        } : null,
         onAddToChangeInstructions: (entry) => {
           const cur = activeExtras.ciQueue || [];
           if (cur.some((x) => x.sourceModule === entry.sourceModule && x.sourceId === entry.sourceId)) return;

@@ -28,7 +28,7 @@ import { supabase } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 4 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 5 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -183,6 +183,10 @@ const css = `
 .tsk .tskUpd{display:flex;align-items:center;justify-content:center;gap:4px}
 .tsk .tskUpd .last{font-size:11px;color:#5b5e66;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tsk .tskFixed{text-align:start;font-weight:700;padding:5px 7px;font-size:13px}
+.tsk .tskEnd{display:flex;flex-direction:column;align-items:center;gap:3px}
+.tsk .tskRfi{border:1px solid #7C3AED;color:#7C3AED;background:#fff;border-radius:6px;font:inherit;font-size:10.5px;font-weight:800;padding:1px 6px;cursor:pointer;white-space:nowrap}
+.tsk .tskRfi:hover{background:#f3edff}
+.tsk .tskRfi.on{background:#7C3AED;color:#fff}
 .tsk .tskEmpty{padding:22px;text-align:center;color:var(--mist,#9a9da5)}
 .tsk .tskErr{color:#b02a37;font-weight:600;font-size:13px;text-align:center;margin:10px 0}
 .tsk .tskSave{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:14px}
@@ -203,7 +207,7 @@ const css = `
 @media (max-width:760px){.tsk .tskTblWrap{overflow-x:auto}.tsk table{min-width:860px}}
 `;
 
-export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCatalogChange, contacts }) {
+export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCatalogChange, contacts, onCreateRfi }) {
   const [data, setData] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
   const [err, setErr] = useState("");
@@ -330,6 +334,17 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     if (!confirm(`למחוק את המשימה "${String(t.desc || "").slice(0, 60) || "ללא תיאור"}"?`)) return;
     edit((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; });
   };
+  // 06.11.26 — the small "RFI" button: a row opens on the RFI board, addressed
+  // to the supervision / client, with the task's text; the task keeps its number.
+  const toRfi = (t) => {
+    if (!onCreateRfi) return;
+    if (t.rfi && !confirm(`כבר נפתח RFI ${t.rfi.no} מהמשימה הזו. לפתוח RFI נוסף?`)) return;
+    if (!t.rfi && !confirm(`לפתוח שורת RFI ללקוח / פיקוח מהמשימה\n"${String(t.desc || "").slice(0, 80)}"?`)) return;
+    const res = onCreateRfi(t);
+    if (!res) return;
+    patch(t.id, { rfi: { id: res.id, no: res.no }, updates: [...(t.updates || []), { id: uid("u"), date: today(), text: `נפתח RFI ${res.no}`, by: currentEmail || "" }] });
+    flash(`נפתח RFI ${res.no} — בלחצן RFI`);
+  };
   const create = (category, desc) => {
     const t = { id: uid("t"), category: category || "", created: today(), desc: desc || "", owner: "", due: "", status: "open", notes: "", updates: [] };
     edit((d) => { d.tasks = [...d.tasks, t]; return d; });
@@ -417,7 +432,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
           </div>
           ${open && html`<div className="tskTblWrap"><table>
             <colgroup><col style=${{ width: "10%" }} /><col style=${{ width: "24%" }} /><col style=${{ width: "12%" }} /><col style=${{ width: "11%" }} />
-              <col style=${{ width: "10%" }} /><col style=${{ width: "18%" }} /><col style=${{ width: "12%" }} /><col style=${{ width: "3%" }} /></colgroup>
+              <col style=${{ width: "10%" }} /><col style=${{ width: "18%" }} /><col style=${{ width: "11%" }} /><col style=${{ width: "7%" }} /></colgroup>
             <thead><tr><th>תאריך הקמה</th><th>תיאור</th><th>אחריות</th><th>תאריך יעד</th><th>סטטוס</th><th>הערות / מידע נוסף</th><th>עדכונים</th><th></th></tr></thead>
             <tbody>${list.length === 0 && html`<tr><td colSpan=${8} className="tskEmpty">אין משימות בקטגוריה — "+ משימה" בכותרת</td></tr>`}${list.map((t) => {
               const st = ST[t.status] || ST.open;
@@ -439,7 +454,11 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
                   <button type="button" className="tskBtn icon" title=${last ? `רשימת עדכונים · אחרון: ${fmt(last.date)}` : "רשימת עדכונים"} disabled=${!ups.length}
                     onClick=${() => setLogFor(t.id)}><${History} size=${14} />${ups.length ? html`<span style=${{ fontSize: 11.5 }}>${ups.length}</span>` : null}</button>
                 </div>${last && html`<div className="tskUpd"><span className="last" title=${last.text}>${fmt(last.date)}</span></div>`}</td>
-                <td>${!(t.fixed || FIXED_IDS.has(t.id)) && html`<button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button>`}</td>
+                <td><div className="tskEnd">
+                  ${onCreateRfi && html`<button type="button" className=${`tskRfi ${t.rfi ? "on" : ""}`} title=${t.rfi ? `נפתח RFI ${t.rfi.no} — לחיצה פותחת RFI נוסף` : "פתיחת שורה בלחצן RFI ללקוח / פיקוח"}
+                    onClick=${() => toRfi(t)}>${t.rfi ? `RFI ${t.rfi.no}` : "RFI"}</button>`}
+                  ${!(t.fixed || FIXED_IDS.has(t.id)) && html`<button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button>`}
+                </div></td>
               </tr>`;
             })}</tbody>
           </table></div>`}
