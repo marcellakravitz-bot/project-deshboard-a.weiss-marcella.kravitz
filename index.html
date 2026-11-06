@@ -956,6 +956,11 @@ var cards = `
           max-width: 780px; margin: 0 auto; padding: 0 28px 27px;
         }
         .functionPage.wide { max-width: 100%; }
+        /* 06.11.26 — the facility file and the tasks board take the page's
+           width whatever is in them: in a flex column a page with auto margins
+           shrank to its content, so every folder of the facility file came out
+           a different (narrower) width. */
+        .functionPage.wide:has(.fac), .functionPage.wide:has(.tsk) { width: 100%; }
         .functionBack { margin-bottom: 10px; }
         .functionFileName { font-size: 12.5px; color: var(--steel); font-weight: 600; overflow-wrap: anywhere; }
         .functionPageBody { display: flex; min-width: 0; }
@@ -2272,6 +2277,10 @@ var pdfViewer = `
         .sdTable .cAct { width: 64px; }
         .sdTable .cMark { width: 80px; }
         .sdTable td > input.lliIn, .sdTable td > select.lliIn, .sdTable .cCat .lliIn { width: 100%; box-sizing: border-box; min-width: 0; }
+        /* 06.11.26 — every field on the row is white, the ones kept from LLI
+           included; only a row left out of the print is light grey (her rule). */
+        .sdTable .lliIn[readonly], .sdTable .lliIn:disabled, .sdTable .lliIn { background: #fff; color: var(--ink); }
+        .sdTable tr.prOff .lliIn, .sdTable tr.prOff button { background: #f4f5f7; }
         /* "הוגש ללקוח": the same square-cornered box as every field on the row. */
         .sdTable .cReq .lliOrd { border-radius: 7px; padding: 5px 8px; min-width: 40px; }
         .sdUpd { display: flex; justify-content: center; gap: 4px; }

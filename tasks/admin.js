@@ -155,7 +155,7 @@ export const TASK_STATUS = [
 const ST = Object.fromEntries(TASK_STATUS.map((s) => [s[0], s]));
 
 const css = `
-.tsk{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;max-width:1180px;margin:0 auto;padding:0 16px 28px}
+.tsk{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;width:100%;box-sizing:border-box;max-width:1180px;margin:0 auto;padding:0 16px 28px}
 .tsk .tskBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:8px 12px;margin-bottom:10px}
 .tsk .tskBar .sbCatBar{margin:0;flex:1 1 auto}
 .tsk .tskBtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:700;padding:6px 12px;border-radius:9px;border:1px solid var(--line,#e6e6e9);background:#fff;color:var(--ink,#17181c);cursor:pointer;white-space:nowrap}

@@ -189,7 +189,7 @@ function serviceSuppliers(data) {
 
 // ----------------------------------------------------------------------------- styles
 const css = `
-.fac{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;max-width:1100px;margin:0 auto;padding:0 16px 28px}
+.fac{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;width:100%;box-sizing:border-box;max-width:1100px;margin:0 auto;padding:0 16px 28px}
 .fac .facHead{display:flex;align-items:center;justify-content:center;gap:10px;margin:4px 0 12px;flex-wrap:wrap;text-align:center}
 .fac .facHead h2{font-size:19px;font-weight:800;margin:0}
 .fac .facHead .facSub{font-size:12.5px;color:var(--steel,#5b5e66);font-weight:600}
