@@ -2594,6 +2594,9 @@ var pdfViewer = `
           display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
           max-width: 1180px; margin: 12px auto 0;
         }
+        /* 06.11.26 — the row of tools (statuses, add row, Excel, PDF) keeps a
+           clear space under the summary squares. */
+        .sbSumBar ~ .lliBar { margin-top: 18px; }
         .sbSumBox {
           display: inline-flex; align-items: baseline; justify-content: center; gap: 8px;
           min-width: 120px; padding: 8px 16px; border-radius: 10px;
@@ -13914,10 +13917,13 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                 // 05.11.26 — which drawings go to the PDF / Excel: the rightmost column.
                 (() => {
                   if (!canEdit) return null;
-                  const allOn = groups.every((g) => g.rows.every((r) => isHidden(r) || !printOff[r.code]));
+                  // 06.11.26 — every row, whatever its client arrow says: the
+                  // client arrow made a board of hidden rows look "all ticked"
+                  // forever, and the click did nothing.
+                  const allOn = groups.every((g) => g.rows.every((r) => !printOff[r.code]));
                   return prPrintTh(isRTL, allOn, () => {
                     const next = {};
-                    if (allOn) groups.forEach((g) => g.rows.forEach((r) => { if (!isHidden(r)) next[r.code] = true; }));
+                    if (allOn) groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = true; }));
                     setPrintOff(next);
                   });
                 })(),
