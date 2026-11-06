@@ -217,6 +217,37 @@
   .logo{height:30px;width:auto;display:block}
   .siteFooter{text-align:center;padding:9px 24px calc(env(safe-area-inset-bottom) + 16px);
     font-size:11.5px;color:var(--mist);font-weight:500}
+  /* 06.11.26 — the home screen: the week first, then the long buttons, then
+     a row of four icons she picks in the dashboard. */
+  .outBtn{display:inline-flex;align-items:center;gap:6px;color:#e3e5ea!important;font-weight:700!important}
+  .wkCard{display:block;width:100%;text-align:right;font:inherit;color:inherit;background:var(--surface);
+    border:1px solid var(--line);border-radius:var(--radius);padding:12px 12px 6px;margin:0 0 12px;cursor:pointer;position:relative}
+  .wkCard .wh{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .wkCard .wh b{font-size:15px;color:var(--navy);display:flex;align-items:center;gap:8px}
+  .wkCard .wh .num{font-size:11.5px;color:var(--mist);font-weight:600}
+  .tt{width:100%;border-collapse:separate;border-spacing:0 4px}
+  .tt th{width:74px;font-size:12px;font-weight:800;color:var(--navy);text-align:right;vertical-align:top;
+    padding:7px 8px;background:#f2f5f9;border-radius:0 8px 8px 0}
+  .tt th .num{display:block;font-size:10.5px;color:var(--mist);font-weight:600}
+  .tt td{font-size:12.5px;line-height:1.55;padding:7px 9px;background:#fafbfc;border-radius:8px 0 0 8px;
+    white-space:pre-wrap;vertical-align:top;color:var(--ink)}
+  .tt td.none{color:#c3c6cc}
+  .tt tr.today th{background:var(--navy);color:#fff}
+  .tt tr.today th .num{color:#cfd8e6}
+  .tt tr.today td{background:#eaf0f8}
+  .longBtn{display:flex;align-items:center;gap:12px;width:100%;margin:0 0 10px;border:1px solid var(--line);
+    background:var(--surface);border-radius:var(--radius);padding:14px 16px;font:inherit;font-weight:800;font-size:15px;
+    color:var(--navy);cursor:pointer;position:relative;text-align:right}
+  .longBtn .ico{width:34px;height:34px;border-radius:10px;background:#eef2f7;display:flex;align-items:center;justify-content:center;flex:none}
+  .longBtn .t{flex:1}
+  .longBtn .n{font-size:12px;color:var(--mist);font-weight:700}
+  .longBtn .car{color:var(--mist);transform:scaleX(-1);display:flex}
+  .longBtn .dot,.iconBtn .dot{position:absolute;top:9px;inset-inline-end:9px;width:9px;height:9px;border-radius:50%;background:var(--navy)}
+  .iconRow{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:6px}
+  .iconBtn{position:relative;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;
+    background:var(--surface);border:1px solid var(--line);border-radius:16px;color:var(--navy);cursor:pointer;padding:0}
+  .iconBtn svg{width:26px;height:26px}
+  .iconBtn:active,.longBtn:active,.wkCard:active{background:#fbfbfc}
   /* 06.11.26 — the dashboard's live preview */
   .pvBadge{display:none}
   body.isPv .pvBadge{display:block;position:sticky;top:52px;z-index:4;background:#fff7d6;color:#7a5a00;
@@ -270,13 +301,13 @@
 <body>
 <div class="bar">
   <span class="side left"><img src="logo.png" alt="A. Weiss" class="logo"></span>
-  <h1>דשבורד - קבלני משנה</h1>
-  <span class="side right"><button id="out" hidden>יציאה</button></span>
+  <h1></h1>
+  <span class="side right"><button id="out" class="outBtn" hidden><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></svg><span>יציאה</span></button></span>
 </div>
 
 <div class="pvBadge">תצוגה מקדימה · נתונים חיים · שינויים לא נשמרים</div>
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">06.11.2026 · build 37</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">06.11.2026 · build 38</span></footer>
 
 <script>
 
@@ -396,7 +427,8 @@ var PREVIEW = (function(){
     var q=new URLSearchParams(location.search);
     if(!q.get("preview")) return null;
     return { who: q.get("preview")==="pm" ? "pm" : "sub", hide: (q.get("hide")||"").split(",").filter(Boolean),
-             project: q.get("project")||"" };
+             project: q.get("project")||"",
+             bottom: q.get("bottom")!=null ? q.get("bottom").split(",").filter(Boolean) : null };
   }catch(e){ return null; }
 })();
 var CUBES = [
@@ -672,25 +704,66 @@ function navBar(){
   return '<button class="backArrow" id="goBack" aria-label="חזרה">'+
     icon("M15 6l-6 6 6 6")+'</button>';
 }
-function board(){
-  out.hidden=false;
-  document.querySelector(".bar").classList.remove("guest");
-  var head=navBar()+projHead(true)+rjEntry();
+// 06.11.26 — the home screen:
+//   the project (logo, name, floors, dates)
+//   this week's schedule, day by day — a tap opens the week
+//   long buttons — a project manager: ניהול משימות, יומן עדכונים, ריג'קטים;
+//                  a subcontractor: יומן עדכונים (and ריג'קטים shared with him)
+//   a row of up to four icons the dashboard picks ("אפליקציות" > עריכה)
+var BOTTOM_DEFAULT=["submittal","sd","standards","specs"];
+function bottomKeys(){
+  var b = PREVIEW ? PREVIEW.bottom : (state.board&&state.board.bottom);
   var hid=hiddenSet();
-  if(PREVIEW) out.hidden=true;
-  app.innerHTML = head+'<div class="grid">'+CUBES.filter(function(c){ return !hid[c.key] && (!c.pm || state.board.isPm); }).map(function(c){
-    return '<button class="cube'+(isNew(c.key)?" fresh":"")+'" data-k="'+c.key+'">'+
-           (isNew(c.key)?'<span class="dot" aria-label="עדכון חדש"></span>':'')+
-           '<span class="ico">'+icon(c.i)+'</span>'+
-           '<span class="t">'+c.t+'</span><span class="s">'+c.s+'</span></button>';
-  }).join("")+'</div>';
-  Array.prototype.forEach.call(app.querySelectorAll(".cube"), function(b){
+  var list = Array.isArray(b) ? b : BOTTOM_DEFAULT.filter(function(k){ return !hid[k]; });
+  return list.filter(function(k){ return CUBES.some(function(c){ return c.key===k; }); }).slice(0,4);
+}
+function weekCard(){
+  var b=state.board||{};
+  var wk=sundayOf(new Date());
+  var cells=(b.weekly||{})[wk]||[];
+  var days=weekDays(wk);
+  var today=new Date(); today=new Date(today.getTime()-today.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+  return '<button class="wkCard" data-k="weekly">'+(isNew("weekly")?'<span class="dot" style="position:absolute;top:12px;left:12px;width:9px;height:9px;border-radius:50%;background:var(--navy)"></span>':'')+
+    '<div class="wh"><b>'+icon(CUBES[1].i)+'לו״ז שבועי</b><span class="num">'+esc(fmt(wk))+' – '+esc(fmt(days[5].iso))+'</span></div>'+
+    '<table class="tt"><tbody>'+days.map(function(d,i){
+      var t=(cells[i]||"").trim();
+      return '<tr class="'+(d.iso===today?"today":"")+'"><th>'+d.name+'<span class="num">'+esc(fmt(d.iso).slice(0,5))+'</span></th>'+
+        '<td class="'+(t?"":"none")+'">'+(t?esc(t):"—")+'</td></tr>';
+    }).join("")+'</tbody></table></button>';
+}
+function longBtn(k, title, extra){
+  var c=CUBES.filter(function(x){ return x.key===k; })[0]||{};
+  return '<button class="longBtn" data-k="'+k+'">'+(isNew(k)?'<span class="dot"></span>':'')+
+    '<span class="ico">'+icon(c.i||"")+'</span><span class="t">'+esc(title||c.t)+'</span>'+
+    (extra?'<span class="n">'+esc(extra)+'</span>':'')+'<span class="car">'+icon("M15 6l-6 6 6 6")+'</span></button>';
+}
+var RJ_ICON="M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9";
+function board(){
+  out.hidden=!!PREVIEW;
+  document.querySelector(".bar").classList.remove("guest");
+  var hid=hiddenSet(), pm=!!state.board.isPm;
+  var h=navBar()+projHead(true);
+  if(!hid.weekly) h+=weekCard();
+  var rj = !hid.rejects && (pm || state.rjN)
+    ? '<button class="longBtn" id="rjGo"><span class="ico">'+icon(RJ_ICON)+'</span><span class="t">ריג\'קטים</span>'+
+      (state.rjN?'<span class="n">'+state.rjN+'</span>':'')+'<span class="car">'+icon("M15 6l-6 6 6 6")+'</span></button>' : "";
+  if(pm && !hid.tasks) h+=longBtn("tasks");
+  if(!hid.log) h+=longBtn("log");
+  h+=rj;
+  var bk=bottomKeys();
+  if(bk.length) h+='<nav class="iconRow">'+bk.map(function(k){
+    var c=CUBES.filter(function(x){ return x.key===k; })[0];
+    return '<button class="iconBtn" data-k="'+k+'" title="'+esc(c.t)+'" aria-label="'+esc(c.t)+'">'+
+      (isNew(k)?'<span class="dot"></span>':'')+icon(c.i)+'</button>';
+  }).join("")+'</nav>';
+  app.innerHTML=h;
+  Array.prototype.forEach.call(app.querySelectorAll("[data-k]"), function(b){
     b.onclick=function(){
       state.screen=b.getAttribute("data-k");
-      if(state.screen==="tasks"){ markSeen("tasks"); history.pushState({s:1},""); tkLoad(); return; }
       state.cat=null;
       markSeen(state.screen);
       history.pushState({s:1},"");
+      if(state.screen==="tasks"){ tkLoad(); return; }
       render();
     };
   });
@@ -1458,6 +1531,7 @@ if(PREVIEW){
     if(d.type!=="aw-preview") return;
     if(Array.isArray(d.hide)){
       PREVIEW.hide=d.hide;
+      if(d.bottom!==undefined) PREVIEW.bottom=d.bottom;
       if(state.board&&!state.screen&&!state.rj&&!state.doc){ var y=window.scrollY; render(); window.scrollTo(0,y); }
       if(state.screen&&hiddenSet()[state.screen]){ state.screen=null; render(); }
     }

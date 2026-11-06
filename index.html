@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 259";
+var APP_BUILD = "06.11.2026 · build 260";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -23630,21 +23630,13 @@ var APP_DEFS = [
   { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "קבלני משנה, לו\"ז, יומן ועוד — כפי שמנהל פרויקט רואה" },
   { key: "sub", he: "אפליקציית קבלן משנה", sub: "מה שקבלן משנה רואה במקצוע שלו" }
 ];
-// 06.11.26 — every folder of the dashboard, with the buttons it has in the
-// apps. A folder with no buttons yet is listed too, so the whole site is in
-// view; its screens in the app are still to be built.
-var APP_FOLDERS = [
-  { he: "ניהול קבלני משנה", btns: ["log", "weekly", "standards", "specs"] },
-  { he: "Submittal", btns: ["submittal"] },
-  { he: "SD", btns: ["sd"] },
-  { he: "ריג'קטים", btns: ["rejects"] },
-  { he: "ניהול משימות", btns: ["tasks"] },
-  { he: "By Room", soon: "חיפוש לפי חדר" },
-  { he: "לו\"ז פרויקט", soon: "לו\"ז הפרויקט (MS Project)" },
-  { he: "LLI", soon: "הזמנות ואספקות" },
-  { he: "RFI", soon: "שאלות ותשובות" },
-  { he: "הוראות שינוי", soon: "הוראות שינוי ותמחור" },
-  { he: "תיק מתקן", soon: "תיק מתקן / אנשי קשר" }
+// 06.11.26 — the app's home screen: the long buttons (switched on and off) and
+// the row of four icons at the bottom (picked from every option).
+var APP_MAIN = [["weekly", "לו״ז שבועי (מערכת שעות)"], ["tasks", "ניהול משימות", true], ["log", "יומן עדכונים"], ["rejects", "ריג'קטים"]];
+var APP_BOTTOM_OPTS = [
+  ["submittal", "סבמיטלים"], ["sd", "SD"], ["standards", "בדיקות מכון התקנים"], ["specs", "מפרטים מיוחדים"],
+  ["rooms", "By Room — חיפוש לפי חדר", true], ["schedule", "לו\"ז פרויקט", true], ["lli", "LLI", true],
+  ["rfi", "RFI", true], ["ci", "הוראות שינוי", true], ["facility", "תיק מתקן", true]
 ];
 var APP_BUTTONS = [
   ["log", "יומן עדכונים"], ["weekly", "לו״ז שבועי"], ["submittal", "סבמיטלים"], ["sd", "SD"],
@@ -23680,14 +23672,15 @@ function AppPreviewDock({ appConfig }) {
     return () => { off = true; clearInterval(t); };
   }, [kind]);
   const hide = kind ? (((appConfig || {})[kind] || {}).hidden || []) : [];
-  const hideKey = hide.join(",");
+  const bottom = kind ? (((appConfig || {})[kind] || {}).bottom || null) : null;
+  const hideKey = hide.join(",") + "|" + (bottom ? bottom.join(",") : "-");
   useEffect5(() => {
     const w = frameRef.current && frameRef.current.contentWindow;
-    if (w) try { w.postMessage({ type: "aw-preview", hide }, window.location.origin); } catch (e) {}
-  }, [hideKey]);
+    if (w) try { w.postMessage({ type: "aw-preview", hide, bottom }, window.location.origin); } catch (e) {}
+  }, [hideKey, kind]);
   // The address is fixed for one kind of user: a change of buttons is sent to
   // the open app, so it does not start over at the projects.
-  const src = React15.useMemo(() => kind ? `sub/index.html?preview=${kind}&hide=${encodeURIComponent(hideKey)}` : "", [kind, nonce]);
+  const src = React15.useMemo(() => kind ? `sub/index.html?preview=${kind}&hide=${encodeURIComponent(hide.join(","))}${bottom ? "&bottom=" + encodeURIComponent(bottom.join(",")) : ""}` : "", [kind, nonce]);
   if (!kind) return null;
   const flip = () => { const n = side === "l" ? "r" : "l"; setSide(n); try { window.localStorage.setItem("aw.pvSide", n); } catch (e) {} };
   const refresh = () => { const w = frameRef.current && frameRef.current.contentWindow; if (w) try { w.postMessage({ type: "aw-preview", refresh: true }, window.location.origin); } catch (e) {} };
@@ -23716,6 +23709,15 @@ function AppsScreen({ isRTL, config, onChange, loaded }) {
     const next = h.indexOf(b) >= 0 ? h.filter((x) => x !== b) : h.concat([b]);
     onChange({ ...cfg, [k]: { ...(cfg[k] || {}), hidden: next } });
   };
+  const bottomOf = (k) => {
+    const b = (cfg[k] || {}).bottom;
+    return Array.isArray(b) ? b : ["submittal", "sd", "standards", "specs"].filter((x) => hiddenOf(k).indexOf(x) < 0);
+  };
+  const toggleBottom = (k, b) => {
+    const cur = bottomOf(k);
+    const next = cur.indexOf(b) >= 0 ? cur.filter((x) => x !== b) : cur.length >= 4 ? cur : cur.concat([b]);
+    onChange({ ...cfg, [k]: { ...(cfg[k] || {}), bottom: next } });
+  };
   const setPreview = (k) => { try { window.dispatchEvent(new CustomEvent("aw-app-preview", { detail: k })); } catch (e) {} };
   return sbH("section", { className: "panel appsScreen", dir: isRTL ? "rtl" : "ltr" },
     sbH("h2", { className: "panelTitle", style: { textAlign: "center" } }, isRTL ? "אפליקציות" : "Apps"),
@@ -23730,17 +23732,16 @@ function AppsScreen({ isRTL, config, onChange, loaded }) {
           sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPreview(a.key) }, isRTL ? "תצוגה מקדימה" : "Preview"),
           sbH("button", { type: "button", className: `ghostBtn small ${edit === a.key ? "on" : ""}`, onClick: () => setEdit(edit === a.key ? null : a.key) }, isRTL ? "עריכה" : "Edit"))),
       edit === a.key ? sbH("div", { className: "appsEdit" },
-        sbH("p", { className: "appsEditHint" }, isRTL ? "מה יוצג באפליקציה — לפי התיקיות באתר:" : "What the app shows, by the dashboard's folders:"),
-        sbH("div", { className: "appsFolders" }, APP_FOLDERS.map((f) => {
-          const btns = (f.btns || []).map((b) => APP_BUTTONS.find((x) => x[0] === b)).filter((x) => x && (!x[2] || a.key === "pm"));
-          if (f.btns && !btns.length) return null;
-          return sbH("div", { key: f.he, className: `appsFolder ${f.soon ? "soon" : ""}` },
-            sbH("b", null, f.he),
-            f.soon
-              ? sbH("label", { className: "appsTick off", title: "המסך הזה עוד לא קיים באפליקציה" },
-                  sbH("input", { type: "checkbox", disabled: true, checked: false }), f.soon, sbH("span", { className: "soonTag" }, "בקרוב"))
-              : btns.map(([b, label]) => sbH("label", { key: b, className: "appsTick" },
-                  sbH("input", { type: "checkbox", checked: hiddenOf(a.key).indexOf(b) < 0, onChange: () => toggle(a.key, b) }), label)));
+        sbH("p", { className: "appsEditHint" }, "לחצנים ראשיים במסך הבית:"),
+        sbH("div", { className: "appsFolder" }, APP_MAIN.filter((x) => !x[2] || a.key === "pm").map(([b, label]) => sbH("label", { key: b, className: "appsTick" },
+          sbH("input", { type: "checkbox", checked: hiddenOf(a.key).indexOf(b) < 0, onChange: () => toggle(a.key, b) }), label))),
+        sbH("p", { className: "appsEditHint", style: { marginTop: 14 } }, `שורת האייקונים התחתונה — לבחור עד 4 (${bottomOf(a.key).length}/4):`),
+        sbH("div", { className: "appsFolder" }, APP_BOTTOM_OPTS.map(([b, label, soon]) => {
+          const on = bottomOf(a.key).indexOf(b) >= 0;
+          const full = !on && bottomOf(a.key).length >= 4;
+          return sbH("label", { key: b, className: `appsTick ${soon || full ? "off" : ""}`, title: soon ? "המסך הזה עוד לא קיים באפליקציה" : full ? "כבר נבחרו 4 — יש להוריד אחד קודם" : "" },
+            sbH("input", { type: "checkbox", disabled: !!soon || full, checked: on, onChange: () => toggleBottom(a.key, b) }), label,
+            soon ? sbH("span", { className: "soonTag" }, "בקרוב") : null);
         }))) : null))));
 }
 // 06.11.26 — "הגדרות הדפסת מסמכים": everything a printed sheet carries around

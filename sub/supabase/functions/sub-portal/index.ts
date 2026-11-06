@@ -701,6 +701,8 @@ Deno.serve(async (req) => {
         const cfg = parse(cfgRow?.value);
         const part = (cfg || {})[grant.isPm ? "pm" : "sub"] || {};
         out.hidden = Array.isArray(part.hidden) ? part.hidden : [];
+        // 06.11.26 — the row of up to four icons at the bottom of the home screen.
+        out.bottom = Array.isArray(part.bottom) ? part.bottom.slice(0, 4) : null;
       } catch (_e) { out.hidden = []; }
       return json(out);
     }
