@@ -52,7 +52,7 @@ const CHAPTERS = [
   // 06.11.26 — who to call, and for what, once the keys are handed over: one
   // line per supplier of the finishes list, filled from the suppliers' library.
   { k: "service", he: "פרטי מחלקת בדק", icon: Wrench, color: "#15803D", kind: "service" },
-  { k: "standards", he: "אישורי מכון התקנים", icon: BadgeCheck, color: "#2563EB", kind: "check", add: "הוספת אישור מכון תקנים", items: [
+  { k: "standards", he: "אישורי מכון התקנים", icon: BadgeCheck, color: "#2563EB", kind: "check", add: "הוספת אישור מכון תקנים", due: true, items: [
     ["si-921", "921 – תגובה בשריפה של חומרי בנייה"],
     ["si-931", "931 – אטומי אש"], ["si-1001", "1001 – מיזוג אוויר"], ["si-1001-7", "1001-7 – מיזוג אוויר"],
     ["si-1212", "1212 – אישור התקנה"], ["si-1220", "1220 – גילוי אש"], ["si-1596", "1596 – ספרינקלרים"],
@@ -563,13 +563,17 @@ function CheckChapter({ ch, data, edit, bar, projectName, flash }) {
       <button type="button" className="facBtn" onClick=${() => setAdding(false)}>ביטול</button>
     </div>`}
     <div className="facWin"><table>
-      <thead><tr><th>#</th><th style=${{ textAlign: "start" }}>סעיף</th><th>בוצע V</th><th>לא רלוונטי</th><th>הערה</th><th></th></tr></thead>
+      <thead><tr><th>#</th><th style=${{ textAlign: "start" }}>סעיף</th>
+        ${ch.due && html`<th style=${{ lineHeight: 1.25 }}>מועד ביצוע<br />לו"ז פרויקט</th>`}
+        <th>בוצע V</th><th>לא רלוונטי</th><th>הערה</th><th></th></tr></thead>
       <tbody>${items.map((it, i) => {
         const s = st[it.id] || {};
         const cls = s.na ? "na" : s.done ? "ok" : "";
         return html`<tr key=${it.id} className=${cls}>
           <td className="num">${i + 1}</td>
           <td className="lbl">${it.label}</td>
+          ${ch.due && html`<td style=${{ width: 150 }}><input type="date" className="facIn" style=${{ minWidth: 0, width: 140 }} value=${s.due || ""}
+            disabled=${!!s.na} onChange=${(e) => set(it.id, { due: e.target.value })} /></td>`}
           <td><input type="checkbox" className="doneBox" checked=${!!s.done} disabled=${!!s.na} onChange=${(e) => set(it.id, { done: e.target.checked })} /></td>
           <td><input type="checkbox" className="naBox" checked=${!!s.na} onChange=${(e) => set(it.id, { na: e.target.checked })} /></td>
           <td style=${{ minWidth: 180 }}><input className="facIn" value=${s.note || ""} placeholder=${s.na ? "סיבה" : ""} onChange=${(e) => set(it.id, { note: e.target.value })} /></td>
