@@ -392,11 +392,113 @@ async function boardFor(grant: any) {
   };
 }
 
+
+// ---------------------------------------------------------------------------
+// 06.11.26 — the dashboard's live preview ("אפליקציות" > תצוגה מקדימה).
+// The administrator's own sign-in stands in for the phone code: she sees the
+// app exactly as a project manager / subcontractor would, on real projects,
+// and nothing she does there is written. A team user sees only the projects
+// given to them.
+// ---------------------------------------------------------------------------
+const OWNER_EMAIL = "marcella.kravitz@gmail.com";
+const PREVIEW_READS = ["projects", "board", "tasks"];
+async function previewOf(body: any): Promise<any> {
+  const pv = body && body.preview;
+  if (!pv) return null;
+  const { data: who } = await db.auth.getUser(String(pv.accessToken || ""));
+  const u: any = who?.user;
+  const role = u?.app_metadata?.role;
+  if (!u || (role !== "admin" && role !== "team")) return { bad: true };
+  const email = String(u.email || "").toLowerCase();
+  let allowed: string[] | null = null;
+  if (role === "team" || email !== OWNER_EMAIL) {
+    const { data } = await db.from("project_access").select("project_id").eq("user_id", u.id);
+    allowed = (data || []).map((r: any) => String(r.project_id));
+  }
+  return { as: pv.as === "pm" ? "pm" : "sub", allowed, email };
+}
+function previewGrant(pv: any, projects: any[], meta: Record<string, any>, projectId: string, trade: string) {
+  if (!projectId || (pv.allowed && pv.allowed.indexOf(projectId) < 0)) return null;
+  const p = projects.filter((x: any) => x.id === projectId)[0];
+  if (!p && !meta[projectId]) return null;
+  return {
+    projectId, trade: trade || "", name: "תצוגה מקדימה", company: "",
+    canWrite: pv.as === "pm", isPm: pv.as === "pm", extras: (p && p.extras) || {}, preview: true,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 06.11.26 — ניהול משימות in the project managers' app. The board is the one
+// the dashboard keeps (public.project_tasks, one row per project): the fixed
+// tasks of the library (contacts-catalog: taskCats / taskFixed) plus the
+// project's own. A project manager adds tasks, and changes the status and the
+// notes of any task and adds updates to it; the wording, category, owner and
+// due date he may change only on a task he opened himself.
+//
+// Every field changed carries its own time (fts), so the dashboard, saving the
+// whole board, keeps what was changed here and the other way round.
+// ---------------------------------------------------------------------------
+const ilDay = () => new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10);
+const tuid = (p: string) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+async function loadCatalog() {
+  const { data } = await db.from("app_state").select("value").eq("key", "contacts-catalog").maybeSingle();
+  return parse(data?.value) || {};
+}
+function tasksView(doc: any, catalog: any) {
+  const cats = (Array.isArray(catalog.taskCats) ? catalog.taskCats : [])
+    .filter((c: any) => c && c.key && String(c.he || "").trim()).map((c: any) => ({ key: c.key, he: c.he }));
+  const catKeys = cats.map((c: any) => c.key);
+  const defs = (Array.isArray(catalog.taskFixed) ? catalog.taskFixed : [])
+    .filter((d: any) => d && d.id && String(d.desc || "").trim() && catKeys.indexOf(d.category) >= 0);
+  const defIds = defs.map((d: any) => d.id);
+  const own: any[] = Array.isArray(doc.tasks) ? doc.tasks : [];
+  const gone: string[] = Array.isArray(doc.gone) ? doc.gone : [];
+  const byId: Record<string, any> = {};
+  own.forEach((t) => { if (t && t.id) byId[t.id] = t; });
+  const day = ilDay();
+  const tasks = defs.map((d: any) => ({
+    ...(byId[d.id] || { id: d.id, created: day, owner: "", due: "", status: "open", notes: "", updates: [] }),
+    fixed: true, desc: d.desc, category: d.category,
+  })).concat(own.filter((t) => t && t.id && defIds.indexOf(t.id) < 0 && !t.fixed && gone.indexOf(t.id) < 0));
+  return { cats, tasks, defs };
+}
+async function editTasks(projectId: string, change: (doc: any) => any) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: row } = await db.from("project_tasks").select("data, updated_at").eq("project_id", projectId).maybeSingle();
+    const doc = JSON.parse(JSON.stringify((row && row.data) || {}));
+    if (!Array.isArray(doc.tasks)) doc.tasks = [];
+    const next = change(doc);
+    const now = new Date().toISOString();
+    if (!row) {
+      const { error } = await db.from("project_tasks").insert({ project_id: projectId, data: next, updated_at: now, updated_by: "app" });
+      if (!error) return next;
+      continue;
+    }
+    const { data: done } = await db.from("project_tasks")
+      .update({ data: next, updated_at: now, updated_by: "app" })
+      .eq("project_id", projectId).eq("updated_at", row.updated_at).select("project_id");
+    if (done && done.length) return next;
+  }
+  throw new Error("busy");
+}
+function taskOut(t: any, phone: string) {
+  const mine = !!(t.createdBy && t.createdBy.phone && t.createdBy.phone === phone);
+  return {
+    id: t.id, category: t.category || "", desc: t.desc || "", owner: t.owner || "", due: t.due || "",
+    status: t.status || "open", notes: t.notes || "", created: t.created || "",
+    createdBy: t.createdBy ? { name: t.createdBy.name || "" } : null,
+    doneAt: t.doneAt || "", doneBy: t.doneBy ? { name: t.doneBy.name || "" } : null,
+    updates: (Array.isArray(t.updates) ? t.updates : []).map((u: any) => ({ id: u.id, date: u.date || "", text: u.text || "", by: typeof u.by === "string" ? (u.by.indexOf("@") > 0 ? u.by.split("@")[0] : u.by) : ((u.by && u.by.name) || "") })),
+    fixed: !!t.fixed, mine, rfi: t.rfi ? (t.rfi.no || "") : "",
+  };
+}
+const TASK_ST = ["open", "progress", "done", "info"];
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 27,
+    fn: "sub-portal", version: 43,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -409,6 +511,10 @@ Deno.serve(async (req) => {
   try { body = await req.json(); } catch { return json({ error: "bad body" }, 400); }
 
   try {
+    const pv = await previewOf(body);
+    if (pv && pv.bad) return json({ error: "unauthorised" }, 401);
+    if (pv && PREVIEW_READS.indexOf(body.action) < 0) return json({ error: "preview" }, 403);
+
     if (body.action === "login") {
       const phone = normPhone(body.phone);
       const code = normCode(body.code);
@@ -542,6 +648,16 @@ Deno.serve(async (req) => {
       return json({ ok: true, report });
     }
 
+    if (body.action === "projects" && pv) {
+      const meta = await loadMeta();
+      const ids = Object.keys(meta).filter((id) => !pv.allowed || pv.allowed.indexOf(id) >= 0);
+      return json({
+        preview: true,
+        projects: ids.map((id) => ({ id, trade: "", isPm: pv.as === "pm", ...(meta[id] || {}) }))
+          .sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""), "he")),
+      });
+    }
+
     if (body.action === "projects") {
       const phone = await readToken(body.token);
       if (!phone) return json({ error: "bad-token" }, 401);
@@ -554,16 +670,17 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === "board") {
-      const phone = await readToken(body.token);
-      if (!phone) return json({ error: "unauthorised" }, 401);
+      const phone = pv ? "" : await readToken(body.token);
+      if (!pv && !phone) return json({ error: "unauthorised" }, 401);
       const [projects, meta, sdParts, schedParts, sbApProbe, sdApProbe] = await Promise.all([
         loadProjects(), loadMeta(), loadPart("project-sd"), loadPart("project-schedules"),
         loadPart("project-submittal-approvals"), loadPart("project-sd-approvals"),
       ]);
-      const grants = grantsFor(projects, phone, null as any);
-      const grant = grants.filter((g) => g.projectId === body.projectId)[0];
+      const grant: any = pv
+        ? previewGrant(pv, projects, meta, String(body.projectId || ""), String(body.trade || ""))
+        : grantsFor(projects, phone as string, null as any).filter((g) => g.projectId === body.projectId)[0];
       if (!grant) return json({ error: "unauthorised" }, 401);
-      if (grant.isPm && body.trade) grant.trade = String(body.trade);
+      if (!pv && grant.isPm && body.trade) grant.trade = String(body.trade);
       grant.extras = {
         ...grant.extras,
         sdRows: sdParts[grant.projectId] || grant.extras.sdRows || {},
@@ -575,6 +692,8 @@ Deno.serve(async (req) => {
       out.project = { id: grant.projectId, ...(meta[grant.projectId] || {}) };
       out.isPm = !!grant.isPm;
       out.canWrite = !!grant.canWrite;
+      out.preview = !!pv;
+      out.me = grant.name || grant.company || "";
       // 06.11.26 — the buttons the dashboard switched off for this kind of
       // user ("אפליקציות" > עריכה): app-config { pm: { hidden }, sub: { hidden } }.
       try {
@@ -584,6 +703,91 @@ Deno.serve(async (req) => {
         out.hidden = Array.isArray(part.hidden) ? part.hidden : [];
       } catch (_e) { out.hidden = []; }
       return json(out);
+    }
+
+    // 06.11.26 — ניהול משימות: project managers only.
+    if (body.action === "tasks" || body.action === "task-save") {
+      const phone = pv ? "" : await readToken(body.token);
+      if (!pv && !phone) return json({ error: "bad-token" }, 401);
+      const projectId = String(body.projectId || "");
+      let grant: any = null;
+      if (pv) grant = previewGrant(pv, await loadProjects(), await loadMeta(), projectId, "");
+      else grant = grantsFor(await loadProjects(), phone as string, null).filter((g) => g.projectId === projectId)[0];
+      if (!grant) return json({ error: "not-granted" }, 401);
+      if (!grant.isPm) return json({ error: "pm-only" }, 403);
+      const catalog = await loadCatalog();
+
+      if (body.action === "tasks") {
+        const { data: row } = await db.from("project_tasks").select("data").eq("project_id", projectId).maybeSingle();
+        const v = tasksView((row && row.data) || {}, catalog);
+        return json({ cats: v.cats, tasks: v.tasks.map((t: any) => taskOut(t, phone as string)), me: grant.name || "" });
+      }
+
+      const me = { name: grant.name || grant.company || "מנהל פרויקט", phone, via: "app" };
+      const op = String(body.op || "");
+      const f = body.fields || {};
+      const now = Date.now();
+      const stamp = (t: any, keys: string[]) => {
+        t.fts = { ...(t.fts || {}) };
+        keys.forEach((k) => { t.fts[k] = now; });
+        t.ts = now;
+      };
+      let result: any = null;
+      let refused = "";
+      await editTasks(projectId, (doc) => {
+        const v = tasksView(doc, catalog);
+        if (op === "add") {
+          const desc = String(f.desc || "").trim();
+          if (!desc) { refused = "missing desc"; return doc; }
+          const t: any = {
+            id: tuid("t"), category: v.cats.some((c: any) => c.key === f.category) ? f.category : "",
+            created: ilDay(), createdBy: me, desc: desc.slice(0, 2000),
+            owner: String(f.owner || "").slice(0, 120), due: /^\d{4}-\d{2}-\d{2}$/.test(String(f.due || "")) ? f.due : "",
+            status: "open", notes: String(f.notes || "").slice(0, 4000), updates: [],
+          };
+          stamp(t, ["id", "category", "created", "createdBy", "desc", "owner", "due", "status", "notes", "updates"]);
+          doc.tasks = doc.tasks.concat([t]);
+          result = t;
+          return doc;
+        }
+        const id = String(body.taskId || "");
+        const shown = v.tasks.filter((t: any) => t.id === id)[0];
+        if (!shown) { refused = "not-found"; return doc; }
+        let t = doc.tasks.filter((x: any) => x && x.id === id)[0];
+        if (!t) { t = { ...shown }; doc.tasks = doc.tasks.concat([t]); }
+        const mine = !!(t.createdBy && t.createdBy.phone && t.createdBy.phone === phone);
+        if (op === "patch") {
+          const keys: string[] = [];
+          const own = mine && !t.fixed;
+          if (!own && (f.desc !== undefined || f.category !== undefined || f.owner !== undefined || f.due !== undefined)) {
+            refused = "not-yours"; return doc;
+          }
+          if (f.status !== undefined && TASK_ST.indexOf(f.status) >= 0 && f.status !== t.status) {
+            const was = t.status === "done";
+            t.status = f.status; keys.push("status");
+            t.doneAt = f.status === "done" ? (was && t.doneAt ? t.doneAt : ilDay()) : "";
+            t.doneBy = f.status === "done" ? (was && t.doneBy ? t.doneBy : me) : null;
+            keys.push("doneAt", "doneBy");
+          }
+          if (f.notes !== undefined) { t.notes = String(f.notes || "").slice(0, 4000); keys.push("notes"); }
+          if (own) {
+            if (f.desc !== undefined && String(f.desc).trim()) { t.desc = String(f.desc).trim().slice(0, 2000); keys.push("desc"); }
+            if (f.category !== undefined) { t.category = v.cats.some((c: any) => c.key === f.category) ? f.category : ""; keys.push("category"); }
+            if (f.owner !== undefined) { t.owner = String(f.owner || "").slice(0, 120); keys.push("owner"); }
+            if (f.due !== undefined) { t.due = /^\d{4}-\d{2}-\d{2}$/.test(String(f.due || "")) ? f.due : ""; keys.push("due"); }
+          }
+          stamp(t, keys);
+        } else if (op === "update") {
+          const text = String(body.text || "").trim();
+          if (!text) { refused = "missing text"; return doc; }
+          t.updates = (Array.isArray(t.updates) ? t.updates : []).concat([{ id: tuid("u"), date: ilDay(), text: text.slice(0, 4000), by: me.name, via: "app" }]);
+          stamp(t, ["updates"]);
+        } else { refused = "bad op"; }
+        result = t;
+        return doc;
+      });
+      if (refused) return json({ error: refused }, refused === "not-yours" ? 403 : 400);
+      return json({ ok: true, task: result ? taskOut(result, phone as string) : null });
     }
 
     return json({ error: "unknown action" }, 400);

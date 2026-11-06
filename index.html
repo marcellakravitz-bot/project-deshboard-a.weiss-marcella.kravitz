@@ -2700,6 +2700,21 @@ var pdfViewer = `
         .appsPhone { position: relative; flex: 1 1 auto; min-height: 0; height: calc(100% - 44px); aspect-ratio: 9 / 19.5; max-width: calc(100vw - 24px); background: #111; border-radius: 38px; padding: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.45); }
         .appsNotch { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 34%; height: 20px; background: #111; border-radius: 0 0 14px 14px; z-index: 2; }
         .appsPhone iframe { width: 100%; height: 100%; border: 0; border-radius: 28px; background: #fff; display: block; }
+        /* 06.11.26 — the live preview stays docked at the side of the screen
+           while she moves around the dashboard. */
+        .awPvDock { position: fixed; top: 64px; bottom: 14px; z-index: 880; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none; font-family: 'Assistant','Inter',sans-serif; }
+        .awPvDock.l { left: 14px; } .awPvDock.r { right: 14px; }
+        .awPvDock.min { display: none; }
+        .awPvBar { pointer-events: auto; display: flex; align-items: center; gap: 4px; background: #14181f; color: #fff; border-radius: 999px; padding: 4px; box-shadow: 0 8px 24px rgba(0,0,0,.28); flex: none; direction: rtl; }
+        .awPvBar button { border: 0; background: transparent; color: #cfd3da; font: inherit; font-size: 12.5px; font-weight: 800; padding: 6px 11px; border-radius: 999px; cursor: pointer; line-height: 1; }
+        .awPvBar button.on { background: #fff; color: #14181f; }
+        .awPvBar button:hover:not(.on) { background: rgba(255,255,255,.12); color: #fff; }
+        .awPvBar .sep { width: 1px; height: 18px; background: rgba(255,255,255,.2); margin: 0 2px; }
+        .awPvDock .appsPhone { pointer-events: auto; height: auto; flex: 1 1 auto; max-width: min(400px, calc(100vw - 28px)); padding: 10px; border-radius: 34px; box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+        .awPvDock .appsNotch { top: 10px; }
+        .awPvDock .appsPhone iframe { border-radius: 26px; }
+        .awPvPill { position: fixed; bottom: 16px; z-index: 880; display: flex; align-items: center; gap: 8px; background: #14181f; color: #fff; border: 0; border-radius: 999px; padding: 10px 16px; font: inherit; font-weight: 800; font-size: 13px; cursor: pointer; box-shadow: 0 8px 24px rgba(0,0,0,.3); }
+        .awPvPill.l { left: 16px; } .awPvPill.r { right: 16px; }
         .tfRow { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px solid var(--line-soft, #f0f0f2); }
         .tfRow > input { flex: 1 1 auto; min-width: 0; }
         .tfRow .contactsRowDel { flex: none; }
@@ -23611,11 +23626,67 @@ var APP_DEFS = [
 ];
 var APP_BUTTONS = [
   ["log", "יומן עדכונים"], ["weekly", "לו״ז שבועי"], ["submittal", "סבמיטלים"], ["sd", "SD"],
-  ["standards", "בדיקות מכון התקנים"], ["specs", "מפרטים מיוחדים"], ["rejects", "ריג'קטים"]
+  ["standards", "בדיקות מכון התקנים"], ["specs", "מפרטים מיוחדים"], ["rejects", "ריג'קטים"],
+  ["tasks", "ניהול משימות", true]
 ];
+// 06.11.26 — the app preview, live: the real project manager / subcontractor
+// app (sub/) in a phone at the side of the screen, on real projects, signed in
+// with her own session and read only. It stays open while she moves between
+// the dashboard's screens, refreshes itself, and takes the buttons switched on
+// and off in "אפליקציות" > עריכה at once. Opened with the event
+// "aw-app-preview" (detail: "pm" | "sub").
+function AppPreviewDock({ appConfig }) {
+  const [kind, setKind] = useState6(null);
+  const [min, setMin] = useState6(false);
+  const [side, setSide] = useState6(() => { try { return window.localStorage.getItem("aw.pvSide") || "l"; } catch (e) { return "l"; } });
+  const [nonce, setNonce] = useState6(0);
+  const frameRef = useRef5(null);
+  useEffect5(() => {
+    const on = (e) => { setKind((e && e.detail) || "pm"); setMin(false); };
+    window.addEventListener("aw-app-preview", on);
+    return () => window.removeEventListener("aw-app-preview", on);
+  }, []);
+  // Her session's key, where the app in the frame can read it.
+  useEffect5(() => {
+    if (!kind) return;
+    let off = false;
+    const pull = async () => {
+      try { const { data } = await supabase.auth.getSession(); if (!off) window.__awAccessToken = (data && data.session && data.session.access_token) || ""; } catch (e) {}
+    };
+    pull();
+    const t = setInterval(pull, 120000);
+    return () => { off = true; clearInterval(t); };
+  }, [kind]);
+  const hide = kind ? (((appConfig || {})[kind] || {}).hidden || []) : [];
+  const hideKey = hide.join(",");
+  useEffect5(() => {
+    const w = frameRef.current && frameRef.current.contentWindow;
+    if (w) try { w.postMessage({ type: "aw-preview", hide }, window.location.origin); } catch (e) {}
+  }, [hideKey]);
+  // The address is fixed for one kind of user: a change of buttons is sent to
+  // the open app, so it does not start over at the projects.
+  const src = React15.useMemo(() => kind ? `sub/index.html?preview=${kind}&hide=${encodeURIComponent(hideKey)}` : "", [kind, nonce]);
+  if (!kind) return null;
+  const flip = () => { const n = side === "l" ? "r" : "l"; setSide(n); try { window.localStorage.setItem("aw.pvSide", n); } catch (e) {} };
+  const refresh = () => { const w = frameRef.current && frameRef.current.contentWindow; if (w) try { w.postMessage({ type: "aw-preview", refresh: true }, window.location.origin); } catch (e) {} };
+  return createPortal(sbH(React15.Fragment, null,
+    sbH("div", { className: `awPvDock ${side} ${min ? "min" : ""}` },
+      sbH("div", { className: "awPvBar" },
+        APP_DEFS.map((a) => sbH("button", { key: a.key, type: "button", className: kind === a.key ? "on" : "", onClick: () => setKind(a.key) }, a.key === "pm" ? "מנהל פרויקט" : "קבלן משנה")),
+        sbH("span", { className: "sep" }),
+        sbH("button", { type: "button", title: "רענון הנתונים", onClick: refresh }, "⟳"),
+        sbH("button", { type: "button", title: "מההתחלה (בחירת פרויקט)", onClick: () => setNonce((n) => n + 1) }, "⌂"),
+        sbH("button", { type: "button", title: "העברה לצד השני", onClick: flip }, "⇄"),
+        sbH("button", { type: "button", title: "מזעור", onClick: () => setMin(true) }, "–"),
+        sbH("button", { type: "button", title: "סגירה", onClick: () => setKind(null) }, "✕")),
+      sbH("div", { className: "appsPhone" },
+        sbH("div", { className: "appsNotch" }),
+        sbH("iframe", { key: src, ref: frameRef, src, title: "app preview" }))),
+    min ? sbH("button", { type: "button", className: `awPvPill ${side}`, onClick: () => setMin(false) }, sbH(SmartphoneIcon, { size: 16, strokeWidth: 2 }), "תצוגת אפליקציה") : null
+  ), document.body);
+}
 function AppsScreen({ isRTL, config, onChange, loaded }) {
   const [edit, setEdit] = useState6(null);
-  const [preview, setPreview] = useState6(null);
   const cfg = config || {};
   const hiddenOf = (k) => ((cfg[k] || {}).hidden || []);
   const toggle = (k, b) => {
@@ -23623,10 +23694,11 @@ function AppsScreen({ isRTL, config, onChange, loaded }) {
     const next = h.indexOf(b) >= 0 ? h.filter((x) => x !== b) : h.concat([b]);
     onChange({ ...cfg, [k]: { ...(cfg[k] || {}), hidden: next } });
   };
-  const src = (k) => `sub/index.html?preview=${k}&hide=${encodeURIComponent(hiddenOf(k).join(","))}`;
+  const setPreview = (k) => { try { window.dispatchEvent(new CustomEvent("aw-app-preview", { detail: k })); } catch (e) {} };
   return sbH("section", { className: "panel appsScreen", dir: isRTL ? "rtl" : "ltr" },
     sbH("h2", { className: "panelTitle", style: { textAlign: "center" } }, isRTL ? "אפליקציות" : "Apps"),
     sbH("p", { className: "panelSub", style: { textAlign: "center" } }, isRTL ? "תצוגה מקדימה ובחירת הלחצנים שכל משתמש רואה" : "Preview and choose the buttons each user sees"),
+    sbH("p", { className: "panelSub", style: { textAlign: "center", fontSize: 12 } }, "התצוגה המקדימה היא האפליקציה עצמה עם הנתונים החיים של הפרויקט שתבחרי — נשארת פתוחה בצד המסך גם כשעוברים בין מסכים באתר, ושינויים בה לא נשמרים."),
     !loaded ? sbH("p", { className: "panelSub", style: { textAlign: "center" } }, "טוען…") : null,
     sbH("div", { className: "appsList" }, APP_DEFS.map((a) => sbH("div", { key: a.key, className: "appsItem" },
       sbH("div", { className: "appsHead" },
@@ -23637,18 +23709,10 @@ function AppsScreen({ isRTL, config, onChange, loaded }) {
           sbH("button", { type: "button", className: `ghostBtn small ${edit === a.key ? "on" : ""}`, onClick: () => setEdit(edit === a.key ? null : a.key) }, isRTL ? "עריכה" : "Edit"))),
       edit === a.key ? sbH("div", { className: "appsEdit" },
         sbH("p", { className: "appsEditHint" }, isRTL ? "הלחצנים שיוצגו באפליקציה:" : "Buttons shown in the app:"),
-        APP_BUTTONS.map(([b, label]) => sbH("label", { key: b, className: "appsTick" },
+        APP_BUTTONS.filter((x) => !x[2] || a.key === "pm").map(([b, label]) => sbH("label", { key: b, className: "appsTick" },
           sbH("input", { type: "checkbox", checked: hiddenOf(a.key).indexOf(b) < 0, onChange: () => toggle(a.key, b) }), label)),
         sbH("div", { style: { textAlign: "center", marginTop: 10 } },
-          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPreview(a.key) }, isRTL ? "תצוגה מקדימה" : "Preview"))) : null))),
-    preview ? createPortal(sbH("div", { className: "appsPvScrim", onClick: () => setPreview(null) },
-      sbH("div", { className: "appsPvWrap", onClick: (e) => e.stopPropagation() },
-        sbH("div", { className: "appsPvTop" },
-          sbH("span", null, (APP_DEFS.find((x) => x.key === preview) || {}).he),
-          sbH("button", { type: "button", className: "appsPvX", onClick: () => setPreview(null), "aria-label": "סגירה" }, "\u2715")),
-        sbH("div", { className: "appsPhone" },
-          sbH("div", { className: "appsNotch" }),
-          sbH("iframe", { key: src(preview), src: src(preview), title: "preview" })))), document.body) : null);
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setPreview(a.key) }, isRTL ? "תצוגה מקדימה" : "Preview"))) : null))));
 }
 // 06.11.26 — "הגדרות הדפסת מסמכים": everything a printed sheet carries around
 // its content — logos, the frame, the footer (text and picture), the colour,
@@ -26564,7 +26628,7 @@ function ProjectDashboardApp() {
     },
     view !== "login" && /* @__PURE__ */ React15.createElement("div", { className: `brandMark ${brandLogoUrl ? "" : "placeholder"}` }, brandLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: brandLogoUrl, alt: "", className: "brandMarkImg" }) : displayBrandInitials),
     /* @__PURE__ */ React15.createElement("div", { className: "brandText" }, /* @__PURE__ */ React15.createElement("span", { className: "brandLabel" }, t.contractorLabel))
-  ), /* @__PURE__ */ React15.createElement("div", { className: "topbarActions" }, /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE")), /* @__PURE__ */ React15.createElement("button", { className: "iconBtn", "aria-label": t.menu, onClick: () => setMenuOpen(true) }, /* @__PURE__ */ React15.createElement(Menu, { size: 19, strokeWidth: 1.8 })))), /* @__PURE__ */ React15.createElement(ScaleToFit, null, /* @__PURE__ */ React15.createElement("div", { className: "appRoot", dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("style", null, styles), view === "dashboard" && /* @__PURE__ */ React15.createElement("div", { className: "metaStrip" }, /* @__PURE__ */ React15.createElement("h1", { className: "metaTitle" }, dataSourcesOpen ? "Data Sources" : openCardKey ? t.cards.find((c) => c.key === openCardKey)?.title || "Project Dashboard" : "Project Dashboard"), /* @__PURE__ */ React15.createElement("div", { className: "metaStack" }, clientLogoUrl && /* @__PURE__ */ React15.createElement("img", {
+  ), /* @__PURE__ */ React15.createElement("div", { className: "topbarActions" }, /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE")), /* @__PURE__ */ React15.createElement("button", { className: "iconBtn", "aria-label": t.menu, onClick: () => setMenuOpen(true) }, /* @__PURE__ */ React15.createElement(Menu, { size: 19, strokeWidth: 1.8 })))), /* @__PURE__ */ React15.createElement(ScaleToFit, null, /* @__PURE__ */ React15.createElement("div", { className: "appRoot", dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("style", null, styles), appRole === "admin" && !teamMode && React15.createElement(AppPreviewDock, { appConfig }), view === "dashboard" && /* @__PURE__ */ React15.createElement("div", { className: "metaStrip" }, /* @__PURE__ */ React15.createElement("h1", { className: "metaTitle" }, dataSourcesOpen ? "Data Sources" : openCardKey ? t.cards.find((c) => c.key === openCardKey)?.title || "Project Dashboard" : "Project Dashboard"), /* @__PURE__ */ React15.createElement("div", { className: "metaStack" }, clientLogoUrl && /* @__PURE__ */ React15.createElement("img", {
       src: clientLogoUrl, alt: "",
       // 06.11.26 — inside a screen, the project's logo is the way back to this
       // project's dashboard (the A. Weiss logo still goes to all projects).

@@ -72,6 +72,36 @@ async function whoOn(projectId: string, phone: string) {
     name: mine.map((s: any) => s.name || s.company || "").filter(Boolean)[0] || "",
   };
 }
+// 06.11.26 — the dashboard's live preview: the administrator's sign-in in
+// place of the phone code. A project manager's view sees every list; a
+// subcontractor's view sees the lists shared with any subcontractor of the
+// trade being previewed. Read only.
+async function previewWho(body: any, projectId: string) {
+  const pv = body && body.preview;
+  if (!pv) return null;
+  const { data: who } = await db.auth.getUser(String(pv.accessToken || ""));
+  const u: any = who?.user;
+  const role = u?.app_metadata?.role;
+  if (!u || (role !== "admin" && role !== "team")) return { bad: true };
+  if (role === "team" || String(u.email || "").toLowerCase() !== "marcella.kravitz@gmail.com") {
+    const { data } = await db.from("project_access").select("project_id").eq("user_id", u.id).eq("project_id", projectId);
+    if (!data || !data.length) return { bad: true };
+  }
+  const isPm = pv.as === "pm";
+  let ids: string[] = [];
+  if (!isPm) {
+    const keys = [`project-subs:${projectId}`, `project-extras:${projectId}`, "project-extras"];
+    const { data } = await db.from("app_state").select("key, value").in("key", keys);
+    const by: Record<string, any> = {};
+    for (const r of (data || [])) by[r.key] = parse(r.value);
+    const list = (by[`project-subs:${projectId}`] || {}).list
+      || ((by[`project-extras:${projectId}`] || {}).subsData || {}).list
+      || (((by["project-extras"] || {})[projectId] || {}).subsData || {}).list || [];
+    const trade = String(body.trade || "");
+    ids = (list || []).filter((s: any) => s && !s.pm && (!trade || s.trade === trade)).map((s: any) => String(s.id || "")).filter(Boolean);
+  }
+  return { isPm, ids, name: "תצוגה מקדימה", preview: true };
+}
 const canSee = (who: any, l: any) => who.isPm || (Array.isArray(l.viewers) && l.viewers.some((v: string) => who.ids.indexOf(String(v)) >= 0));
 
 async function signedPhotos(arr: any[]) {
@@ -103,18 +133,21 @@ const today = () => new Date(Date.now() + 2 * 3600e3).toISOString().slice(0, 10)
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
-  if (req.method === "GET") return json({ fn: "sub-rejects", version: 1 });
+  if (req.method === "GET") return json({ fn: "sub-rejects", version: 2 });
   if (req.method !== "POST") return json({ error: "method" }, 405);
   let body: any = {};
   try { body = await req.json(); } catch { return json({ error: "bad body" }, 400); }
 
   try {
-    const phone = await readToken(body.token);
-    if (!phone) return json({ error: "bad-token" }, 401);
     const projectId = String(body.projectId || "");
     if (!projectId) return json({ error: "missing project" }, 400);
-    const who = await whoOn(projectId, phone);
+    const pvWho: any = await previewWho(body, projectId);
+    if (pvWho && pvWho.bad) return json({ error: "not-granted" }, 401);
+    const phone = pvWho ? "" : await readToken(body.token);
+    if (!pvWho && !phone) return json({ error: "bad-token" }, 401);
+    const who: any = pvWho || await whoOn(projectId, phone as string);
     if (!who) return json({ error: "not-granted" }, 401);
+    if (who.preview && body.action !== "lists" && body.action !== "list") return json({ error: "preview" }, 403);
 
     if (body.action === "lists") {
       const { data, error } = await db.from("rejects_lists")

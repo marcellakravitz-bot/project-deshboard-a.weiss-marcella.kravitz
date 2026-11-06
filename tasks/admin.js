@@ -28,7 +28,7 @@ import { supabase, PrintLangAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 9 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 10 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -142,6 +142,51 @@ export function taskSeedPatch(catalog) {
     taskFixed: fixed.concat(freshFixed.filter((d) => !fixed.some((x) => x.id === d.id)).map((d) => ({ id: d.id, category: d.category, desc: d.desc }))),
     taskFixedSeeded: Array.from(fSeeded).concat(freshFixed.map((d) => d.id)),
   };
+}
+
+// 06.11.26 — the project managers' app writes to the same board (sub-portal,
+// "task-save"), so the board is never simply overwritten: every field changed
+// carries its time (fts), and a save merges the stored board with this one
+// field by field — the later change wins, updates from both sides are kept,
+// and a task or an update deleted here (gone / updGone) stays deleted.
+const stampOf = (p) => { const now = Date.now(); const f = {}; Object.keys(p || {}).forEach((k) => { f[k] = now; }); return f; };
+function mergeTask(a, b) {
+  const fa = a.fts || {}, fb = b.fts || {};
+  const out = { ...a };
+  new Set(Object.keys(a).concat(Object.keys(b))).forEach((k) => {
+    if (k === "fts" || k === "updates" || k === "updGone") return;
+    if (!(k in b)) return;
+    if (!(k in a) || (fb[k] || 0) >= (fa[k] || 0)) out[k] = b[k];
+  });
+  const gone = Array.from(new Set((a.updGone || []).concat(b.updGone || [])));
+  const seen = new Set();
+  const ups = [];
+  (a.updates || []).concat(b.updates || []).forEach((u) => {
+    if (!u || !u.id || seen.has(u.id) || gone.includes(u.id)) return;
+    seen.add(u.id); ups.push(u);
+  });
+  out.updates = ups;
+  if (gone.length) out.updGone = gone;
+  const fts = { ...fa };
+  Object.keys(fb).forEach((k) => { fts[k] = Math.max(fts[k] || 0, fb[k] || 0); });
+  if (Object.keys(fts).length) out.fts = fts;
+  return out;
+}
+export function mergeTaskDocs(remote, local) {
+  const r = remote || {}, l = local || {};
+  const gone = Array.from(new Set((r.gone || []).concat(l.gone || [])));
+  const rt = Array.isArray(r.tasks) ? r.tasks : [], lt = Array.isArray(l.tasks) ? l.tasks : [];
+  const byL = {};
+  lt.forEach((t) => { if (t && t.id) byL[t.id] = t; });
+  const used = new Set();
+  const tasks = [];
+  rt.forEach((t) => {
+    if (!t || !t.id || gone.includes(t.id)) return;
+    used.add(t.id);
+    tasks.push(byL[t.id] ? mergeTask(t, byL[t.id]) : t);
+  });
+  lt.forEach((t) => { if (t && t.id && !used.has(t.id) && !gone.includes(t.id)) tasks.push(t); });
+  return { ...r, ...l, tasks, gone };
 }
 
 // 06.11.26 — a traffic light: a new task starts "טרם בוצע" in red, "בטיפול"
@@ -268,6 +313,25 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     return () => { off = true; };
   }, [projectId]);
 
+  // 06.11.26 — live: what the project managers write in the app shows here
+  // within seconds, as long as nothing typed here is waiting to be saved.
+  useEffect(() => {
+    if (loadedFor !== projectId) return;
+    let off = false;
+    const pull = async () => {
+      if (off || dirtyRef.current || document.visibilityState !== "visible") return;
+      const { data: row, error } = await supabase.from("project_tasks").select("data").eq("project_id", projectId).maybeSingle();
+      if (off || error || dirtyRef.current || !row || !row.data) return;
+      const d = { tasks: [], ...row.data };
+      if (!Array.isArray(d.tasks)) d.tasks = [];
+      if (JSON.stringify(d) === JSON.stringify(dataRef.current)) return;
+      dataRef.current = d; setData(d);
+    };
+    const t = setInterval(pull, 15000);
+    window.addEventListener("focus", pull);
+    return () => { off = true; clearInterval(t); window.removeEventListener("focus", pull); };
+  }, [loadedFor, projectId]);
+
   // ---------------------------------------------------------------- save
   const saveNow = async () => {
     clearTimeout(timerRef.current);
@@ -276,16 +340,27 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     const payload = dataRef.current;
     dirtyRef.current = false;
     setSaveState("saving");
-    const { error } = await supabase.from("project_tasks").upsert(
-      { project_id: projectId, data: payload, updated_at: new Date().toISOString(), updated_by: currentEmail || null },
-      { onConflict: "project_id" });
+    let error = null, merged = null;
+    for (let attempt = 0; attempt < 4 && !merged && !error; attempt++) {
+      const { data: row, error: rerr } = await supabase.from("project_tasks").select("data, updated_at").eq("project_id", projectId).maybeSingle();
+      if (rerr) { error = rerr; break; }
+      const next = row ? mergeTaskDocs(row.data || {}, payload) : payload;
+      const stamp = { data: next, updated_at: new Date().toISOString(), updated_by: currentEmail || null };
+      const res = row
+        ? await supabase.from("project_tasks").update(stamp).eq("project_id", projectId).eq("updated_at", row.updated_at).select("project_id")
+        : await supabase.from("project_tasks").insert({ project_id: projectId, ...stamp }).select("project_id");
+      if (res.error) { if (!row && /duplicate/i.test(res.error.message || "")) continue; error = res.error; break; }
+      if (res.data && res.data.length) merged = next;
+    }
     if (run !== runRef.current) return;
-    if (error) {
+    if (error || !merged) {
       console.warn("[tasks] save failed", error);
       dirtyRef.current = true;
-      setSaveState(""); setErr("השמירה נכשלה: " + (error.message || ""));
+      setSaveState(""); setErr("השמירה נכשלה: " + ((error && error.message) || "נסו שוב"));
       return;
     }
+    // What the app wrote meanwhile is now on screen too.
+    if (!dirtyRef.current) { dataRef.current = merged; setData(merged); }
     setErr(""); setSaveState("saved");
     setTimeout(() => setSaveState((s) => (s === "saved" ? "" : s)), 2200);
   };
@@ -323,7 +398,8 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   // record of it, or a fresh one not yet written — with the library's wording
   // and category, in the library's order; then her own tasks. A fixed task
   // deleted from the library, or whose category was deleted, is gone.
-  const own = (data && data.tasks) || [];
+  const goneIds = new Set((data && data.gone) || []);
+  const own = ((data && data.tasks) || []).filter((t) => t && !goneIds.has(t.id));
   const byId = {};
   own.forEach((t) => { byId[t.id] = t; });
   const nowDay = today();
@@ -359,14 +435,15 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   }, [contacts, tasks]);
 
   const patch = (id, p) => edit((d) => {
-    if (d.tasks.some((t) => t.id === id)) d.tasks = d.tasks.map((t) => (t.id === id ? { ...t, ...p } : t));
-    else { const v = tasks.find((t) => t.id === id); if (v) d.tasks = [...d.tasks, { ...v, ...p }]; }
+    const fts = stampOf(p);
+    if (d.tasks.some((t) => t.id === id)) d.tasks = d.tasks.map((t) => (t.id === id ? { ...t, ...p, fts: { ...(t.fts || {}), ...fts } } : t));
+    else { const v = tasks.find((t) => t.id === id); if (v) d.tasks = [...d.tasks, { ...v, ...p, fts }]; }
     return d;
   });
   const remove = (t) => {
     if (isFixed(t)) return;
     if (!confirm(`למחוק את המשימה "${String(t.desc || "").slice(0, 60) || "ללא תיאור"}"?`)) return;
-    edit((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; });
+    edit((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); d.gone = Array.from(new Set((d.gone || []).concat([t.id]))); return d; });
   };
   // 06.11.26 — the small "RFI" button: a row opens on the RFI board, addressed
   // to the supervision / client, with the task's text; the task keeps its number.
@@ -392,6 +469,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   }, [currentEmail, contacts, catalog]);
   const create = (category, desc) => {
     const t = { id: uid("t"), category: category || "", created: today(), createdBy: me, desc: desc || "", owner: "", due: "", status: "open", notes: "", updates: [] };
+    t.fts = stampOf(t);
     edit((d) => { d.tasks = [...d.tasks, t]; return d; });
     setOpenGrp((o) => ({ ...o, [category || NONE]: true }));
     setNewAsk(false);
@@ -588,7 +666,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
     ${updTask && html`<${AddUpdate} task=${updTask} onClose=${() => setUpdFor(null)}
       onSave=${(u) => { patch(updTask.id, { updates: [...(updTask.updates || []), { id: uid("u"), by: currentEmail || "", ...u }] }); setUpdFor(null); flash("העדכון נשמר"); }} />`}
     ${logTask && html`<${UpdateLog} task=${logTask} onClose=${() => setLogFor(null)}
-      onRemove=${(uidv) => { if (confirm("למחוק את העדכון?")) patch(logTask.id, { updates: (logTask.updates || []).filter((u) => u.id !== uidv) }); }} />`}
+      onRemove=${(uidv) => { if (confirm("למחוק את העדכון?")) patch(logTask.id, { updates: (logTask.updates || []).filter((u) => u.id !== uidv), updGone: Array.from(new Set((logTask.updGone || []).concat([uidv]))) }); }} />`}
     ${toast && html`<div className="tskToast">${toast}</div>`}
   </div>`;
 }

@@ -209,6 +209,53 @@
   .logo{height:30px;width:auto;display:block}
   .siteFooter{text-align:center;padding:9px 24px calc(env(safe-area-inset-bottom) + 16px);
     font-size:11.5px;color:var(--mist);font-weight:500}
+  /* 06.11.26 — the dashboard's live preview */
+  .pvBadge{display:none}
+  body.isPv .pvBadge{display:block;position:sticky;top:52px;z-index:4;background:#fff7d6;color:#7a5a00;
+    text-align:center;font-size:11.5px;font-weight:800;padding:5px 10px;border-bottom:1px solid #f0dc96}
+  .pvToast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:30;background:#17181c;color:#fff;
+    font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.25);
+    max-width:calc(100% - 32px);text-align:center}
+  /* 06.11.26 — ניהול משימות (project managers) */
+  .tkTools{display:flex;gap:8px;justify-content:center;margin:0 0 12px;flex-wrap:wrap}
+  .tkTools button{border:none;border-radius:999px;background:var(--panel);color:#fff;font:inherit;font-weight:800;
+    font-size:14px;padding:11px 20px;cursor:pointer}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;margin:0 -2px 6px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;
+    font:inherit;font-size:12.5px;font-weight:700;color:var(--steel);cursor:pointer;white-space:nowrap}
+  .chip.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .tkGrp{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+  .tkGrpH{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;background:none;border:none;
+    padding:13px 14px;font:inherit;font-size:14.5px;font-weight:800;color:var(--navy);cursor:pointer;text-align:right}
+  .tkGrpH .n{font-size:11.5px;font-weight:700;color:var(--mist);white-space:nowrap}
+  .tkGrpH .car{color:var(--mist);transition:transform .15s}
+  .tkGrp.open .tkGrpH .car{transform:rotate(90deg)}
+  .tk{border-top:1px solid var(--line);padding:11px 14px}
+  .tkTop{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+  .tkTop .d{flex:1;font-size:14px;font-weight:700;line-height:1.55;white-space:pre-wrap}
+  .stp{flex:0 0 auto;border-radius:999px;padding:3px 10px;font-size:11.5px;font-weight:800;white-space:nowrap}
+  .tkMeta{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;font-size:11.5px;color:var(--steel)}
+  .tkMeta .late{color:#c0392b;font-weight:800}
+  .tkEd{margin-top:12px;display:flex;flex-direction:column;gap:10px}
+  .tkEd label{margin:0 0 4px;color:var(--steel)}
+  .tkEd textarea,.tkEd input,.tkEd select{width:100%;font:inherit;font-size:16px;padding:9px 10px;border:1px solid var(--line);
+    border-radius:10px;background:#fff}
+  .tkEd textarea{min-height:76px;resize:vertical}
+  .tkEd .ro{font-size:14px;line-height:1.6;background:#f7f8fa;border:1px solid var(--line);border-radius:10px;padding:9px 10px;white-space:pre-wrap}
+  .stSeg{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+  .stSeg button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 6px;font:inherit;font-size:13px;
+    font-weight:800;color:var(--steel);cursor:pointer}
+  .tkEd .two{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .tkEd .acts{display:flex;gap:8px}
+  .tkEd .acts button{flex:1;border:none;border-radius:999px;padding:11px;font:inherit;font-weight:800;font-size:14px;
+    color:#fff;background:var(--panel);cursor:pointer}
+  .tkEd .acts button.ghost{background:#9aa3af}
+  .tkEd .acts button[disabled]{background:#c3c6cc}
+  .tkUps{display:flex;flex-direction:column;gap:6px}
+  .tkUp{background:#f7f8fa;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;line-height:1.6;white-space:pre-wrap}
+  .tkUp b{display:block;font-size:11px;color:var(--mist);font-weight:700}
+  .tkNote{font-size:11.5px;color:var(--mist);text-align:center}
   .buildStamp{display:block;margin-top:3px;font-size:10.5px;color:var(--mist);letter-spacing:.3px}
 </style>
 </head>
@@ -219,8 +266,9 @@
   <span class="side right"><button id="out" hidden>יציאה</button></span>
 </div>
 
+<div class="pvBadge">תצוגה מקדימה · נתונים חיים · שינויים לא נשמרים</div>
 <main id="app" class="wrap"></main>
-<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">06.11.2026 · build 35</span></footer>
+<footer class="siteFooter">© <span id="yr"></span> Marcella Kravitz<span class="buildStamp" dir="ltr" title="build">06.11.2026 · build 36</span></footer>
 
 <script>
 
@@ -339,7 +387,8 @@ var PREVIEW = (function(){
   try{
     var q=new URLSearchParams(location.search);
     if(!q.get("preview")) return null;
-    return { who: q.get("preview")==="pm" ? "pm" : "sub", hide: (q.get("hide")||"").split(",").filter(Boolean) };
+    return { who: q.get("preview")==="pm" ? "pm" : "sub", hide: (q.get("hide")||"").split(",").filter(Boolean),
+             project: q.get("project")||"" };
   }catch(e){ return null; }
 })();
 var CUBES = [
@@ -348,7 +397,8 @@ var CUBES = [
   { key:"submittal", t:"סבמיטלים",        s:"אישורי חומרים", i:"M9 11l3 3 8-8M20 12v7a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h9" },
   { key:"sd",        t:"SD",              s:"תוכניות ייצור", i:"M3 21l6-6M14 4l6 6M4 20l3-9 9-3 1 1-3 9-9 3z" },
   { key:"standards", t:"בדיקות מכון התקנים", s:"מה אושר ומה נותר", i:"M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" },
-  { key:"specs",     t:"מפרטים מיוחדים",  s:"הנחיות לביצוע", i:"M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3v5h5M9 13h7M9 17h4" }
+  { key:"specs",     t:"מפרטים מיוחדים",  s:"הנחיות לביצוע", i:"M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1zM14 3v5h5M9 13h7M9 17h4" },
+  { key:"tasks",     t:"ניהול משימות",    s:"משימות הפרויקט", pm:true, i:"M9 6h11M9 12h11M9 18h11M4 6l1 1 2-2M4 12l1 1 2-2M4 18l1 1 2-2" }
 ];
 var DECISIONS = {
   approved:      { t:"מאושר",                        c:"#1a7f4b" },
@@ -381,7 +431,38 @@ function fmt(iso){
   var p=String(iso).slice(0,10).split("-");
   return p.length===3 ? p[2]+"."+p[1]+"."+p[0] : String(iso);
 }
+// 06.11.26 — in the dashboard's preview the administrator's own sign-in is
+// sent instead of a phone token (the page shares the dashboard's origin), and
+// nothing is written: a write answers "done" and says it was not saved.
+var PV_READ={projects:1,board:1,tasks:1,vapid:1,lists:1,list:1};
+function pvToken(){
+  try{ var t=window.parent&&window.parent!==window&&window.parent.__awAccessToken; if(t) return t; }catch(e){}
+  try{
+    for(var i=0;i<localStorage.length;i++){
+      var k=localStorage.key(i);
+      if(!/^sb-.*-auth-token$/.test(k)) continue;
+      var v=JSON.parse(localStorage.getItem(k)||"null");
+      if(v&&v.access_token) return v.access_token;
+      if(v&&v.currentSession&&v.currentSession.access_token) return v.currentSession.access_token;
+    }
+  }catch(e){}
+  return "";
+}
+function pvToast(msg){
+  var old=document.querySelector(".pvToast"); if(old) old.remove();
+  var d=document.createElement("div"); d.className="pvToast"; d.textContent=msg||"תצוגה מקדימה — השינוי לא נשמר";
+  document.body.appendChild(d); setTimeout(function(){ d.remove(); },2200);
+}
+function pvGuard(body){
+  if(!PREVIEW) return null;
+  body.preview={as:PREVIEW.who, accessToken:pvToken()};
+  if(state.trade) body.trade=body.trade||state.trade;
+  if(PV_READ[body.action]) return null;
+  pvToast();
+  return Promise.resolve({ ok:true, status:200, data:{ ok:true, preview:true } });
+}
 function call(body){
+  var g=pvGuard(body); if(g) return g;
   return fetch(API,{ method:"POST", headers:{"content-type":"application/json"},
     body:JSON.stringify(body) }).then(function(r){
       return r.json().then(function(j){ return { ok:r.ok, status:r.status, data:j }; },
@@ -498,7 +579,7 @@ function turnPushOff(){
 function picker(){
   out.hidden=false;
   document.querySelector(".bar").classList.remove("guest");
-  app.innerHTML = pushSwitch()+'<p class="lead">בחרו פרויקט</p><div class="grid">'+state.projects.map(function(p){
+  app.innerHTML = (PREVIEW?'<p class="lead" style="font-weight:800;color:var(--navy)">תצוגה כ'+(PREVIEW.who==="pm"?"מנהל פרויקט":"קבלן משנה")+'</p>':pushSwitch())+'<p class="lead">בחרו פרויקט</p><div class="grid">'+state.projects.map(function(p){
     return '<button class="pcube" data-p="'+esc(p.id)+'">'+
       (p.logo ? '<img src="'+esc(p.logo)+'" alt="">' : '')+
       '<span class="t">'+esc(p.name||"פרויקט")+'</span>'+
@@ -510,7 +591,7 @@ function picker(){
   });
   var tg=document.getElementById("pushTgl");
   if(tg) tg.onclick=function(){ if(pushReady()) turnPushOff(); else askPush(true); };
-  maybeOfferPush();
+  if(!PREVIEW) maybeOfferPush();
 }
 function loadBoard(){
   busy("טוען את הפרויקט…");
@@ -541,7 +622,7 @@ var TRADES=[
   {k:"drywall",t:"גבס"},{k:"security",t:"ביטחון, בקרה ותקשורת"},{k:"paint",t:"צבע"}
 ];
 function tradePicker(){
-  out.hidden=false;
+  out.hidden=!!PREVIEW;
   document.querySelector(".bar").classList.remove("guest");
   app.innerHTML=navBar()+projHead(false)+rjEntry()+
     '<p class="lead">בחרו תחום</p><div class="grid">'+TRADES.map(function(t){
@@ -572,8 +653,8 @@ function projHead(withTrade){
 // one of either. Both go through the browser's own history, so the phone's
 // gesture and the button on screen do exactly the same thing.
 function canGoBack(){
-  if(PREVIEW) return false;
   if(state.screen) return true;
+  if(PREVIEW&&state.trade) return true;
   if(state.board&&state.board.isPm&&state.trade) return true;
   return !!state.project;
 }
@@ -588,7 +669,7 @@ function board(){
   var head=navBar()+projHead(true)+rjEntry();
   var hid=hiddenSet();
   if(PREVIEW) out.hidden=true;
-  app.innerHTML = head+'<div class="grid">'+CUBES.filter(function(c){ return !hid[c.key]; }).map(function(c){
+  app.innerHTML = head+'<div class="grid">'+CUBES.filter(function(c){ return !hid[c.key] && (!c.pm || state.board.isPm); }).map(function(c){
     return '<button class="cube'+(isNew(c.key)?" fresh":"")+'" data-k="'+c.key+'">'+
            (isNew(c.key)?'<span class="dot" aria-label="עדכון חדש"></span>':'')+
            '<span class="ico">'+icon(c.i)+'</span>'+
@@ -596,8 +677,8 @@ function board(){
   }).join("")+'</div>';
   Array.prototype.forEach.call(app.querySelectorAll(".cube"), function(b){
     b.onclick=function(){
-      if(PREVIEW){ b.classList.add("pv"); setTimeout(function(){ b.classList.remove("pv"); },400); return; }
       state.screen=b.getAttribute("data-k");
+      if(state.screen==="tasks"){ markSeen("tasks"); history.pushState({s:1},""); tkLoad(); return; }
       state.cat=null;
       markSeen(state.screen);
       history.pushState({s:1},"");
@@ -614,6 +695,7 @@ function board(){
 // only the lists shared with him, and reads them. sub-rejects decides which.
 function rjCall(body){
   body.token=state.token; body.projectId=state.project;
+  var g=pvGuard(body); if(g) return g;
   return fetch(RJ_API,{ method:"POST", headers:{"content-type":"application/json"}, body:JSON.stringify(body) })
     .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, data:j }; },
       function(){ return { ok:false, status:r.status, data:{} }; }); });
@@ -1118,6 +1200,262 @@ function screen(){
   });
 }
 
+// ------------------------------------------------------------ tasks (06.11.26)
+// ניהול משימות — the project's task board, as the dashboard keeps it, for a
+// project manager on his phone. He adds tasks, sets the status, writes notes
+// and adds updates on any task; the wording, category, owner and due date
+// only on a task he opened. The server decides all of that again.
+var TK_ST=[["open","טרם בוצע","#fff","#d93a3a"],["progress","בטיפול","#3d2a00","#f5a524"],
+           ["done","בוצע","#fff","#2f9e57"],["info","לידיעה בלבד","#fff","#8a8d94"]];
+function tkSt(k){ return TK_ST.filter(function(s){ return s[0]===k; })[0]||TK_ST[0]; }
+var tkOpen=null;      // the task whose card is open
+var tkDraft=null;     // the "new task" form
+var tkCat="all", tkFilter="open", tkGrp={};
+function tkLoad(quiet){
+  if(!quiet) busy("טוען משימות…");
+  return call({action:"tasks", token:state.token, projectId:state.project}).then(function(r){
+    if(!r.ok){ if(!quiet) retry(r.status===403?"ניהול משימות זמין למנהלי פרויקט בלבד.":"טעינת המשימות נכשלה."); return false; }
+    var before=JSON.stringify(state.tasks||null);
+    state.tasks=r.data;
+    if(!quiet){ render(); return true; }
+    return before!==JSON.stringify(state.tasks);
+  }).catch(function(){ if(!quiet) retry("אין חיבור לרשת."); return false; });
+}
+function tkCatName(k){
+  var c=((state.tasks||{}).cats||[]).filter(function(x){ return x.key===k; })[0];
+  return c?c.he:"ללא קטגוריה";
+}
+function tkIsLate(t){ return t.due && t.status!=="done" && t.status!=="info" && t.due<new Date().toISOString().slice(0,10); }
+function tkCard(t){
+  var st=tkSt(t.status), open=tkOpen===t.id;
+  var meta=[];
+  if(t.owner) meta.push('<span>אחריות: '+esc(t.owner)+'</span>');
+  if(t.due) meta.push('<span class="'+(tkIsLate(t)?"late":"")+'">יעד: <span class="num">'+esc(fmt(t.due))+'</span></span>');
+  if(t.created&&!t.fixed) meta.push('<span>הוקם <span class="num">'+esc(fmt(t.created))+'</span>'+(t.createdBy&&t.createdBy.name?' · '+esc(t.createdBy.name):'')+'</span>');
+  if(t.status==="done"&&t.doneAt) meta.push('<span>בוצע <span class="num">'+esc(fmt(t.doneAt))+'</span>'+(t.doneBy&&t.doneBy.name?' · '+esc(t.doneBy.name):'')+'</span>');
+  if((t.updates||[]).length) meta.push('<span>'+t.updates.length+' עדכונים</span>');
+  if(t.rfi) meta.push('<span>RFI '+esc(t.rfi)+'</span>');
+  var h='<div class="tk" data-id="'+esc(t.id)+'">'+
+    '<div class="tkTop" data-open="'+esc(t.id)+'"><span class="stp" style="background:'+st[3]+';color:'+st[2]+'">'+st[1]+'</span>'+
+    '<span class="d">'+esc(t.desc||"ללא תיאור")+'</span></div>'+
+    (meta.length?'<div class="tkMeta">'+meta.join("")+'</div>':'');
+  if(open){
+    var own=t.mine&&!t.fixed;
+    var cats=(state.tasks.cats||[]);
+    h+='<div class="tkEd">'+
+      (own
+        ? '<div><label>תיאור</label><textarea id="tkDesc">'+esc(t.desc)+'</textarea></div>'+
+          '<div><label>קטגוריה</label><select id="tkCatSel"><option value="">ללא קטגוריה</option>'+cats.map(function(c){
+            return '<option value="'+esc(c.key)+'"'+(c.key===t.category?" selected":"")+'>'+esc(c.he)+'</option>'; }).join("")+'</select></div>'+
+          '<div class="two"><div><label>אחריות</label><input id="tkOwner" value="'+esc(t.owner)+'"></div>'+
+          '<div><label>תאריך יעד</label><input id="tkDue" type="date" value="'+esc(t.due)+'"></div></div>'
+        : '<p class="tkNote">'+(t.fixed?"משימה קבועה":"משימה שהוקמה על ידי "+esc((t.createdBy&&t.createdBy.name)||"אחר"))+' — אפשר לשנות סטטוס, לכתוב הערות ולהוסיף עדכונים.</p>')+
+      '<div><label>סטטוס</label><div class="stSeg">'+TK_ST.map(function(s){
+        var on=s[0]===t.status;
+        return '<button type="button" data-st="'+s[0]+'" style="'+(on?'background:'+s[3]+';color:'+s[2]+';border-color:'+s[3]:'')+'">'+s[1]+'</button>';
+      }).join("")+'</div></div>'+
+      '<div><label>הערות</label><textarea id="tkNotes" placeholder="הערות">'+esc(t.notes)+'</textarea></div>'+
+      '<div class="acts"><button type="button" id="tkSave">שמירה</button><button type="button" class="ghost" id="tkClose">סגירה</button></div>'+
+      '<div><label>עדכונים</label><div class="tkUps">'+(t.updates||[]).slice().reverse().map(function(u){
+        return '<div class="tkUp"><b><span class="num">'+esc(fmt(u.date))+'</span>'+(u.by?' · '+esc(u.by):'')+'</b>'+esc(u.text)+'</div>';
+      }).join("")+'</div></div>'+
+      '<div><textarea id="tkUpd" placeholder="עדכון חדש" style="min-height:60px"></textarea></div>'+
+      '<div class="acts"><button type="button" id="tkUpdGo">הוספת עדכון</button></div>'+
+    '</div>';
+  }
+  return h+'</div>';
+}
+function tkNewForm(){
+  var cats=(state.tasks.cats||[]);
+  var d=tkDraft;
+  return '<div class="form">'+
+    '<div><label>קטגוריה</label><select id="ndCat" style="width:100%;font:inherit;font-size:16px;padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff"><option value="">ללא קטגוריה</option>'+cats.map(function(c){
+      return '<option value="'+esc(c.key)+'"'+(c.key===d.category?" selected":"")+'>'+esc(c.he)+'</option>'; }).join("")+'</select></div>'+
+    '<div><label>תיאור המשימה</label><textarea id="ndDesc" placeholder="מה צריך לעשות">'+esc(d.desc)+'</textarea></div>'+
+    '<div><label>אחריות</label><input id="ndOwner" value="'+esc(d.owner)+'" placeholder="מי מטפל"></div>'+
+    '<div><label>תאריך יעד</label><input id="ndDue" type="date" value="'+esc(d.due)+'"></div>'+
+    '<div class="row"><button id="ndSave">הוספה</button><button class="ghost" id="ndCancel">ביטול</button></div>'+
+  '</div>';
+}
+function tkView(){
+  out.hidden=!!PREVIEW;
+  var T=state.tasks;
+  if(!T){ tkLoad(); return; }
+  var list=T.tasks||[];
+  var pass=function(t){
+    if(tkFilter==="open" && (t.status==="done"||t.status==="info")) return false;
+    if(tkFilter==="done" && t.status!=="done") return false;
+    if(tkFilter==="late" && !tkIsLate(t)) return false;
+    return true;
+  };
+  var keys=(T.cats||[]).map(function(c){ return c.key; });
+  var catOf=function(t){ return keys.indexOf(t.category)>=0?t.category:""; };
+  var groups=keys.concat([""]).filter(function(k){
+    return (tkCat==="all"||tkCat===k) && list.some(function(t){ return catOf(t)===k && pass(t); });
+  });
+  var withAny=keys.concat([""]).filter(function(k){ return list.some(function(t){ return catOf(t)===k; }); });
+  var nOpen=list.filter(function(t){ return t.status!=="done"&&t.status!=="info"; }).length;
+  var nLate=list.filter(tkIsLate).length;
+  var h=projHead(false)+'<div class="head"><button class="back" id="b">→ חזרה</button><h2>ניהול משימות</h2></div>';
+  if(tkDraft) h+=tkNewForm();
+  else h+='<div class="tkTools"><button id="tkNew">+ משימה חדשה</button></div>';
+  h+='<div class="chips">'+[["open","פתוחות ("+nOpen+")"],["late","באיחור ("+nLate+")"],["done","בוצעו"],["all","הכול"]].map(function(f){
+      return '<button class="chip'+(tkFilter===f[0]?" on":"")+'" data-f="'+f[0]+'">'+f[1]+'</button>'; }).join("")+'</div>';
+  h+='<div class="chips"><button class="chip'+(tkCat==="all"?" on":"")+'" data-c="all">כל הקטגוריות</button>'+withAny.map(function(k){
+      return '<button class="chip'+(tkCat===k?" on":"")+'" data-c="'+esc(k)+'">'+esc(k?tkCatName(k):"ללא קטגוריה")+'</button>'; }).join("")+'</div>';
+  if(!groups.length) h+=empty(tkFilter==="open"?"אין משימות פתוחות.":"אין משימות להצגה.");
+  groups.forEach(function(k){
+    var ts=list.filter(function(t){ return catOf(t)===k && pass(t); });
+    var all=list.filter(function(t){ return catOf(t)===k; });
+    var done=all.filter(function(t){ return t.status==="done"; }).length;
+    var isOpen=tkCat!=="all"||tkGrp[k]||ts.some(function(t){ return t.id===tkOpen; });
+    h+='<div class="tkGrp'+(isOpen?" open":"")+'"><button class="tkGrpH" data-g="'+esc(k)+'"><span>'+esc(k?tkCatName(k):"ללא קטגוריה")+'</span>'+
+      '<span class="n">'+ts.length+' משימות · <span class="num">'+done+'/'+all.length+'</span> בוצעו <span class="car">‹</span></span></button>'+
+      (isOpen?ts.map(tkCard).join(""):"")+'</div>';
+  });
+  app.innerHTML=h;
+  document.getElementById("b").onclick=function(){ history.back(); };
+  var nw=document.getElementById("tkNew");
+  if(nw) nw.onclick=function(){ tkDraft={category:tkCat!=="all"?tkCat:"",desc:"",owner:"",due:""}; tkOpen=null; render(); };
+  var keep=function(){
+    if(!tkDraft) return;
+    tkDraft.category=(document.getElementById("ndCat")||{}).value||"";
+    tkDraft.desc=(document.getElementById("ndDesc")||{}).value||"";
+    tkDraft.owner=(document.getElementById("ndOwner")||{}).value||"";
+    tkDraft.due=(document.getElementById("ndDue")||{}).value||"";
+  };
+  var nc=document.getElementById("ndCancel");
+  if(nc) nc.onclick=function(){ tkDraft=null; render(); };
+  var ns=document.getElementById("ndSave");
+  if(ns) ns.onclick=function(){
+    keep();
+    if(!tkDraft.desc.trim()){ alert("צריך תיאור למשימה."); return; }
+    ns.disabled=true; ns.textContent="שומר…";
+    call({action:"task-save", op:"add", token:state.token, projectId:state.project, fields:tkDraft}).then(function(r){
+      if(!r.ok){ ns.disabled=false; ns.textContent="הוספה"; alert("השמירה נכשלה."); return; }
+      var cat=tkDraft.category; tkDraft=null;
+      if(r.data&&r.data.task){ tkGrp[cat]=true; tkFilter="open"; }
+      tkLoad();
+    }).catch(function(){ ns.disabled=false; ns.textContent="הוספה"; alert("אין חיבור."); });
+  };
+  Array.prototype.forEach.call(app.querySelectorAll(".chip[data-f]"), function(b){
+    b.onclick=function(){ keep(); tkFilter=b.getAttribute("data-f"); render(); };
+  });
+  Array.prototype.forEach.call(app.querySelectorAll(".chip[data-c]"), function(b){
+    b.onclick=function(){ keep(); tkCat=b.getAttribute("data-c"); render(); };
+  });
+  Array.prototype.forEach.call(app.querySelectorAll(".tkGrpH"), function(b){
+    b.onclick=function(){ var k=b.getAttribute("data-g"); tkGrp[k]=!tkGrp[k]; if(!tkGrp[k]) tkOpen=null; tkRender(); };
+  });
+  Array.prototype.forEach.call(app.querySelectorAll("[data-open]"), function(b){
+    b.onclick=function(){ var id=b.getAttribute("data-open"); tkOpen=tkOpen===id?null:id; tkRender(); };
+  });
+  var t=tkOpen&&list.filter(function(x){ return x.id===tkOpen; })[0];
+  if(!t) return;
+  var save=function(fields, btn, label){
+    if(btn){ btn.disabled=true; btn.textContent="שומר…"; }
+    return call({action:"task-save", op:"patch", token:state.token, projectId:state.project, taskId:t.id, fields:fields}).then(function(r){
+      if(!r.ok){ if(btn){ btn.disabled=false; btn.textContent=label; } alert(r.status===403?"אפשר לערוך רק משימה שהקמת.":"השמירה נכשלה."); return; }
+      tkLoad(true).then(function(){ tkRender(); });
+    }).catch(function(){ if(btn){ btn.disabled=false; btn.textContent=label; } alert("אין חיבור."); });
+  };
+  Array.prototype.forEach.call(app.querySelectorAll(".stSeg button"), function(b){
+    b.onclick=function(){ var v=b.getAttribute("data-st"); if(v===t.status) return; save({status:v}); };
+  });
+  var sv=document.getElementById("tkSave");
+  if(sv) sv.onclick=function(){
+    var f={}, own=t.mine&&!t.fixed;
+    var nt=(document.getElementById("tkNotes")||{}).value;
+    if(nt!=null && nt!==t.notes) f.notes=nt;
+    if(own){
+      var dsc=(document.getElementById("tkDesc")||{}).value, ow=(document.getElementById("tkOwner")||{}).value,
+          du=(document.getElementById("tkDue")||{}).value, ct=(document.getElementById("tkCatSel")||{}).value;
+      if(dsc!=null && dsc.trim() && dsc!==t.desc) f.desc=dsc;
+      if(ow!=null && ow!==t.owner) f.owner=ow;
+      if(du!=null && du!==t.due) f.due=du;
+      if(ct!=null && ct!==t.category) f.category=ct;
+    }
+    if(!Object.keys(f).length){ pvToast("אין שינויים לשמירה"); return; }
+    save(f, sv, "שמירה");
+  };
+  var cl=document.getElementById("tkClose");
+  if(cl) cl.onclick=function(){ tkOpen=null; tkRender(); };
+  var ug=document.getElementById("tkUpdGo");
+  if(ug) ug.onclick=function(){
+    var tx=((document.getElementById("tkUpd")||{}).value||"").trim();
+    if(!tx){ alert("צריך לכתוב את העדכון."); return; }
+    ug.disabled=true; ug.textContent="שומר…";
+    call({action:"task-save", op:"update", token:state.token, projectId:state.project, taskId:t.id, text:tx}).then(function(r){
+      if(!r.ok){ ug.disabled=false; ug.textContent="הוספת עדכון"; alert("השמירה נכשלה."); return; }
+      tkLoad(true).then(function(){ tkRender(); });
+    }).catch(function(){ ug.disabled=false; ug.textContent="הוספת עדכון"; alert("אין חיבור."); });
+  };
+}
+// Redrawn in place: an open card must not throw the list back to the top.
+function tkRender(){
+  var y=window.scrollY; tkView(); window.scrollTo(0,y);
+  if(tkOpen){
+    var el=app.querySelector('.tk[data-id="'+(window.CSS&&CSS.escape?CSS.escape(tkOpen):tkOpen)+'"]');
+    if(el){ var r=el.getBoundingClientRect(); if(r.top<60||r.top>window.innerHeight-80) el.scrollIntoView({block:"start"}); }
+  }
+}
+
+// ----------------------------------------------------------- preview (06.11.26)
+// The dashboard's "אפליקציות" > תצוגה מקדימה: the real app, on the real
+// projects, signed in as the administrator, read only. It asks which project,
+// moves between every screen, follows the buttons switched on and off in the
+// dashboard at once, and fetches the data again every few seconds so what is
+// changed on the dashboard shows here live.
+function pvStart(){
+  busy("טוען פרויקטים…");
+  call({action:"projects", token:"preview"}).then(function(r){
+    if(!r.ok){
+      app.innerHTML='<div class="card" style="text-align:center"><p class="hint" style="margin:0 0 14px">'+
+        (r.status===401?"התצוגה המקדימה זמינה רק כשמחוברים לדשבורד כמנהלת.":"השרת לא זמין כרגע.")+
+        '</p><button class="go" id="rt">נסו שוב</button></div>';
+      document.getElementById("rt").onclick=pvStart; return;
+    }
+    state.projects=r.data.projects||[];
+    if(PREVIEW.project && state.projects.some(function(p){ return p.id===PREVIEW.project; })){
+      state.project=PREVIEW.project; loadBoard(); return;
+    }
+    render();
+  }).catch(function(){ retry("אין חיבור לרשת."); });
+}
+function pvBusy(){
+  var a=document.activeElement;
+  if(a&&/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return true;
+  return !!(logDraft||weekBuf||rjDraft||tkDraft||tkOpen||state.doc);
+}
+function pvRefresh(force){
+  if(!PREVIEW||!state.project||!state.board) return;
+  if(!force&&(document.hidden||pvBusy())) return;
+  var y=window.scrollY;
+  if(state.screen==="tasks"){ tkLoad(true).then(function(ch){ if(ch||force){ tkView(); window.scrollTo(0,y); } }); return; }
+  if(state.rj) return;
+  call({action:"board", token:state.token, projectId:state.project, trade:state.trade}).then(function(r){
+    if(!r.ok) return;
+    if(!force&&JSON.stringify(r.data)===JSON.stringify(state.board)) return;
+    state.board=r.data;
+    if(pvBusy()&&!force) return;
+    render(); window.scrollTo(0,y);
+  }).catch(function(){});
+}
+if(PREVIEW){
+  setInterval(function(){ pvRefresh(false); }, 12000);
+  window.addEventListener("message", function(e){
+    if(e.origin!==location.origin) return;
+    var d=e.data||{};
+    if(d.type!=="aw-preview") return;
+    if(Array.isArray(d.hide)){
+      PREVIEW.hide=d.hide;
+      if(state.board&&!state.screen&&!state.rj&&!state.doc){ var y=window.scrollY; render(); window.scrollTo(0,y); }
+      if(state.screen&&hiddenSet()[state.screen]){ state.screen=null; render(); }
+    }
+    if(d.refresh) pvRefresh(true);
+  });
+}
+
 // 06.11.26 — the buttons the dashboard switched off for this kind of user
 // ("אפליקציות" > עריכה). The server sends them with the board; the preview
 // takes them from its address.
@@ -1136,7 +1474,8 @@ function render(){
   if(state.doc){ viewDoc(); return; }
   if(state.rj){ rjView(); window.scrollTo(0,0); return; }
   // A project manager sees every trade, so he says which one first.
-  if(state.board.isPm && !state.trade){ tradePicker(); return; }
+  if((state.board.isPm || PREVIEW) && !state.trade){ tradePicker(); return; }
+  if(state.screen==="tasks"){ tkView(); return; }
   if(state.screen) screen(); else board();
   window.scrollTo(0,0);
 }
@@ -1155,8 +1494,9 @@ window.addEventListener("popstate", function(){
     state.rj=null; rjDraft=null; render(); return;
   }
   if(state.cat){ state.cat=null; render(); return; }
-  if(state.screen){ state.screen=null; render(); return; }
-  if(state.board&&state.board.isPm&&state.trade){ state.trade=null; state.board.trade=null; render(); return; }
+  if(state.screen==="tasks"&&tkOpen){ tkOpen=null; tkDraft=null; render(); return; }
+  if(state.screen){ state.screen=null; tkOpen=null; tkDraft=null; render(); return; }
+  if(state.board&&(state.board.isPm||PREVIEW)&&state.trade){ state.trade=null; state.board.trade=null; render(); return; }
   if(state.project && state.projects.length>1){ state.project=null; state.board=null; render(); }
 });
 
@@ -1166,10 +1506,11 @@ window.addEventListener("popstate", function(){
   // 06.11.26 — the dashboard's preview ("אפליקציות"): the home screen as the
   // chosen kind of user sees it, with no sign-in and no data.
   if(PREVIEW){
-    state.token="preview"; state.project="preview"; state.trade="hvac"; state.rjN=0;
-    state.board={ isPm: PREVIEW.who==="pm", canWrite: PREVIEW.who==="pm", trade:"hvac", marks:{}, hidden:PREVIEW.hide,
-      project:{ name:"תצוגה מקדימה", floors:"", dates:"" }, submittals:[], sd:[], log:[], specs:[], standards:[], weekly:{} };
-    board(); return;
+    document.body.classList.add("isPv");
+    out.hidden=true;
+    state.token="preview";
+    pvStart();
+    return;
   }
   var t=null;
   try{ t=localStorage.getItem(TOKEN_KEY); }catch(e){}
