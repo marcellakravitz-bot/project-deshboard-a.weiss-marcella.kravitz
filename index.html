@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 262";
+var APP_BUILD = "06.11.2026 · build 263";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6924,7 +6924,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
 
   // 06.11.26 — the form that adds an app user, and the table of them.
   const accessForm = (other) => React9.createElement(React9.Fragment, null,
-      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key, pm: accessKind === "pm", kind: accessKind })) }, accessKind === "pm" ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8" : accessKind === "sub" ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4" : "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e9\u05ea\u05de\u05e9"),
+      canEdit && !draft && React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => goDeeper(() => setDraft({ name: "", company: "", phone: "", trade: SUB_TRADES[0].key, pm: accessKind === "pm", kind: accessKind === "client" ? "supervision" : accessKind, who: accessKind === "client" ? "פיקוח" : "" })) }, accessKind === "pm" ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e0\u05d4\u05dc \u05e4\u05e8\u05d5\u05d9\u05e7\u05d8" : accessKind === "sub" ? "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df \u05de\u05e9\u05e0\u05d4" : "+ \u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e9\u05ea\u05de\u05e9"),
       // Nothing is granted until Save is pressed.
       canEdit && draft && React9.createElement("div", { style: { border: "1px solid var(--line)", borderRadius: 12, padding: 18, background: "#fff", display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 520 } },
         React9.createElement("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 } },
@@ -6934,12 +6934,15 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
             React9.createElement("input", { style: inputS, value: draft.company, onChange: (e) => setDraft({ ...draft, company: e.target.value }) })),
           React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05d8\u05dc\u05e4\u05d5\u05df",
             React9.createElement("input", { style: { ...inputS, direction: "ltr" }, inputMode: "tel", value: draft.phone, onChange: (e) => setDraft({ ...draft, phone: e.target.value }) })),
+          other && React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "סוג",
+            React9.createElement("select", { style: inputS, value: draft.who || "פיקוח", onChange: (e) => setDraft({ ...draft, who: e.target.value, kind: e.target.value === "פיקוח" ? "supervision" : "client" }) },
+              ["פיקוח", "לקוח", "אדריכלים"].map((w) => React9.createElement("option", { key: w, value: w }, w)))),
           (draft.kind || (draft.pm ? "pm" : "sub")) === "sub" && React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d7\u05d5\u05dd",
             React9.createElement("select", { style: inputS, value: draft.trade, onChange: (e) => setDraft({ ...draft, trade: e.target.value }) },
               SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label))))),
         React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: !(draft.name.trim() || draft.company.trim()) || !draft.phone.trim(), onClick: () => {
-            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: (draft.kind || "sub") === "sub" ? draft.trade : "", pm: !!draft.pm, kind: draft.kind || (draft.pm ? "pm" : "sub"), active: true }]));
+            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: (draft.kind || "sub") === "sub" ? draft.trade : "", pm: !!draft.pm, kind: draft.kind || (draft.pm ? "pm" : "sub"), ...(draft.who ? { who: draft.who } : {}), active: true }]));
             goBack();
           } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))));
@@ -6958,7 +6961,7 @@ React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
                   React9.createElement("td", { style: { ...cellS, direction: "ltr", whiteSpace: "nowrap" } },
                     React9.createElement("span", { style: { fontWeight: 800, letterSpacing: 1 } }, r.code || "\u2014"),
                     canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginInlineStart: 8, padding: "2px 8px", fontSize: 11 }, onClick: () => setField(r.id, "code", makeSubCode()) }, "\u05d7\u05d3\u05e9")),
-                  React9.createElement("td", { style: cellS }, kindLabel || (r.pm ? "\u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd" : (tradeOf(r.trade).label || "\u2014"))),
+                  React9.createElement("td", { style: cellS }, (typeof kindLabel === "function" ? kindLabel(r) : kindLabel) || (r.pm ? "\u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd" : (tradeOf(r.trade).label || "\u2014"))),
                   React9.createElement("td", { style: { ...cellS, whiteSpace: "nowrap" } },
                     React9.createElement("button", {
                       type: "button",
@@ -6985,14 +6988,15 @@ React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
     // architects. All sign in to the app the same way (phone + code).
     const isPmView = accessKind === "pm";
     const kindOfRow = (r) => r.kind || (r.pm ? "pm" : "sub");
-    const rows = list.filter((r) => kindOfRow(r) === accessKind);
+    // 06.11.26 — supervision, client and architects share one list.
     const otherKind = accessKind === "supervision" || accessKind === "client";
+    const rows = list.filter((r) => otherKind ? (kindOfRow(r) === "client" || kindOfRow(r) === "supervision") : kindOfRow(r) === accessKind);
     const KIND_HE = { supervision: "\u05e4\u05d9\u05e7\u05d5\u05d7", client: "\u05d0\u05d3\u05e8\u05d9\u05db\u05dc\u05d9\u05dd / \u05dc\u05e7\u05d5\u05d7" };
     if (otherKind) return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-      React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "\u05e0\u05d9\u05d4\u05d5\u05dc \u05de\u05e9\u05ea\u05de\u05e9\u05d9\u05dd " + KIND_HE[accessKind]),
+      React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "ניהול הרשאות פיקוח, לקוח ואדריכלים"),
       React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center", maxWidth: 620 } }, "\u05e0\u05db\u05e0\u05e1\u05d9\u05dd \u05dc\u05d0\u05e4\u05dc\u05d9\u05e7\u05e6\u05d9\u05d4 \u05e2\u05dd \u05de\u05e1\u05e4\u05e8 \u05d8\u05dc\u05e4\u05d5\u05df \u05d5\u05e7\u05d5\u05d3 \u05d6\u05de\u05e0\u05d9; \u05d1\u05db\u05e0\u05d9\u05e1\u05d4 \u05d4\u05e8\u05d0\u05e9\u05d5\u05e0\u05d4 \u05d1\u05d5\u05d7\u05e8\u05d9\u05dd \u05e7\u05d5\u05d3 \u05e7\u05d1\u05d5\u05e2."),
       accessForm(true),
-      accessTable(rows, KIND_HE[accessKind])
+      accessTable(rows, (r) => r.who || KIND_HE[kindOfRow(r)] || "")
     );
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
       React9.createElement("h3", { style: { margin: 0, textAlign: "center" } },
@@ -23650,8 +23654,7 @@ var AW_OWNER_EMAIL = "marcella.kravitz@gmail.com";
 var APP_DEFS = [
   { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "משימות, יומן עדכונים, ריג'קטים ועוד — כפי שמנהל פרויקט רואה", tab: "מנהל" },
   { key: "sub", he: "אפליקציית קבלן משנה", sub: "מה שקבלן משנה רואה בתחום שלו (בתצוגה: קבלן חשמל)", tab: "קבלן" },
-  { key: "client", he: "אפליקציית לקוח", sub: "לקוח ואדריכלים", tab: "לקוח" },
-  { key: "supervision", he: "אפליקציית פיקוח", sub: "פיקוח", tab: "פיקוח" }
+  { key: "client", he: "אפליקציית פיקוח, לקוח ואדריכלים", sub: "מסך אחד לפיקוח, ללקוח ולאדריכלים", tab: "פיקוח / לקוח" }
 ];
 // 06.11.26 — the app's home screen: the long buttons (switched on and off) and
 // the row of four icons at the bottom (picked from every option).
@@ -23902,8 +23905,7 @@ function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatur
     React15.createElement("div", { style: { height: 1, background: "var(--line)", margin: "4px 0" } }),
     blackBtn(React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "ניהול הרשאות קבלני משנה — אפליקציה", "Subcontractors — app access", () => setView("subsAccess")),
     blackBtn(React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "ניהול הרשאות מנהלי פרויקטים — אפליקציה", "Project managers — app access", () => setView("pmAccess")),
-    blackBtn(React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "ניהול משתמשים פיקוח", "Supervision users", () => setView("supervision")),
-    blackBtn(React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "ניהול משתמשים אדריכלים / לקוח", "Architects / client users", () => setView("clients"))));
+    blackBtn(React15.createElement(Users2, { size: 17, strokeWidth: 1.8 }), "ניהול הרשאות פיקוח, לקוח ואדריכלים — אפליקציה", "Supervision, client & architects — app access", () => setView("clients"))));
 }
 // Submittal permissions, per project. The system admin always builds; the main
 // contractor and the client are view-only unless they are switched to edit here.

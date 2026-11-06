@@ -152,7 +152,7 @@ function picker(){
   // One line at the top when every project is the same role (a subcontractor
   // sees "קבלן - אינסטלציה"); otherwise each project says it.
   var lines=list.map(roleLine), same=lines.length && lines.every(function(x){ return x===lines[0]; });
-  var top=PREVIEW ? '<p class="roleHead">תצוגה כ'+E(AW.ROLE_HE[PREVIEW.who]||"")+(PREVIEW.who==="sub"?" (חשמל)":"")+'</p>'
+  var top=PREVIEW ? '<p class="roleHead">תצוגה כ'+(PREVIEW.who==="client"?"פיקוח, לקוח ואדריכלים":E(AW.ROLE_HE[PREVIEW.who]||""))+(PREVIEW.who==="sub"?" (חשמל)":"")+'</p>'
     : (same ? '<p class="roleHead">'+E(lines[0])+'</p>' : '');
   app.innerHTML=(PREVIEW?'':'<div class="pushSwitch"><span>התראות לטלפון</span><button class="tgl'+(pushReady()?" on":"")+'" id="pushTgl" aria-label="התראות"><span></span></button></div>')+
     top+'<p class="lead">בחרו פרויקט</p>'+
