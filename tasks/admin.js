@@ -28,7 +28,7 @@ import { supabase } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 1 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 2 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -36,6 +36,32 @@ const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const fmt = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; };
 const NONE = "__none__";
+
+// 06.11.26 — "תיק פתיחת אתר": a category on every project, with six tasks
+// that are always there. They cannot be deleted and their wording is fixed;
+// everything else on them (dates, owner, status, notes, updates) is hers.
+export const SITE_CAT = { key: "tc-site-open", he: "תיק פתיחת אתר", fixed: true };
+export const FIXED_TASKS = [
+  ["fx-start-order", "צו תחילת עבודה (פיקוח)"],
+  ["fx-site-manager", "מינוי מנהל עבודה רשום"],
+  ["fx-risk-survey", "סקר סיכונים"],
+  ["fx-site-rules", "נהלי בניין"],
+  ["fx-rejects-floors", "דוח ריג'קטים טרם קבלת הקומות"],
+  ["fx-floor-handover", "תיאום סיור מסירת קומות"],
+];
+const FIXED_IDS = new Set(FIXED_TASKS.map((x) => x[0]));
+// The fixed tasks a project does not have yet, appended in their order.
+function withFixed(tasks) {
+  const have = new Set(tasks.map((t) => t.id));
+  const add = FIXED_TASKS.filter(([id]) => !have.has(id)).map(([id, desc]) => ({
+    id, fixed: true, category: SITE_CAT.key, created: today(), desc, owner: "", due: "", status: "open", notes: "", updates: []
+  }));
+  if (!add.length) return tasks;
+  // Fixed tasks first, in their order; then the rest as they were.
+  const all = add.concat(tasks);
+  const fx = FIXED_TASKS.map(([id]) => all.find((t) => t.id === id)).filter(Boolean);
+  return fx.concat(all.filter((t) => !FIXED_IDS.has(t.id)));
+}
 
 // 06.11.26 — a traffic light: a new task starts "טרם בוצע" in red, "בטיפול"
 // is orange, "בוצע" green; "לידיעה בלבד" is grey.
@@ -79,6 +105,7 @@ const css = `
 .tsk select.tskSt option{background:#fff;color:#17181c}
 .tsk .tskUpd{display:flex;align-items:center;justify-content:center;gap:4px}
 .tsk .tskUpd .last{font-size:11px;color:#5b5e66;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tsk .tskFixed{text-align:start;font-weight:700;padding:5px 7px;font-size:13px}
 .tsk .tskEmpty{padding:22px;text-align:center;color:var(--mist,#9a9da5)}
 .tsk .tskErr{color:#b02a37;font-weight:600;font-size:13px;text-align:center;margin:10px 0}
 .tsk .tskSave{display:flex;justify-content:center;align-items:center;gap:10px;margin-top:14px}
@@ -133,6 +160,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
       }
       const d = { tasks: [], ...((row && row.data) || {}) };
       if (!Array.isArray(d.tasks)) d.tasks = [];
+      d.tasks = withFixed(d.tasks);
       console.info("[tasks] loaded", projectId, d.tasks.length);
       setData(d); setLoadedFor(projectId);
     })();
@@ -176,7 +204,14 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   };
 
   // ---------------------------------------------------------------- categories
-  const cats = ((catalog || {}).taskCats || []).filter((c) => c && c.key && String(c.he || "").trim());
+  // The site-opening category is always in the library — first, until she moves it.
+  useEffect(() => {
+    if (!onCatalogChange || !catalog) return;
+    const list = (catalog.taskCats || []);
+    if (!list.some((c) => c && c.key === SITE_CAT.key)) onCatalogChange({ ...catalog, taskCats: [SITE_CAT].concat(list) });
+  }, [catalog && (catalog.taskCats || []).length]);
+  const rawCats = ((catalog || {}).taskCats || []).filter((c) => c && c.key && String(c.he || "").trim());
+  const cats = rawCats.some((c) => c.key === SITE_CAT.key) ? rawCats : [SITE_CAT].concat(rawCats);
   const catName = (k) => (k === NONE ? "ללא קטגוריה" : ((cats.find((c) => c.key === k) || {}).he || "ללא קטגוריה"));
   const tasks = (data && data.tasks) || [];
   const catOf = (t) => (t.category && cats.some((c) => c.key === t.category) ? t.category : NONE);
@@ -195,6 +230,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
 
   const patch = (id, p) => edit((d) => { d.tasks = d.tasks.map((t) => (t.id === id ? { ...t, ...p } : t)); return d; });
   const remove = (t) => {
+    if (t.fixed || FIXED_IDS.has(t.id)) return;
     if (!confirm(`למחוק את המשימה "${String(t.desc || "").slice(0, 60) || "ללא תיאור"}"?`)) return;
     edit((d) => { d.tasks = d.tasks.filter((x) => x.id !== t.id); return d; });
   };
@@ -284,7 +320,9 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
               const last = ups[ups.length - 1];
               return html`<tr key=${t.id} className=${`${t.status === "done" ? "done" : t.status === "info" ? "info" : ""} ${late ? "late" : ""}`.trim()}>
                 <td><input type="date" className="tskIn" value=${t.created || ""} onChange=${(e) => patch(t.id, { created: e.target.value })} /></td>
-                <td><textarea className="tskIn" rows=${1} value=${t.desc || ""} placeholder="תיאור המשימה" onChange=${(e) => patch(t.id, { desc: e.target.value })} /></td>
+                <td>${t.fixed || FIXED_IDS.has(t.id)
+                  ? html`<div className="tskFixed" title="משימה קבועה בכל פרויקט">${t.desc}</div>`
+                  : html`<textarea className="tskIn" rows=${1} value=${t.desc || ""} placeholder="תיאור המשימה" onChange=${(e) => patch(t.id, { desc: e.target.value })} />`}</td>
                 <td><input className="tskIn" list="tskPeople" value=${t.owner || ""} placeholder="אחראי/ת" onChange=${(e) => patch(t.id, { owner: e.target.value })} /></td>
                 <td className="due"><input type="date" className="tskIn" value=${t.due || ""} title=${late ? "עבר תאריך היעד" : ""} onChange=${(e) => patch(t.id, { due: e.target.value })} /></td>
                 <td><select className="tskIn tskSt" style=${{ color: st[2], background: st[3] }} value=${st[0]} onChange=${(e) => patch(t.id, { status: e.target.value })}>
@@ -295,7 +333,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
                   <button type="button" className="tskBtn icon" title=${last ? `רשימת עדכונים · אחרון: ${fmt(last.date)}` : "רשימת עדכונים"} disabled=${!ups.length}
                     onClick=${() => setLogFor(t.id)}><${History} size=${14} />${ups.length ? html`<span style=${{ fontSize: 11.5 }}>${ups.length}</span>` : null}</button>
                 </div>${last && html`<div className="tskUpd"><span className="last" title=${last.text}>${fmt(last.date)}</span></div>`}</td>
-                <td><button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button></td>
+                <td>${!(t.fixed || FIXED_IDS.has(t.id)) && html`<button type="button" className="tskBtn icon" style=${{ border: 0 }} title="מחיקת המשימה" onClick=${() => remove(t)}><${Trash2} size=${14} color="#b02a37" /></button>`}</td>
               </tr>`;
             })}</tbody>
           </table></div>`}
