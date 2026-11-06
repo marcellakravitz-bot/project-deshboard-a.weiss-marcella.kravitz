@@ -40,7 +40,7 @@ function home(){
     AW.projHead("מנהל פרויקט");
   var wk=AW.sundayOf(new Date()), days=AW.weekDays(wk);
   h+='<button class="wkCard" data-k="weekly">'+
-    '<div class="wh"><b>'+AW.icon(IC.weekly)+'לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
+    '<div class="wh"><b>לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
     AW.timetable(wk, function(i){ return dayCell(wk,i); })+'</button>';
   h+=longBtn("tasks","ניהול משימות")+longBtn("log","יומן עדכונים")+longBtn("rj","ריג'קטים")+
      longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות מכון התקנים");
