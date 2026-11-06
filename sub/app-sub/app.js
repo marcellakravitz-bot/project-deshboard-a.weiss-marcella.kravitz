@@ -14,7 +14,7 @@ var IC={
   standards:"M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
   weekly:"M3 6h18M3 12h18M3 18h18M8 3v18M16 3v18"
 };
-var lists={ submittal:{filter:{}}, sd:{filter:{}} };
+var lists={ submittal:{filter:{}, simple:true}, sd:{filter:{}, simple:true} };
 var rjN=null, weekShown=null;
 
 function longBtn(k, title, extra){
@@ -31,7 +31,7 @@ function home(){
     AW.timetable(wk, function(i){ var t=String(cells[i]||"").trim(); return t?E(t):""; })+'</button>'+
     longBtn("log","יומן עדכונים")+longBtn("submittal","Submittal")+longBtn("sd","SD")+
     (rjN?longBtn("rj","ריג'קטים", String(rjN)):"")+
-    ((b.standards||[]).length?longBtn("standards","בדיקות מכון התקנים"):"");
+    longBtn("standards","בדיקות ומכון התקנים");
   app.innerHTML=h;
   var tp=document.getElementById("toProj"); if(tp) tp.onclick=AW.toEntry;
   Array.prototype.forEach.call(app.querySelectorAll("[data-k]"), function(el){
@@ -68,8 +68,8 @@ function itemScreen(kind){
   AW.wireItemList(o, function(keep){ AW.render(!!keep); });
 }
 function standards(){
-  AW.el().innerHTML=AW.head("בדיקות מכון התקנים")+AW.standards(S.board.standards, false);
-  AW.wireBack(); AW.wireStandards();
+  AW.el().innerHTML=AW.head("בדיקות ומכון התקנים")+AW.standardsSimple(S.board.standards);
+  AW.wireBack();
 }
 function draw(v){
   if(!S.board) return;

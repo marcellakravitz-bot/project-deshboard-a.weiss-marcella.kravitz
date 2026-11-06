@@ -350,7 +350,18 @@ AW.itemList = function(o){
     if(d) return d;
     return r.submitted ? {t:"הוגש",c:"#5b5e66",bg:"#eef2f7"} : {t:"טרם הוגש",c:"#9a9da5",bg:"#f4f5f7"};
   };
-  var h='<div class="find"><input id="fq" type="search" placeholder="חיפוש חופשי" value="'+E(f.q||"")+'">'+
+  // 06.11.26 — the subcontractor's list is plain: free search only, and each
+  // row coloured by where it stands — submitted orange, approved green, not
+  // approved red.
+  var tone=function(r){
+    var k = o.kind==="sd" ? r.status : (r.decision || (r.submitted ? "submitted" : ""));
+    if(k==="approved"||k==="approvedNoted") return {bg:"#e0f2e6",bd:"#b6dfc3"};
+    if(k==="rejected") return {bg:"#fde4e2",bd:"#f6c5c0"};
+    if(k==="submitted"||k==="revise"||k==="requested") return {bg:"#feecd6",bd:"#f6d3a5"};
+    return null;
+  };
+  var h= o.simple ? '<div class="find"><input id="fq" type="search" placeholder="חיפוש חופשי" value="'+E(f.q||"")+'"></div>' :
+    '<div class="find"><input id="fq" type="search" placeholder="חיפוש חופשי" value="'+E(f.q||"")+'">'+
     '<div class="two"><select id="fc"><option value="">כל הקטגוריות</option>'+cats.map(function(c){
       return '<option value="'+E(c)+'"'+(f.cat===c?" selected":"")+'>'+E(catName(c))+'</option>'; }).join("")+'</select>'+
     '<select id="ft"><option value="">כל האיפיונים</option>'+types.map(function(t){
@@ -358,8 +369,9 @@ AW.itemList = function(o){
   if(!shown.length) h+=AW.empty(items.length?"אין תוצאות לחיפוש.":"אין פריטים להצגה.");
   shown.forEach(function(r){
     var id=r.id||r.code, st=stOf(r), open=f.open===id;
-    h+='<button class="item" data-id="'+E(id)+'">'+
-      (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':'<span class="pic"></span>')+
+    var tn=o.simple?tone(r):null;
+    h+='<button class="item" data-id="'+E(id)+'"'+(tn?' style="background:'+tn.bg+';border-color:'+tn.bd+'"':'')+'>'+
+      (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':(o.simple?'':'<span class="pic"></span>'))+
       '<span class="tx"><b>'+E(r.typeId||r.no||r.code||"—")+'</b><span>'+E(catName(r.category))+'</span></span>'+
       '<span class="st" style="color:'+st.c+';background:'+st.bg+'">'+E(st.t)+'</span></button>';
     if(open){
@@ -392,6 +404,23 @@ AW.wireItemList = function(o, onChange){
       AW.openFile(doc);
     };
   });
+};
+// 06.11.26 — the subcontractor's checks: the check that is needed, and under
+// it the date set for it. One marked done on the dashboard turns pale green.
+AW.standardsSimple = function(list){
+  var E=AW.esc;
+  list=(list||[]).slice();
+  if(!list.length) return AW.empty("טרם הוגדרו בדיקות.");
+  list.sort(function(a,c){
+    var da=(a.date||"").slice(0,10), dc=(c.date||"").slice(0,10);
+    if(!da&&!dc) return 0; if(!da) return 1; if(!dc) return -1; return da<dc?-1:da>dc?1:0;
+  });
+  return list.map(function(it){
+    return '<div class="rec" style="padding:10px 12px'+(it.done?';background:#e0f2e6;border-color:#b6dfc3':'')+'">'+
+      '<div style="font-size:14px;font-weight:700;line-height:1.55;white-space:pre-wrap">'+E(it.text)+'</div>'+
+      (it.date?'<div style="font-size:12px;color:var(--steel);margin-top:4px">תאריך לביצוע - <span class="num">'+E(AW.fmt(it.date))+'</span></div>':'')+
+    '</div>';
+  }).join("");
 };
 AW.standards = function(list, withTrade){
   var E=AW.esc;
