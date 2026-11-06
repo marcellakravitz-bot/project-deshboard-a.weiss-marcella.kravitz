@@ -67,8 +67,8 @@ function weekly(){
   app.innerHTML=AW.head("לו״ז שבועי")+
     '<div class="wkNav"><button id="wkPrev">‹</button><strong class="num">'+E(AW.fmt(weekShown))+' – '+E(AW.fmt(days[5].iso))+'</strong><button id="wkNext">›</button></div>'+
     '<div class="rec" style="padding:8px">'+AW.timetable(weekShown, function(i){ return dayCell(weekShown,i); })+'</div>'+
-    '<div class="lbl">עריכת הלו״ז לקבלן</div><div class="chips" style="flex-wrap:wrap;justify-content:center">'+
-    AW.TRADES.map(function(t){ return '<button class="chip" data-tr="'+t.k+'">'+E(t.t)+'</button>'; }).join("")+'</div>';
+    '<div class="lbl">עריכת הלו״ז לקבלן</div><div class="trGrid">'+
+    AW.TRADES.map(function(t){ return '<button class="trSq" data-tr="'+t.k+'">'+AW.icon(IC.trade)+'<span>'+E(t.t)+'</span></button>'; }).join("")+'</div>';
   AW.wireBack();
   document.getElementById("wkPrev").onclick=function(){ weekShown=AW.shiftWeek(weekShown,-1); AW.render(true); };
   document.getElementById("wkNext").onclick=function(){ weekShown=AW.shiftWeek(weekShown,1); AW.render(true); };
