@@ -9289,6 +9289,46 @@ function SupplierLibraryRow({ s, isRTL, open, onToggle, onSave, busy, onRemove }
           : sbH("p", { className: "panelSub dlEmpty" }, "אין עדיין מפרטים בתיקייה.")))
     ) : null);
 }
+// 06.11.26 — the spec upload asks where from: the computer, or the
+// suppliers' library (a supplier, a product folder, its files).
+function SpecSourceAsk({ isHe, view, setView, onComputer, onLibrary }) {
+  const [lib, setLib] = useState6(null);
+  const [err, setErr] = useState6("");
+  const [q, setQ] = useState6("");
+  const [pick, setPick] = useState6({});
+  useEffect5(() => {
+    if (view !== "lib" || lib) return;
+    supLibLoad(true).then((l) => setLib(l || [])).catch((e) => { setErr((e && e.message) || String(e)); setLib([]); });
+  }, [view]);
+  const all = supLibFiles(lib || []);
+  const qq = q.trim().toLowerCase();
+  const shown = all.filter((x) => !qq || `${x.supplier.name} ${x.product.name} ${x.file.name}`.toLowerCase().includes(qq));
+  const close = () => setView(null);
+  return createPortal(sbH("div", { className: "printAskScrim", onClick: close },
+    sbH("div", { className: `printAskBox ${view === "lib" ? "rsBox" : ""}`.trim(), dir: isHe ? "rtl" : "ltr", onClick: (e) => e.stopPropagation() },
+      sbH("button", { type: "button", className: "printAskX", "aria-label": "Close", onClick: close }, "\u00d7"),
+      sbH("h3", { className: "printAskCenter" }, isHe ? "העלאת מפרטים" : "Upload specifications"),
+      view === "ask"
+        ? sbH("div", { className: "printAskBtns", style: { flexDirection: "column" } },
+            sbH("button", { type: "button", className: "sgBtn", onClick: onComputer }, isHe ? "העלאת קובץ מהמחשב" : "From the computer"),
+            sbH("button", { type: "button", className: "sgBtn", onClick: () => setView("lib") }, isHe ? "העלאת קובץ ממאגר הספקים" : "From the suppliers' library"))
+        : sbH(React15.Fragment, null,
+            sbH("p", { className: "printAskCenter" }, isHe ? "קובץ שכבר נותח לא יופעל עליו AI שוב." : "A file already read is not sent to the AI again."),
+            sbH("input", { className: "contactsInput", style: { width: "100%", margin: "8px 0" }, value: q, placeholder: isHe ? "חיפוש ספק, מוצר או קובץ" : "Search", onChange: (e) => setQ(e.target.value) }),
+            lib == null ? sbH("p", null, "טוען…")
+              : err ? sbH("p", { className: "dlErr" }, /relation|does not exist|schema cache/i.test(err) ? "מאגר הספקים עדיין לא הופעל." : err)
+              : !shown.length ? sbH("p", null, isHe ? "אין קבצים במאגר." : "No files in the library.")
+              : sbH("ul", { className: "rsList" }, shown.map((x) => sbH("li", { key: x.file.id },
+                  sbH("label", null,
+                    sbH("input", { type: "checkbox", checked: !!pick[x.file.id], onChange: () => setPick({ ...pick, [x.file.id]: !pick[x.file.id] }) }),
+                    sbH("span", { className: "rsCode" }, x.supplier.name),
+                    sbH("span", { className: "rsLabel" }, `${x.product.name} · ${x.file.name}`),
+                    x.file.ai ? sbH("span", { className: "dlTag ok" }, isHe ? "נותח ✓" : "Read ✓") : null)))),
+            sbH("div", { className: "printAskBtns" },
+              sbH("button", { type: "button", className: "sgBtn", disabled: !all.some((x) => pick[x.file.id]),
+                onClick: () => onLibrary(all.filter((x) => pick[x.file.id])) }, isHe ? "הוספה לסבמיטל" : "Add"))))),
+    document.body);
+}
 // 06.11.26 — `mode`: "document" (inside the facility file, one project, no
 // catalogue) or "catalog" (the data libraries screen, the catalogue only).
 function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, contactsByProject, onContactsChange, groupVisibility, onGroupVisibilityChange, mode, fixedProjectId }) {
@@ -19405,12 +19445,20 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
     const files = Array.from(e.target.files || []);
     e.target.value = "";
     if (!files.length) return;
+    await addSpecFiles(files, null);
+  };
+  // 06.11.26 — spec files from the computer, or from the suppliers' library.
+  // A library file carries `lib` (where it lives), so what the AI reads out of
+  // it is kept with it and is not paid for twice.
+  const [specAsk, setSpecAsk] = useState6(null);   // null | "ask" | "lib"
+  const addSpecFiles = async (files, libRefs, supplierName) => {
     setErr(null);
     setBusy("spec");
     try {
       const added = [];
       let text = d.specText || "";
-      for (const f of files) {
+      for (let fi = 0; fi < files.length; fi++) {
+        const f = files[fi];
         const up = await sbUploadFile(projectId, d.id, f);
         const att = {
           id: `at-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
@@ -19422,6 +19470,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
           dataUrl: up.inline ? up.dataUrl : null,
           uploadedAt: new Date().toISOString()
         };
+        if (libRefs && libRefs[fi]) att.lib = libRefs[fi];
         // 21.10.26 — each file keeps its own share of text, so the tenth
         // specification is not lost behind the first nine.
         if ((f.type || "").indexOf("pdf") >= 0 && text.length < SB_TEXT_TOTAL) {
@@ -19431,7 +19480,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         }
         added.push(att);
       }
-      set({ attachments: [...(d.attachments || []), ...added], specText: text });
+      set({ attachments: [...(d.attachments || []), ...added], specText: text, ...(supplierName && !String(d.supplier || "").trim() ? { supplier: supplierName } : {}) });
 
     } catch (ex) {
       setErr(
@@ -19658,6 +19707,23 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
   const runAi = async (kind) => {
     setAiMsg(null);
     setErr(null);
+    // 06.11.26 — one spec file from the suppliers' library that the AI has
+    // already read: fill from what it read then, with no new AI run.
+    const atts0 = d.attachments || [];
+    if (atts0.length === 1 && atts0[0].lib) {
+      try {
+        const lib = await supLibLoad(false);
+        const sup = (lib || []).find((x) => x.id === atts0[0].lib.supplierId);
+        const prod = sup && ((sup.data || {}).products || []).find((x) => x.id === atts0[0].lib.productId);
+        const file = prod && (prod.files || []).find((x) => x.id === atts0[0].lib.fileId);
+        if (file && file.ai && file.ai.product && (file.ai.kind || "product") === (kind === "system" ? "system" : "product")) {
+          if (Array.isArray(file.ai.fileNotes)) set({ fileNotes: file.ai.fileNotes.map((n) => ({ ...n, file: atts0[0].name })) });
+          applyProduct(file.ai.product, kind);
+          setAiMsg(lang === "he" ? `הטופס מולא מהניתוח השמור של הקובץ במאגר הספקים (${file.ai.at || ""}) — בלי הפעלת AI.` : "Filled from the library's saved reading of this file — no AI run.");
+          return;
+        }
+      } catch (e) { console.warn("[awdash] library cache", e); }
+    }
     const gathered = (d.specText || "").trim();
     if (!gathered && !(d.attachments || []).length) {
       setAiMsg(lang === "he" ? "צריך להעלות מפרט PDF קודם — ה‑AI קורא רק ממנו." : "Upload a specification PDF first — the AI reads only from it.");
@@ -19750,6 +19816,23 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         setAiMsg([`${L("foundProducts")} (${products.length}). ${L("worklistHint")}`, unusedLine].filter(Boolean).join("\n"));
       } else {
         applyProduct(products[0], kind);
+        // 06.11.26 — the reading is kept with the library file, for next time.
+        if (atts0.length === 1 && atts0[0].lib && products[0]) {
+          (async () => {
+            try {
+              const lib = await supLibLoad(false);
+              const sup = (lib || []).find((x) => x.id === atts0[0].lib.supplierId);
+              if (!sup) return;
+              const data2 = { ...(sup.data || {}) };
+              data2.products = (data2.products || []).map((p) => p.id !== atts0[0].lib.productId ? p : {
+                ...p, files: (p.files || []).map((f) => f.id !== atts0[0].lib.fileId ? f : {
+                  ...f, ai: { at: new Date().toISOString().slice(0, 10), kind: kind === "system" ? "system" : "product", product: products[0], fileNotes: Array.isArray(out.fileNotes) ? out.fileNotes : [] }
+                })
+              });
+              await supLibSave({ ...sup, data: data2 });
+            } catch (e) { console.warn("[awdash] could not keep the reading in the library", e); }
+          })();
+        }
         // On a submittal tied to a BOQ line, the product is checked against
         // what that line asks for (22.10.26).
         if (String(d.boqText || "").trim()) runBoqCheck({ shots, specForAi, form: products[0] || {} });
@@ -19852,18 +19935,38 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
       ro
         ? null
         : sbH(
-            "label",
-            { className: "sbToolBtn", title: L("aiHint") },
+            "button",
+            { type: "button", className: "sbToolBtn", title: L("aiHint"), onClick: () => setSpecAsk("ask") },
             sbH(Upload4, { size: 15, strokeWidth: 2 }),
-            sbH("span", null, busy === "spec" ? "…" : L("uploadSpec")),
-            sbH("input", {
-              type: "file",
-              accept: "application/pdf,.pdf",
-              multiple: true,
-              style: { display: "none" },
-              onChange: onPickSpec
-            })
+            sbH("span", null, busy === "spec" ? "…" : L("uploadSpec"))
           ),
+      specAsk ? sbH(SpecSourceAsk, {
+        isHe, view: specAsk, setView: setSpecAsk,
+        onComputer: () => {
+          setSpecAsk(null);
+          const inp = document.createElement("input");
+          inp.type = "file"; inp.accept = "application/pdf,.pdf"; inp.multiple = true; inp.style.display = "none";
+          inp.onchange = () => { const fs = Array.from(inp.files || []); inp.remove(); if (fs.length) addSpecFiles(fs, null); };
+          document.body.appendChild(inp); inp.click();
+        },
+        onLibrary: async (picks) => {
+          setSpecAsk(null);
+          setBusy("spec");
+          try {
+            const files = [], refs = [];
+            for (const pk of picks) {
+              const blob = await supLibFileBlob(pk.file.path);
+              files.push(new File([blob], pk.file.name, { type: pk.file.type || blob.type || "application/pdf" }));
+              refs.push({ supplierId: pk.supplier.id, productId: pk.product.id, fileId: pk.file.id });
+            }
+            setBusy(null);
+            await addSpecFiles(files, refs, picks[0] ? picks[0].supplier.name : "");
+          } catch (e) {
+            setBusy(null);
+            setErr(isHe ? "לא הצלחתי להביא את הקובץ מהמאגר." : "Could not fetch the file from the library.");
+          }
+        }
+      }) : null,
       ro
         ? null
         : sbH(
