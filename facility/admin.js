@@ -582,8 +582,7 @@ function CheckChapter({ ch, data, edit, bar, projectName, flash }) {
         </tr>`;
       })}</tbody>
     </table></div>
-    <div className="facLegend"><span><i style=${{ background: "#e3f3e6" }} />בוצע</span><span><i style=${{ background: "#f4f4f6" }} />לא רלוונטי — לא נספר</span>
-      <span>נותרו ${pending.length}</span></div><//>`;
+    <div className="facLegend"><span><i style=${{ background: "#e3f3e6" }} />בוצע</span><span><i style=${{ background: "#f4f4f6" }} />לא רלוונטי — לא נספר</span></div><//>`;
 }
 
 // ----------------------------------------------------------------------------- the finishes list
