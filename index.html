@@ -2064,37 +2064,35 @@ var pdfViewer = `
         .lliFindStep:hover:not(:disabled) { background: var(--accent-soft, #eef2f8); }
         .lliFindStep:disabled { opacity: .4; cursor: default; }
         .lliTable .cImg { width: 196px; }
-        /* 06.11.26 — the four columns that say WHAT the product is (type mark,
-           description, supplier, picture) stay put while the board scrolls
+        /* 06.11.26 — the four columns that say WHAT the product is (category,
+           type mark, description, picture) stay put while the board scrolls
            sideways. The offsets are measured from the real headings, so they
            follow the columns when the board is wider than its minimum. */
+        .lliFreeze th.cCat, .lliFreeze td.cCat,
         .lliFreeze th.cMark, .lliFreeze td.cMark,
         .lliFreeze th.cDesc, .lliFreeze td.cDesc,
-        .lliFreeze th.cSup, .lliFreeze td.cSup,
         .lliFreeze th.cImg, .lliFreeze td.cImg { position: sticky; }
         /* The table is white throughout, so the frozen cells (which must be
            opaque) look like every other cell; a row left out of the print is
            grey in all its cells alike (tr.prOff). */
         .lliTable.lliFreeze { background: #fff; }
-        .lliFreeze td.cMark, .lliFreeze td.cDesc, .lliFreeze td.cSup, .lliFreeze td.cImg { background: #fff; z-index: 3; }
-        .lliFreeze thead th.cMark, .lliFreeze thead th.cDesc, .lliFreeze thead th.cSup, .lliFreeze thead th.cImg { z-index: 8; }
-        .lliFreeze:dir(rtl) .cMark { right: var(--fz0, 0px); }
-        .lliFreeze:dir(rtl) .cDesc { right: var(--fz1, 120px); }
-        .lliFreeze:dir(rtl) .cSup { right: var(--fz2, 330px); }
-        .lliFreeze:dir(rtl) .cImg { right: var(--fz3, 445px); }
-        .lliFreeze:dir(ltr) .cMark { left: var(--fz0, 0px); }
-        .lliFreeze:dir(ltr) .cDesc { left: var(--fz1, 120px); }
-        .lliFreeze:dir(ltr) .cSup { left: var(--fz2, 330px); }
-        .lliFreeze:dir(ltr) .cImg { left: var(--fz3, 445px); }
-        /* The edge of the frozen block: a soft line, so the columns sliding
-           under it read as going underneath. */
+        .lliFreeze td.cCat, .lliFreeze td.cMark, .lliFreeze td.cDesc, .lliFreeze td.cImg { background: #fff; z-index: 3; }
+        .lliFreeze thead th.cCat, .lliFreeze thead th.cMark, .lliFreeze thead th.cDesc, .lliFreeze thead th.cImg { z-index: 8; }
+        .lliFreeze:dir(rtl) .cCat { right: var(--fz0, 0px); }
+        .lliFreeze:dir(rtl) .cMark { right: var(--fz1, 138px); }
+        .lliFreeze:dir(rtl) .cDesc { right: var(--fz2, 258px); }
+        .lliFreeze:dir(rtl) .cImg { right: var(--fz3, 468px); }
+        .lliFreeze:dir(ltr) .cCat { left: var(--fz0, 0px); }
+        .lliFreeze:dir(ltr) .cMark { left: var(--fz1, 138px); }
+        .lliFreeze:dir(ltr) .cDesc { left: var(--fz2, 258px); }
+        .lliFreeze:dir(ltr) .cImg { left: var(--fz3, 468px); }
         .lliFreeze td.cImg, .lliFreeze th.cImg { box-shadow: inset 1px 0 0 var(--line); }
         /* A row taken out of the order fades — but a frozen cell is opaque,
            so its contents fade instead of the cell itself. */
-        .lliFreeze tr.lliOff td.cMark, .lliFreeze tr.lliOff td.cDesc,
-        .lliFreeze tr.lliOff td.cSup, .lliFreeze tr.lliOff td.cImg { opacity: 1; }
-        .lliFreeze tr.lliOff td.cMark > *, .lliFreeze tr.lliOff td.cDesc > *,
-        .lliFreeze tr.lliOff td.cSup > *, .lliFreeze tr.lliOff td.cImg > * { opacity: .45; }
+        .lliFreeze tr.lliOff td.cCat, .lliFreeze tr.lliOff td.cMark,
+        .lliFreeze tr.lliOff td.cDesc, .lliFreeze tr.lliOff td.cImg { opacity: 1; }
+        .lliFreeze tr.lliOff td.cCat > *, .lliFreeze tr.lliOff td.cMark > *,
+        .lliFreeze tr.lliOff td.cDesc > *, .lliFreeze tr.lliOff td.cImg > * { opacity: .45; }
         .lliTable .cQty { width: 75px; }
         .lliTable .cUnit { width: 55px; color: var(--steel); font-weight: 700; }
         .lliTable .cOrd { width: 90px; }
@@ -12184,7 +12182,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     if (!tbl) return;
     const measure = () => {
       let acc = 0;
-      ["cMark", "cDesc", "cSup", "cImg"].forEach((c, i) => {
+      ["cCat", "cMark", "cDesc", "cImg"].forEach((c, i) => {
         tbl.style.setProperty(`--fz${i}`, `${acc}px`);
         const th = tbl.querySelector(`thead th.${c}`);
         // offsetWidth, not the on-screen box: the board sits inside a scaled
