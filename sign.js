@@ -746,7 +746,8 @@ function sbReviewSignature(rv, registry) {
 // <type mark>". Quote marks are dropped, so נדל"ן is saved as נדלן.
 function sbPrintName(rec, lang) {
   const clean = (x) => sanitizeFileNamePart(String(x || "").replace(/["'\u05f3\u05f4`\u201c\u201d\u2018\u2019]/g, "")).trim();
-  const head = [clean(rec.projectName), "submittal", sbNumber(rec.category, rec.seq)].filter(Boolean).join(" ");
+  // 06.11.26 — the revision is part of the name: "... Joinery-003 Rev 1 - D-04".
+  const head = [clean(rec.projectName), "submittal", sbNumber(rec.category, rec.seq), `Rev ${rec.rev || 0}`].filter(Boolean).join(" ");
   const mark = clean(rec.typeId);
   return mark ? `${head} - ${mark}` : head;
 }

@@ -844,6 +844,8 @@ var projectMeta = `
         .clientLogoImg {
           max-height: 46px; max-width: 190px; object-fit: contain; margin-bottom: 4px;
         }
+        .clientLogoImg.isLink { cursor: pointer; }
+        .clientLogoImg.isLink:hover { opacity: .8; }
         .metaProjectName {
           font-size: 16px; font-weight: 800; color: var(--accent);
           letter-spacing: -0.005em;
@@ -11732,7 +11734,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
   // The disciplines this board is actually using, in the catalogue's order.
-  const inUseCats = BOARD_CATEGORIES.filter((c) => all.some((r) => r.category === c.key));
+  const inUseCats = boardCatChips(all.filter((r) => !(data[r.code] || {}).removed).map((r) => ({ category: r.category, subCategory: (data[r.code] || {}).subCategory || "" })), lang);
+  const catKeyOfRow = (r) => boardCatKeyOf(r.category, (data[r.code] || {}).subCategory || "");
   // Every mark anybody has written on this board, for the list she picks from.
   const markList = Array.from(new Set(
     all.map((r) => String(lliRowOf(data, r.code).typeMark || "").trim()).filter(Boolean)
@@ -11775,7 +11778,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
     : null;
   const visible = all.filter((r) =>
     !isRemoved(r) &&
-    (cat === "all" || r.category === cat) &&
+    (cat === "all" || catKeyOfRow(r) === cat) &&
     // The administrator sees the whole board — the "הצגה" tick tells her which
     // rows are on it. A client sees only the rows that are on (29.8.26).
     (canEdit || !isHidden(r))
@@ -12205,7 +12208,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       // moment it is created.
       category: (g && (data[here] || {}).category) || (here && (data[here] || {}).category)
         || (g && (g.rows.find((r) => r.code === here) || {}).category)
-        || (cat === "all" ? null : cat),
+        || (cat === "all" ? null : cat.split("|")[0]),
       manualIndex: n
     };
     if (!g || !onChangeRows) { patch(code, blank); return; }
@@ -12293,7 +12296,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
       // Only the disciplines that are actually on this board, so the row of
       // chips is a summary and not a wall of buttons. It follows the rows as
       // they are edited — nothing waits for a refresh (29.8.26).
-      inUseCats.map((c) => catChip(c.key, sbText(c, lang)))
+      inUseCats.map((c) => catChip(c.key, c.label))
     ),
     // The tally stands on its own line, centred, with the search for a mark
     // beside it: the marks already on the board are offered as a list, so she
@@ -13180,7 +13183,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const saved = (data[r.code] || {}).hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
-  const inUseCats = BOARD_CATEGORIES.filter((c) => all.some((r) => r.category === c.key));
+  const inUseCats = boardCatChips(all.filter((r) => !(data[r.code] || {}).removed).map((r) => ({ category: r.category, subCategory: (data[r.code] || {}).subCategory || "" })), lang);
+  const catKeyOfRow = (r) => boardCatKeyOf(r.category, (data[r.code] || {}).subCategory || "");
   const isDone = (r) => SD_DONE.indexOf(sdRowOf(data, r.code).status) >= 0;
   const matchesStatus = (r) => {
     if (statusFilter === "all") return true;
@@ -13213,11 +13217,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     : null;
   const visible = all.filter((r) =>
     !isRemoved(r) &&
-    (cat === "all" || r.category === cat) &&
+    (cat === "all" || catKeyOfRow(r) === cat) &&
     (canEdit || !isHidden(r)) &&
     matchesStatus(r)
   );
-  const doneCount = all.filter((r) => !isHidden(r) && (cat === "all" || r.category === cat) && isDone(r)).length;
+  const doneCount = all.filter((r) => !isHidden(r) && (cat === "all" || catKeyOfRow(r) === cat) && isDone(r)).length;
 
   const groups = [];
   visible.forEach((r) => {
@@ -13397,7 +13401,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     });
   };
   const addManual = () => {
-    patch(`s-${Date.now()}`, { ...sdBlankRow(), category: cat === "all" ? null : cat });
+    patch(`s-${Date.now()}`, { ...sdBlankRow(), category: cat === "all" ? null : cat.split("|")[0], subCategory: cat.indexOf("|") > 0 ? cat.split("|")[1] : "" });
   };
 
   const catChip = (key, label) =>
@@ -13452,7 +13456,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       // Only the disciplines that are actually on this board, so the row of
       // chips is a summary and not a wall of buttons. It follows the rows as
       // they are edited — nothing waits for a refresh (29.8.26).
-      inUseCats.map((c) => catChip(c.key, sbText(c, lang)))
+      inUseCats.map((c) => catChip(c.key, c.label))
     ),
     // The tally on its own line, centred (29.8.26).
     sbH(
@@ -17844,6 +17848,26 @@ function boardCatOptions(lang) {
     });
   });
   return out;
+}
+// 06.11.26 — the bar above a board shows what the category column shows: a
+// category, or the sub-category she picked under it — each its own filter,
+// in the catalogue's order. rowsCats: [{ category, subCategory }].
+function boardCatChips(rowsCats, lang) {
+  const seen = {};
+  const out = [];
+  rowsCats.forEach(({ category, subCategory }) => {
+    if (!category || !boardCategoryOf(category)) return;
+    const key = subCategory ? `${category}|${subCategory}` : category;
+    if (seen[key]) return;
+    seen[key] = true;
+    const subs = sbSubcats(category);
+    const si = subCategory ? subs.findIndex((x) => x[0] === subCategory || x[1] === subCategory) : -1;
+    out.push({ key, label: boardCatLabel(category, subCategory, lang), rank: boardCatRank(category) * 1000 + (subCategory ? 1 + (si < 0 ? 999 : si) : 0) });
+  });
+  return out.sort((a, b) => a.rank - b.rank);
+}
+function boardCatKeyOf(category, subCategory) {
+  return category ? (subCategory ? `${category}|${subCategory}` : category) : "";
 }
 function boardCatLabel(category, subCategory, lang) {
   if (!category) return "";
@@ -25528,7 +25552,14 @@ function ProjectDashboardApp() {
     },
     view !== "login" && /* @__PURE__ */ React15.createElement("div", { className: `brandMark ${brandLogoUrl ? "" : "placeholder"}` }, brandLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: brandLogoUrl, alt: "", className: "brandMarkImg" }) : displayBrandInitials),
     /* @__PURE__ */ React15.createElement("div", { className: "brandText" }, /* @__PURE__ */ React15.createElement("span", { className: "brandLabel" }, t.contractorLabel))
-  ), /* @__PURE__ */ React15.createElement("div", { className: "topbarActions" }, /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE")), /* @__PURE__ */ React15.createElement("button", { className: "iconBtn", "aria-label": t.menu, onClick: () => setMenuOpen(true) }, /* @__PURE__ */ React15.createElement(Menu, { size: 19, strokeWidth: 1.8 })))), /* @__PURE__ */ React15.createElement(ScaleToFit, null, /* @__PURE__ */ React15.createElement("div", { className: "appRoot", dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("style", null, styles), view === "dashboard" && /* @__PURE__ */ React15.createElement("div", { className: "metaStrip" }, /* @__PURE__ */ React15.createElement("h1", { className: "metaTitle" }, dataSourcesOpen ? "Data Sources" : openCardKey ? t.cards.find((c) => c.key === openCardKey)?.title || "Project Dashboard" : "Project Dashboard"), /* @__PURE__ */ React15.createElement("div", { className: "metaStack" }, clientLogoUrl && /* @__PURE__ */ React15.createElement("img", { src: clientLogoUrl, alt: "", className: "clientLogoImg" }), /* @__PURE__ */ React15.createElement("span", { className: "metaProjectName" }, displayProjectName), /* @__PURE__ */ React15.createElement("span", { className: "metaFloors numerals" }, "Floors ", displayFloorsFrom, "-", displayFloorsTo), /* @__PURE__ */ React15.createElement("span", { className: "metaDates numerals", dir: "ltr" }, displayStartDate, " - ", displayEndDate))), view === "login" && /* @__PURE__ */ React15.createElement(
+  ), /* @__PURE__ */ React15.createElement("div", { className: "topbarActions" }, /* @__PURE__ */ React15.createElement("div", { className: "langToggle" }, /* @__PURE__ */ React15.createElement("button", { className: lang === "en" ? "active" : "", onClick: () => setLang("en") }, "EN"), /* @__PURE__ */ React15.createElement("button", { className: lang === "he" ? "active" : "", onClick: () => setLang("he") }, "HE")), /* @__PURE__ */ React15.createElement("button", { className: "iconBtn", "aria-label": t.menu, onClick: () => setMenuOpen(true) }, /* @__PURE__ */ React15.createElement(Menu, { size: 19, strokeWidth: 1.8 })))), /* @__PURE__ */ React15.createElement(ScaleToFit, null, /* @__PURE__ */ React15.createElement("div", { className: "appRoot", dir: APP_FRAME_DIR, lang }, /* @__PURE__ */ React15.createElement("style", null, styles), view === "dashboard" && /* @__PURE__ */ React15.createElement("div", { className: "metaStrip" }, /* @__PURE__ */ React15.createElement("h1", { className: "metaTitle" }, dataSourcesOpen ? "Data Sources" : openCardKey ? t.cards.find((c) => c.key === openCardKey)?.title || "Project Dashboard" : "Project Dashboard"), /* @__PURE__ */ React15.createElement("div", { className: "metaStack" }, clientLogoUrl && /* @__PURE__ */ React15.createElement("img", {
+      src: clientLogoUrl, alt: "",
+      // 06.11.26 — inside a screen, the project's logo is the way back to this
+      // project's dashboard (the A. Weiss logo still goes to all projects).
+      className: `clientLogoImg ${openCardKey || dataSourcesOpen ? "isLink" : ""}`.trim(),
+      title: openCardKey || dataSourcesOpen ? (isRTL ? "חזרה לדשבורד הפרויקט" : "Back to the project dashboard") : void 0,
+      onClick: () => { if (openCardKey || dataSourcesOpen) { setOpenCardKey(null); setDataSourcesOpen(false); window.scrollTo(0, 0); } }
+    }), /* @__PURE__ */ React15.createElement("span", { className: "metaProjectName" }, displayProjectName), /* @__PURE__ */ React15.createElement("span", { className: "metaFloors numerals" }, "Floors ", displayFloorsFrom, "-", displayFloorsTo), /* @__PURE__ */ React15.createElement("span", { className: "metaDates numerals", dir: "ltr" }, displayStartDate, " - ", displayEndDate))), view === "login" && /* @__PURE__ */ React15.createElement(
     LoginScreen,
     {
       t,
