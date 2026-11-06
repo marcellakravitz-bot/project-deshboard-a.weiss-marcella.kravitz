@@ -193,7 +193,7 @@ var AW = (function(){
     var days=weekDays(wk), today=todayIso();
     return '<table class="tt"><tbody>'+days.map(function(d,i){
       var c=cellOf(i);
-      return '<tr class="'+(d.iso===today?"today":"")+'"><th>'+d.name+'<span class="num">'+esc(fmt(d.iso).slice(0,5))+'</span></th>'+
+      return '<tr data-day="'+i+'" class="'+(d.iso===today?"today":"")+'"><th>'+d.name+'<span class="num">'+esc(fmt(d.iso).slice(0,5))+'</span></th>'+
         '<td class="'+(c?"":"none")+'">'+(c||"—")+'</td></tr>';
     }).join("")+'</tbody></table>';
   }

@@ -20,20 +20,34 @@ var rjN=null, weekShown=null;
 function longBtn(k, title, extra){
   return '<button class="longBtn" data-k="'+k+'">'+'<span class="ico">'+AW.icon(IC[k])+'</span><span class="t">'+E(title)+'</span>'+(AW.isNew(k)?'<span class="newStar">★ עדכון חדש</span>':'')+(extra?'<span class="n">'+E(extra)+'</span>':'')+'</button>';
 }
+var wkAhead=0;   // 0 — this week, 1 — the next one; nothing further
 function home(){
   var b=S.board, app=AW.el();
-  var wk=AW.sundayOf(new Date()), days=AW.weekDays(wk), cells=(b.weekly||{})[wk]||[];
+  var wk=AW.shiftWeek(AW.sundayOf(new Date()), wkAhead), days=AW.weekDays(wk), cells=(b.weekly||{})[wk]||[];
+  var star=AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'';
   var h=((S.projects||[]).length>1||AW.PREVIEW?'<button class="backArrow" id="toProj" aria-label="פרויקטים">'+AW.icon("M15 6l-6 6 6 6")+'</button>':'')+
     AW.projHead("קבלן "+AW.tradeHe(b.trade))+
-    '<button class="wkCard" data-k="weekly">'+
-    '<div class="wh"><b>'+AW.icon(IC.weekly)+'לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
-    AW.timetable(wk, function(i){ var t=String(cells[i]||"").trim(); return t?E(t):""; })+'</button>'+
+    '<div class="wkBox"><div class="wh"><b>לו״ז שבועי '+star+'</b><div class="chips">'+
+      '<button class="chip'+(wkAhead===0?" on":"")+'" data-w="0">השבוע</button>'+
+      '<button class="chip'+(wkAhead===1?" on":"")+'" data-w="1">שבוע הבא</button></div></div>'+
+    AW.timetable(wk, function(i){ var t=String(cells[i]||"").trim(); return t?'<span class="clamp">'+E(t)+'</span>':""; })+'</div>'+
     longBtn("log","יומן עדכונים")+longBtn("submittal","Submittal")+longBtn("sd","SD")+
     (rjN?longBtn("rj","ריג'קטים", String(rjN)):"")+
     longBtn("standards","בדיקות ומכון התקנים");
   app.innerHTML=h;
   var tp=document.getElementById("toProj"); if(tp) tp.onclick=AW.toEntry;
-  Array.prototype.forEach.call(app.querySelectorAll("[data-k]"), function(el){
+  Array.prototype.forEach.call(app.querySelectorAll("[data-w]"), function(el){
+    el.onclick=function(){ wkAhead=Number(el.getAttribute("data-w")); AW.render(true); };
+  });
+  // A day opens in full, large.
+  Array.prototype.forEach.call(app.querySelectorAll(".wkBox tr[data-day]"), function(tr){
+    tr.onclick=function(){
+      var i=Number(tr.getAttribute("data-day")), d=days[i], t=String(cells[i]||"").trim();
+      AW.markSeen("weekly");
+      AW.pop(E(d.name)+' · <span class="num">'+E(AW.fmt(d.iso))+'</span>', t?'<div class="dayBig">'+E(t)+'</div>':'<p class="lead">לא נרשמו עבודות ליום הזה.</p>');
+    };
+  });
+  Array.prototype.forEach.call(app.querySelectorAll(".longBtn[data-k]"), function(el){
     el.onclick=function(){
       var k=el.getAttribute("data-k"); AW.markSeen(k);
       if(k==="rj"){ AW.rejects.reset(); AW.go({v:"rj"}); return; }
@@ -73,7 +87,6 @@ function standards(){
 function draw(v){
   if(!S.board) return;
   switch(v.v){
-    case "weekly": return weekly();
     case "log": return log();
     case "submittal": return itemScreen("submittal");
     case "sd": return itemScreen("sd");
