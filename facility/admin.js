@@ -32,13 +32,13 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
 import {
   Phone, Layers, ShieldCheck, BadgeCheck, PenTool, HardHat, Flame, FolderOpen, Map as MapIcon,
-  Plus, Mail, Copy, Trash2, Printer, Pencil, Save, ChevronDown, ChevronUp, X, ListPlus, Search,
+  Plus, Mail, Copy, Trash2, Printer, Pencil, Save, ChevronDown, ChevronUp, X, ListPlus, Search, ArrowRight,
 } from "lucide-react";
 import { supabase, printSheetCss, printedStampText, supLibLoad, supLibFind, supLibSave, supLibHasService, supLibNorm } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;   // a template with more than one root returns an array without keys
-export const FACILITY_BUILD = "facility build 2 · 06.11.2026";
+export const FACILITY_BUILD = "facility build 3 · 06.11.2026";
 if (typeof console !== "undefined") console.info(FACILITY_BUILD);
 
 // ----------------------------------------------------------------------------- the chapters
@@ -146,8 +146,8 @@ function finRowState(row, lib) {
   if (cells.every((c) => c === "v" || c === "auto" || c === "na")) return "done";
   return "open";
 }
-function progressOf(data, ch, floors, contactsCount, lib) {
-  if (ch.kind === "contacts") return { label: contactsCount ? `${contactsCount} אנשי קשר` : "", done: 0, total: 0 };
+function progressOf(data, ch, floors, lib) {
+  if (ch.kind === "contacts") return { label: "", done: 0, total: 0 };
   if (ch.kind === "finishes") {
     const rows = (data.finishes || []).map((r) => finRowState(r, lib)).filter((s) => s !== "na");
     return { done: rows.filter((s) => s === "done").length, total: rows.length };
@@ -178,6 +178,12 @@ const css = `
 .fac .facCount{font-size:10.5px;color:var(--mist,#9a9da5);font-weight:600;margin-top:2px}
 .fac .dashCard.facAllDone{border-color:#9fd3ae;background:#f2faf4}
 .fac .facBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:8px 12px;margin-bottom:10px}
+.fac .facFrame{background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:14px;padding:14px 16px;width:100%;min-height:620px;box-sizing:border-box}
+.fac .facFrame>.facBar:first-child{border:0;border-bottom:1px solid var(--line,#e6e6e9);border-radius:0;padding:0 0 10px;margin-bottom:12px}
+.fac .facFrame .panel{box-shadow:none;border:0;padding:0;margin:0;width:100%;max-width:none;background:transparent}
+.fac .facFrame .contactsAdminBar{margin-top:0}
+.fac .facBack{display:inline-flex;align-items:center;gap:4px;border:0;background:transparent;color:#8a8d94;font:inherit;font-size:13px;font-weight:700;cursor:pointer;padding:2px 4px;margin:0 0 6px;border-radius:6px}
+.fac .facBack:hover{color:#3f434b;background:#f2f3f6}
 .fac .facBar .facTitle{font-weight:800;font-size:15px;margin-inline-end:auto;display:flex;align-items:center;gap:8px}
 .fac .facBtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:9px;border:1px solid var(--line,#e6e6e9);background:#fff;color:var(--ink,#17181c);cursor:pointer}
 .fac .facBtn:hover{border-color:var(--accent,#17181c)}
@@ -249,7 +255,7 @@ async function copyText(t) {
 }
 
 // ----------------------------------------------------------------------------- the module
-export function FacilityFile({ projectId, project, projectName, contactsNode, contactsCount, supplierHints, printParts, currentEmail, lliItems, contacts, catalog, onAddContacts }) {
+export function FacilityFile({ projectId, project, projectName, contactsNode, contactsExportNode, printParts, currentEmail, lliItems, contacts, catalog, onAddContacts }) {
   const print = useMemo(() => makeFacilityPrint({ projectName, ...(printParts || {}) }), [projectName, printParts]);
   const [data, setData] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
@@ -361,7 +367,7 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
       ${err && html`<p className="facErr">${err}</p>`}
       <div className=${`cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim()}>
         ${CHAPTERS.map((c) => {
-          const p = progressOf(data, c, floors, contactsCount, lib);
+          const p = progressOf(data, c, floors, lib);
           const all = p.total > 0 && p.done === p.total;
           return html`<button key=${c.k} type="button" className=${`dashCard ${all ? "facAllDone" : ""}`} onClick=${() => goChapter(c.k)}>
             <div className="cardIcon" style=${{ color: c.color }}><${c.icon} size=${20} strokeWidth=${1.7} /></div>
@@ -377,22 +383,26 @@ export function FacilityFile({ projectId, project, projectName, contactsNode, co
     </div>`;
   }
 
+  // 06.11.26 — the way back is a small grey arrow at the top, on the right;
+  // the bar keeps the chapter's own tools.
   const bar = (extra) => html`<div className="facBar">
-    <span className="facTitle"><${ch.icon} size=${18} strokeWidth=${1.9} color=${ch.color} /> ${ch.he}</span>
-    ${extra}
-    <button type="button" className="facBtn" onClick=${goBack}>חזרה לתיק מתקן</button>
-  </div>`;
+      <span className="facTitle"><${ch.icon} size=${18} strokeWidth=${1.9} color=${ch.color} /> ${ch.he}</span>
+      ${extra}
+    </div>`;
 
   let body = null;
-  if (ch.kind === "contacts") body = html`<${F}>${bar(null)}${contactsNode}<//>`;
+  if (ch.kind === "contacts") body = html`<${F}>${bar(contactsExportNode || null)}${contactsNode}<//>`;
   else if (ch.kind === "check") body = html`<${F}><${CheckChapter} ch=${ch} data=${data} edit=${edit} bar=${bar} projectName=${projectName} flash=${flash} />${saveRow}<//>`;
   else if (ch.kind === "finishes") body = html`<${F}><${FinishesChapter} data=${data} edit=${edit} bar=${bar} projectName=${projectName} print=${print} flash=${flash}
     lliItems=${lliItems || []} contacts=${contacts || []} catalog=${catalog || {}} onAddContacts=${onAddContacts} lib=${lib} reloadLib=${reloadLib} />${saveRow}<//>`;
   else if (ch.kind === "asmade") body = html`<${F}><${AsMadeChapter} ch=${ch} data=${data} edit=${edit} bar=${bar} floors=${floors} />${saveRow}<//>`;
 
+  // 06.11.26 — every chapter sits in the same white frame, the size of the
+  // contacts chapter's, whichever folder is open.
   return html`<div className="fac" dir="rtl"><style>${css}</style>
     ${err && html`<p className="facErr">${err}</p>`}
-    ${body}
+    <button type="button" className="facBack" onClick=${goBack} title="חזרה לתיק מתקן"><${ArrowRight} size=${15} strokeWidth=${2.2} /> חזרה</button>
+    <div className="facFrame">${body}</div>
     ${toast && html`<div className="facToast">${toast}</div>`}
   </div>`;
 }

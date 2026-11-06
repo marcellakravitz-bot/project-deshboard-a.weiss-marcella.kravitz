@@ -3320,10 +3320,9 @@ var pdfViewer = `
           padding: 5px 8px; border-bottom: 1px solid var(--line-soft);
         }
         .peopleCatalogRow.head { font-size: 10.5px; font-weight: 800; color: var(--mist); text-transform: uppercase; }
-        .contactsVisToggle {
-          margin-inline-start: auto; display: flex; align-items: center; gap: 6px;
-          font-size: 11px; font-weight: 700; color: var(--steel); cursor: pointer;
-        }
+        /* 06.11.26 — a light line between one contact and the next, the table's own grey. */
+        .contactsAdminGroup .contactsAdminRow:not(.head) { border-top: 1px solid var(--line); padding-top: 6px; margin-top: 6px; }
+        .contactsExportBtns { display: inline-flex; gap: 6px; align-items: center; flex-wrap: wrap; }
         .contactsAdminRow {
           display: grid; grid-template-columns: 14px 1.1fr 1.3fr 1.3fr 1.1fr 0.9fr 1.2fr 22px;
           gap: 6px; align-items: start;
@@ -8108,7 +8107,6 @@ function CardView({
   onChangeBoardCats,
   contactsEditorNode,
   onAddContacts,
-  contactGroupVisibility,
   contractorAccent,
   submittals,
   onChangeSubmittals,
@@ -8228,15 +8226,14 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
     projectId: project.id, project, projectName: project.name, currentEmail,
-    contactsNode: contactsEditorNode || React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }),
-    contactsCount: (contacts || []).length,
+    contactsNode: contactsEditorNode || React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }),
+    contactsExportNode: React14.createElement(ContactsCard, { exportOnly: true, contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }),
     // 06.11.26 — the finishes list picks from LLI; its suppliers join the
     // project's contacts.
     lliItems: lliItemsFor(boqData, boqFlags, lliRows, contacts, contactsCatalog, "he"),
     contacts, catalog: contactsCatalog, onAddContacts,
-    supplierHints: Array.from(new Set(Object.values(lliRows || {}).map((v) => String((v && v.supplier) || "").trim()).filter(Boolean))).sort(),
     printParts: { brand: printBrand, accent: contractorAccent || CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isPhotos && /* @__PURE__ */ React14.createElement(PhotoGalleryCard, { photos, canEdit: photosCanEdit, onUploadPhotos, onRemovePhoto, isRTL }), hasEditModal && /* @__PURE__ */ React14.createElement("div", { className: "functionEditFooter" }, /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => setEditOpen(true) }, "Upload")), hasEditModal && editOpen && createPortal(/* @__PURE__ */ React14.createElement("div", { className: "functionEditModalScrim", dir: isRTL ? "rtl" : "ltr", onClick: () => setEditOpen(false) }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModal", onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalHead" }, /* @__PURE__ */ React14.createElement("button", { className: "drawerClose", onClick: () => setEditOpen(false), "aria-label": t.close }, /* @__PURE__ */ React14.createElement(X3, { size: 16, strokeWidth: 2 })), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalTitle" }, /* @__PURE__ */ React14.createElement(Upload3, { size: 16, strokeWidth: 2.2 }), " Upload"), /* @__PURE__ */ React14.createElement("span", { className: "functionEditModalSpacer" })), /* @__PURE__ */ React14.createElement("div", { className: "functionEditModalBody" }, isSchedule ? /* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement("p", { className: "dataSourceFileName", dir: "auto", style: { margin: "0 0 10px", textAlign: "center" } }, isRTL ? "\u05D9\u05E9 \u05DC\u05D4\u05E2\u05DC\u05D5\u05EA \u05E7\u05D5\u05D1\u05E5 XML \u05D1\u05DC\u05D1\u05D3 (\u05D1\u05DE\u05E1 \u05E4\u05E8\u05D5\u05D9\u05E7\u05D8: Save As \u2190 XML)" : "Upload an XML file only (in MS Project: Save As \u2192 XML)"), /* @__PURE__ */ React14.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setXmlHelpOpen(true) }, /* @__PURE__ */ React14.createElement(Upload3, { size: 14, strokeWidth: 2 }), scheduleData ? "Replace schedule (XML only)" : "Upload schedule (XML only)"), scheduleData && /* @__PURE__ */ React14.createElement("span", { className: "functionFileName numerals" }, scheduleData.fileName), scheduleData && /* @__PURE__ */ React14.createElement("button", { type: "button", className: "functionRemoveBtn", onClick: onRemoveSchedule }, "Remove file"), scheduleErr && /* @__PURE__ */ React14.createElement("p", { className: "scheduleErr" }, scheduleErr), pendingScheduleFile && /* @__PURE__ */ React14.createElement("div", { className: "pendingFileRow" }, /* @__PURE__ */ React14.createElement("span", { className: "pendingFileName numerals" }, pendingScheduleFile.name), /* @__PURE__ */ React14.createElement("span", { className: "pendingFileHint" }, isRTL ? "הקובץ ייקלט רק אחרי לחיצה על SAVE" : "The file is applied only when you press SAVE"))) :/* @__PURE__ */ React14.createElement(React14.Fragment, null, /* @__PURE__ */ React14.createElement(
     FunctionUploadButton,
     {
@@ -8860,19 +8857,17 @@ function CatalogCombo({ options, allOptions, valueId, onChange, lang, placeholde
 }
 
 // src/cards/ContactsCard.jsx
-function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, appIsRTL, groupVisibility, contractorAccent }) {
+// 06.11.26 — `exportOnly`: just the Excel / PDF buttons (the facility file's
+// contacts chapter puts them in its own bar). The per-group "show to client"
+// switches are gone: a client sees the three company groups, nothing else.
+function ContactsCard({ contacts, catalog, viewerRole, projectName, printBrand, appIsRTL, contractorAccent, exportOnly }) {
   // Language follows the site switch in the top bar — no second toggle here.
   const lang = appIsRTL ? "he" : "en";
   const [q, setQ] = useState6("");
   const isRTL = appIsRTL;
   const cat = catalog || { disciplines: [], roles: [], companies: [] };
   const rows = contacts || [];
-  // Visibility is decided per group, per project, by the switches in System
-  // Admin. Only the client is filtered — the main contractor always sees
-  // everything, whatever the switches say.
-  const vis = groupVisibility || {};
-  const groupShown = (key) => key === "suppliers" || key === "subcontractors" ? vis[key] === true : vis[key] !== false;
-  const allowed = viewerRole === "client" ? CONTACT_GROUPS.filter((g) => groupShown(g.key)).map((g) => g.key) : CONTACT_GROUPS.map((g) => g.key);
+  const allowed = viewerRole === "client" ? CLIENT_CONTACT_GROUPS.slice() : CONTACT_GROUPS.map((g) => g.key);
   // This document is a company document, so it wears the main contractor's
   // colour — not the per-project colour used by the schedule.
   const accentColour = contractorAccent || CONTACTS_DOC_ACCENT;
@@ -8999,6 +8994,16 @@ ${footBlock}</div><div id="pages"></div>${printPaginateJs(printedStampText(he ? 
     w.focus();
     awPrintWhenPaged(w, 300);
   };
+  if (exportOnly) {
+    return /* @__PURE__ */ React15.createElement(
+      "span",
+      { className: "contactsExportBtns", dir: isRTL ? "rtl" : "ltr" },
+      /* @__PURE__ */ React15.createElement("button", { type: "button", className: "facBtn", onClick: () => setPrintAsk(() => exportCsv) }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.excel),
+      /* @__PURE__ */ React15.createElement("button", { type: "button", className: "facBtn", onClick: () => setPrintAsk(() => exportPdf) }, /* @__PURE__ */ React15.createElement(Download2, { size: 14, strokeWidth: 2 }), " ", c.pdf),
+      printAsk && /* @__PURE__ */ React15.createElement(PrintLangAsk, { onPick: (lg) => { const f = printAsk; setPrintAsk(null); f(lg); }, onClose: () => setPrintAsk(null) }),
+      plainNote && /* @__PURE__ */ React15.createElement("span", { className: "pdfBookStatus", style: { fontSize: 11.5 } }, plainNote)
+    );
+  }
   return /* @__PURE__ */ React15.createElement(
     "div",
     { className: "contactsCard", dir: isRTL ? "rtl" : "ltr" },
@@ -9336,7 +9341,7 @@ function SpecSourceAsk({ isHe, view, setView, onComputer, onLibrary }) {
 }
 // 06.11.26 — `mode`: "document" (inside the facility file, one project, no
 // catalogue) or "catalog" (the data libraries screen, the catalogue only).
-function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, contactsByProject, onContactsChange, groupVisibility, onGroupVisibilityChange, mode, fixedProjectId }) {
+function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, contactsByProject, onContactsChange, mode, fixedProjectId }) {
   const [projectId, setProjectId] = useState6(fixedProjectId || (projects.length ? projects[0].id : null));
   const [tab, setTab] = useState6(mode || "document");
   // The people library, one group at a time (06.11.26).
@@ -9362,8 +9367,9 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   // arrival; an empty one stays shut and keeps the screen short. Touching a
   // chevron fixes that group's state from then on. (14.10.26)
   const [openGrp, setOpenGrp] = useState6({});
-  const grpOpen = (key, count) => openGrp[key] === void 0 ? count > 0 : !!openGrp[key];
-  const toggleGrp = (key, count) => setOpenGrp((s) => ({ ...s, [key]: !(s[key] === void 0 ? count > 0 : s[key]) }));
+  // 06.11.26 — every group starts closed; she opens the one she needs.
+  const grpOpen = (key) => !!openGrp[key];
+  const toggleGrp = (key) => setOpenGrp((s) => ({ ...s, [key]: !s[key] }));
   const lang = isRTL ? "he" : "en";
   const cat = catalogDraft || { disciplines: [], roles: [], companies: [] };
   // Which project's stored contacts the draft is currently a copy of. Until
@@ -9386,8 +9392,6 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
   useEffect5(() => {
     setCatalogDraft(catalog);
   }, [catalog]);
-  const vis = groupVisibility || {};
-  const groupShown = (key) => key === "suppliers" || key === "subcontractors" ? vis[key] === true : vis[key] !== false;
   // Under Main Contractor and Supervision the discipline is always the same, so
   // it is filled in for you on every new row (still editable if ever needed).
   const GROUP_FIXED_DISCIPLINE = { main: "Main Contractor", supervision: "Supervision" };
@@ -9685,17 +9689,7 @@ function ProjectContactsScreen({ isRTL, projects, catalog, onCatalogChange, cont
               /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 15, strokeWidth: 2.2, className: "contactsSecChev", style: { transform: isOpen ? "rotate(180deg)" : "none" } })
             ),
             /* @__PURE__ */ React15.createElement("span", { className: "contactsGrpName", onClick: () => toggleGrp(g.key, rows.length) }, isRTL ? g.he : g.en),
-            /* @__PURE__ */ React15.createElement("span", { className: "contactsSecCount numerals" }, rows.length),
-            /* @__PURE__ */ React15.createElement(
-              "label",
-              { className: "contactsVisToggle", title: isRTL ? "הצגה ללקוח" : "Show to client" },
-              /* @__PURE__ */ React15.createElement("input", {
-                type: "checkbox",
-                checked: groupShown(g.key),
-                onChange: (e) => onGroupVisibilityChange(projectId, { ...vis, [g.key]: e.target.checked })
-              }),
-              /* @__PURE__ */ React15.createElement("span", null, isRTL ? "הצגה ללקוח" : "Show to client")
-            )
+            /* @__PURE__ */ React15.createElement("span", { className: "contactsSecCount numerals" }, rows.length)
           ),
           isOpen && /* @__PURE__ */ React15.createElement(
             "div",
@@ -24877,7 +24871,6 @@ function ProjectDashboardApp() {
     console.log("[awdash] contacts reached the app state:", projectId, (contacts || []).length, "rows");
     updateProjectExtras(projectId, { contacts });
   };
-  const setContactGroupVisibility = (projectId, visibility) => updateProjectExtras(projectId, { contactGroupVisibility: visibility });
   // The drawings and what was read out of them, one set per project. Only the
   // record travels here; the drawing files themselves sit in Storage.
   const setProjectPlans = (projectId, next) => updateProjectExtras(projectId, { plans: next });
@@ -24960,10 +24953,6 @@ function ProjectDashboardApp() {
   }, {});
   const boqDataByProject = Object.keys(projectExtras).reduce((acc, pid) => {
     acc[pid] = projectExtras[pid] && projectExtras[pid].boqData || null;
-    return acc;
-  }, {});
-  const contactVisibilityByProject = Object.keys(projectExtras).reduce((acc, pid) => {
-    acc[pid] = projectExtras[pid] && projectExtras[pid].contactGroupVisibility || {};
     return acc;
   }, {});
   const contactsByProject = Object.keys(projectExtras).reduce((acc, pid) => {
@@ -26178,14 +26167,12 @@ function ProjectDashboardApp() {
         contactsEditorNode: appRole === "admin" && activeProject ? React15.createElement(ProjectContactsScreen, {
           isRTL, mode: "document", fixedProjectId: activeProject.id, projects: [activeProject],
           catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [], hiddenCats: (cur && cur.hiddenCats) || [] })),
-          contactsByProject, onContactsChange: setProjectContacts,
-          groupVisibility: contactVisibilityByProject[activeProject.id] || {}, onGroupVisibilityChange: setContactGroupVisibility
+          contactsByProject, onContactsChange: setProjectContacts
         }) : null,
         onAddContacts: appRole === "admin" && activeProject ? (rows) => {
           const cur = (contactsByProject && contactsByProject[activeProject.id]) || [];
           setProjectContacts(activeProject.id, cur.concat(rows));
         } : null,
-        contactGroupVisibility: activeExtras.contactGroupVisibility || {},
         // Fixed navy, not the project colour and not the contractor's saved accent.
         contractorAccent: CONTACTS_DOC_ACCENT,
         submittals: activeExtras.submittals || [],
@@ -26276,7 +26263,7 @@ function ProjectDashboardApp() {
   })(), view === "systemAdmin" && /* @__PURE__ */ React15.createElement("div", { className: "adminWrap" }, /* @__PURE__ */ React15.createElement("div", { className: "adminHead", style: { justifyContent: "center", textAlign: "center" } }, /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("h1", { className: "adminHeadTitle", style: { margin: 0 } }, t.systemAdmin.title))), systemAdminSection === null && /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("div", { className: "sysAdminGrid" }, /* @__PURE__ */ React15.createElement("button", { className: "sysAdminCard", onClick: () => setSystemAdminSection("projects") }, /* @__PURE__ */ React15.createElement("div", { className: "sysCardIcon" }, /* @__PURE__ */ React15.createElement(CalendarClock2, { size: 20, strokeWidth: 1.7 })), /* @__PURE__ */ React15.createElement("div", null, /* @__PURE__ */ React15.createElement("p", { className: "sysCardTitle" }, t.systemAdmin.cardProjectTitle), /* @__PURE__ */ React15.createElement("p", { className: "sysCardSub" }, t.systemAdmin.cardProjectSub)))), /* @__PURE__ */ React15.createElement(AddUserPanel, { isRTL, projects: activeContractor.projects.filter((p) => p.name), setUserPerms }), /* @__PURE__ */ React15.createElement("div", { className: "saveRow", style: { marginTop: 18, justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { className: "ghostBtn", onClick: handleLogout }, t.systemAdmin.backToDash))), systemAdminSection === "users" && /* @__PURE__ */ React15.createElement(UserSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), brandLogo: activeContractor.logoUrl || DEFAULT_BRAND_LOGO_URL, signatures: userSignatures, onSignatureChange: setUserSignature, userPerms, setUserPerms }), systemAdminSection === "audit" && /* @__PURE__ */ React15.createElement(AuditLogScreen, { isRTL }), systemAdminSection === "branding" && /* @__PURE__ */ React15.createElement(BrandingScreen, { isRTL, current: activeContractor.accent && activeContractor.accent.accent || "", onPreview: previewPalette, onSave: pickPalette }), systemAdminSection === "libraries" && /* @__PURE__ */ React15.createElement(DataLibrariesScreen, {
     isRTL, catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog(n),
     // the contacts catalogue tab keeps the categories as they are
-    contactsProps: { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [], hiddenCats: (cur && cur.hiddenCats) || [] })), contactsByProject, onContactsChange: setProjectContacts, groupVisibility: contactVisibilityByProject[selectedProjectId] || {}, onGroupVisibilityChange: setContactGroupVisibility }
+    contactsProps: { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [], hiddenCats: (cur && cur.hiddenCats) || [] })), contactsByProject, onContactsChange: setProjectContacts }
   }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
