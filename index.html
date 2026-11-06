@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 263";
+var APP_BUILD = "06.11.2026 · build 264";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2072,6 +2072,10 @@ var pdfViewer = `
         .lliFreeze th.cDesc, .lliFreeze td.cDesc,
         .lliFreeze th.cSup, .lliFreeze td.cSup,
         .lliFreeze th.cImg, .lliFreeze td.cImg { position: sticky; }
+        /* The table is white throughout, so the frozen cells (which must be
+           opaque) look like every other cell; a row left out of the print is
+           grey in all its cells alike (tr.prOff). */
+        .lliTable.lliFreeze { background: #fff; }
         .lliFreeze td.cMark, .lliFreeze td.cDesc, .lliFreeze td.cSup, .lliFreeze td.cImg { background: #fff; z-index: 3; }
         .lliFreeze thead th.cMark, .lliFreeze thead th.cDesc, .lliFreeze thead th.cSup, .lliFreeze thead th.cImg { z-index: 8; }
         .lliFreeze:dir(rtl) .cMark { right: var(--fz0, 0px); }
@@ -2084,7 +2088,7 @@ var pdfViewer = `
         .lliFreeze:dir(ltr) .cImg { left: var(--fz3, 445px); }
         /* The edge of the frozen block: a soft line, so the columns sliding
            under it read as going underneath. */
-        .lliFreeze td.cImg, .lliFreeze th.cImg { box-shadow: inset 1px 0 0 var(--line), -4px 0 6px -4px rgba(15, 52, 96, .25); }
+        .lliFreeze td.cImg, .lliFreeze th.cImg { box-shadow: inset 1px 0 0 var(--line); }
         /* A row taken out of the order fades — but a frozen cell is opaque,
            so its contents fade instead of the cell itself. */
         .lliFreeze tr.lliOff td.cMark, .lliFreeze tr.lliOff td.cDesc,
@@ -12183,7 +12187,9 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
       ["cMark", "cDesc", "cSup", "cImg"].forEach((c, i) => {
         tbl.style.setProperty(`--fz${i}`, `${acc}px`);
         const th = tbl.querySelector(`thead th.${c}`);
-        acc += th ? th.getBoundingClientRect().width : 0;
+        // offsetWidth, not the on-screen box: the board sits inside a scaled
+        // frame, and the scaled width put the frozen columns apart (06.11.26).
+        acc += th ? th.offsetWidth : 0;
       });
     };
     measure();
