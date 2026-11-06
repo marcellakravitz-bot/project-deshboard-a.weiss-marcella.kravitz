@@ -773,7 +773,7 @@ function sbReviewSignature(rv, registry) {
 function sbPrintName(rec, lang) {
   const clean = (x) => sanitizeFileNamePart(String(x || "").replace(/["'\u05f3\u05f4`\u201c\u201d\u2018\u2019]/g, "")).trim();
   // 06.11.26 — the revision is part of the name: "... Joinery-003 Rev 1 - D-04".
-  const head = [clean(rec.projectName), "submittal", sbNumber(rec.category, rec.seq), `Rev ${rec.rev || 0}`].filter(Boolean).join(" ");
+  const head = [clean(rec.projectName), "submittal", sbNumber(rec.category, rec.seq), `Rev ${(Number(rec.rev) || 0) + 1}`].filter(Boolean).join(" ");
   const mark = clean(rec.typeId);
   return mark ? `${head} - ${mark}` : head;
 }
@@ -831,7 +831,7 @@ function sbBuildPrintHtml(rec, lang, brand, specPages, signatures) {
   // so nothing here is paginated — but the paper is the house paper, the same
   // shell every other document is printed on (7.9.26).
   const formBody = `<div class="hdr"><div class="side">${logo}</div><div class="mid"><div class="ttl">${L("formTitle")}</div></div>
-<div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc(rec.rev || 0)}</i></div></div>
+<div class="no"><b>${L("submittalNo")}</b><span>${sbEsc(sbNumber(rec.category, rec.seq))}</span><i>Rev.${sbEsc((Number(rec.rev) || 0) + 1)}</i></div></div>
 
 <div class="secBar">${L("projectInfo")}</div>
 <table class="info">
@@ -857,7 +857,7 @@ ${infoRow(L("subCategory"), sbEsc(sbSubcatLabel(rec.subCategory || rec.scope, re
 <div class="txtBox" dir="${dir}">${sbEsc((isHe ? rec.infoHe : rec.infoEn) || "")}</div>
 </div>
 ${reviewBlock}
-<div class="ftr">${sbEsc(sbNumber(rec.category, rec.seq))} &nbsp;·&nbsp; Rev.${sbEsc(rec.rev || 0)} &nbsp;·&nbsp; ${sbEsc(sbFmtDate(rec.date))}</div>`;
+<div class="ftr">${sbEsc(sbNumber(rec.category, rec.seq))} &nbsp;·&nbsp; Rev.${sbEsc((Number(rec.rev) || 0) + 1)} &nbsp;·&nbsp; ${sbEsc(sbFmtDate(rec.date))}</div>`;
   const html = `<!doctype html><html dir="${dir}"><head><meta charset="utf-8"><title>${sbEsc(sbPrintName(rec, lang))}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
 ${printSheetCss({ landscape: false, accent })}
@@ -1472,7 +1472,7 @@ function sbPagesOf(att, numPages) {
           // on a printed page says nothing about the product and everything
           // about how the folder is kept. The submittal number, the revision
           // and the page are what identify the sheet. (7.9.26)
-          label: `${sbNumber(rec.category, rec.seq)} Rev.${rec.rev || 0} · p.${i}/${doc.numPages}`,
+          label: `${sbNumber(rec.category, rec.seq)} Rev.${(Number(rec.rev) || 0) + 1} · p.${i}/${doc.numPages}`,
           dataUrl: canvas.toDataURL("image/jpeg", 0.8)
         });
         if (onProgress) onProgress(out.length);
@@ -1711,7 +1711,7 @@ function SubmittalReview({ rec, lang, isRTL, langSwitch, canSign, printBrand, us
       { className: "sbNoBox" },
       sbH("b", null, L("submittalNo")),
       sbH("span", null, sbNumber(d.category, d.seq)),
-      sbH("i", null, `Rev.${d.rev || 0}`)
+      sbH("i", null, `Rev.${(Number(d.rev) || 0) + 1}`)
     ),
     sbH(
       "div",

@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 268";
+var APP_BUILD = "06.11.2026 · build 269";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -20415,7 +20415,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         { className: "sbNoBox" },
         sbH("b", null, L("submittalNo")),
         sbH("span", null, sbNumber(d.category, d.seq)),
-        sbH("i", null, `Rev.${d.rev || 0}`)
+        sbH("i", null, `Rev.${(Number(d.rev) || 0) + 1}`)
       ),
       sbH("div", { className: "sbFormHeadSide end" }, langSwitch || null)
     ),
@@ -20649,7 +20649,7 @@ function SubmittalForm({ onNewRevision, onSignAsClient, onSwitchLang, siteRTL, r
         )
       : null,
     typeof d.fromRev === "number" && !d.sent
-      ? sbH("p", { className: "sbRevNote" }, `${L("newVersionNote")} Rev.${d.fromRev} → Rev.${d.rev}`)
+      ? sbH("p", { className: "sbRevNote" }, `${L("newVersionNote")} Rev.${(Number(d.fromRev) || 0) + 1} → Rev.${(Number(d.rev) || 0) + 1}`)
       : null,
     err ? sbH("p", { className: "sbErr" }, err) : null,
     // ------- specification files + AI
@@ -21966,7 +21966,7 @@ function SubmittalFolder({
       { className: "sbActGrid" },
       rec
         ? sbH("button", { type: "button", className: "sbRevLong", title: L("newRevision"), onClick: () => onNewRevision(rec) },
-            sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${sbNextRev(list, rec)}`)
+            sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${sbNextRev(list, rec) + 1}`)
         : sbH("button", { type: "button", className: "sbRevLong", title: L("chkAdd"),
             onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "", lliMark: r.ownMark || "", lliDesc: r.ownDesc || "", lliImage: (lli[r.code] || {}).image || null }, r.cat) },
             sbH(Plus2, { size: 13, strokeWidth: 2.4 }), " ", L("chkAdd")),
@@ -22025,7 +22025,7 @@ function SubmittalFolder({
         rec
           ? sbH(React15.Fragment, null,
               sbH("span", { className: "sbNoMain" }, sbNumber(rec.category, rec.seq)),
-              sbH("span", { className: "sbNoRev" }, `Rev.${rec.rev || 0}`,
+              sbH("span", { className: "sbNoRev" }, `Rev.${(Number(rec.rev) || 0) + 1}`,
                 others.length
                   ? sbH("button", {
                       type: "button", className: `sbRevToggle ${famOpen ? "open" : ""}`, title: L("olderVersions"),
@@ -22092,7 +22092,7 @@ function SubmittalFolder({
           ? sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
           : sbH("div", { className: "sbStatusWrap" },
               chip(r.status, rec),
-              r.approved && r.approved.id !== rec.id ? sbH("span", { className: "sbChkStatRev" }, `Rev.${r.approved.rev || 0}`) : null,
+              r.approved && r.approved.id !== rec.id ? sbH("span", { className: "sbChkStatRev" }, `Rev.${(Number(r.approved.rev) || 0) + 1}`) : null,
               !rec.sent && !r.approved ? sbH("span", { className: "sbDraftTag" }, L("draft")) : null)
       ),
       sbH("td", { dir: "ltr" }, r.signed ? sbFmtDate(String(r.signed).slice(0, 10)) : "—"),
@@ -22127,7 +22127,7 @@ function SubmittalFolder({
           sbH("td", { className: "sbAiCell" }),
           sbH("td", { className: "sbNoCell" },
             sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
-            sbH("span", { className: "sbNoRev" }, `Rev.${s.rev || 0}`)),
+            sbH("span", { className: "sbNoRev" }, `Rev.${(Number(s.rev) || 0) + 1}`)),
           sbH("td", { dir: "ltr" }, s.boqCode || "—"),
           sbH("td", { className: "sbItemCell", dir: "auto" }, s.typeId || "—"),
           sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || "—"),
@@ -22534,7 +22534,7 @@ function SubmittalCard({
   };
   const sendMailNow = (s) => {
     learnFrom(s);
-    const no = sbNumber(s.category, s.seq) + (Number(s.rev) ? ` Rev.${s.rev}` : "");
+    const no = sbNumber(s.category, s.seq) + (Number(s.rev) ? ` Rev.${Number(s.rev) + 1}` : "");
     const mark = String(s.typeId || "").trim();
     const due = s.requiredApprovalDate ? sbFmtDate(String(s.requiredApprovalDate).slice(0, 10)) : "";
     const to = (contacts || [])
