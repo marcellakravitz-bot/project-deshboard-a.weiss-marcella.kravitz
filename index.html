@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 265";
+var APP_BUILD = "06.11.2026 · build 266";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -1344,6 +1344,21 @@ var pdfViewer = `
         }
         @keyframes sbSpin { to { transform: rotate(360deg); } }
         .sbTableWrap { overflow-x: auto; margin-top: 8px; }
+        /* 06.11.26 — the submittal board: the column titles in a frame of
+           their own that never moves, the rows in a frame under it that
+           scrolls inside (the scroll bar on the left, as the page is RTL).
+           Both frames as wide as the page allows. */
+        .functionPage.wide:has(.sbFrames) { width: 100%; }
+        .submittalPanel:has(> .sbFrames) { max-width: none; width: 100%; background: transparent; border: 0; box-shadow: none; padding: 0; }
+        .sbFrames { display: flex; flex-direction: column; gap: 8px; }
+        .sbFrames .sbHeadFrame { overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+        .sbFrames .sbHeadFrame .sbHeadTable { table-layout: fixed; }
+        .sbFrames .sbHeadFrame .sbHeadTable thead th { border-bottom: 0; }
+        .sbFrames .sbBodyFrame { margin-top: 0; overflow: auto; max-height: calc(var(--appvh, 760px) - 300px); background: #fff;
+          border: 1px solid var(--line); border-radius: 12px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+        .sbFrames .sbBodyFrame::-webkit-scrollbar { width: 8px; height: 8px; }
+        .sbFrames .sbBodyFrame::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
+        .sbFrames .sbBodyTable thead { visibility: hidden; }
         .sbTable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
         .sbTable th {
           background: #f3f6fa; color: var(--steel); font-weight: 800; font-size: 11.5px;
@@ -8408,7 +8423,16 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null,
+    // 06.11.26 — a category changed on LLI is changed on SD and on a submittal
+    // draft of the same line too. A submittal already sent keeps its folder:
+    // its number was issued in it.
+    onCategoryEverywhere: appRole === "admin" ? (code, category, subCategory) => {
+      if (sdRows && sdRows[code] && onChangeSdRows) onChangeSdRows({ ...sdRows, [code]: { ...sdRows[code], category: category || null, subCategory: subCategory || null } });
+      if (onChangeSubmittals && (submittals || []).some((x) => x && x.boqCode === code && !x.sent && x.category !== category && category)) {
+        onChangeSubmittals((submittals || []).map((x) => (x && x.boqCode === code && !x.sent && category ? { ...x, category } : x)));
+      }
+    } : null }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
     projectId: project.id, project, projectName: project.name, currentEmail,
     contactsNode: contactsEditorNode || React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }),
     contactsExportNode: React14.createElement(ContactsCard, { exportOnly: true, contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }),
@@ -12085,7 +12109,7 @@ function lliItemsFor(boqData, boqFlags, lliRows, contacts, catalog, lang) {
   Object.keys(data).filter((k) => k.indexOf("m-") === 0).forEach((k) => push(k, (data[k] || {}).category, (data[k] || {}).desc));
   return out;
 }
-function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere }) {
+function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere, onCategoryEverywhere }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -13314,6 +13338,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                           // 06.11.26 — every category reaches the routing: one
                           // she typed opens its own submittal folder.
                           writeCategory(r, pick.category);
+                          if (onCategoryEverywhere) onCategoryEverywhere(r.code, pick.category, pick.subCategory);
                         },
                         onNewCat: (name) => boardAddCat(name, contactsCatalog, onChangeBoardCats),
                         onDropCat: (key) => boardDropCat(key, contactsCatalog, onChangeBoardCats),
@@ -22113,7 +22138,98 @@ function SubmittalFolder({
     }
     return [main, ...kids];
   };
-  return sbH(
+  const headEl = () => sbH("thead", null, sbH("tr", null,
+              // 05.11.26 — which rows print: the rightmost column.
+              canEdit ? (() => {
+                const allOn = rowsAll.every((r) => !printOff[r.key]);
+                return prPrintTh(he, allOn, () => {
+                  const next = {};
+                  if (allOn) rowsAll.forEach((r) => { next[r.key] = true; });
+                  setPrintOff(next);
+                });
+              })() : null,
+              // 06.11.26 — shown to the client / supervision, as on LLI.
+              canEdit && onChangeClientOff ? (() => {
+                const allOn = rowsAll.every((r) => !cOff[r.key]);
+                return sbH("th", {
+                  className: `cAct prAllTh ${allOn ? "on" : ""}`.trim(),
+                  title: he ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח") : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
+                  onClick: () => {
+                    const next = {};
+                    if (allOn) rowsAll.forEach((r) => { next[r.key] = true; });
+                    onChangeClientOff(next);
+                  }
+                }, he ? "לקוח / פיקוח" : "Client / supervision");
+              })() : null,
+              sbH("th", { className: "sbAiCell", title: "\u05d1\u05d3\u05d9\u05e7\u05ea AI \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea" }, "AI"),
+              // 05.11.26 — the column title is the switch: dark prints, faded
+              // and struck through is left out. No tick beside it.
+              SB_BOARD_COLS.map((c) => sbH(
+                "th",
+                canEdit
+                  ? {
+                      key: c.key, className: `sbColTh prColTh ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim(),
+                      title: prColTitle(lang, hidden.indexOf(c.key) < 0),
+                      onClick: () => onToggleCol && onToggleCol(c.key)
+                    }
+                  : { key: c.key, className: "sbColTh" },
+                c.label(lang)
+              )),
+              sbH("th", { className: "cAct" }, "")
+            ));
+  const framesRef = React15.useRef(null);
+  // The copied titles take the widths of the real ones, and follow the rows
+  // when they are scrolled sideways.
+  React15.useEffect(() => {
+    const root = framesRef.current;
+    if (!root) return;
+    const body = root.querySelector(".sbBodyFrame"), headT = root.querySelector(".sbHeadTable"), bodyT = root.querySelector(".sbBodyTable");
+    if (!body || !headT || !bodyT) return;
+    const fit = () => {
+      const ghost = bodyT.querySelectorAll("thead th"), copy = headT.querySelectorAll("thead th");
+      const gh = bodyT.querySelector("thead");
+      headT.style.width = bodyT.offsetWidth + "px";
+      ghost.forEach((th, i) => { if (copy[i]) { copy[i].style.width = th.offsetWidth + "px"; copy[i].style.minWidth = th.offsetWidth + "px"; copy[i].style.maxWidth = th.offsetWidth + "px"; } });
+      bodyT.style.marginTop = (gh ? -gh.offsetHeight : 0) + "px";
+    };
+    const sync = () => { root.querySelector(".sbHeadFrame").scrollLeft = body.scrollLeft; };
+    fit();
+    body.addEventListener("scroll", sync);
+    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(fit) : null;
+    if (ro) ro.observe(bodyT);
+    return () => { body.removeEventListener("scroll", sync); if (ro) ro.disconnect(); };
+  });
+  return sbH(React15.Fragment, null,
+    // 06.11.26 — what was removed, and the way back: on the grey page under
+    // the Excel / PDF buttons, not inside the table's frame.
+    canEdit && offCount
+      ? sbH(
+          "p",
+          { className: "sbOffBar" },
+          `${offCount} ${L("removedSome")}`,
+          sbH(
+            "button",
+            { type: "button", className: "sbOffRestore", onClick: () => setRestoreAsk(true) },
+            sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
+            " ",
+            he ? "החזרת סעיפים" : "Restore lines"
+          )
+        )
+      : null,
+    restoreAsk && canEdit
+      ? sbH(RestoreRowsAsk, {
+          he,
+          items: scope.flatMap((c) => {
+            const off = ((chkOff || {})[c.key]) || {};
+            return boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", c.key)
+              .filter((p) => off[p.code])
+              .map((p) => ({ key: `${c.key}|${p.code}`, code: p.code, label: `${sbText(c, lang)} \u00b7 ${boqText(p, lang)}` }));
+          }),
+          onRestore: (keys) => onRestoreChkSome && onRestoreChkSome(keys.map((k) => { const i = k.indexOf("|"); return [k.slice(0, i), k.slice(i + 1)]; })),
+          onClose: () => setRestoreAsk(false)
+        })
+      : null,
+    sbH(
     "div",
     { className: "submittalPanel", dir: isRTL ? "rtl" : "ltr" },
     // What the AI split out of one set of specifications and is still waiting
@@ -22228,90 +22344,25 @@ function SubmittalFolder({
           )
         )
       : null,
-    canEdit && offCount
-      ? sbH(
-          "p",
-          { className: "sbOffBar" },
-          `${offCount} ${L("removedSome")}`,
-          sbH(
-            "button",
-            { type: "button", className: "sbOffRestore", onClick: () => setRestoreAsk(true) },
-            sbH(RotateCcw, { size: 12, strokeWidth: 2.4 }),
-            " ",
-            he ? "החזרת סעיפים" : "Restore lines"
-          )
-        )
-      : null,
-    restoreAsk && canEdit
-      ? sbH(RestoreRowsAsk, {
-          he,
-          items: scope.flatMap((c) => {
-            const off = ((chkOff || {})[c.key]) || {};
-            return boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", c.key)
-              .filter((p) => off[p.code])
-              .map((p) => ({ key: `${c.key}|${p.code}`, code: p.code, label: `${sbText(c, lang)} \u00b7 ${boqText(p, lang)}` }));
-          }),
-          onRestore: (keys) => onRestoreChkSome && onRestoreChkSome(keys.map((k) => { const i = k.indexOf("|"); return [k.slice(0, i), k.slice(i + 1)]; })),
-          onClose: () => setRestoreAsk(false)
-        })
-      : null,
     rowsAll.length === 0
       ? sbH("p", { className: "submittalPanelNote" }, L("noSubmittals"))
-      : sbH(
-          "div",
-          { className: "sbTableWrap" },
-          sbH(
-            "table",
-            { className: "sbTable sbBoardTable" },
-            sbH("thead", null, sbH("tr", null,
-              // 05.11.26 — which rows print: the rightmost column.
-              canEdit ? (() => {
-                const allOn = rowsAll.every((r) => !printOff[r.key]);
-                return prPrintTh(he, allOn, () => {
-                  const next = {};
-                  if (allOn) rowsAll.forEach((r) => { next[r.key] = true; });
-                  setPrintOff(next);
-                });
-              })() : null,
-              // 06.11.26 — shown to the client / supervision, as on LLI.
-              canEdit && onChangeClientOff ? (() => {
-                const allOn = rowsAll.every((r) => !cOff[r.key]);
-                return sbH("th", {
-                  className: `cAct prAllTh ${allOn ? "on" : ""}`.trim(),
-                  title: he ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח") : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
-                  onClick: () => {
-                    const next = {};
-                    if (allOn) rowsAll.forEach((r) => { next[r.key] = true; });
-                    onChangeClientOff(next);
-                  }
-                }, he ? "לקוח / פיקוח" : "Client / supervision");
-              })() : null,
-              sbH("th", { className: "sbAiCell", title: "\u05d1\u05d3\u05d9\u05e7\u05ea AI \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea" }, "AI"),
-              // 05.11.26 — the column title is the switch: dark prints, faded
-              // and struck through is left out. No tick beside it.
-              SB_BOARD_COLS.map((c) => sbH(
-                "th",
-                canEdit
-                  ? {
-                      key: c.key, className: `sbColTh prColTh ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim(),
-                      title: prColTitle(lang, hidden.indexOf(c.key) < 0),
-                      onClick: () => onToggleCol && onToggleCol(c.key)
-                    }
-                  : { key: c.key, className: "sbColTh" },
-                c.label(lang)
-              )),
-              sbH("th", { className: "cAct" }, "")
-            )),
-            sbH("tbody", null, order.flatMap((sec) => {
+      // 06.11.26 — the column titles in a frame of their own that stays put,
+      // and the rows in a frame below that scrolls inside (scroll bar on the
+      // left). The titles are a copy of the table's own, sized from it.
+      : sbH("div", { className: "sbFrames", ref: framesRef },
+          sbH("div", { className: "sbHeadFrame" },
+            sbH("table", { className: "sbTable sbBoardTable sbHeadTable" }, headEl())),
+          sbH("div", { className: "sbTableWrap sbBodyFrame" },
+            sbH("table", { className: "sbTable sbBoardTable sbBodyTable" },
+              headEl(),
+              sbH("tbody", null, order.flatMap((sec) => {
               const band = showBands
                 ? [sbH("tr", { key: `band:${sec}`, className: "sbBandRow" }, sbH("td", { colSpan: ncols }, sec))]
                 : [];
               return band.concat(bySec[sec].flatMap(rowOf));
-            }))
-          )
-        ),
+            }))))),
     bqShow ? sbH(SbBoqCheckDialog, { check: bqShow, onClose: () => setBqShow(null) }) : null
-  );
+  ));
 }
 // --------------------------------------------------------------- the card
 // The one thing a client or a main contractor writes on a project.
