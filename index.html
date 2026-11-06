@@ -132,6 +132,8 @@ import {
   openImagePicker,
   imgPickProps,
   imgAsk,
+  sbSetCustomFolders,
+  sbCustomCode,
   ImgLibrary,
   supLibLoad,
   supLibFind,
@@ -8141,6 +8143,9 @@ function CardView({
   userPerms,
   submittalChkOff,
   onChangeChkOff,
+  onRestoreEverywhere,
+  submittalClientOff,
+  onChangeClientOff,
   submittalReview,
   onChangeReview,
   submittalApprovals,
@@ -8223,7 +8228,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
     projectId: project.id, project, projectName: project.name, currentEmail,
     contactsNode: contactsEditorNode || React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, groupVisibility: contactGroupVisibility, contractorAccent }),
     contactsCount: (contacts || []).length,
@@ -9175,7 +9180,7 @@ function CategoriesLibrary({ isRTL, catalog, onCatalogChange }) {
       ? sbH(React15.Fragment, null,
           sbH("input", { className: "contactsInput", dir: "rtl", value: c.he || "", onChange: (e) => setMine(mine.map((x) => x.key === c.key ? { ...x, he: e.target.value } : x)) }),
           sbH("input", { className: "contactsInput", dir: "ltr", value: c.en || "", placeholder: "English", onChange: (e) => setMine(mine.map((x) => x.key === c.key ? { ...x, en: e.target.value } : x)) }),
-          sbH("input", { className: "contactsInput dlCode", dir: "ltr", value: c.code || "", placeholder: isRTL ? "קוד סבמיטל" : "Submittal code",
+          sbH("input", { className: "contactsInput dlCode", dir: "ltr", value: c.code || "", placeholder: sbCustomCode(c),
             title: isRTL ? "הקוד שבמספור הסבמיטלים של התיקייה (למשל ELV)" : "The folder's code in submittal numbers (e.g. ELV)",
             onChange: (e) => setMine(mine.map((x) => x.key === c.key ? { ...x, code: e.target.value.replace(/[^A-Za-z0-9]/g, "").toUpperCase().slice(0, 8) } : x)) }),
           sbH("button", { type: "button", className: "contactsRowDel", title: isRTL ? "מחיקה מהמאגר" : "Delete",
@@ -11767,7 +11772,7 @@ function lliItemsFor(boqData, boqFlags, lliRows, contacts, catalog, lang) {
   Object.keys(data).filter((k) => k.indexOf("m-") === 0).forEach((k) => push(k, (data[k] || {}).category, (data[k] || {}).desc));
   return out;
 }
-function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats }) {
+function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -12064,6 +12069,7 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
           };
         }),
         onRestore: (keys) => {
+          if (onRestoreEverywhere) { onRestoreEverywhere(keys); return; }
           const next = { ...data };
           keys.forEach((k) => { next[k] = { ...(next[k] || {}), removed: false }; });
           onChangeRows && onChangeRows(next);
@@ -12959,13 +12965,11 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                         lang,
                         disabled: !canEdit,
                         noneLabel: L("noCat"),
-                        // A category she typed is hers, not the BOQ routing's:
-                        // it stays on the row, so the submittal folders are not
-                        // touched by it (05.11.26).
                         onPick: (pick) => {
                           patch(r.code, { category: pick.category, subCategory: pick.subCategory });
-                          const c = pick.category ? boardCategoryOf(pick.category) : null;
-                          if (!c || !c.custom) writeCategory(r, pick.category);
+                          // 06.11.26 — every category reaches the routing: one
+                          // she typed opens its own submittal folder.
+                          writeCategory(r, pick.category);
                         },
                         onNewCat: (name) => boardAddCat(name, contactsCatalog, onChangeBoardCats),
                         onDropCat: (key) => boardDropCat(key, contactsCatalog, onChangeBoardCats),
@@ -13372,7 +13376,7 @@ function sdDueTone(v, done) {
   return warn.toISOString().slice(0, 10) <= today ? "wait" : "";
 }
 
-function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail, userPerms, onChangeBoardCats }) {
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -13481,6 +13485,23 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const inUseCats = boardCatChips(all.filter((r) => !(data[r.code] || {}).removed).map((r) => ({ category: r.category, subCategory: (data[r.code] || {}).subCategory || "" })), lang);
   const catKeyOfRow = (r) => boardCatKeyOf(r.category, (data[r.code] || {}).subCategory || "");
   const isDone = (r) => SD_DONE.indexOf(sdRowOf(data, r.code).status) >= 0;
+  // 06.11.26 — the same summary squares as the submittal board, counted off
+  // the rows the table shows; the PDF and the workbook print them too.
+  const sdSumKey = (r) => {
+    const v = sdRowOf(data, r.code);
+    if (sdApprovalOf(approvals, r.code) || SD_DONE.indexOf(v.status) >= 0) return "approved";
+    if (v.status === "revise") return "returned";
+    if (v.status === "submitted" || v.toClient) return "waiting";
+    if (v.status === "drafting") return "draft";
+    return "missing";
+  };
+  const sdSummary = (keys, lg) => {
+    const c = { approved: 0, waiting: 0, returned: 0, draft: 0, missing: 0 };
+    keys.forEach((k) => { c[k] = (c[k] || 0) + 1; });
+    const ks = ["approved", "waiting"].concat(["returned", "draft", "missing"].filter((k) => c[k] > 0));
+    return ks.map((k) => ({ key: k, n: c[k], label: sbText(k === "missing" ? { en: "Not started", he: "טרם הוכנו" } : SB_SUM_L[k], lg), bg: SB_SUM_BG[k], ink: SB_SUM_INK[k] }))
+      .concat([{ key: "total", n: keys.length, label: sbText(SB_SUM_L.total, lg), bg: SB_SUM_BG.total, ink: SB_SUM_INK.total }]);
+  };
   const matchesStatus = (r) => {
     if (statusFilter === "all") return true;
     if (statusFilter === "hidden") return true;
@@ -13503,6 +13524,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
           };
         }),
         onRestore: (keys) => {
+          // 06.11.26 — brought back here is brought back on every board.
+          if (onRestoreEverywhere) { onRestoreEverywhere(keys); return; }
           const next = { ...data };
           keys.forEach((k) => { next[k] = { ...(next[k] || {}), removed: false }; });
           onChangeRows && onChangeRows(next);
@@ -13586,7 +13609,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     else window.open(url, "_blank", "noopener");
   };
   // The board as it stands on screen, in the two shapes it has to leave in.
-  const exportGrid = () => {
+  const exportGrid = (audience) => {
     const yn = (v, at) => (v ? `${L("yes")}${at ? ` · ${sbFmtDate(String(at).slice(0, 10))}` : ""}` : L("no"));
     const head = [
       L("section"), L("category"), L("typeMark"), L("desc"), L("qty"),
@@ -13603,11 +13626,13 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     // approved-as-noted, orange for submitted, red for a drawing whose due date
     // has passed and is still not in. Nothing else is coloured (29.8.26).
     const tone = [];
-    const catSecs = [], catRank = [], chSecs = [], chRank = [];
+    const catSecs = [], catRank = [], chSecs = [], chRank = [], sumKeys = [];
     const today = new Date().toISOString().slice(0, 10);
     groups.forEach((g, gi) => {
       g.rows.forEach((r) => {
-        if (isHidden(r)) return;
+        // 06.11.26 — the client / supervision arrow decides the client's copy
+        // only; her own paper follows the print V.
+        if (isHidden(r) && audience === "client") return;
         if (printOff[r.code]) return;
         const v = sdRowOf(data, r.code);
         // The client's approval counts on the paper too — the report is what
@@ -13617,6 +13642,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         const done = !!ap || SD_DONE.indexOf(v.status) >= 0;
         const approvedOn = (ap && ap.approvedAt) || v.approvedAt || "";
         tone.push(sdDueTone(v, done));
+        sumKeys.push(sdSumKey(r));
         // 05.11.26 — what the row is grouped under on paper, both ways.
         catSecs.push(cat2(r.category) || (lang === "he" ? "ללא תחום" : "Other"));
         catRank.push(boardCatRank(r.category));
@@ -13638,7 +13664,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
         ]);
       });
     });
-    return { head, body, widths, types, tone, keys: SD_COL_KEYS.slice(), catSecs, catRank, chSecs, chRank };
+    return { head, body, widths, types, tone, keys: SD_COL_KEYS.slice(), catSecs, catRank, chSecs, chRank, sumKeys };
   };
   const exportTitle = () => `${projectName || ""}`.trim() || L("title");
   const exportSub = () => `${L("title")} · ${sbFmtDate(new Date().toISOString().slice(0, 10))}`;
@@ -13654,7 +13680,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   };
   const onExcel = async (hdr) => {
     const H = hdr || sdTitles(lang);
-    const g = sbDropCols(exportGrid(), sdHide);
+    const g = sbDropCols(exportGrid("admin"), sdHide);
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     setExportNote(null);
     const byBoq = H.order === "boq";
@@ -13663,6 +13689,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       title: H.title, subtitle: [H.subtitle, H.date].filter((x) => String(x || "").trim()).join(" \u00b7 "), sheetName: "SD",
       fileName: boardFileName(projectName, "SD", "xlsx"),
       head: g.head, body: O.body, sections: O.sections, toneRows: H.tones === false ? null : O.tone, widths: g.widths, colTypes: g.types,
+      summary: sdSummary(g.sumKeys, lang),
       accent: (printBrand || {}).accent, isRTL
     });
     if (res && res.styled === false) setExportNote(sbText(BOARD_EXPORT_T.plainNote, lang));
@@ -13673,7 +13700,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const sdClientKeys = ["section", "category", "typeMark", "desc", "dueAt", "toClient", "status"];
   const onPdf = (printLang, audience, hdr) => {
     const H = hdr || sdTitles(printLang);
-    const g = sbDropCols(exportGrid(), sdHide);
+    const g = sbDropCols(exportGrid(audience), sdHide);
     if (!g.body.length) { setExportNote(L("nothingToExport")); return; }
     const byBoq = H.order === "boq";
     const O = boardOrderBy({ body: g.body, tone: g.tone }, byBoq ? g.chSecs : g.catSecs, byBoq ? g.chRank : g.catRank);
@@ -13690,6 +13717,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       widths: keep.map((i) => g.widths[i]),
       toneRows: H.tones === false ? null : O.tone,
       sections: O.secs,
+      summary: sdSummary(g.sumKeys, printLang === "en" ? "en" : "he"),
       // The drawings report keeps its printed-on stamp; only the ordering
       // report drops it, because she asked for that one by name (29.8.26).
       accent: (printBrand || {}).accent, brand: printBrand, isRTL: printLang !== "en"
@@ -13753,11 +13781,16 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
       // they are edited — nothing waits for a refresh (29.8.26).
       inUseCats.map((c) => catChip(c.key, c.label))
     ),
-    // The tally on its own line, centred (29.8.26).
+    // 06.11.26 — the summary squares, as on the submittal board.
     sbH(
       "div",
-      { className: "lliTally" },
-      sbH("span", { className: "lliCount" }, `${visible.length} ${L("rowsOf")} · ${doneCount} ${L("approvedOf")}`)
+      { className: "sbSumBar", role: "status" },
+      sdSummary(visible.filter((r) => !isRemoved(r)).map(sdSumKey), lang).map((x) => sbH(
+        "div",
+        { key: x.key, className: `sbSumBox ${x.key}`, style: { background: x.bg, color: x.ink } },
+        sbH("b", null, x.n),
+        sbH("span", null, x.label)
+      ))
     ),
     restoreDialog,
     // Nothing is thrown away: what she removed is counted here and comes back
@@ -13840,6 +13873,20 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     setPrintOff(next);
                   });
                 })(),
+                // 06.11.26 — shown to the client / supervision, as on LLI.
+                (() => {
+                  if (!canEdit) return null;
+                  const allOn = groups.every((g) => g.rows.every((r) => !isHidden(r)));
+                  return sbH("th", {
+                    className: `cAct prAllTh ${allOn ? "on" : ""}`.trim(),
+                    title: isRTL ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח") : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
+                    onClick: () => {
+                      const next = { ...data };
+                      groups.forEach((g) => g.rows.forEach((r) => { next[r.code] = { ...sdRowOf(data, r.code), hidden: allOn }; }));
+                      onChangeRows(next);
+                    }
+                  }, isRTL ? "לקוח / פיקוח" : "Client / supervision");
+                })(),
                 thS("section", "cSec", L("section")),
                 thS("category", "cCat", L("category")),
                 thS("typeMark", "cMark", L("typeMark")),
@@ -13855,7 +13902,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 10 : 8 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 11 : 8 }, g.title)),
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -13886,7 +13933,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                   const tone = tone0 === "ok" ? "lliDone" : tone0 === "wait" ? "lliWait" : tone0 === "late" ? "lliLate" : "";
                   return sbH(
                     "tr",
-                    { key: r.code, className: `${hidden ? "lliOff" : ""} ${tone} ${printOff[r.code] ? "prOff" : ""}`.trim() },
+                    { key: r.code, className: `${tone} ${printOff[r.code] ? "prOff" : ""}`.trim() },
                     canEdit
                       ? sbH(
                           "td",
@@ -13899,6 +13946,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                             onChange: () => setPrintOff({ ...printOff, [r.code]: !printOff[r.code] })
                           })
                         )
+                      : null,
+                    canEdit
+                      ? sbH("td", { className: "cAct prKeep" },
+                          sbH(ClientShowBtn, { on: !hidden, he: isRTL, onClick: () => patch(r.code, { hidden: !hidden }) }))
                       : null,
                     sbH(
                       "td",
@@ -18018,12 +18069,25 @@ var BOARD_CATEGORIES = SUBMITTAL_CATEGORIES.concat(BOARD_ONLY_CATEGORIES);
 // there) opens a "נגרות" folder on the submittal screen, numbered Joinery-001.
 var SB_JOINERY_FOLDER = { ...SB_EXTRA_FOLDERS[0], icon: Hammer2 };
 var SB_ALL_FOLDERS = SUBMITTAL_CATEGORIES.concat([SB_JOINERY_FOLDER]);
+// 06.11.26 — the extra folders: joinery, and every category she added. Kept in
+// SB_ALL_FOLDERS too (rebuilt in place, so every lookup by key finds them).
+function sbExtraFolders() {
+  return [SB_JOINERY_FOLDER].concat(SB_EXTRA_FOLDERS.filter((f) => f.custom).map((f) => ({ ...f, icon: Hammer2 })));
+}
+function sbRebuildAllFolders() {
+  SB_ALL_FOLDERS.length = 0;
+  SUBMITTAL_CATEGORIES.concat(sbExtraFolders()).forEach((f) => SB_ALL_FOLDERS.push(f));
+}
 function sbFoldersFor(boqData, boqFlags, lliRows, list) {
-  let need = false;
-  try { need = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", "joinery").length > 0; } catch (e) { need = false; }
-  if (!need) need = Object.keys(lliRows || {}).some((k) => k.indexOf("m-") === 0 && lliRows[k] && lliRows[k].alsoSubmittal && lliRows[k].category === "joinery");
-  if (!need) need = (list || []).some((x) => x && x.category === "joinery");
-  return need ? SB_ALL_FOLDERS : SUBMITTAL_CATEGORIES;
+  // A folder beyond the standing ones opens when something is filed in it.
+  const needs = (key) => {
+    let need = false;
+    try { need = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", key).length > 0; } catch (e) { need = false; }
+    if (!need) need = Object.keys(lliRows || {}).some((k) => k.indexOf("m-") === 0 && lliRows[k] && lliRows[k].alsoSubmittal && lliRows[k].category === key);
+    if (!need) need = (list || []).some((x) => x && x.category === key);
+    return need;
+  };
+  return SUBMITTAL_CATEGORIES.concat(sbExtraFolders().filter((f) => needs(f.key)));
 }
 // 20.10.26 — categories she adds herself, from the top of the LLI table. They
 // live in the global catalogue (one list for every project) and are appended
@@ -18036,6 +18100,8 @@ function sbFoldersFor(boqData, boqFlags, lliRows, list) {
 var BOARD_HIDDEN = new Set();
 function boardSetCustomCats(list, hidden) {
   if (hidden !== void 0) BOARD_HIDDEN = new Set(Array.isArray(hidden) ? hidden : []);
+  // The same list opens submittal folders (06.11.26).
+  try { sbSetCustomFolders(list); sbRebuildAllFolders(); } catch (e) {}
   for (let i = BOARD_CATEGORIES.length - 1; i >= 0; i--) {
     if (BOARD_CATEGORIES[i].custom) BOARD_CATEGORIES.splice(i, 1);
   }
@@ -21303,6 +21369,8 @@ function SubmittalFolder({
   onRemoveChk,
   onRestoreChk,
   onRestoreChkSome,
+  clientOff,
+  onChangeClientOff,
   tradeFor,
   reviewRows,
   onPlaceReview,
@@ -21323,8 +21391,10 @@ function SubmittalFolder({
   // 21.10.26 — one table. The lines of the bill of quantities this discipline
   // owes, each with the submittal that answers it, then everything else that
   // was filed here. A client sees only what was actually filed.
+  // 06.11.26 — a row she took off the client's view is not on it.
+  const cOff = clientOff || {};
   const rowsAll = sbBoardRows({ list, boqData, boqFlags, chkOff, lliRows, categories: scope, lang })
-    .filter((r) => canEdit || r.lead);
+    .filter((r) => canEdit || (r.lead && !cOff[r.key]));
   // Grouped by discipline, the groups in the order they first appear — the
   // same order the workbook and the PDF use.
   const order = [];
@@ -21334,16 +21404,22 @@ function SubmittalFolder({
     bySec[r.disc].push(r);
   });
   const showBands = allMode || order.length > 1;
-  const ncols = SB_BOARD_COLS.length + 2 + (canEdit ? 1 : 0);
+  const ncols = SB_BOARD_COLS.length + 2 + (canEdit ? 1 : 0) + (canEdit && onChangeClientOff ? 1 : 0);
   // 05.11.26 — the print V on every row, the rightmost column. Kept in a
   // module map as well, because the exports build their own rows.
   const [printOff, setPrintOffState] = useState6(() => ({ ...sbPrintOffMap }));
   const setPrintOff = (next) => { sbPrintOffMap = next; setPrintOffState(next); };
-  const prTd = (k) => (canEdit ? sbH("td", { className: "cRoom prKeep" }, k ? sbH("input", {
-    type: "checkbox", className: "lliShowTick", checked: !printOff[k],
-    title: he ? "להדפסה ולאקסל" : "Print / Excel",
-    onChange: () => setPrintOff({ ...printOff, [k]: !printOff[k] })
-  }) : null) : null);
+  const prTd = (k) => [
+    canEdit ? sbH("td", { key: "pr", className: "cRoom prKeep" }, k ? sbH("input", {
+      type: "checkbox", className: "lliShowTick", checked: !printOff[k],
+      title: he ? "להדפסה ולאקסל" : "Print / Excel",
+      onChange: () => setPrintOff({ ...printOff, [k]: !printOff[k] })
+    }) : null) : null,
+    canEdit && onChangeClientOff ? sbH("td", { key: "cl", className: "cAct prKeep" }, k ? sbH(ClientShowBtn, {
+      on: !(clientOff || {})[k], he,
+      onClick: () => { const m = { ...(clientOff || {}) }; if (m[k]) delete m[k]; else m[k] = true; onChangeClientOff(m); }
+    }) : null) : null
+  ];
   // 02.11.26 — a V on the row puts the product on the LLI list. It writes the
   // routing (the same table the LLI board's own ticks write), so ticking here
   // IS ticking there. A row she made by hand on LLI is on LLI already.
@@ -21805,6 +21881,19 @@ function SubmittalFolder({
                   setPrintOff(next);
                 });
               })() : null,
+              // 06.11.26 — shown to the client / supervision, as on LLI.
+              canEdit && onChangeClientOff ? (() => {
+                const allOn = rowsAll.every((r) => !cOff[r.key]);
+                return sbH("th", {
+                  className: `cAct prAllTh ${allOn ? "on" : ""}`.trim(),
+                  title: he ? (allOn ? "כל השורות מוצגות ללקוח / פיקוח — לחיצה מסתירה את כולן" : "לחיצה מציגה את כל השורות ללקוח / פיקוח") : (allOn ? "Every row is shown — click to hide all" : "Click to show every row"),
+                  onClick: () => {
+                    const next = {};
+                    if (allOn) rowsAll.forEach((r) => { next[r.key] = true; });
+                    onChangeClientOff(next);
+                  }
+                }, he ? "לקוח / פיקוח" : "Client / supervision");
+              })() : null,
               sbH("th", { className: "sbAiCell", title: "\u05d1\u05d3\u05d9\u05e7\u05ea AI \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea" }, "AI"),
               // 05.11.26 — the column title is the switch: dark prints, faded
               // and struck through is left out. No tick beside it.
@@ -21890,6 +21979,9 @@ function SubmittalCard({
   userPerms,
   submittalChkOff,
   onChangeChkOff,
+  onRestoreEverywhere,
+  submittalClientOff,
+  onChangeClientOff,
   submittalReview,
   onChangeReview,
   submittalApprovals,
@@ -22645,12 +22737,16 @@ function SubmittalCard({
         onDelete: deleteOne,
         // Removing a checklist line from this folder, and putting them back.
         chkOff: submittalChkOff || {},
+        clientOff: submittalClientOff || {},
+        onChangeClientOff,
         onRemoveChk: (catKey, code) => onChangeChkOff && onChangeChkOff({
           ...(submittalChkOff || {}),
           [catKey]: { ...((submittalChkOff || {})[catKey] || {}), [code]: true }
         }),
         // 05.11.26 — bring back just the lines she picked: [[catKey, code], …]
         onRestoreChkSome: (pairs) => {
+          // 06.11.26 — brought back here is brought back on LLI and SD too.
+          if (onRestoreEverywhere) { onRestoreEverywhere(pairs.map((p) => p[1])); return; }
           const next = { ...(submittalChkOff || {}) };
           pairs.forEach(([cat, code]) => {
             if (!next[cat]) return;
@@ -26139,6 +26235,28 @@ function ProjectDashboardApp() {
         },
         sdRows: activeExtras.sdRows || {},
         onChangeSdRows: (next) => updateProjectExtras(activeProject.id, { sdRows: next }),
+        // 06.11.26 — a line brought back on one board comes back on all three
+        // (LLI, SD, submittals); removing stays per board.
+        onRestoreEverywhere: (codes) => setProjectExtras((prev) => {
+          const pid = activeProject.id;
+          const ex = prev[pid] || {};
+          const want = new Set(codes || []);
+          const back = (rows) => {
+            const out = { ...(rows || {}) };
+            Object.keys(out).forEach((k) => { if (want.has(k) && out[k] && out[k].removed) out[k] = { ...out[k], removed: false }; });
+            return out;
+          };
+          const chk = {};
+          Object.keys(ex.submittalChkOff || {}).forEach((cat) => {
+            const m = { ...((ex.submittalChkOff || {})[cat] || {}) };
+            Object.keys(m).forEach((code) => { if (want.has(code)) delete m[code]; });
+            if (Object.keys(m).length) chk[cat] = m;
+          });
+          return { ...prev, [pid]: { ...ex, lliRows: back(ex.lliRows), sdRows: back(ex.sdRows), submittalChkOff: chk } };
+        }),
+        // 06.11.26 — submittal rows hidden from the client / supervision.
+        submittalClientOff: activeExtras.submittalClientOff || {},
+        onChangeClientOff: (next) => updateProjectExtras(activeProject.id, { submittalClientOff: next }),
         roomsData: activeExtras.roomsData || null,
         onChangeRoomsData: (next) => updateProjectExtras(activeProject.id, { roomsData: next }),
         currentEmail: loggedInEmail,

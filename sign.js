@@ -226,6 +226,24 @@ var sbH = React15.createElement;
 var SB_EXTRA_FOLDERS = [
   { key: "joinery", en: "Joinery", he: "נגרות", code: "Joinery" }
 ];
+// 06.11.26 — the categories she adds (on LLI, SD or in the data libraries)
+// become submittal folders of their own. The number prefix is the code she
+// sets in the libraries; until then the English name, or a short code made
+// from the category's key (never the Hebrew name, which a number cannot hold).
+function sbCustomCode(c) {
+  const own = String((c && c.code) || "").replace(/[^A-Za-z0-9]/g, "");
+  if (own) return own;
+  const en = String((c && c.en) || "").replace(/[^A-Za-z0-9]/g, "");
+  if (en && en !== String((c && c.he) || "").replace(/[^A-Za-z0-9]/g, "")) return en.slice(0, 14);
+  return "C" + String((c && c.key) || "").replace(/[^A-Za-z0-9]/g, "").slice(-5).toUpperCase();
+}
+function sbSetCustomFolders(list) {
+  for (let i = SB_EXTRA_FOLDERS.length - 1; i >= 0; i--) if (SB_EXTRA_FOLDERS[i].custom) SB_EXTRA_FOLDERS.splice(i, 1);
+  (Array.isArray(list) ? list : []).forEach((c) => {
+    if (!c || !c.key || !(c.he || c.en)) return;
+    SB_EXTRA_FOLDERS.push({ key: c.key, en: c.en || c.he, he: c.he || c.en, code: sbCustomCode(c), custom: true });
+  });
+}
 var SUBMITTAL_CATEGORIES = [
   { key: "architecture", en: "Architecture", he: "אדריכלות", icon: Building23 },
   { key: "flooring", en: "Flooring", he: "ריצוף", icon: Grid3x32 },
@@ -3528,6 +3546,8 @@ function ImgLibrary({ projectId, onPick, onClose, inline }) {
 
 export {
   PrintLangAsk,
+  sbSetCustomFolders,
+  sbCustomCode,
   ImgLibrary,
   supLibLoad,
   supLibFind,
