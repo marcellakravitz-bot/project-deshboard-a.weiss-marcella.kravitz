@@ -28,7 +28,7 @@ import { supabase } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const TASKS_BUILD = "tasks build 2 · 06.11.2026";
+export const TASKS_BUILD = "tasks build 3 · 06.11.2026";
 if (typeof console !== "undefined") console.info(TASKS_BUILD);
 
 const uid = (p) => `${p}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
@@ -37,29 +37,77 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const fmt = (iso) => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(iso || "")); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; };
 const NONE = "__none__";
 
-// 06.11.26 — "תיק פתיחת אתר": a category on every project, with six tasks
-// that are always there. They cannot be deleted and their wording is fixed;
-// everything else on them (dates, owner, status, notes, updates) is hers.
-export const SITE_CAT = { key: "tc-site-open", he: "תיק פתיחת אתר", fixed: true };
-export const FIXED_TASKS = [
-  ["fx-start-order", "צו תחילת עבודה (פיקוח)"],
-  ["fx-site-manager", "מינוי מנהל עבודה רשום"],
-  ["fx-risk-survey", "סקר סיכונים"],
-  ["fx-site-rules", "נהלי בניין"],
-  ["fx-rejects-floors", "דוח ריג'קטים טרם קבלת הקומות"],
-  ["fx-floor-handover", "תיאום סיור מסירת קומות"],
+// 06.11.26 — the fixed categories, on every project, each with the tasks that
+// are always there (her lists). Fixed tasks cannot be deleted and their
+// wording is fixed; everything else on them (dates, owner, status, notes,
+// updates) is hers, and any category takes more tasks of her own.
+// The ids are permanent: a project's marks hang on them.
+const KO = "תיאום פגישת התנעה ";
+export const FIXED_CATS = [
+  { key: "tc-site-open", he: "תיק פתיחת אתר", tasks: [
+    ["fx-start-order", "צו תחילת עבודה (פיקוח)"],
+    ["fx-site-manager", "מינוי מנהל עבודה רשום"],
+    ["fx-risk-survey", "סקר סיכונים"],
+    ["fx-site-rules", "נהלי בניין"],
+    ["fx-rejects-floors", "דוח ריג'קטים טרם קבלת הקומות"],
+    ["fx-floor-handover", "תיאום סיור מסירת קומות"],
+  ] },
+  { key: "tc-kickoff", he: "פגישות התנעת פרויקט", tasks: [
+    ["fx-ko-arch", KO + "הצגת פרויקט אדריכלים - פרונטלי"],
+    ["fx-ko-main", KO + "קבלן ראשי + פיקוח - פרונטלי"],
+    ["fx-ko-mep", KO + "יועצי מערכות MEP - זום"],
+    ["fx-ko-elec", KO + "קבלן חשמל"],
+    ["fx-ko-hvac", KO + "קבלן מיזוג אוויר"],
+    ["fx-ko-plumb", KO + "קבלן אינסטלציה"],
+    ["fx-ko-gypsum", KO + "קבלן גבס"],
+    ["fx-ko-paint", KO + "קבלן צבע"],
+    ["fx-ko-sec", KO + "קבלן ביטחון ותקשורת"],
+    ["fx-ko-media", KO + "קבלן מולטימדיה"],
+  ] },
+  { key: "tc-site-setup", he: "התארגנות אתר", tasks: [
+    ["fx-su-ac", "התקנת יחידת מיזוג אוויר עבור משרד אתר במידה ונדרש"],
+    ["fx-su-power", "ביצוע עמדות חשמל זמני"],
+    ["fx-su-power-check", "בודק חשמל עבור עמדות חשמל זמני"],
+    ["fx-su-light", "ביצוע תאורה זמנית"],
+    ["fx-su-safety-signs", "הזמנת שילוט בטיחות - סט מרלו\"ג"],
+    ["fx-su-floor-signs", "הכנת שילוט התארגנות אתר לפי קומות"],
+    ["fx-su-plan-print", "הדפסת תוכנית התארגנות אתר"],
+    ["fx-su-office-signs", "הכנת שילוט משרדים זמניים"],
+    ["fx-su-office-print", "הדפסת שילוט משרדים זמניים"],
+    ["fx-su-nosmoke", "הזמנת שילוט אסור לעשן"],
+    ["fx-su-waste", "הזמנת שילוט ריכוז פסולת"],
+    ["fx-su-emerg-signs", "הכנת שילוט התארגנות במצב חירום"],
+    ["fx-su-emerg-print", "הדפסת שילוט התארגנות במצב חירום"],
+  ] },
+  { key: "tc-change-orders", he: "הוראות שינוי", tasks: [] },
+  { key: "tc-hvac", he: "מיזוג אוויר", tasks: [
+    ["fx-hv-plans", "קבלת סט תוכניות לביצוע"],
+    ["fx-hv-subm", "אישור סבמיטלים עבור כלל הציוד"],
+    ["fx-hv-samples", "אספקת דוגמאות לשטח לאישור אדריכלי"],
+  ] },
+  { key: "tc-elec", he: "חשמל", tasks: [
+    ["fx-el-plans", "קבלת סט תוכניות לביצוע"],
+    ["fx-el-subm", "אישור סבמיטלים עבור כלל הציוד"],
+    ["fx-el-samples", "אספקת דוגמאות לשטח לאישור אדריכלי (כולל גילוי אש)"],
+    ["fx-el-radiation", "סקר מיגון קרינה במידה ונדרש"],
+    ["fx-el-dwg", "דרישה תוכניות PDF + DWG מיועץ חשמל עבור תכנון לוחות חשמל (כולל לוח חשמל חדר תקשורת)"],
+    ["fx-el-sd-panels", "העברת בקשה לביצוע SD - לוחות חשמל - לאישור יועץ חשמל"],
+  ] },
 ];
-const FIXED_IDS = new Set(FIXED_TASKS.map((x) => x[0]));
-// The fixed tasks a project does not have yet, appended in their order.
+const FIXED_CAT_KEYS = new Set(FIXED_CATS.map((c) => c.key));
+const FIXED_DEFS = [];
+FIXED_CATS.forEach((c) => c.tasks.forEach(([id, desc]) => FIXED_DEFS.push({ id, desc, category: c.key })));
+const FIXED_IDS = new Set(FIXED_DEFS.map((d) => d.id));
+// The fixed tasks a project does not have yet are added; the fixed ones come
+// first in their order, then hers as they were.
 function withFixed(tasks) {
   const have = new Set(tasks.map((t) => t.id));
-  const add = FIXED_TASKS.filter(([id]) => !have.has(id)).map(([id, desc]) => ({
-    id, fixed: true, category: SITE_CAT.key, created: today(), desc, owner: "", due: "", status: "open", notes: "", updates: []
+  const add = FIXED_DEFS.filter((d) => !have.has(d.id)).map((d) => ({
+    id: d.id, fixed: true, category: d.category, created: today(), desc: d.desc, owner: "", due: "", status: "open", notes: "", updates: []
   }));
   if (!add.length) return tasks;
-  // Fixed tasks first, in their order; then the rest as they were.
   const all = add.concat(tasks);
-  const fx = FIXED_TASKS.map(([id]) => all.find((t) => t.id === id)).filter(Boolean);
+  const fx = FIXED_DEFS.map((d) => all.find((t) => t.id === d.id)).filter(Boolean);
   return fx.concat(all.filter((t) => !FIXED_IDS.has(t.id)));
 }
 
@@ -210,15 +258,18 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
   useEffect(() => {
     if (!onCatalogChange || !catalog) return;
     const list = (catalog.taskCats || []);
-    if (!list.some((c) => c && c.key === SITE_CAT.key)) onCatalogChange({ ...catalog, taskCats: [SITE_CAT].concat(list) });
+    const missing = FIXED_CATS.filter((f) => !list.some((c) => c && c.key === f.key)).map((f) => ({ key: f.key, he: f.he, fixed: true }));
+    if (missing.length) onCatalogChange({ ...catalog, taskCats: list.concat(missing) });
   }, [catalog && (catalog.taskCats || []).length]);
   const rawCats = ((catalog || {}).taskCats || []).filter((c) => c && c.key && String(c.he || "").trim());
-  const cats = rawCats.some((c) => c.key === SITE_CAT.key) ? rawCats : [SITE_CAT].concat(rawCats);
+  const cats = rawCats.concat(FIXED_CATS.filter((f) => !rawCats.some((c) => c.key === f.key)).map((f) => ({ key: f.key, he: f.he, fixed: true })));
   const catName = (k) => (k === NONE ? "ללא קטגוריה" : ((cats.find((c) => c.key === k) || {}).he || "ללא קטגוריה"));
   const tasks = (data && data.tasks) || [];
   const catOf = (t) => (t.category && cats.some((c) => c.key === t.category) ? t.category : NONE);
   // The groups in the library's order; only the ones with tasks, as on the other boards.
-  const inUse = cats.filter((c) => tasks.some((t) => catOf(t) === c.key)).map((c) => c.key)
+  // The categories with tasks — and the fixed ones always, even when empty
+  // ("הוראות שינוי"), so their "+ משימה" is there.
+  const inUse = cats.filter((c) => FIXED_CAT_KEYS.has(c.key) || tasks.some((t) => catOf(t) === c.key)).map((c) => c.key)
     .concat(tasks.some((t) => catOf(t) === NONE) ? [NONE] : []);
   const shownGroups = cat === "all" ? inUse : inUse.filter((k) => k === cat);
   useEffect(() => { if (cat !== "all" && !inUse.includes(cat)) setCat("all"); }, [inUse.join("|")]);
@@ -316,7 +367,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
             <colgroup><col style=${{ width: "10%" }} /><col style=${{ width: "24%" }} /><col style=${{ width: "12%" }} /><col style=${{ width: "11%" }} />
               <col style=${{ width: "10%" }} /><col style=${{ width: "18%" }} /><col style=${{ width: "12%" }} /><col style=${{ width: "3%" }} /></colgroup>
             <thead><tr><th>תאריך הקמה</th><th>תיאור</th><th>אחריות</th><th>תאריך יעד</th><th>סטטוס</th><th>הערות / מידע נוסף</th><th>עדכונים</th><th></th></tr></thead>
-            <tbody>${list.map((t) => {
+            <tbody>${list.length === 0 && html`<tr><td colSpan=${8} className="tskEmpty">אין משימות בקטגוריה — "+ משימה" בכותרת</td></tr>`}${list.map((t) => {
               const st = ST[t.status] || ST.open;
               const late = t.due && t.status !== "done" && t.status !== "info" && t.due < nowIso;
               const ups = t.updates || [];
