@@ -2614,6 +2614,7 @@ var pdfViewer = `
            clear space under the summary squares. */
         .sbSumBar ~ .lliBar { margin-top: 18px; }
         .dlFind { display: flex; justify-content: center; margin: 4px 0 12px; }
+        .dlCatSecBody { padding: 4px 6px 12px; }
         .tfRow { display: flex; align-items: center; gap: 6px; padding: 4px 2px; border-bottom: 1px solid var(--line-soft, #f0f0f2); }
         .tfRow > input { flex: 1 1 auto; min-width: 0; }
         .tfRow .contactsRowDel { flex: none; }
@@ -9208,10 +9209,11 @@ function PersonField({ row, people, companies, roles, lang, isRTL, onChange, onP
 // ===========================================================================
 function DataLibrariesScreen({ isRTL, catalog, onCatalogChange, contactsProps }) {
   const [tab, setTab] = useState6("cats");
+  const [catSec, setCatSec] = useState6({});
   // 06.11.26 — the task categories and fixed tasks she was given go into the
   // library the first time it is opened (the lists live with the tasks cube).
   useEffect5(() => {
-    if (tab !== "tcats" && tab !== "tfixed") return;
+    if (tab !== "cats" && tab !== "tfixed") return;
     let off = false;
     import("./tasks/admin.js" + MODULE_V).then((m) => {
       if (off || !m || !m.taskSeedPatch) return;
@@ -9220,15 +9222,23 @@ function DataLibrariesScreen({ isRTL, catalog, onCatalogChange, contactsProps })
     }).catch(() => {});
     return () => { off = true; };
   }, [tab, catalog && (catalog.taskFixedSeeded || []).length, catalog && (catalog.taskSeeded || []).length]);
-  const tabs = [["cats", "קטגוריות", "Categories"], ["tcats", "קטגוריות משימות", "Task categories"], ["tfixed", "משימות קבועות", "Fixed tasks"], ["pics", "מאגר תמונות", "Pictures"], ["sups", "מאגר ספקים", "Suppliers"], ["contacts", "מאגרי אנשי קשר", "Contacts"]];
+  const tabs = [["cats", "קטגוריות", "Categories"], ["tfixed", "משימות קבועות", "Fixed tasks"], ["pics", "מאגר תמונות", "Pictures"], ["sups", "מאגר ספקים", "Suppliers"], ["contacts", "מאגרי אנשי קשר", "Contacts"]];
   return sbH("section", { className: "panel dlScreen", dir: isRTL ? "rtl" : "ltr" },
     sbH("h2", { className: "panelTitle" }, isRTL ? "מאגרי מידע" : "Data libraries"),
     sbH("p", { className: "panelSub" }, isRTL ? "משותף לכל הפרויקטים" : "Shared by every project"),
     sbH("div", { className: "contactsTabs dlTabs" }, tabs.map(([k, he, en]) => sbH("button", {
       key: k, type: "button", className: `contactsTabBtn ${tab === k ? "on" : ""}`, onClick: () => setTab(k)
     }, isRTL ? he : en))),
-    tab === "cats" ? sbH(CategoriesLibrary, { isRTL, catalog, onCatalogChange }) : null,
-    tab === "tcats" ? sbH(TaskCategoriesLibrary, { isRTL, catalog, onCatalogChange }) : null,
+    // 06.11.26 — one place for every kind of category, each under its own
+    // heading that opens and closes: the boards' (submittals, SD, LLI), then
+    // the task table's, and so on as more come.
+    tab === "cats" ? sbH("div", { className: "dlCatSecs" },
+      [["boards", isRTL ? "קטגוריות סבמיטל + SD + LLI" : "Submittal, SD and LLI categories", () => sbH(CategoriesLibrary, { isRTL, catalog, onCatalogChange })],
+       ["tasks", isRTL ? "קטגוריות טבלת משימות" : "Task table categories", () => sbH(TaskCategoriesLibrary, { isRTL, catalog, onCatalogChange })]
+      ].map(([k, label, body]) => sbH("div", { key: k, className: "contactsAdminGroup" },
+        sbH("button", { type: "button", className: `contactsAdminGroupHead contactsSecHead ${catSec[k] ? "open" : ""}`, onClick: () => setCatSec((o) => ({ ...o, [k]: !o[k] })) },
+          sbH(catSec[k] ? ChevronDown : ChevronLeft3, { size: 16, className: "contactsSecChev" }), sbH("span", null, label)),
+        catSec[k] ? sbH("div", { className: "dlCatSecBody" }, body()) : null))) : null,
     tab === "tfixed" ? sbH(TaskFixedLibrary, { isRTL, catalog, onCatalogChange }) : null,
     tab === "pics" ? sbH(ImgLibrary, { inline: true, projectId: null }) : null,
     tab === "sups" ? sbH(SupplierLibraryPanel, { isRTL }) : null,
@@ -9269,7 +9279,7 @@ function TaskFixedLibrary({ isRTL, catalog, onCatalogChange }) {
         cats.map((c) => sbH("option", { key: c.key, value: c.key }, c.he))),
       sbH("input", { className: "contactsInput", dir: "rtl", value: nDesc, placeholder: isRTL ? "משימה קבועה חדשה" : "New fixed task", onChange: (e) => setNDesc(e.target.value), onKeyDown: (e) => { if (e.key === "Enter") add(); } }),
       sbH("button", { type: "button", className: "functionEditBtn", onClick: add, disabled: !cats.length }, isRTL ? "+ הוספה" : "+ Add")),
-    sbH("p", { className: "panelSub", style: { textAlign: "center" } }, isRTL ? "משימה קבועה מופיעה בכל הפרויקטים, בקטגוריה שלה. את הקטגוריות מגדירים בלשונית \"קטגוריות משימות\"." : "A fixed task appears on every project."),
+    sbH("p", { className: "panelSub", style: { textAlign: "center" } }, isRTL ? "משימה קבועה מופיעה בכל הפרויקטים, בקטגוריה שלה. את הקטגוריות מגדירים בלשונית \"קטגוריות\" > קטגוריות טבלת משימות." : "A fixed task appears on every project."),
     cats.map((c) => {
       const rows = list.filter((x) => x.category === c.key);
       const isOpen = !!open[c.key];
