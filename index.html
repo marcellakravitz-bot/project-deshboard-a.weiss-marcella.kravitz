@@ -23212,8 +23212,11 @@ function SubmittalCard({
         onDelete: deleteOne,
         // Removing a checklist line from this folder, and putting them back.
         chkOff: submittalChkOff || {},
-        clientOff: submittalClientOff || {},
-        onChangeClientOff,
+        // 06.11.26 — who sees a row is chosen in "ניהול קבלן" (the trades, the
+        // project manager, client / supervision); the separate "לקוח / פיקוח"
+        // column with its send arrow is gone.
+        clientOff: {},
+        onChangeClientOff: null,
         onRemoveChk: (catKey, code) => onChangeChkOff && onChangeChkOff({
           ...(submittalChkOff || {}),
           [catKey]: { ...((submittalChkOff || {})[catKey] || {}), [code]: true }
