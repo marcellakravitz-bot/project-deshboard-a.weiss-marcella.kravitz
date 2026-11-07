@@ -28,12 +28,13 @@ var PMSchedule = (function(){
   function dm(iso){ var p=String(iso||"").slice(0,10).split("-"); return p.length===3 ? p[2]+"."+p[1]+"."+p[0].slice(2) : ""; }
 
   function tasks(){ return (S.board&&S.board.schedule)||[]; }
-  // Phases open; the ones inside them start closed, so the list fits a phone.
+  // 07.11.26 — opens with every phase closed.
   function initCollapsed(){
     collapsed={};
-    var list=tasks(), top=Math.min.apply(null, list.map(function(t){ return t.level; }).concat([99]));
-    list.forEach(function(t){ if(t.sum && t.level>top) collapsed[t.id]=true; });
+    tasks().forEach(function(t){ if(t.sum) collapsed[t.id]=true; });
   }
+  // The small + / − beside "פעילות": + opens everything, − closes everything.
+  var allBtn=function(anyOpen){ return '<button class="schAllBtn" id="schAll" aria-label="'+(anyOpen?"כיווץ הכל":"פתיחת הכל")+'">'+(anyOpen?"−":"+")+'</button>'; };
   function hasKids(list, i){ return i+1<list.length && list[i+1].level>list[i].level; }
   function visible(){
     var list=tasks(), out=[], hideBelow=null;
@@ -51,8 +52,8 @@ var PMSchedule = (function(){
       (row.kids ? '<button class="schCaret" data-id="'+E(t.id)+'" aria-label="'+(collapsed[t.id]?"פתיחה":"כיווץ")+'">'+(collapsed[t.id]?"‹":"⌄")+'</button>' : '<span class="schDot"></span>')+
       '<span class="nm">'+E(t.name)+'</span></div>';
   }
-  function listHtml(rows, top){
-    return '<table class="schTbl"><thead><tr><th>פעילות</th><th>תאריכים</th><th>צפוי</th><th>בפועל</th></tr></thead><tbody>'+
+  function listHtml(rows, top, anyOpen){
+    return '<table class="schTbl"><thead><tr><th>'+allBtn(anyOpen)+'פעילות</th><th>תאריכים</th><th>צפוי</th><th>בפועל</th></tr></thead><tbody>'+
       rows.map(function(row){
         var t=row.t, st=status(t);
         return '<tr class="'+(t.sum?"sum":"")+'"><td>'+nameCell(row, top)+'</td>'+
@@ -61,7 +62,7 @@ var PMSchedule = (function(){
           '<td class="pc num st-'+st+'">'+t.pc+'%</td></tr>';
       }).join("")+'</tbody></table>';
   }
-  function ganttHtml(rows, top){
+  function ganttHtml(rows, top, anyOpen){
     var list=tasks(), lo=Infinity, hi=-Infinity;
     list.forEach(function(t){ var s=t0(t.start), f=finishEnd(t); if(!isNaN(s)&&s<lo) lo=s; if(!isNaN(f)&&f>hi) hi=f; });
     if(!isFinite(lo)||!isFinite(hi)||hi<=lo) return AW.empty("אין תאריכים בלו״ז.");
@@ -78,7 +79,7 @@ var PMSchedule = (function(){
     var axis='<div class="schAxis">'+months.map(function(m,i){
       return '<span class="tick" style="right:'+m.x+'%">'+(i%step===0?'<b class="num">'+E(m.t)+'</b>':"")+'</span>';
     }).join("")+'</div>';
-    return '<div class="schG"><div class="gRow gHead"><div class="gName">פעילות</div><div class="gBars">'+axis+'</div></div>'+
+    return '<div class="schG"><div class="gRow gHead"><div class="gName">'+allBtn(anyOpen)+'פעילות</div><div class="gBars">'+axis+'</div></div>'+
       rows.map(function(row){
         var t=row.t, s=t0(t.start), f=finishEnd(t);
         var bar="";
@@ -99,12 +100,12 @@ var PMSchedule = (function(){
     var anyOpen=list.some(function(t,i){ return t.sum && hasKids(list,i) && !collapsed[t.id]; });
     if(!list.length){ AW.el().innerHTML=AW.head("לו״ז פרויקט")+AW.empty("טרם עלה לו״ז פרויקט"); AW.wireBack(); return; }
     AW.el().innerHTML=AW.head("לו״ז פרויקט")+
-      '<div class="schBar"><button id="schGantt" class="chip'+(gantt?" on":"")+'">גאנט</button>'+
-      '<button id="schAll" class="chip">'+(anyOpen?"כיווץ הכל":"פתיחת הכל")+'</button></div>'+
-      (list.length ? (gantt ? ganttHtml(rows, top) : listHtml(rows, top)) : AW.empty("טרם עלה לו״ז פרויקט"));
+      '<div class="schBar"><button id="schGantt" class="chip'+(gantt?" on":"")+'">גאנט</button></div>'+
+      (gantt ? ganttHtml(rows, top, anyOpen) : listHtml(rows, top, anyOpen));
     AW.wireBack();
     document.getElementById("schGantt").onclick=function(){ gantt=!gantt; AW.render(true); };
-    document.getElementById("schAll").onclick=function(){
+    var sa=document.getElementById("schAll");
+    if(sa) sa.onclick=function(){
       collapsed={};
       if(anyOpen) list.forEach(function(t,i){ if(t.sum && hasKids(list,i)) collapsed[t.id]=true; });
       AW.render(true);
