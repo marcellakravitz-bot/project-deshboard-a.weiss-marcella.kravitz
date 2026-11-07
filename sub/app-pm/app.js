@@ -16,6 +16,7 @@ var IC={
   sd:"M3 21l6-6M14 4l6 6M4 20l3-9 9-3 1 1-3 9-9 3z",
   standards:"M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11",
   weekly:"M3 6h18M3 12h18M3 18h18M8 3v18M16 3v18",
+  schedule:"M3 5h8M3 10h12M3 15h6M3 20h10M15 3v4M19 3v4M14 5h7",
   trade:"M2 20h20M5 20V9l7-5 7 5v11M9 20v-6h6v6"
 };
 var lists={ submittal:{filter:{}}, sd:{filter:{}} };
@@ -43,6 +44,7 @@ function home(){
   h+='<button class="wkCard" data-k="weekly">'+
     '<div class="wh"><b>לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
     AW.timetable(wk, function(i){ return dayCell(wk,i); })+'</button>';
+  if((b.schedule||[]).length) h+=longBtn("schedule","לו״ז פרויקט");
   h+=longBtn("tasks","ניהול משימות")+longBtn("log","יומן עדכונים")+longBtn("rj","ריג'קטים")+
      longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות מכון התקנים")+longBtn("finishes","רשימת חומרי גמר");
   app.innerHTML=h;
@@ -80,11 +82,11 @@ function weekly(){
 function weekEdit(trade){
   var app=AW.el();
   if(!weekShown) weekShown=AW.sundayOf(new Date());
-  var stored=(((S.board.weekly||{})[trade]||{})[weekShown])||[];
+  var stored=(((S.board.weeklyEdit||S.board.weekly||{})[trade]||{})[weekShown])||[];
   var days=AW.weekDays(weekShown);
   var val=function(i){ return weekBuf&&weekBuf[i]!=null ? weekBuf[i] : (stored[i]||""); };
   var dirty=!!weekBuf&&Object.keys(weekBuf).some(function(i){ return (weekBuf[i]||"")!==(stored[i]||""); });
-  app.innerHTML=AW.head("לו״ז שבועי - קבלן "+E(AW.tradeHe(trade)))+
+  app.innerHTML=AW.head("לו״ז שבועי - קבלן "+E(AW.tradeHe(trade))+(AW.state.floor?" · קומה "+E(AW.state.floor):""))+
     '<div class="wkNav"><button id="wkPrev">‹</button><strong class="num">'+E(AW.fmt(weekShown))+' – '+E(AW.fmt(days[5].iso))+'</strong><button id="wkNext">›</button></div>'+
     days.map(function(d,i){
       return '<div class="wkDay"><div class="wkHead">'+d.name+'<span class="num">'+E(AW.fmt(d.iso))+'</span></div>'+
@@ -196,6 +198,7 @@ function draw(v){
     case "sd": return itemScreen("sd");
     case "standards": return standards();
     case "finishes": return finishes();
+    case "schedule": return PMSchedule.draw();
     case "rj": return AW.rejects.draw(v);
     case "tasks": case "taskCat": case "taskStatus": case "task": return PMTasks.draw(v);
     default: return home();

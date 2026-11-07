@@ -195,7 +195,7 @@ async function phonesFor(projectId: string, trade: string, floor?: string): Prom
   const list = ((p?.extras?.subsData || {}).list) || [];
   return list
     .filter((s: any) => s && s.active !== false && (s.pm || !trade || s.trade === trade))
-    .filter((s: any) => !floor || onFloors(s.floors, [floor]))
+    .filter((s: any) => !floor || floor === "*" || onFloors(s.floors, [floor]))
     .map((s: any) => normPhone(s.phone));
 }
 
@@ -577,9 +577,18 @@ async function pmBoard(grant: any) {
   const weekly: Record<string, any> = {};
   // 07.11.26 — a floor chosen: that floor's own week, which is the one he
   // edits; otherwise the week for all floors.
+  // What he reads: the week for all floors with his floors' own, named; what
+  // he edits (weeklyEdit): the chosen floor's own week, or the one for all.
+  const weeklyEdit: Record<string, any> = {};
   for (const t of ALL_TRADES) {
-    weekly[t] = grant.floorChosen ? ((sdata.weekly || {})[`${t}@${grant.floorChosen}`] || {}) : ((sdata.weekly || {})[t] || {});
+    weekly[t] = weeklyFor(sdata.weekly || {}, t, F, grant.floorChosen || "");
+    weeklyEdit[t] = grant.floorChosen ? ((sdata.weekly || {})[`${t}@${grant.floorChosen}`] || {}) : ((sdata.weekly || {})[t] || {});
   }
+  // 07.11.26 — לו"ז פרויקט: the project schedule, to read.
+  const schedule = ((ex.scheduleData || {}).tasks || []).map((t: any) => ({
+    id: String(t.id), name: String(t.nameHe || t.name || ""), level: Number(t.level) || 1,
+    start: t.start || "", finish: t.finish || "", sum: !!t.isSummary, pc: Number(t.percentComplete) || 0,
+  }));
   const sign = (v: unknown) => {
     const str = JSON.stringify(v ?? null);
     let h = 5381;
@@ -590,12 +599,15 @@ async function pmBoard(grant: any) {
     pm: true,
     trade: "",
     weekly,
+    weeklyEdit,
+    schedule,
     logs,
     submittals,
     sd,
     standards,
     marks: {
       weekly: sign(weekly),
+      schedule: sign(schedule.map((t: any) => [t.id, t.start, t.finish, t.pc])),
       log: sign(Object.values(logs).map((l: any) => l.map((x: any) => [x.date, x.subject, x.body]))),
       submittal: sign(submittals.map((x: any) => [x.no, x.decision, x.submitted])),
       sd: sign(sd.map((x: any) => [x.code, x.status])),
@@ -848,7 +860,7 @@ Deno.serve(async (req) => {
           body: String(body.text || "").trim(),
           atts,
           // 07.11.26 — written with a floor chosen: for that floor.
-          ...(String(body.floor || "").trim() ? { floors: [String(body.floor).trim()] } : {}),
+          ...(String(body.floor || "").trim() && String(body.floor).trim() !== "*" ? { floors: [String(body.floor).trim()] } : {}),
         };
         await editSubsRow(grant.projectId, (cur) => {
           cur.logs = cur.logs || {};
@@ -862,7 +874,7 @@ Deno.serve(async (req) => {
       const weekStart = String(body.weekStart || "").slice(0, 10);
       const day = Number(body.day);
       if (!weekStart || !(day >= 0 && day <= 5)) return json({ error: "bad week" }, 400);
-      const wFloor = String(body.floor || "").trim();
+      const wFloor = String(body.floor || "").trim().replace(/^\*$/, "");
       const wKey = wFloor ? `${trade}@${wFloor}` : trade;
       await editSubsRow(grant.projectId, (cur) => {
         cur.weekly = cur.weekly || {};
@@ -976,9 +988,10 @@ Deno.serve(async (req) => {
       const projFl: string[] = (meta[grant.projectId] || {}).floorList || [];
       const mine = floorArr(grant.floors);
       const choosable = mine.length ? mine : projFl;
+      // "*" — "כל הקומות" in the app, always offered: the whole project.
       const chosen = String(body.floor || "").trim();
-      grant.floorChosen = chosen && choosable.indexOf(chosen) >= 0 ? chosen : "";
-      grant.F = grant.floorChosen ? [grant.floorChosen] : (mine.length ? mine : null);
+      grant.floorChosen = chosen && chosen !== "*" && choosable.indexOf(chosen) >= 0 ? chosen : "";
+      grant.F = grant.floorChosen ? [grant.floorChosen] : (chosen === "*" || !mine.length ? null : mine);
       const out: any = role === "pm" ? await pmBoard(grant)
         : role === "sub" ? await boardFor(grant)
         : { marks: {}, trade: "" };

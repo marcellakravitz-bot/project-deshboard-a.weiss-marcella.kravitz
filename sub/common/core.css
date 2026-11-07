@@ -300,3 +300,43 @@ body.isPv .pvBadge{display:block;position:sticky;top:var(--barH);z-index:4;backg
   background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);font:inherit;font-size:12.5px;font-weight:800;color:var(--navy);cursor:pointer;text-align:center;line-height:1.3}
 .trSq svg{width:20px;height:20px;color:var(--navy)}
 .trSq:active{background:#fbfbfc}
+
+/* 07.11.26 — a day's text may hold several lines (floors). */
+.wkCard .tr,.rec .tr{white-space:pre-line}
+/* 07.11.26 — לו"ז פרויקט */
+.schBar{display:flex;gap:8px;justify-content:center;margin:0 0 10px}
+.schTbl{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;table-layout:fixed}
+.schTbl th{background:#eef2f7;color:var(--navy);font-size:12px;padding:7px 5px;text-align:center}
+.schTbl th:first-child{text-align:right}
+.schTbl th:nth-child(2){width:66px}.schTbl th:nth-child(3),.schTbl th:nth-child(4){width:46px}
+.schTbl td{border-top:1px solid var(--line);padding:6px 5px;font-size:12.5px;vertical-align:middle}
+.schTbl tr.sum td{background:#f6f8fb}
+.schTbl td.dt{font-size:11px;color:var(--steel);text-align:center;line-height:1.35}
+.schTbl td.pc{text-align:center;font-weight:700}
+.schName{display:flex;align-items:flex-start;gap:5px;min-width:0}
+.schName .nm{min-width:0;word-break:break-word;line-height:1.35}
+.schName.sum .nm{font-weight:800;color:var(--navy)}
+.schCaret{flex:none;width:20px;height:20px;border:1px solid var(--line);border-radius:6px;background:#fff;font:inherit;font-size:13px;line-height:1;padding:0;cursor:pointer;color:var(--navy)}
+.schDot{flex:none;width:20px;text-align:center}
+.schDot:before{content:"·";color:#b8bbc2}
+.st-green{color:#1a7f4b}.st-orange{color:#c47a00}.st-red{color:#c0392b}
+.schG{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.gRow{display:flex;border-top:1px solid var(--line);min-height:30px}
+.gRow:first-child{border-top:none}
+.gRow.sum{background:#f6f8fb}
+.gName{flex:0 0 42%;max-width:42%;padding:5px 5px;font-size:11.5px;border-inline-end:1px solid var(--line)}
+.gName .nm{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.gBars{flex:1;position:relative;min-width:0}
+.gHead{background:#eef2f7;min-height:26px}
+.gHead .gName{font-weight:700;color:var(--navy);font-size:12px}
+.schAxis{position:absolute;inset:0}
+.schAxis .tick{position:absolute;top:0;bottom:0;border-right:1px solid #d5dbe4}
+.schAxis .tick b{position:absolute;top:5px;right:2px;font-size:9.5px;color:var(--steel);white-space:nowrap}
+.gBar{position:absolute;top:50%;height:10px;margin-top:-5px;border-radius:3px;overflow:hidden}
+.gBar:before{content:"";position:absolute;inset:0;background:currentColor;opacity:.3}
+.gBar.sum{height:6px;margin-top:-3px}
+.gBar i{position:absolute;top:0;bottom:0;right:0;background:currentColor;opacity:1}
+.gBar.st-green{color:#1a7f4b}.gBar.st-orange{color:#e08a00}.gBar.st-red{color:#c0392b}
+.gToday{position:absolute;top:0;bottom:0;border-right:1.5px solid #2b6fd6;z-index:1}
+.gLegend{font-size:11.5px;color:var(--steel);text-align:center;margin:8px 0 0}
+.gLegend .lt{color:#2b6fd6;font-weight:800}

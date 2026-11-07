@@ -100,7 +100,7 @@ var AW = (function(){
   function call(body){
     body.token=body.token||state.token;
     // 07.11.26 — what he writes with a floor chosen is for that floor.
-    if(state.floor && (body.action==="add-log"||body.action==="set-week") && body.floor===undefined) body.floor=state.floor;
+    if(state.floor && state.floor!=="*" && (body.action==="add-log"||body.action==="set-week") && body.floor===undefined) body.floor=state.floor;
     return post(API, body);
   }
   function rjCall(body){ body.token=state.token; body.projectId=state.project; return post(RJ_API, body); }
@@ -234,28 +234,29 @@ var AW = (function(){
 
   // ------------------------------------------------------------- the floor
   // 07.11.26 — on a project with floors, after the project comes the floor:
-  // one of his (none set for him: any of the project's) or all of them. Asked
-  // once each time the app is opened; the chip under the project changes it.
+  // one of his (none set for him: any of the project's), or "כל הקומות" —
+  // always there, the whole project. Asked once each time the app is opened;
+  // the chip under the project changes it. state.floor: "5", or "*" for all.
   function floorKey(){ return "awsub.floor|"+state.project; }
   function myFloors(){ var b=state.board||{}; return Array.isArray(b.myFloors)?b.myFloors:[]; }
-  function needsPick(){ var f=myFloors(); return f.length>1 || (f.length===1 && b_all()); }
+  function needsPick(){ return myFloors().length>0; }
   function b_all(){ return !!(state.board&&state.board.allFloors); }
   function floorChip(){
-    if(!needsPick()) return (state.floor ? '<span class="pfl num">קומה '+esc(state.floor)+'</span>' : '');
-    return '<button class="floorChip" type="button">'+(state.floor?'קומה <b class="num">'+esc(state.floor)+'</b>':'כל הקומות')+' <span class="chg">החלפה</span></button>';
+    if(!needsPick()) return '';
+    return '<button class="floorChip" type="button">'+(state.floor&&state.floor!=="*"?'קומה <b class="num">'+esc(state.floor)+'</b>':'כל הקומות')+' <span class="chg">החלפה</span></button>';
   }
   function floorPicker(){
     var f=myFloors(), p=(state.board&&state.board.project)||{};
     el().innerHTML='<div class="proj">'+(p.logo?'<img src="'+esc(p.logo)+'" alt="">':'')+'<span class="pn">'+esc(p.name||"")+'</span></div>'+
       '<h2 class="flTitle">בחירת קומה</h2>'+
       '<div class="flGrid">'+f.map(function(x){ return '<button class="flBtn num" data-f="'+esc(x)+'">'+esc(x)+'</button>'; }).join("")+'</div>'+
-      '<button class="flAll" data-f="">'+(b_all()?'כל הקומות':'כל הקומות שלי')+'</button>';
+      '<button class="flAll" data-f="*">כל הקומות</button>';
     Array.prototype.forEach.call(el().querySelectorAll("[data-f]"), function(b){
       b.onclick=function(){ chooseFloor(b.getAttribute("data-f")); };
     });
   }
   function chooseFloor(fl){
-    state.floor=fl||"";
+    state.floor=fl||"*";
     try{ sessionStorage.setItem(floorKey(), state.floor); }catch(e){}
     stack.length=0;
     loadBoard(false);
@@ -328,12 +329,10 @@ var AW = (function(){
           var fk="awsub.first|"+state.project+"|"+(state.board.trade||"");
           try{ if(localStorage.getItem(fk)!=="1"){ markAllSeen(); localStorage.setItem(fk,"1"); } }catch(e){}
         }
-        // One floor of his own: that floor, nothing to ask.
         var mf=myFloors();
-        if(state.floor===null && mf.length===1 && !b_all()){ state.floor=mf[0]; }
         if(state.floor===null){
           var saved=null; try{ saved=sessionStorage.getItem(floorKey()); }catch(e){}
-          if(saved!==null && (saved==="" || mf.indexOf(saved)>=0)){ state.floor=saved; if(saved){ return loadBoard(quiet); } }
+          if(saved!==null && (saved==="*" || mf.indexOf(saved)>=0)){ state.floor=saved; return loadBoard(quiet); }
           else if(needsPick()){ if(!quiet) floorPicker(); return true; }
           else state.floor="";
         }
