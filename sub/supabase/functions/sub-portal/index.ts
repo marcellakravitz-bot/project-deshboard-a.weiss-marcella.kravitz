@@ -219,35 +219,36 @@ async function editSubsRow(projectId: string, change: (cur: any) => any) {
   throw new Error("busy");
 }
 
+// 07.11.26 — who may enter is all that most calls need: the registers
+// (project-subs:<id>), a few kilobytes, instead of every project's whole data
+// (megabytes) on every call. The board loads its one project in full.
 async function loadProjects() {
-  const { data, error } = await db.from("app_state").select("key, value").like("key", "project-extras%");
+  const { data, error } = await db.from("app_state").select("key, value").like("key", "project-subs:%");
   if (error) throw error;
-  const out: any[] = [];
-  for (const row of (data || [])) {
-    const key = String(row.key);
-    if (key === "project-extras") {
-      const all = parse(row.value);
-      for (const [id, extras] of Object.entries<any>(all || {})) {
-        if (extras && typeof extras === "object") out.push({ id, extras });
-      }
-    } else if (key.startsWith("project-extras:")) {
-      out.push({ id: key.slice("project-extras:".length), extras: parse(row.value), own: true });
-    }
+  return (data || []).map((row: any) => ({ id: String(row.key).slice("project-subs:".length), extras: { subsData: parse(row.value) } }));
+}
+// One project, in full: its own data row and the parts the apps read.
+async function loadProjectFull(pid: string) {
+  const keys = ["project-extras", "project-subs", "project-sd", "project-schedules", "project-submittal-approvals", "project-sd-approvals", "project-lli"].map((k) => `${k}:${pid}`);
+  const { data } = await db.from("app_state").select("key, value").in("key", keys);
+  const got: Record<string, any> = {};
+  for (const row of (data || [])) got[String(row.key).split(":")[0]] = parse(row.value);
+  let extras = got["project-extras"];
+  if (!extras) {
+    const { data: sh } = await db.from("app_state").select("value").eq("key", "project-extras").maybeSingle();
+    extras = (parse(sh?.value) || {})[pid] || {};
   }
-  const { data: subRows } = await db.from("app_state").select("key, value").like("key", "project-subs:%");
-  const subsById: Record<string, any> = {};
-  for (const row of (subRows || [])) subsById[String(row.key).slice("project-subs:".length)] = parse(row.value);
-  for (const p of out) {
-    if (subsById[p.id]) p.extras = { ...p.extras, subsData: subsById[p.id] };
-  }
-  const byId = new Map<string, any>();
-  for (const p of out) {
-    const prev = byId.get(p.id);
-    if (!prev) { byId.set(p.id, p); continue; }
-    if (p.own && !prev.own) byId.set(p.id, { ...p, extras: { ...prev.extras, ...p.extras } });
-    else byId.set(p.id, { ...prev, extras: { ...p.extras, ...prev.extras } });
-  }
-  return Array.from(byId.values());
+  return {
+    extras: {
+      ...extras,
+      subsData: got["project-subs"] || extras.subsData || {},
+      sdRows: got["project-sd"] || extras.sdRows || {},
+      scheduleData: got["project-schedules"] || extras.scheduleData || {},
+      submittalApprovals: got["project-submittal-approvals"] || extras.submittalApprovals || {},
+      sdApprovals: got["project-sd-approvals"] || extras.sdApprovals || {},
+    },
+    lli: got["project-lli"] || {},
+  };
 }
 // 06.11.26 — four kinds of app user on a project's register (subsData.list):
 // "pm" (project manager), "sub" (subcontractor of one trade), "supervision"
@@ -305,18 +306,21 @@ function grantsFor(projects: any[], phone: string, code: string | null) {
   }
   return Array.from(merged.values());
 }
+// 07.11.26 — a signed link is good for an hour; one made in the last half
+// hour is used again, and links are made side by side, not one after another.
+const SIGNED = new Map<string, { url: string; at: number }>();
 async function signed(path: string) {
   if (!path) return null;
+  const hit = SIGNED.get(path);
+  if (hit && Date.now() - hit.at < 30 * 60e3) return hit.url;
   const { data } = await db.storage.from(BUCKET).createSignedUrl(path, 3600);
-  return data?.signedUrl || null;
+  const url = data?.signedUrl || null;
+  if (url) SIGNED.set(path, { url, at: Date.now() });
+  return url;
 }
 async function signAll(atts: any[]) {
-  const out: any[] = [];
-  for (const a of atts || []) {
-    if (!a || !a.path) continue;
-    out.push({ name: a.name || "", type: a.type || "", url: await signed(a.path) });
-  }
-  return out;
+  const list = (atts || []).filter((a: any) => a && a.path);
+  return await Promise.all(list.map(async (a: any) => ({ name: a.name || "", type: a.type || "", url: await signed(a.path) })));
 }
 
 const TRADE_CATS: Record<string, string[]> = {
@@ -333,94 +337,13 @@ async function boardFor(grant: any) {
   const ex = grant.extras || {};
   const trade = grant.trade;
 
-  // 21.10.26 — a submittal goes to the trades ticked on it (ניהול קבלן),
-  // exactly as an SD row does. One never ticked falls back to the folders the
-  // trade has always seen. The "show" tick is gone from the dashboard.
-  const cats = TRADE_CATS[trade] || [];
-  // 07.11.26 — a line with no submittal yet carries its app view and floors
-  // itself (submittalRowMeta, by BOQ code); a submittal's own win.
+  // 07.11.26 — what he sees is what "צפייה אפליקציה" on the dashboard has
+  // ticked for his trade, and no more (the older fall-backs are gone).
   const F: string[] | null = grant.F || null;
-  const rowMeta = ex.submittalRowMeta || {};
-  const subsOfRec = (r: any) => Array.isArray(r.subs) ? r.subs : (rowMeta[r.boqCode] || {}).subs;
-  const floorsOfRec = (r: any) => Array.isArray(r.floors) ? r.floors : (rowMeta[r.boqCode] || {}).floors;
-  const ticked = (r: any) => {
-    const subs = subsOfRec(r);
-    return (Array.isArray(subs) ? subs.indexOf(trade) >= 0 : cats.indexOf(r.category) >= 0) && onFloors(floorsOfRec(r), F);
-  };
-  const allSent = (ex.submittals || []).filter((r: any) => r && r.sent);
-  const records = allSent.filter(ticked);
-  const off = ex.submittalChkOff || {};
-  const sbAp = ex.submittalApprovals || {};
-  const decisionOfRec = (r: any) =>
-    ((sbAp[r?.id] || {}).review || {}).decision || ((r?.reviews || [])[0] || {}).decision || null;
-  const submittals: any[] = [];
-  const seen: Record<string, boolean> = {};
-  const latestFor = (code: string) => records
-    .filter((r: any) => r.boqCode === code)
-    .sort((a: any, b: any) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
-  const row = async (category: string, no: string, description: string, rec: any) => {
-    const decision = rec ? decisionOfRec(rec) : null;
-    return {
-      category,
-      no,
-      typeId: (rec && rec.typeId) || "",
-      description,
-      decision,
-      submitted: !!rec,
-      // 06.11.26 — the picture and the produced submittal, as on the managers' list.
-      image: rec && rec.image && rec.image.path ? await signed(rec.image.path) : null,
-      doc: rec && (sbAp[rec.id] || {}).doc && (sbAp[rec.id] || {}).doc.path
-        ? { name: (sbAp[rec.id] || {}).doc.name || "submittal", type: (sbAp[rec.id] || {}).doc.type || "", url: await signed((sbAp[rec.id] || {}).doc.path) }
-        : null,
-      files: rec && decision && APPROVED.indexOf(decision) >= 0
-        ? await signAll(
-            [(sbAp[rec.id] || {}).doc].filter(Boolean).concat(rec.attachments || []),
-          )
-        : [],
-    };
-  };
-  for (const line of ((ex.subsData || {}).checklist || [])) {
-    if (!line || off[line.code]) continue;
-    const meta = rowMeta[line.code] || {};
-    if (Array.isArray(meta.subs) ? meta.subs.indexOf(trade) < 0 : cats.indexOf(line.category) < 0) continue;
-    // A line whose submittal was sent to other trades only is not his.
-    const any = allSent.filter((r: any) => r.boqCode === line.code)
-      .sort((a: any, b: any) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0];
-    if (any && Array.isArray(subsOfRec(any)) && subsOfRec(any).indexOf(trade) < 0) continue;
-    if (!onFloors(any ? floorsOfRec(any) : meta.floors, F)) continue;
-    const rec = latestFor(line.code);
-    if (rec) seen[rec.id] = true;
-    const no = rec ? `${String(rec.category || "").toUpperCase()}-${String(rec.seq || "").padStart(3, "0")}` : "";
-    submittals.push(await row(line.category, no, (rec && rec.itemDescription) || line.title || line.code, rec));
-  }
-  for (const r of records) {
-    if (seen[r.id]) continue;
-    const no = `${String(r.category || "").toUpperCase()}-${String(r.seq || "").padStart(3, "0")}`;
-    submittals.push(await row(r.category, no, r.itemDescription || r.scope || "", r));
-  }
+  const [submittals, sd] = await Promise.all([submittalsFor(grant, trade), sdFor(grant, trade)]);
 
-  const sd = [];
-  const sdAp = ex.sdApprovals || {};
-  for (const [code, row] of Object.entries<any>(ex.sdRows || {})) {
-    if (((row || {}).subs || []).indexOf(trade) < 0) continue;
-    if (!onFloors((row || {}).floors, F)) continue;
-    const approvedByClient = !!sdAp[code];
-    const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
-    sd.push({
-      code,
-      description: sdDesc(grant, code, row),
-      status: approvedByClient ? "approved" : (row.status || "required"),
-      files: ok
-        ? await signAll([(sdAp[code] || {}).file || row.file].filter(Boolean))
-        : [],
-    });
-  }
-
-  const log = [];
-  for (const u of ((ex.subsData?.logs || {})[trade] || [])) {
-    if (!onFloors(u.floors, F)) continue;
-    log.push({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) });
-  }
+  const log = await Promise.all(((ex.subsData?.logs || {})[trade] || []).filter((u: any) => onFloors(u.floors, F))
+    .map(async (u: any) => ({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) })));
   const specs = [];
   for (const sp of ((ex.subsData?.specs || {})[trade] || [])) {
     specs.push({ subject: sp.subject, body: sp.body, files: await signAll(sp.atts || []) });
@@ -505,73 +428,106 @@ function sdDesc(grant: any, code: string, row: any) {
   const lli = ((grant.lli || {})[code] || {});
   return row.descOwn ? String(row.desc || "") : (String(lli.desc || "").trim() || row.desc || "");
 }
+// ---------------------------------------------------------------------------
+// 07.11.26 — the submittal and SD lists of the apps, from "צפייה אפליקציה"
+// on the dashboard: a viewer key ("pm" or a trade) sees the rows ticked for
+// it, on his floors. A submittal: its latest revision that went out. A line
+// with no submittal yet: what the board shows for it (submittalRowMeta).
+// ---------------------------------------------------------------------------
+function catLabel(grant: any, key: string) {
+  if (!key) return "";
+  const custom = (Array.isArray((grant.catalog || {}).boardCats) ? grant.catalog.boardCats : []).filter((c: any) => c && c.key === key)[0];
+  return CAT_LABELS[key] || (custom && (custom.he || custom.en)) || key;
+}
+async function submittalsFor(grant: any, key: string) {
+  const ex = grant.extras || {};
+  const F: string[] | null = grant.F || null;
+  const rowMeta = ex.submittalRowMeta || {};
+  const sbAp = ex.submittalApprovals || {};
+  const offCodes: Record<string, boolean> = {};
+  for (const m of Object.values<any>(ex.submittalChkOff || {})) if (m && typeof m === "object") Object.keys(m).forEach((c) => { offCodes[c] = true; });
+  const subsOf = (r: any) => Array.isArray(r.subs) ? r.subs : ((rowMeta[r.boqCode] || {}).subs || []);
+  const floorsOf = (r: any) => Array.isArray(r.floors) ? r.floors : (rowMeta[r.boqCode] || {}).floors;
+  const decisionOf = (r: any) => ((sbAp[r?.id] || {}).review || {}).decision || ((r?.reviews || [])[0] || {}).decision || null;
+  const fam: Record<string, any> = {};
+  const sentCode: Record<string, boolean> = {};
+  for (const r of (ex.submittals || [])) {
+    if (!r || !r.sent || r.hidden) continue;
+    if (r.boqCode) sentCode[r.boqCode] = true;
+    const k = r.boqCode ? "b:" + r.boqCode : `s:${r.category}:${r.seq}`;
+    if (!fam[k] || (Number(r.rev) || 0) > (Number(fam[k].rev) || 0)) fam[k] = r;
+  }
+  const rows: Promise<any>[] = [];
+  for (const r of Object.values<any>(fam)) {
+    if (subsOf(r).indexOf(key) < 0 || !onFloors(floorsOf(r), F)) continue;
+    if (r.boqCode && offCodes[r.boqCode]) continue;
+    rows.push((async () => {
+      const decision = decisionOf(r);
+      const signedDoc = (sbAp[r.id] || {}).doc;
+      const d = signedDoc && signedDoc.path ? signedDoc : (r.formDoc && r.formDoc.path ? r.formDoc : null);
+      return {
+        id: r.id,
+        no: `${String(r.category || "").toUpperCase()}-${String(r.seq || "").padStart(3, "0")}`,
+        category: r.category || "",
+        typeId: String(r.typeId || "").trim(),
+        description: r.itemDescription || r.scope || r.boqText || "",
+        decision,
+        submitted: true,
+        rev: Number(r.rev) || 0,
+        image: r.image && r.image.path ? await signed(r.image.path) : null,
+        doc: d ? { name: d.name || "submittal.html", type: d.type || "text/html", url: await signed(d.path) } : null,
+        files: decision && APPROVED.indexOf(decision) >= 0 ? await signAll(r.attachments || []) : [],
+      };
+    })());
+  }
+  for (const [code, m] of Object.entries<any>(rowMeta)) {
+    if (!m || !Array.isArray(m.subs) || m.subs.indexOf(key) < 0) continue;
+    if (sentCode[code] || offCodes[code] || !onFloors(m.floors, F)) continue;
+    rows.push(Promise.resolve({ id: "c:" + code, no: "", category: m.cat || "", typeId: String(m.mark || "").trim(),
+      description: m.desc || code, decision: null, submitted: false, rev: 0, image: null, doc: null, files: [] }));
+  }
+  return await Promise.all(rows);
+}
+async function sdFor(grant: any, key: string) {
+  const ex = grant.extras || {};
+  const F: string[] | null = grant.F || null;
+  const sdAp = ex.sdApprovals || {};
+  const rows: Promise<any>[] = [];
+  for (const [code, row] of Object.entries<any>(ex.sdRows || {})) {
+    if (!row || row.removed || (row.subs || []).indexOf(key) < 0 || !onFloors(row.floors, F)) continue;
+    const lli = (grant.lli || {})[code] || {};
+    const cat = row.category || lli.category || "";
+    rows.push((async () => {
+      const approvedByClient = !!sdAp[code];
+      const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
+      return {
+        code,
+        typeId: String(row.markOwn ? (row.typeMark || "") : (lli.typeMark || row.typeMark || "")).trim(),
+        category: cat,
+        catHe: catLabel(grant, cat),
+        description: sdDesc(grant, code, row),
+        dueAt: row.dueAt || "",
+        updates: (Array.isArray(row.updates) ? row.updates : []).map((u: any) => ({ date: String(u.at || "").slice(0, 10), text: String(u.text || "") })),
+        status: approvedByClient ? "approved" : (row.status || "required"),
+        files: ok ? await signAll([(sdAp[code] || {}).file || row.file].filter(Boolean)) : [],
+      };
+    })());
+  }
+  return await Promise.all(rows);
+}
 const ALL_TRADES = ["hvac", "electric", "plumbing", "drywall", "security", "paint"];
 async function pmBoard(grant: any) {
   const ex = grant.extras || {};
   const sdata = ex.subsData || {};
-  const sbAp = ex.submittalApprovals || {};
-  const decisionOfRec = (r: any) =>
-    ((sbAp[r?.id] || {}).review || {}).decision || ((r?.reviews || [])[0] || {}).decision || null;
   const F: string[] | null = grant.F || null;
-  const rowMeta = ex.submittalRowMeta || {};
-  const floorsOfRec = (r: any) => Array.isArray(r.floors) ? r.floors : (rowMeta[r.boqCode] || {}).floors;
-  const sent = (ex.submittals || []).filter((r: any) => r && r.sent && !r.hidden && onFloors(floorsOfRec(r), F));
-  const latest: Record<string, any> = {};
-  for (const r of sent) {
-    const k = r.boqCode ? "b:" + r.boqCode : "i:" + r.id;
-    if (!latest[k] || (Number(r.rev) || 0) > (Number(latest[k].rev) || 0)) latest[k] = r;
-  }
-  const submittals: any[] = [];
-  const seenCode: Record<string, boolean> = {};
-  for (const r of Object.values<any>(latest)) {
-    if (r.boqCode) seenCode[r.boqCode] = true;
-    const doc = (sbAp[r.id] || {}).doc;
-    submittals.push({
-      id: r.id,
-      no: `${String(r.category || "").toUpperCase()}-${String(r.seq || "").padStart(3, "0")}`,
-      category: r.category || "",
-      typeId: String(r.typeId || "").trim(),
-      description: r.itemDescription || r.scope || r.boqText || "",
-      decision: decisionOfRec(r),
-      submitted: true,
-      rev: Number(r.rev) || 0,
-      image: r.image && r.image.path ? await signed(r.image.path) : null,
-      doc: doc && doc.path ? { name: doc.name || "submittal", type: doc.type || "", url: await signed(doc.path) } : null,
-    });
-  }
-  const off = ex.submittalChkOff || {};
-  for (const line of (sdata.checklist || [])) {
-    if (!line || off[line.code] || seenCode[line.code]) continue;
-    if (!onFloors((rowMeta[line.code] || {}).floors, F)) continue;
-    submittals.push({ id: "c:" + line.code, no: "", category: line.category || "", typeId: "", description: line.title || line.code,
-      decision: null, submitted: false, rev: 0, image: null, doc: null });
-  }
-
-  const sd: any[] = [];
-  const sdAp = ex.sdApprovals || {};
-  for (const [code, row] of Object.entries<any>(ex.sdRows || {})) {
-    if (!row || row.removed) continue;
-    if (!onFloors(row.floors, F)) continue;
-    const approvedByClient = !!sdAp[code];
-    const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
-    sd.push({
-      code,
-      description: sdDesc(grant, code, row),
-      category: row.category || "",
-      typeId: String(row.typeMark || row.typeId || "").trim(),
-      status: approvedByClient ? "approved" : (row.status || "required"),
-      subs: Array.isArray(row.subs) ? row.subs : [],
-      files: ok ? await signAll([(sdAp[code] || {}).file || row.file].filter(Boolean)) : [],
-    });
-  }
+  // 07.11.26 — as ticked for "מנהל פרויקט" in "צפייה אפליקציה".
+  const [submittals, sd] = await Promise.all([submittalsFor(grant, "pm"), sdFor(grant, "pm")]);
 
   const logs: Record<string, any[]> = {};
   for (const t of ALL_TRADES) {
     logs[t] = [];
-    for (const u of ((sdata.logs || {})[t] || [])) {
-      if (!onFloors(u.floors, F)) continue;
-      logs[t].push({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) });
-    }
+    logs[t] = await Promise.all(((sdata.logs || {})[t] || []).filter((u: any) => onFloors(u.floors, F))
+      .map(async (u: any) => ({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) })));
   }
   const standards: any[] = [];
   for (const t of ALL_TRADES) {
@@ -682,7 +638,7 @@ async function pmPhonesFor(projectId: string): Promise<string[]> {
 // given to them.
 // ---------------------------------------------------------------------------
 const OWNER_EMAIL = "marcella.kravitz@gmail.com";
-const PREVIEW_READS = ["projects", "board", "tasks"];
+const PREVIEW_READS = ["projects", "board", "tasks", "finishes"];
 async function previewOf(body: any): Promise<any> {
   const pv = body && body.preview;
   if (!pv) return null;
@@ -779,7 +735,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 46,
+    fn: "sub-portal", version: 47,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -969,30 +925,32 @@ Deno.serve(async (req) => {
       });
     }
 
+    if (body.action === "finishes") {
+      const phone = pv ? "" : await readToken(body.token);
+      if (!pv && !phone) return json({ error: "unauthorised" }, 401);
+      const pid0 = String(body.projectId || "");
+      const [projects, meta] = await Promise.all([loadProjects(), loadMeta()]);
+      const grant: any = pv
+        ? previewGrant(pv, projects, meta, pid0, String(body.trade || ""))
+        : grantsFor(projects, phone as string, null as any).filter((g) => g.projectId === pid0)[0];
+      if (!grant) return json({ error: "unauthorised" }, 401);
+      const role = grant.role || (grant.isPm ? "pm" : "sub");
+      return json({ finishes: await finishesFor(pid0, role, grant.trade || "") });
+    }
+
     if (body.action === "board") {
       const phone = pv ? "" : await readToken(body.token);
       if (!pv && !phone) return json({ error: "unauthorised" }, 401);
-      const [projects, meta, sdParts, schedParts, sbApProbe, sdApProbe] = await Promise.all([
-        loadProjects(), loadMeta(), loadPart("project-sd"), loadPart("project-schedules"),
-        loadPart("project-submittal-approvals"), loadPart("project-sd-approvals"),
-      ]);
+      const pid0 = String(body.projectId || "");
+      const [projects, meta, full, catalog] = await Promise.all([loadProjects(), loadMeta(), loadProjectFull(pid0), loadCatalog()]);
       const grant: any = pv
-        ? previewGrant(pv, projects, meta, String(body.projectId || ""), String(body.trade || ""))
-        : grantsFor(projects, phone as string, null as any).filter((g) => g.projectId === body.projectId)[0];
+        ? previewGrant(pv, projects, meta, pid0, String(body.trade || ""))
+        : grantsFor(projects, phone as string, null as any).filter((g) => g.projectId === pid0)[0];
       if (!grant) return json({ error: "unauthorised" }, 401);
-
-      grant.extras = {
-        ...grant.extras,
-        sdRows: sdParts[grant.projectId] || grant.extras.sdRows || {},
-        scheduleData: schedParts[grant.projectId] || grant.extras.scheduleData || {},
-        submittalApprovals: sbApProbe[grant.projectId] || grant.extras.submittalApprovals || {},
-        sdApprovals: sdApProbe[grant.projectId] || grant.extras.sdApprovals || {},
-      };
+      grant.extras = full.extras;
+      grant.lli = full.lli;
+      grant.catalog = catalog;
       const role = grant.role || (grant.isPm ? "pm" : "sub");
-      try {
-        const { data: lr } = await db.from("app_state").select("value").eq("key", `project-lli:${grant.projectId}`).maybeSingle();
-        grant.lli = parse(lr?.value) || {};
-      } catch (_e) { grant.lli = {}; }
       // 07.11.26 — floors. His own (none: all of the project's), and the one
       // he chose in the app, if it is one of them.
       const projFl: string[] = (meta[grant.projectId] || {}).floorList || [];
@@ -1007,12 +965,18 @@ Deno.serve(async (req) => {
         : { marks: {}, trade: "" };
       out.role = role;
       out.project = { id: grant.projectId, ...(meta[grant.projectId] || {}) };
-      try { out.finishes = await finishesFor(grant.projectId, role, grant.trade || ""); } catch (e) { console.error("[sub-portal] finishes", e); out.finishes = []; }
+      // 07.11.26 — the finishes list's pictures are large: they come with
+      // their own call ("finishes"), when the list is opened. Here only what
+      // tells whether something on it changed.
       {
-        const str = JSON.stringify(out.finishes.map((x: any) => [x.code, x.category, x.typeMark, x.desc, (x.image || "").length]));
+        const want = role === "pm" ? "pm" : role === "sub" ? (grant.trade || "") : "client";
+        const fin = Object.entries<any>(grant.lli || {}).filter(([, r]) => r && !r.removed && Array.isArray(r.subs) && r.subs.indexOf(want) >= 0)
+          .map(([c, r]) => [c, r.category, r.typeMark, r.desc, typeof r.image === "string" ? r.image.length : (r.image && r.image.path) || ""]);
+        const str = JSON.stringify(fin);
         let h = 5381;
         for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
-        out.marks = { ...(out.marks || {}), finishes: out.finishes.length ? String(h >>> 0) : "" };
+        out.marks = { ...(out.marks || {}), finishes: fin.length ? String(h >>> 0) : "" };
+        out.finishesN = fin.length;
       }
       out.myFloors = choosable;
       out.allFloors = !mine.length;

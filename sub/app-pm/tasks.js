@@ -96,8 +96,10 @@ var PMTasks = (function(){
     });
   }
   // A list screen redrawn now and then in the preview, with what is new.
+  // 07.11.26 — kept fresh: a status changed on the dashboard shows here
+  // within seconds, on the task itself too.
   function freshen(){
-    if(T && Date.now()-T.at>10000 && !draft){
+    if(T && Date.now()-T.at>4000 && !draft && !(ed && (ed.upd || ed.dirty))){
       load(true).then(function(ch){ if(ch) AW.render(true); });
     }
   }
@@ -170,7 +172,7 @@ var PMTasks = (function(){
     var t=(T.tasks||[]).filter(function(x){ return x.id===id; })[0];
     if(!t){ history.back(); return; }
     markSeen(t.id);
-    if(!ed || ed.id!==t.id) ed={id:t.id, status:t.status||"open", notes:t.notes||"", desc:t.desc||"", owner:t.owner||"", due:t.due||"", category:t.category||"", upd:""};
+    if(!ed || ed.id!==t.id || (!ed.dirty && !ed.upd)) ed={id:t.id, status:t.status||"open", notes:t.notes||"", desc:t.desc||"", owner:t.owner||"", due:t.due||"", category:t.category||"", upd:""};
     var own=t.mine&&!t.fixed;
     var who=t.fixed ? "משימה קבועה" : ("משימה נפתחה ע\"י "+E((t.createdBy&&t.createdBy.name)||"—")+(t.created?" בתאריך "+E(AW.fmtShort(t.created)):""));
     if(t.status==="done"&&t.doneBy&&t.doneBy.name) who+='<br>משימה עודכנה לסטטוס בוצע ע"י '+E(t.doneBy.name)+(t.doneAt?" בתאריך "+E(AW.fmtShort(t.doneAt)):"");
@@ -197,13 +199,16 @@ var PMTasks = (function(){
     '</div>';
     AW.el().innerHTML=h;
     AW.wireBack();
+    Array.prototype.forEach.call(AW.el().querySelectorAll(".tkEd textarea,.tkEd input,.tkEd select"), function(x){
+      x.addEventListener("input", function(){ if(x.id!=="eUpd") ed.dirty=true; else ed.upd=x.value; });
+    });
     var keep=function(){
       ed.notes=document.getElementById("eNotes").value; ed.upd=document.getElementById("eUpd").value;
       if(own){ ed.desc=document.getElementById("eDesc").value; ed.owner=document.getElementById("eOwner").value;
         ed.due=document.getElementById("eDue").value; ed.category=document.getElementById("eCat").value; }
     };
     Array.prototype.forEach.call(AW.el().querySelectorAll("[data-s]"), function(b){
-      b.onclick=function(){ keep(); ed.status=b.getAttribute("data-s"); AW.render(true); };
+      b.onclick=function(){ keep(); ed.status=b.getAttribute("data-s"); ed.dirty=true; AW.render(true); };
     });
     document.getElementById("eHist").onclick=function(){
       var ups=(t.updates||[]).slice().reverse();
@@ -246,12 +251,17 @@ var PMTasks = (function(){
 
   function draw(v){
     if(!T){ load(false).then(function(){ if(T) AW.render(); }); return; }
+    freshen();
     if(v.v==="task") return task(v.id);
     ed=null;
-    freshen();
     if(v.v==="taskCat") return byCat(v.cat||"");
     if(v.v==="taskStatus") return byStatus(v.st);
     return main();
   }
-  return { draw:draw, busy:function(){ return !!(draft||ed); } };
+  // In the preview the board is asked again every few seconds.
+  if(AW.PREVIEW) setInterval(function(){
+    var v=AW.view().v;
+    if(["tasks","taskCat","taskStatus","task"].indexOf(v)>=0 && !document.querySelector(".pop")) freshen();
+  }, 6000);
+  return { draw:draw, busy:function(){ return !!(draft||(ed&&(ed.upd||ed.dirty))); }, reset:function(){ T=null; ed=null; } };
 })();

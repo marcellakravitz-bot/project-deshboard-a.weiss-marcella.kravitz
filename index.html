@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 272";
+var APP_BUILD = "06.11.2026 · build 273";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -21916,7 +21916,8 @@ function SubmittalFolder({
   const setRowMeta = (r, patch) => {
     if (r.lead && onPatchMany) { onPatchMany(r.hits.map((x) => x.id), patch); return; }
     if (r.lead && onPatch) { onPatch(r.lead, patch); return; }
-    if (onChangeRowMeta) onChangeRowMeta({ ...(rowMeta || {}), [metaKey(r)]: { ...metaOf(r), ...patch } });
+    // What the apps show for the line until it has a submittal.
+    if (onChangeRowMeta) onChangeRowMeta({ ...(rowMeta || {}), [metaKey(r)]: { ...metaOf(r), ...patch, mark: r.mark || "", desc: r.desc || "", cat: (r.cat && r.cat.key) || "" } });
   };
   const he = lang === "he";
   const lli = lliRows || {};
@@ -22900,6 +22901,56 @@ function SubmittalCard({
   const commit = (next) => {
     if (onChangeSubmittals) onChangeSubmittals(next);
   };
+  // 07.11.26 — back from editing a submittal, the board is where it was: the
+  // place in the rows she clicked from, not the top of the page.
+  const scrollMemo = useRef5(null);
+  const wasOpen = useRef5(false);
+  React15.useEffect(() => {
+    const onDown = (e) => {
+      const fr = document.querySelector(".submittalCard .sbBodyFrame");
+      if (fr && fr.contains(e.target)) scrollMemo.current = { win: window.scrollY, frame: fr.scrollTop, left: fr.scrollLeft };
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, []);
+  React15.useEffect(() => {
+    if (draft) { wasOpen.current = true; return; }
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
+    const m = scrollMemo.current;
+    if (!m) return;
+    let n = 0;
+    const go = () => {
+      const fr = document.querySelector(".submittalCard .sbBodyFrame");
+      if (fr) { fr.scrollTop = m.frame; fr.scrollLeft = m.left; window.scrollTo(0, m.win); }
+      else if (n++ < 30) requestAnimationFrame(go);
+    };
+    requestAnimationFrame(() => requestAnimationFrame(go));
+  }, [draft]);
+  // 07.11.26 — the form of every submittal that went out, kept as a file so
+  // the apps can show it ("צפייה בטופס"): made again whenever the submittal
+  // changes. A signed one already has its signed copy.
+  React15.useEffect(() => {
+    if (!canEdit || !projectId) return;
+    const sigOf = (r) => { const { formDoc, ...rest } = r; const str = JSON.stringify(rest); let h = 5381; for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0; return String(h >>> 0); };
+    const need = (list || []).filter((r) => r && r.sent && !(((submittalApprovals || {})[r.id] || {}).doc) && (!r.formDoc || r.formDoc.sig !== sigOf(r))).slice(0, 4);
+    if (!need.length) return;
+    let stop = false;
+    const t = setTimeout(async () => {
+      const done = {};
+      for (const r of need) {
+        if (stop) return;
+        try {
+          const html = sbBuildPrintHtml(r, "he", printBrand, [], null).replace(/window\.print\(\)/g, "void 0");
+          const name = `${sbNumber(r.category, r.seq)}.html`;
+          const up = await sbUploadFile(projectId, `submittal-form-${r.id}`, new File([html], name, { type: "text/html" }));
+          if (up && up.path) done[r.id] = { path: up.path, name, type: "text/html", sig: sigOf(r) };
+        } catch (e) { console.warn("[awdash] submittal form copy", e); }
+      }
+      if (!stop && Object.keys(done).length) commit((submittals || []).map((x) => (done[x.id] ? { ...x, formDoc: done[x.id] } : x)));
+    }, 1500);
+    return () => { stop = true; clearTimeout(t); };
+  }, [list, submittalApprovals, canEdit, projectId]);
   // `preset` arrives when the submittal is started from a line of the bill of
   // quantities: it carries the item number it answers and the wording to start
   // from. Started from the button at the top it is empty, and the submittal

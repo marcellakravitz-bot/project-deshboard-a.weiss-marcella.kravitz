@@ -54,7 +54,7 @@ function home(){
       var k=el.getAttribute("data-k");
       AW.markSeen(k);
       if(k==="rj"){ AW.rejects.reset(); AW.go({v:"rj"}); return; }
-      if(k==="tasks"){ AW.go({v:"tasks"}); return; }
+      if(k==="tasks"){ PMTasks.reset(); AW.go({v:"tasks"}); return; }
       AW.go({v:k});
     };
   });
@@ -182,11 +182,7 @@ function standards(){
 }
 
 var fin={q:""};
-function finishes(){
-  fin.items=S.board.finishes||[];
-  AW.el().innerHTML=AW.head("רשימת חומרי גמר")+AW.finishes(fin);
-  AW.wireBack(); AW.wireFinishes(fin, function(){ AW.render(true); });
-}
+function finishes(){ AW.finishesScreen(fin); }
 function draw(v){
   if(!S.board) return;
   switch(v.v){

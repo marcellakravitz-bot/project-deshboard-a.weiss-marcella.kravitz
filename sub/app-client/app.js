@@ -19,11 +19,7 @@ function home(){
     el.onclick=function(){ var k=el.getAttribute("data-k"); AW.markSeen(k); AW.go({v:k}); };
   });
 }
-function finishes(){
-  fin.items=S.board.finishes||[];
-  AW.el().innerHTML=AW.head("רשימת חומרי גמר")+AW.finishes(fin);
-  AW.wireBack(); AW.wireFinishes(fin, function(){ AW.render(true); });
-}
+function finishes(){ AW.finishesScreen(fin); }
 AW.boot({ render:function(v){
   if(!S.board) return;
   if(v && v.v==="finishes") return finishes();

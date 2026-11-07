@@ -127,17 +127,32 @@ var AW = (function(){
   }
   function isDoc(f){ return /html/.test((f&&f.type)||"") || /\.html(\?|$)/i.test((f&&f.url)||""); }
   // A signed submittal (an HTML page) opens inside the app, fitted to the phone.
+  // 07.11.26 — the form opens over the list like a picture of the printed
+  // page: laid out at its own A4 width and shrunk to the phone's, never
+  // reflowed (which bent its rows). The X closes it, back to the list.
   function openDoc(url){
-    busy("טוען את המסמך…");
-    history.pushState({doc:1},"");
+    var box=document.createElement("div");
+    box.className="docView";
+    box.innerHTML='<div class="docTop"><button class="docX" type="button" aria-label="סגירה">✕</button></div><div class="docBody"><p class="lead">טוען את הטופס…</p></div>';
+    document.body.appendChild(box);
+    var close=function(){ box.remove(); };
+    box.querySelector(".docX").onclick=close;
     fetch(url).then(function(r){ return r.text(); }).then(function(html){
-      var css='<style>@media screen{html,body{background:#fff!important;padding:0!important;margin:0!important}'+
-        '.page{width:100%!important;height:auto!important;min-height:0!important;padding:8px!important;margin:0 0 10px!important;box-shadow:none!important}'+
-        '.sheet{height:auto!important}.frame{height:auto!important}}</style>';
-      el().innerHTML='<button class="backArrow" id="docBack" aria-label="חזרה">'+icon("M15 6l-6 6 6 6")+'</button>'+
-        '<iframe class="docFrame" srcdoc="'+esc(String(html||"").replace(/<\/head>/i, css+'</head>'))+'"></iframe>';
-      document.getElementById("docBack").onclick=function(){ history.back(); };
-    }).catch(function(){ alert("לא ניתן לפתוח את המסמך."); history.back(); });
+      var W=794, body=box.querySelector(".docBody");
+      var css='<style>html,body{margin:0!important;padding:0!important;background:#fff!important;width:'+W+'px!important}.page{margin:0 0 12px!important;box-shadow:none!important}</style>';
+      body.innerHTML='<div class="docScale"><iframe scrolling="no"></iframe></div>';
+      var fr=body.querySelector("iframe"), wrap=body.querySelector(".docScale");
+      fr.style.width=W+"px";
+      fr.onload=function(){
+        try{
+          var d=fr.contentDocument, h=Math.max(d.documentElement.scrollHeight, d.body.scrollHeight);
+          var k=Math.min(1, (body.clientWidth-12)/W);
+          fr.style.height=h+"px"; fr.style.transform="scale("+k+")";
+          wrap.style.width=(W*k)+"px"; wrap.style.height=(h*k)+"px";
+        }catch(e){}
+      };
+      fr.srcdoc=String(html||"").replace(/window\.print\(\)/g,"void 0").replace(/<\/head>/i, css+'</head>');
+    }).catch(function(){ box.querySelector(".docBody").innerHTML='<p class="lead">לא ניתן לפתוח את הטופס.</p>'; });
   }
   function openFile(f){ if(!f||!f.url) return; if(isDoc(f)) openDoc(f.url); else window.open(f.url,"_blank","noopener"); }
   // A small window from the bottom of the screen.
@@ -250,7 +265,7 @@ var AW = (function(){
     el().innerHTML='<div class="proj">'+(p.logo?'<img src="'+esc(p.logo)+'" alt="">':'')+'<span class="pn">'+esc(p.name||"")+'</span></div>'+
       '<h2 class="flTitle">בחירת קומה</h2>'+
       '<div class="flGrid">'+f.map(function(x){ return '<button class="flBtn num" data-f="'+esc(x)+'">'+esc(x)+'</button>'; }).join("")+'</div>'+
-      '<button class="flAll" data-f="*">כל הקומות</button>';
+      '<div class="flAllBar"><button class="flAll" data-f="*">כל הקומות</button></div>';
     Array.prototype.forEach.call(el().querySelectorAll("[data-f]"), function(b){
       b.onclick=function(){ chooseFloor(b.getAttribute("data-f")); };
     });
@@ -306,6 +321,9 @@ var AW = (function(){
     state.token=PREVIEW ? "preview" : (function(){ try{ return localStorage.getItem(TOKEN_KEY); }catch(e){ return null; } })();
     try{ state.projects=JSON.parse(localStorage.getItem(TOKEN_KEY+".projects")||"[]"); }catch(e){ state.projects=[]; }
     if(!state.token || !state.project){ toEntry(); return; }
+    // 07.11.26 — the floor chosen earlier in this visit goes with the first
+    // request, so the project is fetched once, not twice.
+    try{ var sv=sessionStorage.getItem(floorKey()); if(sv) state.floor=sv; }catch(e){}
     loadBoard(false).then(function(){ if(opts.ready) opts.ready(); });
     if(PREVIEW){
       setInterval(function(){ refresh(false); }, 12000);
@@ -330,6 +348,7 @@ var AW = (function(){
           try{ if(localStorage.getItem(fk)!=="1"){ markAllSeen(); localStorage.setItem(fk,"1"); } }catch(e){}
         }
         var mf=myFloors();
+        if(state.floor && state.floor!=="*" && mf.indexOf(state.floor)<0){ state.floor=null; try{ sessionStorage.removeItem(floorKey()); }catch(e){} }
         if(state.floor===null){
           var saved=null; try{ saved=sessionStorage.getItem(floorKey()); }catch(e){}
           if(saved!==null && (saved==="*" || mf.indexOf(saved)>=0)){ state.floor=saved; return loadBoard(quiet); }
@@ -380,7 +399,7 @@ var AW = (function(){
 AW.itemList = function(o){
   // o: { items, kind: "submittal"|"sd", key (state holder) }
   var E=AW.esc, f=o.filter||{}, items=o.items||[];
-  var catName=function(c){ return AW.CAT_HE[c]||c||"ללא קטגוריה"; };
+  var catName=function(c, r){ return (r&&r.catHe)||AW.CAT_HE[c]||c||"ללא קטגוריה"; };
   var cats=[], types=[];
   items.forEach(function(r){
     if(r.category && cats.indexOf(r.category)<0) cats.push(r.category);
@@ -418,18 +437,20 @@ AW.itemList = function(o){
       return '<option value="'+E(t)+'"'+(f.type===t?" selected":"")+'>'+E(t)+'</option>'; }).join("")+'</select></div></div>';
   if(!shown.length) h+=AW.empty(items.length?"אין תוצאות לחיפוש.":"אין פריטים להצגה.");
   shown.forEach(function(r){
-    var id=r.id||r.code, st=stOf(r), open=f.open===id;
+    var id=r.id||r.code, st=stOf(r), open=f.open===id && o.kind!=="sd";
     var tn=o.simple?tone(r):null;
-    h+='<button class="item" data-id="'+E(id)+'"'+(tn?' style="background:'+tn.bg+';border-color:'+tn.bd+'"':'')+'>'+
-      (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':(o.simple?'':'<span class="pic"></span>'))+
-      '<span class="tx"><b>'+E(r.typeId||r.no||r.code||"—")+'</b><span>'+E(catName(r.category))+'</span></span>'+
+    // 07.11.26 — SD: the category's icon, the type mark, the category.
+    var pic = o.kind==="sd" ? '<span class="pic catIc">'+AW.catIcon(r.category, r.catHe)+'</span>'
+      : (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':(o.simple?'':'<span class="pic catIc">'+AW.catIcon(r.category, "")+'</span>'));
+    h+='<button class="item" data-id="'+E(id)+'"'+(tn?' style="background:'+tn.bg+';border-color:'+tn.bd+'"':'')+'>'+pic+
+      '<span class="tx"><b>'+E(o.kind==="sd" ? (r.typeId||"—") : (r.typeId||r.no||r.code||"—"))+'</b><span>'+E(catName(r.category, r))+'</span></span>'+
       '<span class="st" style="color:'+st.c+';background:'+st.bg+'">'+E(st.t)+'</span></button>';
     if(open){
       var doc=r.doc || ((r.files||[]).filter(AW.isDoc)[0]) || null;
       var others=(r.files||[]).filter(function(x){ return !AW.isDoc(x); });
       h+='<div class="itemOpen">'+(r.no?'<div class="lbl">'+E(r.no)+'</div>':'')+
         '<p>'+E(r.description||"—")+'</p>'+
-        (doc?'<div class="acts"><button class="pill" type="button" data-doc="'+E(id)+'">'+(o.kind==="sd"?"צפייה בקובץ":"צפייה בסבמיטל")+'</button></div>':'')+
+        (doc?'<div class="acts"><button class="eyeBtn" type="button" data-doc="'+E(id)+'">'+AW.icon("M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z")+'<span>צפייה בטופס</span></button></div>':'')+
         (o.kind==="sd"&&others.length?AW.files(others):'')+
       '</div>';
     }
@@ -443,7 +464,11 @@ AW.wireItemList = function(o, onChange){
   var c=document.getElementById("fc"); if(c) c.onchange=function(){ f.cat=c.value; f.type=""; onChange(); };
   var t=document.getElementById("ft"); if(t) t.onchange=function(){ f.type=t.value; onChange(); };
   Array.prototype.forEach.call(document.querySelectorAll(".item[data-id]"), function(b){
-    b.onclick=function(){ var id=b.getAttribute("data-id"); f.open=f.open===id?null:id; onChange(true); };
+    b.onclick=function(){
+      var id=b.getAttribute("data-id");
+      if(o.kind==="sd"){ var r=(o.items||[]).filter(function(x){ return x.code===id; })[0]; if(r) AW.sdCard(r); return; }
+      f.open=f.open===id?null:id; onChange(true);
+    };
   });
   Array.prototype.forEach.call(document.querySelectorAll("[data-doc]"), function(b){
     b.onclick=function(){
@@ -454,6 +479,60 @@ AW.wireItemList = function(o, onChange){
       AW.openFile(doc);
     };
   });
+};
+// 07.11.26 — an SD drawing, in a card in the middle of the screen: the
+// description, the date it is due, its file, and its updates in a window of
+// their own (a date and the update beside it).
+AW.sdCard = function(r){
+  var E=AW.esc;
+  var files=r.files||[];
+  var ups=(r.updates||[]).slice().reverse();
+  var box=AW.pop("", '<div class="finCard">'+
+    '<div class="fr"><div><span class="lbl">קטגוריה</span><b>'+E(r.catHe||AW.CAT_HE[r.category]||"—")+'</b></div>'+
+      '<div><span class="lbl">איפיון</span><b>'+E(r.typeId||"—")+'</b></div></div>'+
+    '<div class="fd"><span class="lbl">תיאור</span><p>'+E(r.description||"—")+'</p></div>'+
+    '<div class="fd"><span class="lbl">תאריך יעד</span><p class="num">'+E(r.dueAt?AW.fmt(r.dueAt):"—")+'</p></div>'+
+    '<div class="sdActs">'+(ups.length?'<button class="eyeBtn" type="button" id="sdUps">'+AW.icon("M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4")+'<span>צפייה בעדכונים ('+ups.length+')</span></button>':'<span class="noUps">אין עדכונים</span>')+
+      (files.length?'<button class="eyeBtn" type="button" id="sdFile">'+AW.icon("M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z")+'<span>צפייה בקובץ</span></button>':'')+'</div>'+
+  '</div>', true);
+  var u=box.querySelector("#sdUps");
+  if(u) u.onclick=function(){
+    AW.pop("עדכונים", '<div class="upList">'+ups.map(function(x){
+      return '<div class="upRow"><span class="d num">'+E(x.date?AW.fmtShort(x.date):"")+'</span><span class="t">'+E(x.text)+'</span></div>';
+    }).join("")+'</div>', true);
+  };
+  var fl=box.querySelector("#sdFile");
+  if(fl) fl.onclick=function(){ AW.openFile(files[0]); };
+};
+// 07.11.26 — an icon for each category, all drawn alike: a navy line with the
+// part that names it filled in. A box seen from the corner for the room
+// trades — the ceiling, the floor or the walls of it darker.
+AW.catIcon = function(key, label){
+  var k=String(key||"").toLowerCase(), t=String(label||AW.CAT_HE[key]||"");
+  var has=function(re){ return re.test(k)||re.test(t); };
+  var BOX='<path d="M12 3l8 4.5v9L12 21l-8-4.5v-9z" fill="none"/>';
+  var face={
+    top:'<path d="M12 3l8 4.5-8 4.5-8-4.5z" class="f"/>',
+    floor:'<path d="M4 16.5L12 12l8 4.5L12 21z" class="f"/>',
+    walls:'<path d="M4 7.5L12 12v9l-8-4.5z" class="f"/><path d="M20 7.5L12 12v9l8-4.5z" class="f2"/>'
+  };
+  var cube=function(f){ return f+BOX+'<path d="M4 7.5L12 12l8-4.5M12 12v9"/>'; };
+  var svg;
+  if(has(/ceiling|תקר/)) svg=cube(face.top);
+  else if(has(/floor|ריצוף|רצפ/)) svg=cube(face.floor);
+  else if(has(/clad|גמר|חיפוי/)) svg=cube(face.walls);
+  else if(has(/door|דלת|דלתות/)) svg='<path d="M6 21V4.5L14 3v18" class="f"/><path d="M4 21h16M14 5h4v16"/><circle cx="11.5" cy="12.5" r="1" fill="#fff" stroke="none"/>';
+  else if(has(/curtain|וילו/)) svg='<path d="M3 4h18"/><path d="M5 4c0 6 2 11 4 16H5z" class="f"/><path d="M19 4c0 6-2 11-4 16h4z" class="f"/>';
+  else if(has(/joiner|נגר|ריהוט|furn/)) svg='<rect x="4" y="5" width="16" height="11" rx="1.5" class="f"/><path d="M4 10.5h16M12 5v11M6 16v3M18 16v3"/>';
+  else if(has(/construct|בינוי|build/)) svg='<path d="M14 4l6 6-3 3-6-6z" class="f"/><path d="M11.5 9.5L4 17l3 3 7.5-7.5"/>';
+  else if(has(/light|תאור/)) svg='<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V16h7v-2.1A6 6 0 0 0 12 3z" class="f"/>';
+  else if(has(/electr|חשמל/)) svg='<path d="M13 2L5 13h6l-1 9 8-11h-6z" class="f"/>';
+  else if(has(/hvac|מיזוג/)) svg='<rect x="3" y="5" width="18" height="8" rx="2" class="f"/><path d="M7 16l-1 3M12 16v3M17 16l1 3"/>';
+  else if(has(/plumb|אינסטל/)) svg='<path d="M4 8h8a4 4 0 0 1 4 4v1h3v4h-3a4 4 0 0 1-4-4v-1H4z" class="f"/>';
+  else if(has(/fire|אש/)) svg='<path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 3-7 1 2 2 2 3 3 0-3 0-5 0-7z" class="f"/>';
+  else if(has(/secur|ביטחון|av|מולטימדי/)) svg='<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" class="f"/>';
+  else svg='<rect x="5" y="3" width="14" height="18" rx="2" class="f"/><path d="M8 8h8M8 12h8M8 16h5"/>';
+  return '<svg viewBox="0 0 24 24" class="catSvg">'+svg+'</svg>';
 };
 // 06.11.26 — the subcontractor's checks: the check that is needed, and under
 // it the date set for it. One marked done on the dashboard turns pale green.
@@ -490,6 +569,26 @@ AW.finishes = function(o){
         '<td class="im">'+(r.image?'<img src="'+E(r.image)+'" alt="" loading="lazy">':'<span class="noIm">—</span>')+'</td></tr>';
     }).join("")+'</tbody></table>';
   return h;
+};
+// 07.11.26 — the list with its pictures comes with its own call, made when
+// the list is opened (the pictures are large; the project opens faster
+// without them).
+AW.finishesScreen = function(fin){
+  var S=AW.state, mark=(S.board&&S.board.marks||{}).finishes||"";
+  if(!fin.loaded || fin.mark!==mark){
+    AW.el().innerHTML=AW.head("רשימת חומרי גמר")+'<p class="lead">טוען את הרשימה…</p>';
+    AW.wireBack();
+    if(fin.loading) return;
+    fin.loading=true;
+    AW.call({action:"finishes", projectId:S.project, trade:(S.board&&S.board.trade)||""}).then(function(r){
+      fin.loading=false; fin.loaded=true; fin.mark=mark;
+      fin.items=r.ok ? (r.data.finishes||[]) : [];
+      if(AW.view().v==="finishes") AW.render(true);
+    }).catch(function(){ fin.loading=false; });
+    return;
+  }
+  AW.el().innerHTML=AW.head("רשימת חומרי גמר")+AW.finishes(fin);
+  AW.wireBack(); AW.wireFinishes(fin, function(){ AW.render(true); });
 };
 AW.wireFinishes = function(o, onChange){
   var E=AW.esc;
