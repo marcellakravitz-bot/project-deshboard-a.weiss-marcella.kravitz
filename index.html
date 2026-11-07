@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "07.11.2026 · build 281";
+var APP_BUILD = "07.11.2026 · build 282";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -930,6 +930,13 @@ var cards = `
         }
         .dashCard:hover .cardTitle { color: var(--accent-ink); }
         .dashCard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        /* 07.11.26 — the empty cube that closes the board: a frame, nothing to press. */
+        .dashCard.dashFuture { cursor: default; border-style: dashed; background: transparent; }
+        .dashCard.dashFuture .cardIcon { color: var(--mist, #9aa0aa); }
+        .dashCard.dashFuture .cardTitle { color: var(--mist, #9aa0aa); font-weight: 600; }
+        .dashCard.dashFuture:hover { background: transparent; border-color: var(--line); box-shadow: none; }
+        .dashCard.dashFuture:hover .cardIcon { background: var(--bg); border-color: var(--line); color: var(--mist, #9aa0aa); }
+        .dashCard.dashFuture:hover .cardTitle { color: var(--mist, #9aa0aa); }
         .cardIcon {
           width: 28px; height: 28px; border-radius: 8px;
           background: var(--bg); border: 1px solid var(--line);
@@ -5488,7 +5495,10 @@ function Dashboard({
   // How the last row falls out: one card alone goes in the middle column, two
   // are centred as a pair. Worked out here rather than in CSS because only the
   // count knows. (7.9.26)
-  const tail = cards2.length % 3;
+  // 07.11.26 — two on the last row: a third, empty, closes the board (a
+  // function still to come), so the board reads full.
+  const future = cards2.length % 3 === 2;
+  const tail = future ? 0 : cards2.length % 3;
   return /* @__PURE__ */ React9.createElement(React9.Fragment, null, /* @__PURE__ */ React9.createElement("div", { className: `cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim() }, cards2.map((c) => {
     const isLocked = c.locked && !isAuthenticated;
     return /* @__PURE__ */ React9.createElement(
@@ -5503,7 +5513,11 @@ function Dashboard({
       /* @__PURE__ */ React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, /* @__PURE__ */ React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
       /* @__PURE__ */ React9.createElement("div", null, /* @__PURE__ */ React9.createElement("p", { className: "cardTitle" }, c.title))
     );
-  })), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
+  }), future ? React9.createElement("div", { key: "future", className: "dashCard dashFuture", "aria-hidden": "true" },
+    React9.createElement("div", { className: "cardIcon" },
+      React9.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" },
+        React9.createElement("path", { d: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }))),
+    React9.createElement("div", null, React9.createElement("p", { className: "cardTitle" }, "\u05e4\u05d5\u05e0\u05e7\u05e6\u05d9\u05d4 \u05e2\u05ea\u05d9\u05d3\u05d9\u05ea"))) : null), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
 }
 
 
