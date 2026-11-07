@@ -335,18 +335,19 @@ var COPY = {
     worksStartValue: "01.03.2025",
     handoverValue: "30.11.2027",
     cards: [
-      { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
-      { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, iconColor: "#2563EB", title: "Project Schedule", sub: "MS Project" },
+      { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
+      { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "\u05E0\u05D9\u05D4\u05D5\u05DC \u05E7\u05D1\u05DC\u05E0\u05D9 \u05DE\u05E9\u05E0\u05D4", sub: "Subcontractors", locked: true },
       { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Order & Delivery Tracking" },
       { key: "submittal", icon: FileCheck2, iconColor: "#1A7F4B", title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
       { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "\u05D4\u05D5\u05E8\u05D0\u05D5\u05EA \u05E9\u05D9\u05E0\u05D5\u05D9", sub: "Change Instructions", locked: true },
-      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
       { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "\u05e8\u05d9\u05d2'\u05e7\u05d8\u05d9\u05dd", sub: "Rejects \u00b7 Punch Lists", locked: true },
       // 06.11.26 — task management, by category; the administrator's own.
-      { key: "tasks", icon: TasksIcon, iconColor: "#DB2777", title: "ניהול משימות", sub: "Task Management", locked: true }
+      { key: "tasks", icon: TasksIcon, iconColor: "#DB2777", title: "ניהול משימות", sub: "Task Management", locked: true },
+      // 07.11.26 — the facility file closes the board; the empty cube takes its old place.
+      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true }
     ],
     menuOptions: {
       mainContractor: "\u05DB\u05E0\u05D9\u05E1\u05D4 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9",
@@ -459,18 +460,19 @@ var COPY = {
     worksStartValue: "01.03.2025",
     handoverValue: "30.11.2027",
     cards: [
-      { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
-      { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
       { key: "schedule", icon: CalendarClock, iconColor: "#2563EB", title: "Project Schedule", sub: "MS Project" },
+      { key: "rooms", icon: DoorOpen, iconColor: "#8B5E3C", title: "By Room", sub: "Search by Room Number", locked: true },
+      { key: "subs", icon: HardHat, iconColor: "#E8B10A", title: "Subcontractors", sub: "Trades, Access & Distribution", locked: true },
       { key: "lli", icon: ClipboardList, iconColor: "#EA7317", title: "LLI", sub: "Order & Delivery Tracking" },
       { key: "submittal", icon: FileCheck2, iconColor: "#1A7F4B", title: "Submittal", sub: "Material & Sample Approvals", locked: true },
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
       { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "Change Instructions", sub: "Pricing & Approvals", locked: true },
-      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true },
       { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "\u05e8\u05d9\u05d2'\u05e7\u05d8\u05d9\u05dd", sub: "Rejects \u00b7 Punch Lists", locked: true },
       // 06.11.26 — task management, by category; the administrator's own.
-      { key: "tasks", icon: TasksIcon, iconColor: "#DB2777", title: "ניהול משימות", sub: "Task Management", locked: true }
+      { key: "tasks", icon: TasksIcon, iconColor: "#DB2777", title: "ניהול משימות", sub: "Task Management", locked: true },
+      // 07.11.26 — the facility file closes the board; the empty cube takes its old place.
+      { key: "contacts", icon: PhoneIcon, iconColor: "#0EA5E9", title: "Contacts", sub: "Main Contractor | Supervision | Consultants", locked: true }
     ],
     menuOptions: {
       mainContractor: "Main Contractor Login",
@@ -577,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "07.11.2026 · build 282";
+var APP_BUILD = "07.11.2026 · build 283";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -5498,7 +5500,19 @@ function Dashboard({
   // function still to come), so the board reads full.
   const future = cards2.length % 3 === 2;
   const tail = future ? 0 : cards2.length % 3;
-  return /* @__PURE__ */ React9.createElement(React9.Fragment, null, /* @__PURE__ */ React9.createElement("div", { className: `cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim() }, cards2.map((c) => {
+  // 07.11.26 — on the administrator's board the empty cube stands where the
+  // facility file used to be (before ריג'קטים); elsewhere at the end.
+  const futAt = future ? (() => { const r = cards2.findIndex((c) => c.key === "rejects"); return r >= 0 ? r : cards2.length; })() : -1;
+  const futureCube = React9.createElement("div", { key: "future", className: "dashCard dashFuture", "aria-hidden": "true" },
+    React9.createElement("div", { className: "cardIcon" },
+      React9.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" },
+        React9.createElement("path", { d: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }))),
+    React9.createElement("div", null, React9.createElement("p", { className: "cardTitle" }, "\u05e4\u05d5\u05e0\u05e7\u05e6\u05d9\u05d4 \u05e2\u05ea\u05d9\u05d3\u05d9\u05ea")));
+  const cells = [];
+  cards2.forEach((c, i) => { if (i === futAt) cells.push(null); cells.push(c); });
+  if (future && futAt >= cards2.length) cells.push(null);
+  return /* @__PURE__ */ React9.createElement(React9.Fragment, null, /* @__PURE__ */ React9.createElement("div", { className: `cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim() }, cells.map((c) => {
+    if (!c) return futureCube;
     const isLocked = c.locked && !isAuthenticated;
     return /* @__PURE__ */ React9.createElement(
       "button",
@@ -5512,11 +5526,7 @@ function Dashboard({
       /* @__PURE__ */ React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, /* @__PURE__ */ React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
       /* @__PURE__ */ React9.createElement("div", null, /* @__PURE__ */ React9.createElement("p", { className: "cardTitle" }, c.title))
     );
-  }), future ? React9.createElement("div", { key: "future", className: "dashCard dashFuture", "aria-hidden": "true" },
-    React9.createElement("div", { className: "cardIcon" },
-      React9.createElement("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.7, strokeLinecap: "round", strokeLinejoin: "round" },
-        React9.createElement("path", { d: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }))),
-    React9.createElement("div", null, React9.createElement("p", { className: "cardTitle" }, "\u05e4\u05d5\u05e0\u05e7\u05e6\u05d9\u05d4 \u05e2\u05ea\u05d9\u05d3\u05d9\u05ea"))) : null), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
+  })), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
 }
 
 
