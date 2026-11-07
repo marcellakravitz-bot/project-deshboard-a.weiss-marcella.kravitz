@@ -541,7 +541,7 @@ AW.catIcon = function(key, label){
 };
 // 06.11.26 — the subcontractor's checks: the check that is needed, and under
 // it the date set for it. One marked done on the dashboard turns pale green.
-AW.standardsSimple = function(list){
+AW.standardsSimple = function(list, withTrade){
   var E=AW.esc;
   list=(list||[]).slice();
   if(!list.length) return AW.empty("טרם הוגדרו בדיקות.");
@@ -551,6 +551,7 @@ AW.standardsSimple = function(list){
   });
   return list.map(function(it){
     return '<div class="rec" style="padding:10px 12px'+(it.done?';background:#e0f2e6;border-color:#b6dfc3':'')+'">'+
+      (withTrade&&it.trade?'<div style="font-size:11.5px;font-weight:800;color:#1d4f91;margin-bottom:3px">קבלן '+E(AW.tradeHe(it.trade))+'</div>':'')+
       '<div style="font-size:14px;font-weight:700;line-height:1.55;white-space:pre-wrap">'+E(it.text)+'</div>'+
       (it.date?'<div style="font-size:12px;color:var(--steel);margin-top:4px">תאריך לביצוע - <span class="num">'+E(AW.fmt(it.date))+'</span></div>':'')+
     '</div>';

@@ -330,8 +330,6 @@ async function boardFor(grant: any) {
 
   const log = await Promise.all(((ex.subsData?.logs || {})[trade] || []).filter((u: any) => onFloors(u.floors, F))
     .map(async (u: any) => ({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) })));
-  const specs = await Promise.all(((ex.subsData?.specs || {})[trade] || [])
-    .map(async (sp: any) => ({ subject: sp.subject, body: sp.body, files: await signAll(sp.atts || []) })));
   const standards = await Promise.all(((ex.subsData?.standards || {})[trade] || []).map(async (x: any) => ({
     text: x.text,
     done: !!x.done,
@@ -350,7 +348,6 @@ async function boardFor(grant: any) {
   const marks = {
     log: sign(log.map((x: any) => [x.date, x.subject, x.body, (x.files || []).length])),
     weekly: sign(weekly),
-    specs: sign(specs.map((x: any) => [x.subject, x.body, (x.files || []).length])),
     standards: sign(standards.map((x: any) => [x.text, x.done, x.date, x.note, !!x.cert])),
     submittal: sign(submittals.map((x: any) => [x.no, x.decision, x.submitted])),
     sd: sign(sd.map((x: any) => [x.code, x.status])),
@@ -363,7 +360,6 @@ async function boardFor(grant: any) {
     submittals,
     sd,
     log,
-    specs,
     standards,
     weekly,
   };

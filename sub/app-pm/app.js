@@ -46,7 +46,7 @@ function home(){
     AW.timetable(wk, function(i){ return dayCell(wk,i); })+'</button>';
   if((b.schedule||[]).length) h+=longBtn("schedule","לו״ז פרויקט");
   h+=longBtn("tasks","ניהול משימות")+longBtn("log","יומן עדכונים")+longBtn("rj","ריג'קטים")+
-     longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות מכון התקנים")+longBtn("finishes","רשימת חומרי גמר");
+     longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות ומכון התקנים")+longBtn("finishes","רשימת חומרי גמר");
   app.innerHTML=h;
   var tp=document.getElementById("toProj"); if(tp) tp.onclick=AW.toEntry;
   Array.prototype.forEach.call(app.querySelectorAll("[data-k]"), function(el){
@@ -177,8 +177,10 @@ function itemScreen(kind){
   AW.wireItemList(o, function(keep){ AW.render(!!keep); });
 }
 function standards(){
-  AW.el().innerHTML=AW.head("בדיקות מכון התקנים")+AW.standards(S.board.standards, true);
-  AW.wireBack(); AW.wireStandards();
+  // 07.11.26 — as in the subcontractor's app: the check and its date under it,
+  // a done one pale green, no tick and no eye; the trade above each.
+  AW.el().innerHTML=AW.head("בדיקות ומכון התקנים")+AW.standardsSimple(S.board.standards, true);
+  AW.wireBack();
 }
 
 var fin={q:""};
