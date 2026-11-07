@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 270";
+var APP_BUILD = "06.11.2026 · build 271";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -13969,7 +13969,9 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   // on SD, then the bill of quantities, as before.
   const lliMarkOf = (r) => String(((lliRows || {})[r.code] || {}).typeMark || "").trim();
   const lliDescOf = (r) => String(((lliRows || {})[r.code] || {}).desc || "").trim();
-  const markOf = (r, v) => lliMarkOf(r) || String(v.typeMark || "").trim();
+  // 07.11.26 — not trimmed while typing: trimming the field she types in ate
+  // every space the moment it was typed at the end of the mark.
+  const markOf = (r, v) => lliMarkOf(r) || String(v.typeMark || "");
   const descOf = (r, v) => lliDescOf(r) || v.desc || r.title;
   // 06.11.26 — the client / supervision see an SD row when "צפייה אפליקציה"
   // has them ticked; rows never set keep the old show tick.
