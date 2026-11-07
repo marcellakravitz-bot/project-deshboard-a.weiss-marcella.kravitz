@@ -469,15 +469,51 @@ async function submittalsFor(grant: any, key: string) {
       };
     })());
   }
-  for (const [code, m] of Object.entries<any>(rowMeta)) {
-    if (!m || !Array.isArray(m.subs) || m.subs.indexOf(key) < 0) continue;
-    if (sentCode[code] || offCodes[code] || !onFloors(m.floors, F)) continue;
-    const li = ((grant.lli || {})[code] || {}).image;
-    rows.push(Promise.resolve({ id: "c:" + code, hk: "b:" + code, no: "", category: m.cat || "", typeId: String(m.mark || "").trim(),
-      description: m.desc || code, decision: null, submitted: false, rev: 0,
+  // 07.11.26 — a line with no submittal yet. Lines ticked before the board
+  // began keeping what it shows (mark, description, category) carry only
+  // their viewers; what is missing is read where the board itself reads it:
+  // the LLI row, then the bill of quantities (its line text, its discipline).
+  const lines = Object.entries<any>(rowMeta).filter(([code, m]) => m && Array.isArray(m.subs) && m.subs.indexOf(key) >= 0 &&
+    !sentCode[code] && !offCodes[code] && onFloors(m.floors, F));
+  const lliAll = grant.lli || {};
+  const thin = lines.some(([code, m]) => !String(m.mark || "").trim() && !String((lliAll[code] || {}).typeMark || "").trim()
+    || !m.cat || !m.desc);
+  const boq = thin ? await boqIndex(grant.projectId) : null;
+  for (const [code, m] of lines) {
+    const ll = lliAll[code] || {};
+    const b = boq ? boq.lines[code] : null;
+    const ov = (ex.boqFlagOverrides || {})[code] || {};
+    const bf = boq ? (boq.flags[code] || {}) : {};
+    const mark = String(m.mark || "").trim() || String(ll.typeMark || "").trim();
+    const desc = String(m.desc || "").trim() || String(ll.desc || "").trim() || (b ? b.he : "");
+    const cat = [m.cat, ll.category, ov.category, bf.category, b ? b.cat : ""].map((c) => String(c || "").trim()).filter(Boolean)[0] || "";
+    const li = ll.image;
+    rows.push(Promise.resolve({ id: "c:" + code, hk: "b:" + code, no: "", code, category: cat, catHe: catLabel(grant, cat),
+      typeId: mark, description: desc || code, decision: null, submitted: false, rev: 0,
       image: typeof li === "string" && li.length < 400000 ? li : null, doc: null, files: [] }));
   }
-  return await Promise.all(rows);
+  const out = await Promise.all(rows);
+  out.forEach((r: any) => { if (r && !r.catHe && r.category) r.catHe = catLabel(grant, r.category); });
+  return out;
+}
+// The bill of quantities, as the submittal lines need it: each line's text and
+// discipline (the chapter's, as the board reckons it), and the automatic flags.
+const BOQ_CHAPTER_CATEGORY: Record<number, string> = {
+  6: "architecture", 7: "plumbing", 8: "electrical", 9: "architecture", 10: "flooring", 11: "cladding",
+  12: "architecture", 15: "hvac", 22: "architecture", 29: "architecture", 30: "architecture",
+};
+const BOQ_LIGHTING_SUBS = [11, 12, 23];
+async function boqIndex(pid: string) {
+  const out = { lines: {} as Record<string, { he: string; cat: string }>, flags: {} as Record<string, any> };
+  if (!pid) return out;
+  const { data } = await db.from("app_state").select("value").eq("key", `project-boq:${pid}`).maybeSingle();
+  const tree = parse(data?.value) || {};
+  out.flags = tree.flags || {};
+  for (const ch of (tree.chapters || [])) for (const sub of (ch.subs || [])) {
+    const cat = (Number(sub.c) === 8 && BOQ_LIGHTING_SUBS.indexOf(Number(sub.s)) >= 0) ? "lighting" : (BOQ_CHAPTER_CATEGORY[Number(sub.c)] || "");
+    for (const it of (sub.items || [])) if (it && it.code) out.lines[it.code] = { he: String(it.he || it.en || "").trim(), cat };
+  }
+  return out;
 }
 async function sdFor(grant: any, key: string) {
   const ex = grant.extras || {};

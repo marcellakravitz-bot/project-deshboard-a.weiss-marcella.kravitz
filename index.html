@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 278";
+var APP_BUILD = "07.11.2026 · build 279";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6437,7 +6437,28 @@ function SubsSdList({ trade, tradeLabel, sdRows, boqData, boqFlags }) {
 // off this floor's list, here and in the app of the contractor on it — and
 // comes back from "החזרת סעיפים".
 // ---------------------------------------------------------------------------
-function subsSbRows(trade, submittals, rowMeta, approvals, chkOff) {
+// 07.11.26 — what a line with no submittal shows, when it was ticked before
+// the board kept its mark, description and category: the LLI row, then the
+// bill of quantities (the line's text, its discipline) — as the board reads it.
+var subsBoqIdx = { tree: null, map: {} };
+function subsLineInfo(code, m, lliRows, boqData, boqFlags) {
+  const ll = (lliRows || {})[code] || {};
+  if (subsBoqIdx.tree !== boqData) {
+    const map = {};
+    ((boqData && boqData.chapters) || []).forEach((ch) => (ch.subs || []).forEach((sub) => (sub.items || []).forEach((it) => {
+      if (it && it.code) map[it.code] = { he: String(it.he || it.en || "").trim(), cat: boqCategoryOf(sub) || "" };
+    })));
+    subsBoqIdx = { tree: boqData, map };
+  }
+  const b = subsBoqIdx.map[code] || {};
+  const f = boqFlagsOf((boqData || {}).flags, boqFlags, code) || {};
+  return {
+    mark: String((m && m.mark) || "").trim() || String(ll.typeMark || "").trim(),
+    desc: String((m && m.desc) || "").trim() || String(ll.desc || "").trim() || b.he || "",
+    cat: (m && m.cat) || ll.category || f.category || b.cat || ""
+  };
+}
+function subsSbRows(trade, submittals, rowMeta, approvals, chkOff, lliRows, boqData, boqFlags) {
   const meta = rowMeta || {};
   const offCodes = {};
   Object.values(chkOff || {}).forEach((m) => { if (m && typeof m === "object") Object.keys(m).forEach((c) => { offCodes[c] = true; }); });
@@ -6459,7 +6480,8 @@ function subsSbRows(trade, submittals, rowMeta, approvals, chkOff) {
   Object.keys(meta).forEach((code) => {
     const m = meta[code];
     if (!m || !Array.isArray(m.subs) || m.subs.indexOf(trade) < 0 || sentCode[code] || offCodes[code]) return;
-    out.push({ key: "b:" + code, category: m.cat || "", no: "—", description: m.desc || m.mark || code, decision: null, sent: false });
+    const info = subsLineInfo(code, m, lliRows, boqData, boqFlags);
+    out.push({ key: "b:" + code, category: info.cat, no: info.mark || "—", description: info.desc || info.mark || code, decision: null, sent: false });
   });
   return out;
 }
@@ -7129,7 +7151,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   if (view === "board" && trade && section === "submittal") {
     return React9.createElement(SubsFloorList, {
       kind: "sb", title: "Submittal \u2014 \u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "") + flTag, canEdit,
-      rows: subsSbRows(trade, submittals, submittalRowMeta, submittalApprovals, submittalChkOff),
+      rows: subsSbRows(trade, submittals, submittalRowMeta, submittalApprovals, submittalChkOff, lliRows, boqData, boqFlags),
       hidden: hideOf.sb || {},
       onHide: (k) => setHide("sb", [k], true),
       onRestore: (keys) => setHide("sb", keys, false)

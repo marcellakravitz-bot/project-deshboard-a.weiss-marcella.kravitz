@@ -397,6 +397,12 @@ var AW = (function(){
 // and the checks of the standards institute. Used by the project manager and
 // the subcontractor apps alike.
 // --------------------------------------------------------------------------
+// 07.11.26 — a line with no type mark is named by its description: the first
+// line of it, cut to what fits a row.
+AW.shortLine = function(s){
+  var t=String(s||"").split("\n")[0].replace(/\s+/g," ").trim();
+  return t.length>60 ? t.slice(0,58).replace(/[\s,.;:-]+\S*$/,"")+"…" : t;
+};
 AW.itemList = function(o){
   // o: { items, kind: "submittal"|"sd", key (state holder) }
   var E=AW.esc, f=o.filter||{}, items=o.items||[];
@@ -449,7 +455,7 @@ AW.itemList = function(o){
     var pic = o.kind==="sd" ? '<span class="pic catIc">'+AW.catIcon(r.category, (r.catHe||"")+" "+(r.description||""))+'</span>'
       : (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':'<span class="pic catIc">'+AW.catIcon(r.category, "")+'</span>');
     h+='<button class="item" data-id="'+E(id)+'"'+(tn?' style="background:'+tn.bg+';border-color:'+tn.bd+'"':'')+'>'+pic+
-      '<span class="tx"><b>'+E(o.kind==="sd" ? (r.typeId||"—") : (r.typeId||r.no||r.code||"—"))+'</b><span>'+E(o.kind==="sd" ? (sdSub||"—") : catName(r.category, r))+'</span></span>'+
+      '<span class="tx"><b>'+E(o.kind==="sd" ? (r.typeId||"—") : (r.typeId||r.no||AW.shortLine(r.description)||r.code||"—"))+'</b><span>'+E(o.kind==="sd" ? (sdSub||"—") : catName(r.category, r))+'</span></span>'+
       '<span class="st" style="color:'+st.c+';background:'+st.bg+'">'+E(st.t)+'</span></button>';
     if(open){
       var doc=r.doc || ((r.files||[]).filter(AW.isDoc)[0]) || null;
