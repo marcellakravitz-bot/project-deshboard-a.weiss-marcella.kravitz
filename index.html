@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 275";
+var APP_BUILD = "06.11.2026 · build 276";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -894,6 +894,13 @@ var cards = `
           .cardGrid.tail2 > :nth-last-child(2),
           .cardGrid.tail2 > :last-child { grid-column: auto; width: auto; justify-self: stretch; }
         }
+        /* 07.11.26 — the subcontractors' cubes: equal squares in centred rows. */
+        .subsPyr { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 6px 16px 24px; }
+        .subsPyrRow { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .subsPyrRow .dashCard { width: 150px; height: 150px; justify-content: center; gap: 10px; padding: 10px; box-sizing: border-box; }
+        .subsPyrRow .dashCard .cardIcon { width: 44px; height: 44px; border-radius: 12px; }
+        .subsPyrRow .dashCard .cardTitle { font-size: 14px; }
+        @media (max-width: 560px) { .subsPyrRow .dashCard { width: 104px; height: 104px; } }
         .dashCard {
           position: relative;
           background: var(--surface);
@@ -5510,12 +5517,14 @@ var SUB_TRADES = [
   { key: "security", icon: Cctv, label: "\u05d1\u05d9\u05d8\u05d7\u05d5\u05df, \u05de\u05d5\u05dc\u05d8\u05d9\u05de\u05d3\u05d9\u05d4 \u05d5\u05ea\u05e7\u05e9\u05d5\u05e8\u05ea" },
   { key: "paint", icon: Paintbrush, label: "\u05e6\u05d1\u05e2" }
 ];
+// 07.11.26 — in this order, right to left: the week and the log on top,
+// submittal, SD and the standards checks under them.
 var SUB_SECTIONS = [
+  { key: "weekly", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9" },
+  { key: "log", icon: NotebookPen, title: "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd" },
   { key: "submittal", icon: FileCheck2, title: "Submittal" },
   { key: "sd", icon: Ruler, title: "SD" },
-  { key: "log", icon: NotebookPen, title: "\u05d9\u05d5\u05de\u05df \u05e2\u05d3\u05db\u05d5\u05e0\u05d9\u05dd" },
-  { key: "standards", icon: ClipboardCheck, title: "\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05db\u05d5\u05df \u05d4\u05ea\u05e7\u05e0\u05d9\u05dd" },
-  { key: "weekly", icon: CalendarClock, title: "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9" }
+  { key: "standards", icon: ClipboardCheck, title: "\u05d1\u05d3\u05d9\u05e7\u05d5\u05ea \u05de\u05db\u05d5\u05df \u05d4\u05ea\u05e7\u05e0\u05d9\u05dd" }
   // 07.11.26 — "מפרטים מיוחדים" is gone, here and in the apps.
 ];
 // Ambiguous glyphs are left out on purpose: this code is read off a phone
@@ -6960,19 +6969,21 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   const formBtnS = { flex: "1 1 0", minWidth: 0, maxWidth: 170, justifyContent: "center", gap: 8 };
   // Same centring rule as the project board: a last row of one sits in the
   // middle column, a last row of two is centred as a pair.
+  // 07.11.26 — equal squares, a pyramid: the odd ones on top (2 above 3),
+  // full rows of three under them, each row centred.
   const cubeGrid = (items, onPick) => {
-    const tail = items.length % 3;
-    return React9.createElement(
-      "div",
-      { className: `cardGrid ${tail === 1 ? "tail1" : tail === 2 ? "tail2" : ""}`.trim() },
-      items.map((c) => React9.createElement(
+    const rows = [];
+    const first = items.length % 3;
+    if (first) rows.push(items.slice(0, first));
+    for (let i = first; i < items.length; i += 3) rows.push(items.slice(i, i + 3));
+    return React9.createElement("div", { className: "subsPyr" }, rows.map((row, ri) => React9.createElement("div", { key: ri, className: "subsPyrRow" },
+      row.map((c) => React9.createElement(
         "button",
         { key: c.key, className: "dashCard", type: "button", onClick: () => onPick(c.key) },
         React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
         React9.createElement("div", null,
           React9.createElement("p", { className: "cardTitle" }, c.title))
-      ))
-    );
+      )))));
   };
 
   if (view === "board" && trade && section === "log") {
