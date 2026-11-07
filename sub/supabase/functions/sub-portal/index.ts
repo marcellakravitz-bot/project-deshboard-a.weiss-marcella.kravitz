@@ -126,12 +126,6 @@ function fmtDate(v: any) {
   const p = s.split("-");
   return p.length === 3 ? `${p[2]}/${p[1]}/${p[0]}` : s;
 }
-async function loadPart(prefix: string): Promise<Record<string, any>> {
-  const { data } = await db.from("app_state").select("key, value").like("key", prefix + ":%");
-  const out: Record<string, any> = {};
-  for (const row of (data || [])) out[String(row.key).slice(prefix.length + 1)] = parse(row.value);
-  return out;
-}
 function b64urlToBytes(s: string): Uint8Array {
   const pad = s.replace(/-/g, "+").replace(/_/g, "/");
   const str = atob(pad + "=".repeat((4 - pad.length % 4) % 4));
@@ -323,14 +317,6 @@ async function signAll(atts: any[]) {
   return await Promise.all(list.map(async (a: any) => ({ name: a.name || "", type: a.type || "", url: await signed(a.path) })));
 }
 
-const TRADE_CATS: Record<string, string[]> = {
-  hvac: ["hvac"],
-  electric: ["electrical", "lighting", "security"],
-  plumbing: ["plumbing"],
-  security: ["security"],
-  drywall: [],
-  paint: [],
-};
 const APPROVED = ["approved", "approvedNoted"];
 
 async function boardFor(grant: any) {
@@ -344,21 +330,15 @@ async function boardFor(grant: any) {
 
   const log = await Promise.all(((ex.subsData?.logs || {})[trade] || []).filter((u: any) => onFloors(u.floors, F))
     .map(async (u: any) => ({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) })));
-  const specs = [];
-  for (const sp of ((ex.subsData?.specs || {})[trade] || [])) {
-    specs.push({ subject: sp.subject, body: sp.body, files: await signAll(sp.atts || []) });
-  }
-
-  const standards: any[] = [];
-  for (const x of ((ex.subsData?.standards || {})[trade] || [])) {
-    standards.push({
-      text: x.text,
-      done: !!x.done,
-      date: x.date || "",
-      note: x.note || "",
-      cert: x.cert && x.cert.path ? (await signAll([x.cert]))[0] || null : null,
-    });
-  }
+  const specs = await Promise.all(((ex.subsData?.specs || {})[trade] || [])
+    .map(async (sp: any) => ({ subject: sp.subject, body: sp.body, files: await signAll(sp.atts || []) })));
+  const standards = await Promise.all(((ex.subsData?.standards || {})[trade] || []).map(async (x: any) => ({
+    text: x.text,
+    done: !!x.done,
+    date: x.date || "",
+    note: x.note || "",
+    cert: x.cert && x.cert.path ? (await signAll([x.cert]))[0] || null : null,
+  })));
 
   const sign = (v: unknown) => {
     const str = JSON.stringify(v ?? null);
@@ -524,18 +504,17 @@ async function pmBoard(grant: any) {
   const [submittals, sd] = await Promise.all([submittalsFor(grant, "pm"), sdFor(grant, "pm")]);
 
   const logs: Record<string, any[]> = {};
-  for (const t of ALL_TRADES) {
-    logs[t] = [];
+  await Promise.all(ALL_TRADES.map(async (t) => {
     logs[t] = await Promise.all(((sdata.logs || {})[t] || []).filter((u: any) => onFloors(u.floors, F))
       .map(async (u: any) => ({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) })));
-  }
+  }));
   const standards: any[] = [];
   for (const t of ALL_TRADES) {
     for (const x of ((sdata.standards || {})[t] || [])) {
-      standards.push({ trade: t, text: x.text, done: !!x.done, date: x.date || "", note: x.note || "",
-        cert: x.cert && x.cert.path ? (await signAll([x.cert]))[0] || null : null });
+      standards.push({ trade: t, text: x.text, done: !!x.done, date: x.date || "", note: x.note || "", cert: x.cert || null });
     }
   }
+  await Promise.all(standards.map(async (x: any) => { x.cert = x.cert && x.cert.path ? (await signAll([x.cert]))[0] || null : null; }));
   const weekly: Record<string, any> = {};
   // 07.11.26 — a floor chosen: that floor's own week, which is the one he
   // edits; otherwise the week for all floors.
@@ -603,21 +582,20 @@ async function finishesFor(projectId: string, role: string, trade: string) {
   }
   const custom: Record<string, string> = {};
   for (const c of (Array.isArray(catalog.boardCats) ? catalog.boardCats : [])) if (c && c.key) custom[c.key] = c.he || c.en || c.key;
-  const out: any[] = [];
-  for (const [code, r] of Object.entries<any>(lli)) {
-    if (!r || typeof r !== "object" || r.removed) continue;
-    if (!Array.isArray(r.subs) || r.subs.indexOf(want) < 0) continue;
-    let image: string | null = null;
-    if (typeof r.image === "string" && r.image) image = r.image;
-    else if (r.image && r.image.path) image = await signed(r.image.path);
-    out.push({
-      code,
-      category: r.category ? (CAT_LABELS[r.category] || custom[r.category] || r.category) : "",
-      typeMark: String(r.typeMark || "").trim(),
-      desc: String(r.desc || "").trim() || boqHe[code] || "",
-      image,
-    });
-  }
+  const out: any[] = await Promise.all(Object.entries<any>(lli)
+    .filter(([, r]) => r && typeof r === "object" && !r.removed && Array.isArray(r.subs) && r.subs.indexOf(want) >= 0)
+    .map(async ([code, r]) => {
+      let image: string | null = null;
+      if (typeof r.image === "string" && r.image) image = r.image;
+      else if (r.image && r.image.path) image = await signed(r.image.path);
+      return {
+        code,
+        category: r.category ? (CAT_LABELS[r.category] || custom[r.category] || r.category) : "",
+        typeMark: String(r.typeMark || "").trim(),
+        desc: String(r.desc || "").trim() || boqHe[code] || "",
+        image,
+      };
+    }));
   out.sort((a, b) => (a.category + "\u0000" + a.typeMark).localeCompare(b.category + "\u0000" + b.typeMark, "he"));
   return out;
 }
