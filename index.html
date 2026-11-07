@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "07.11.2026 · build 280";
+var APP_BUILD = "07.11.2026 · build 281";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -8688,6 +8688,53 @@ function CardView({
   const isSd = cardKey === "sd";
   const isRfi = cardKey === "rfi";
   const isCi = cardKey === "changeInstructions";
+  // 07.11.26 — one category for a line on all three boards (LLI, submittal,
+  // SD): changed on any of them, it is changed on the other two. `from` is the
+  // board it was changed on, which has written its own row already.
+  //   LLI: its row (made if the line is on LLI and has none yet).
+  //   SD: its row, when there is one.
+  //   Submittal: the board's own note of the line (and a draft not sent yet).
+  //   The routing of the line, so the boards that read it follow — unless a
+  //   submittal on it was already sent: that number was issued in its folder.
+  const catEverywhere = appRole === "admin" ? (code, category, subCategory, from) => {
+    if (!code) return;
+    const cat = category || null, sub = subCategory || "";
+    const auto = (boqData || {}).flags || {};
+    const prod = boqData ? boqProducts(boqData, auto, boqFlags).find((p) => p.code === code) : null;
+    const sentOn = (submittals || []).some((x) => x && (x.boqCode === code || x.lliKey === code) && x.sent);
+    if (from !== "lli" && onChangeLliRows) {
+      const cur = (lliRows || {})[code];
+      if (cur || (prod && prod.flags && prod.flags.lli)) onChangeLliRows({ ...(lliRows || {}), [code]: { ...(cur || lliBlankRow()), category: cat, subCategory: sub } });
+    }
+    if (from !== "sd" && onChangeSdRows && sdRows && sdRows[code]) onChangeSdRows({ ...sdRows, [code]: { ...sdRows[code], category: cat, subCategory: sub || null } });
+    if (from !== "submittal" && onChangeRowMeta) {
+      const rm = submittalRowMeta || {};
+      onChangeRowMeta({ ...rm, [code]: { ...(rm[code] || {}), catOwn: cat || "", cat: cat || "" } });
+    }
+    // The form says the same category: a draft moves to that folder; one
+    // already sent keeps its folder and number, and its form prints the
+    // category in the discipline box.
+    if (onChangeSubmittals && cat) {
+      const label = boardCatLabel(cat, "", "he");
+      let changed = false;
+      const next = (submittals || []).map((x) => {
+        if (!x || (x.boqCode !== code && x.lliKey !== code)) return x;
+        const want = x.sent ? { disciplineText: x.category === cat ? "" : label } : { category: cat, disciplineText: "" };
+        if (Object.keys(want).every((k) => (x[k] || "") === want[k])) return x;
+        changed = true;
+        return { ...x, ...want };
+      });
+      if (changed) onChangeSubmittals(next);
+    }
+    if (from !== "lli" && prod && !sentOn && cat && onChangeBoqFlags) {
+      const next = { ...(boqFlags || {}) };
+      (prod.items || []).forEach((it) => {
+        const f = boqFlagsOf(auto, next, it.code);
+        next[it.code] = { submittal: f.submittal, sd: f.sd, lli: f.lli, group: f.group, category: cat, main: f.main, accessory: f.accessory };
+      });
+      onChangeBoqFlags(next);
+    }
+  } : null;
   const isMarcella = cardKey === "marcella";
   const isSubs = cardKey === "subs";
   const isRejects = cardKey === "rejects";
@@ -8751,16 +8798,11 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalRowMeta, onChangeRowMeta, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null,
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalRowMeta, onChangeRowMeta, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals, onCategoryEverywhere: catEverywhere ? (code, category, subCategory) => catEverywhere(code, category, subCategory, "submittal") : null }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null,
     // 06.11.26 — a category changed on LLI is changed on SD and on a submittal
     // draft of the same line too. A submittal already sent keeps its folder:
     // its number was issued in it.
-    onCategoryEverywhere: appRole === "admin" ? (code, category, subCategory) => {
-      if (sdRows && sdRows[code] && onChangeSdRows) onChangeSdRows({ ...sdRows, [code]: { ...sdRows[code], category: category || null, subCategory: subCategory || null } });
-      if (onChangeSubmittals && (submittals || []).some((x) => x && x.boqCode === code && !x.sent && x.category !== category && category)) {
-        onChangeSubmittals((submittals || []).map((x) => (x && x.boqCode === code && !x.sent && category ? { ...x, category } : x)));
-      }
-    } : null }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
+    onCategoryEverywhere: catEverywhere ? (code, category, subCategory) => catEverywhere(code, category, subCategory, "lli") : null }), isSd && /* @__PURE__ */ React14.createElement(SdCard, { appIsRTL: isRTL, boqData, boqFlags, rows: sdRows, onChangeRows: onChangeSdRows, canEdit, projectId: project.id, projectName: project.name, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals: sdApprovals, onChangeApprovals: onChangeSdApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, onCategoryEverywhere: catEverywhere ? (code, category, subCategory) => catEverywhere(code, category, subCategory, "sd") : null }), isRfi && /* @__PURE__ */ React14.createElement(RfiCard, { appIsRTL: isRTL, rows: rfiRows, onChangeRows: onChangeRfiRows, canEdit, projectId: project.id, projectName: project.name, printBrand, boqData, scheduleData, currentEmail, onAddToChangeInstructions }), isMarcella && /* @__PURE__ */ React14.createElement(MarcellaCard, { appIsRTL: isRTL, rows: marcellaRows, onChangeRows: onChangeMarcellaRows, canEdit: marcellaCanEdit, projectId: project.id, projectName: project.name, currentEmail }), isCi && /* @__PURE__ */ React14.createElement(ChangeInstructionsCard, { appIsRTL: isRTL, rows: ciRows, onChangeRows: onChangeCiRows, queue: ciQueue, onChangeQueue: onChangeCiQueue, canEdit: ciCanEdit, projectId: project.id, projectName: project.name, printBrand, boqData, projectMarkup, currentEmail }), isContacts && appRole !== "admin" && /* @__PURE__ */ React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }), isContacts && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(FacilityLazy, {
     projectId: project.id, project, projectName: project.name, currentEmail,
     contactsNode: contactsEditorNode || React14.createElement(ContactsCard, { contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }),
     contactsExportNode: React14.createElement(ContactsCard, { exportOnly: true, contacts, catalog: contactsCatalog, viewerRole, projectName: project.name, printBrand, appIsRTL: isRTL, contractorAccent }),
@@ -14060,7 +14102,7 @@ function sdDueTone(v, done) {
   return warn.toISOString().slice(0, 10) <= today ? "wait" : "";
 }
 
-function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere }) {
+function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, projectId, projectName, printBrand, lliRows, contacts, contactsCatalog, viewerRole, approvals, onChangeApprovals, currentEmail, userPerms, onChangeBoardCats, onRestoreEverywhere, onCategoryEverywhere }) {
   // 28.8.26 — no local override. The language button in the top bar is the only
   // one, and every screen follows it.
   const lang = appIsRTL ? "he" : "en";
@@ -14135,7 +14177,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     sub: p.sub,
     product: p,
     source: "boq",
-    category: ((data[p.code] || {}).category) || p.category,
+    // 07.11.26 — one category on all three boards: the LLI row's first.
+    category: ((lliRows || {})[p.code] || {}).category || ((data[p.code] || {}).category) || p.category,
     title: boqText(p, lang),
     unit: p.unit,
     qty: p.qty,
@@ -14190,8 +14233,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
     const saved = own.hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
   };
-  const inUseCats = boardCatChips(all.filter((r) => !(data[r.code] || {}).removed).map((r) => ({ category: r.category, subCategory: (data[r.code] || {}).subCategory || "" })), lang);
-  const catKeyOfRow = (r) => boardCatKeyOf(r.category, (data[r.code] || {}).subCategory || "");
+  // 07.11.26 — the sub-category goes with the category: the LLI row's when the
+  // category is the LLI row's.
+  const sdSubOf = (code) => { const l = (lliRows || {})[code]; return l && l.category ? (l.subCategory || "") : ((data[code] || {}).subCategory || ""); };
+  const inUseCats = boardCatChips(all.filter((r) => !(data[r.code] || {}).removed).map((r) => ({ category: r.category, subCategory: sdSubOf(r.code) })), lang);
+  const catKeyOfRow = (r) => boardCatKeyOf(r.category, sdSubOf(r.code));
   const isDone = (r) => SD_DONE.indexOf(sdRowOf(data, r.code).status) >= 0;
   // 06.11.26 — the same summary squares as the submittal board, counted off
   // the rows the table shows; the PDF and the workbook print them too.
@@ -14650,11 +14696,15 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                       { className: "cCat" },
                       sbH(BoardCatCombo, {
                         value: r.category || "",
-                        subValue: v.subCategory || "",
+                        subValue: sdSubOf(r.code) || "",
                         lang,
                         disabled: !canEdit,
                         noneLabel: L("noCat"),
-                        onPick: (pick) => patch(r.code, { category: pick.category, subCategory: pick.subCategory }),
+                        onPick: (pick) => {
+                          // 07.11.26 — and on LLI and the submittal board too.
+                          if (!r.fromLli) patch(r.code, { category: pick.category, subCategory: pick.subCategory });
+                          if (onCategoryEverywhere) onCategoryEverywhere(r.code, pick.category, pick.subCategory);
+                        },
                         onNewCat: (name) => boardAddCat(name, contactsCatalog, onChangeBoardCats),
                         onDropCat: (key) => boardDropCat(key, contactsCatalog, onChangeBoardCats),
                         inUse: (key) => all.some((x) => x.category === key)
@@ -22123,7 +22173,8 @@ function SubmittalFolder({
   onApprove,
   onUnsend,
   rowMeta,
-  onChangeRowMeta
+  onChangeRowMeta,
+  onCategoryEverywhere
 }) {
   const L = (k) => sbText(SB_L[k], lang);
   // 07.11.26 — who sees a row in the apps, and its floors, can be set on every
@@ -22302,7 +22353,9 @@ function SubmittalFolder({
         ? sbH("button", { type: "button", className: "sbRevLong", title: L("newRevision"), onClick: () => onNewRevision(rec) },
             sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${sbNextRev(list, rec) + 1}`)
         : sbH("button", { type: "button", className: "sbRevLong", title: L("chkAdd"),
-            onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "", lliMark: r.ownMark || "", lliDesc: r.ownDesc || "", lliImage: (lli[r.code] || {}).image || null }, r.cat) },
+            onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "", lliMark: r.ownMark || "", lliDesc: r.ownDesc || "", lliImage: (lli[r.code] || {}).image || null,
+              // 07.11.26 — the form says the category of the row.
+              disciplineText: r.catKey && r.cat && r.catKey !== r.cat.key ? boardCatLabel(r.catKey, "", "he") : "" }, r.cat) },
             sbH(Plus2, { size: 13, strokeWidth: 2.4 }), " ", L("chkAdd")),
       sq("", he ? "פתיחה ועריכה" : "Open and edit", Pencil, () => rec && onOpen(rec), !rec),
       sq("", he ? "הדפסת הטופס" : "Print the form", Printer, () => rec && onPrint(rec), !rec),
@@ -22325,9 +22378,11 @@ function SubmittalFolder({
   const setCat = (r, key) => {
     const code = r.code;
     if (!code) return;
+    if (onChangeRowMeta) onChangeRowMeta({ ...(rowMeta || {}), [code]: { ...((rowMeta || {})[code] || {}), catOwn: key || "", cat: key || "" } });
+    // 07.11.26 — and on LLI, SD and the forms (the project screen does it).
+    if (onCategoryEverywhere) { onCategoryEverywhere(code, key, ""); return; }
     const cur = lli[code];
     if (cur && onChangeLliRows) onChangeLliRows({ ...lli, [code]: { ...cur, category: key || null, subCategory: cur.category === key ? cur.subCategory : "" } });
-    if (onChangeRowMeta) onChangeRowMeta({ ...(rowMeta || {}), [code]: { ...((rowMeta || {})[code] || {}), catOwn: key || "", cat: key || "" } });
     if (!r.hits.length && r.product && !r.fromLli && onChangeBoqFlags && key) {
       const auto = (boqData || {}).flags || {};
       const next = { ...(boqFlags || {}) };
@@ -22815,7 +22870,8 @@ function SubmittalCard({
   // hand and ticked SUB is a line of this checklist like any other.
   lliRows,
   onChangeLliRows,
-  onChangeBoqFlags
+  onChangeBoqFlags,
+  onCategoryEverywhere
 }) {
   // The submittal has its own language switch. It starts from the site-wide
   // one and then belongs to this screen: the boxes keep their size, only the
@@ -23624,6 +23680,7 @@ function SubmittalCard({
         onChangeClientOff: null,
         rowMeta: submittalRowMeta || {},
         onChangeRowMeta: onChangeRowMeta || null,
+        onCategoryEverywhere: onCategoryEverywhere || null,
         onRemoveChk: (catKey, code) => onChangeChkOff && onChangeChkOff({
           ...(submittalChkOff || {}),
           [catKey]: { ...((submittalChkOff || {})[catKey] || {}), [code]: true }
