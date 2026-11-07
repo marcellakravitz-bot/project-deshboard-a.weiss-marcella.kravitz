@@ -326,7 +326,16 @@ async function boardFor(grant: any) {
   // 07.11.26 — what he sees is what "צפייה אפליקציה" on the dashboard has
   // ticked for his trade, and no more (the older fall-backs are gone).
   const F: string[] | null = grant.F || null;
-  const [submittals, sd] = await Promise.all([submittalsFor(grant, trade), sdFor(grant, trade)]);
+  const [sbAll, sdAll] = await Promise.all([submittalsFor(grant, trade), sdFor(grant, trade)]);
+  // 07.11.26 — rows put in the bin on the dashboard for this trade on a floor
+  // (subsData.hide["<trade>@<floor>"], or "<trade>" on a project without
+  // floors): off that floor's list. Seen on several floors, a row stays as
+  // long as one of them still has it.
+  const hide = (ex.subsData || {}).hide || {};
+  const hKeys = F ? F.map((f) => `${trade}@${f}`) : [trade];
+  const gone = (part: string, k: string) => hKeys.every((hk) => !!(((hide[hk] || {})[part] || {})[k]));
+  const submittals = sbAll.filter((x: any) => !gone("sb", x.hk));
+  const sd = sdAll.filter((x: any) => !gone("sd", x.code));
 
   const log = await Promise.all(((ex.subsData?.logs || {})[trade] || []).filter((u: any) => onFloors(u.floors, F))
     .map(async (u: any) => ({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) })));
@@ -434,7 +443,7 @@ async function submittalsFor(grant: any, key: string) {
     if (!fam[k] || (Number(r.rev) || 0) > (Number(fam[k].rev) || 0)) fam[k] = r;
   }
   const rows: Promise<any>[] = [];
-  for (const r of Object.values<any>(fam)) {
+  for (const [hk, r] of Object.entries<any>(fam)) {
     if (subsOf(r).indexOf(key) < 0 || !onFloors(floorsOf(r), F)) continue;
     if (r.boqCode && offCodes[r.boqCode]) continue;
     rows.push((async () => {
@@ -443,6 +452,7 @@ async function submittalsFor(grant: any, key: string) {
       const d = signedDoc && signedDoc.path ? signedDoc : (r.formDoc && r.formDoc.path ? r.formDoc : null);
       return {
         id: r.id,
+        hk,
         no: `${String(r.category || "").toUpperCase()}-${String(r.seq || "").padStart(3, "0")}`,
         category: r.category || "",
         typeId: String(r.typeId || "").trim(),
@@ -463,7 +473,7 @@ async function submittalsFor(grant: any, key: string) {
     if (!m || !Array.isArray(m.subs) || m.subs.indexOf(key) < 0) continue;
     if (sentCode[code] || offCodes[code] || !onFloors(m.floors, F)) continue;
     const li = ((grant.lli || {})[code] || {}).image;
-    rows.push(Promise.resolve({ id: "c:" + code, no: "", category: m.cat || "", typeId: String(m.mark || "").trim(),
+    rows.push(Promise.resolve({ id: "c:" + code, hk: "b:" + code, no: "", category: m.cat || "", typeId: String(m.mark || "").trim(),
       description: m.desc || code, decision: null, submitted: false, rev: 0,
       image: typeof li === "string" && li.length < 400000 ? li : null, doc: null, files: [] }));
   }
@@ -715,7 +725,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 48,
+    fn: "sub-portal", version: 49,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,

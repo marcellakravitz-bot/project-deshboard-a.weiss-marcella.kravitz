@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 276";
+var APP_BUILD = "06.11.2026 · build 277";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -900,6 +900,9 @@ var cards = `
         .subsPyrRow .dashCard { width: 150px; height: 150px; justify-content: center; gap: 10px; padding: 10px; box-sizing: border-box; }
         .subsPyrRow .dashCard .cardIcon { width: 44px; height: 44px; border-radius: 12px; }
         .subsPyrRow .dashCard .cardTitle { font-size: 14px; }
+        .subsFloorCard .fl { font-size: 14px; font-weight: 700; color: var(--steel); }
+        .subsFloorCard .fl b { font-size: 26px; color: var(--ink); margin-inline-start: 4px; }
+        .subsFloorCard .nm { font-size: 12px; font-weight: 600; color: var(--steel); white-space: pre-line; line-height: 1.4; max-height: 52px; overflow: hidden; }
         @media (max-width: 560px) { .subsPyrRow .dashCard { width: 104px; height: 104px; } }
         .dashCard {
           position: relative;
@@ -6427,6 +6430,98 @@ function SubsSdList({ trade, tradeLabel, sdRows, boqData, boqFlags }) {
                         React9.createElement(EyeIcon2, { size: 17, strokeWidth: 2 }))));
             }))));
 }
+// ---------------------------------------------------------------------------
+// 07.11.26 — a trade's submittals and SD on one floor (or on the whole
+// project, when it has no floors): what "צפייה אפליקציה" ticked for the trade,
+// the same rows its app shows. A row not his on this floor goes in the bin —
+// off this floor's list, here and in the app of the contractor on it — and
+// comes back from "החזרת סעיפים".
+// ---------------------------------------------------------------------------
+function subsSbRows(trade, submittals, rowMeta, approvals, chkOff) {
+  const meta = rowMeta || {};
+  const offCodes = {};
+  Object.values(chkOff || {}).forEach((m) => { if (m && typeof m === "object") Object.keys(m).forEach((c) => { offCodes[c] = true; }); });
+  const subsOf = (r) => (Array.isArray(r.subs) ? r.subs : ((meta[r.boqCode] || {}).subs || []));
+  const fam = {}, sentCode = {};
+  (submittals || []).forEach((r) => {
+    if (!r || !r.sent || r.hidden) return;
+    if (r.boqCode) sentCode[r.boqCode] = true;
+    const k = r.boqCode ? "b:" + r.boqCode : `s:${r.category}:${r.seq}`;
+    if (!fam[k] || (Number(r.rev) || 0) > (Number(fam[k].rev) || 0)) fam[k] = r;
+  });
+  const decisionOf = (r) => (((approvals || {})[r.id] || {}).review || {}).decision || ((r.reviews || [])[0] || {}).decision || null;
+  const out = [];
+  Object.keys(fam).forEach((k) => {
+    const r = fam[k];
+    if (subsOf(r).indexOf(trade) < 0 || (r.boqCode && offCodes[r.boqCode])) return;
+    out.push({ key: k, category: r.category || "", no: sbNumber(r.category, r.seq), description: r.itemDescription || r.boqText || r.scope || "—", decision: decisionOf(r), sent: true });
+  });
+  Object.keys(meta).forEach((code) => {
+    const m = meta[code];
+    if (!m || !Array.isArray(m.subs) || m.subs.indexOf(trade) < 0 || sentCode[code] || offCodes[code]) return;
+    out.push({ key: "b:" + code, category: m.cat || "", no: "—", description: m.desc || m.mark || code, decision: null, sent: false });
+  });
+  return out;
+}
+function subsSdRows(trade, sdRows, lliRows) {
+  const out = [];
+  Object.keys(sdRows || {}).forEach((code) => {
+    const v = (sdRows || {})[code];
+    if (!v || v.removed || (v.subs || []).indexOf(trade) < 0) return;
+    const lli = (lliRows || {})[code] || {};
+    const desc = v.descOwn ? (v.desc || "") : (String(lli.desc || "").trim() || v.desc || "");
+    out.push({ key: code, category: v.category || lli.category || "", description: desc || code, status: v.status });
+  });
+  return out;
+}
+function SubsFloorList({ kind, title, rows, hidden, canEdit, onHide, onRestore }) {
+  const [ask, setAsk] = React9.useState(null);
+  const off = rows.filter((r) => hidden[r.key]);
+  const shown = rows.filter((r) => !hidden[r.key]);
+  const status = (r) => {
+    if (kind === "sd") { const st = SD_STATUSES.find((x) => x.key === r.status) || SD_STATUSES[0]; return { t: st.he, c: st.color || "var(--mist)" }; }
+    const dec = SB_DECISIONS.find((d) => d.key === r.decision);
+    return dec ? { t: dec.he, c: dec.color } : r.sent ? { t: "הוגש, טרם התקבלה התייחסות", c: "var(--mist)" } : { t: "טרם הוגש", c: "var(--mist)" };
+  };
+  const catOf = (r) => boardCatLabel(r.category, "", "he") || (SB_ALL_FOLDERS.find((x) => x.key === r.category) || {}).he || "—";
+  return React9.createElement(SubsShell, { title },
+    canEdit && off.length ? React9.createElement("p", { className: "sbOffBar", style: { margin: "0 0 12px" } },
+      `${off.length} הוסרו מהרשימה`,
+      React9.createElement("button", { type: "button", className: "sbOffRestore", onClick: () => setAsk({}) }, "החזרת סעיפים")) : null,
+    React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%" } },
+      React9.createElement("thead", null, React9.createElement("tr", null,
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 150 } }, "קטגוריה"),
+        kind === "sd" ? null : React9.createElement("th", { style: { ...SUBS_HEAD, width: 140 } }, "מס' סבמיטל"),
+        React9.createElement("th", { style: SUBS_HEAD }, "תיאור"),
+        React9.createElement("th", { style: { ...SUBS_HEAD, width: 190 } }, "סטטוס"),
+        canEdit ? React9.createElement("th", { style: { ...SUBS_HEAD, width: 60 } }, "") : null)),
+      React9.createElement("tbody", null,
+        shown.length === 0
+          ? React9.createElement("tr", null, React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", color: "var(--mist)" }, colSpan: 5 }, "אין שורות. שורות מצטרפות כשמסמנים את הקבלן בעמודת \"צפייה אפליקציה\"."))
+          : shown.map((r) => {
+              const st = status(r);
+              return React9.createElement("tr", { key: r.key },
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 700 } }, catOf(r)),
+                kind === "sd" ? null : React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", direction: "ltr", fontWeight: 800 } }, r.no),
+                React9.createElement("td", { style: { ...SUBS_CELL, whiteSpace: "pre-wrap" } }, r.description),
+                React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 700, color: st.c } }, st.t),
+                canEdit ? React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center" } },
+                  React9.createElement("button", { type: "button", title: "הסרה מהרשימה", onClick: () => onHide(r.key),
+                    style: { border: "1px solid #f0c6c0", background: "#fff", color: "#d02f2f", borderRadius: 8, width: 30, height: 30, cursor: "pointer", display: "inline-flex", alignItems: "center", justifyContent: "center" } },
+                    React9.createElement(Trash2, { size: 15, strokeWidth: 2 }))) : null);
+            }))),
+    ask ? createPortal(React9.createElement("div", { style: { position: "fixed", inset: 0, zIndex: 1200, background: "rgba(16,17,20,.35)", display: "flex", alignItems: "center", justifyContent: "center" }, onClick: () => setAsk(null) },
+      React9.createElement("div", { dir: "rtl", onClick: (e) => e.stopPropagation(), style: { background: "#fff", borderRadius: 14, padding: 18, width: "min(560px, 92vw)", maxHeight: "80vh", display: "flex", flexDirection: "column", gap: 10, fontFamily: "inherit" } },
+        React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "החזרת סעיפים"),
+        React9.createElement("div", { style: { overflow: "auto", display: "flex", flexDirection: "column", gap: 6 } },
+          off.map((r) => React9.createElement("label", { key: r.key, style: { display: "flex", gap: 8, alignItems: "flex-start", fontSize: 13, cursor: "pointer", border: "1px solid var(--line)", borderRadius: 8, padding: "7px 9px" } },
+            React9.createElement("input", { type: "checkbox", checked: !!ask[r.key], onChange: () => setAsk({ ...ask, [r.key]: !ask[r.key] }) }),
+            React9.createElement("span", null, React9.createElement("b", null, catOf(r) + (kind === "sd" ? "" : " · " + r.no) + " — "), r.description)))),
+        React9.createElement("div", { style: { display: "flex", gap: 8, justifyContent: "center" } },
+          React9.createElement("button", { type: "button", className: "functionEditBtn", disabled: !Object.keys(ask).some((k) => ask[k]), onClick: () => { onRestore(Object.keys(ask).filter((k) => ask[k])); setAsk(null); } }, "החזרה"),
+          React9.createElement("button", { type: "button", className: "functionEditBtn", style: { background: "#9aa3af" }, onClick: () => onRestore(off.map((r) => r.key)) || setAsk(null) }, "החזרת הכל"),
+          React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setAsk(null) }, "סגירה")))), document.body) : null);
+}
 function SubsFileEye({ att }) {
   const [url, setUrl] = React9.useState(null);
   React9.useEffect(() => {
@@ -6833,7 +6928,7 @@ function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange 
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail, accessOnly, projectFloors }) {
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail, accessOnly, projectFloors, submittalRowMeta, lliRows }) {
   const list = (subsData && subsData.list) || [];
   // 06.11.26 — accessOnly ("sub" | "pm"): only the access list, as it is opened
   // from User settings; the cube itself no longer carries the two buttons.
@@ -6842,6 +6937,8 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   const [section, setSection] = React9.useState(null);
   const [draft, setDraft] = React9.useState(null);
   const [subCat, setSubCat] = React9.useState(null);
+  // 07.11.26 — the floor of the trade being worked on ("" — the project has no floors).
+  const [floor, setFloor] = React9.useState(null);
   const [accessKind, setAccessKind] = React9.useState(accessOnly || "sub");
   const [copied, setCopied] = React9.useState(null);
   // Everything in the invitation comes from the row itself, so a code typed
@@ -6933,7 +7030,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     };
   }, []);
   const subsStateRef = React9.useRef(null);
-  subsStateRef.current = { view, trade, section, draft, subCat };
+  subsStateRef.current = { view, trade, section, draft, subCat, floor };
   React9.useEffect(() => {
     const onPop = () => {
       // popstate reports the entry being landed ON, not the one left behind —
@@ -6950,6 +7047,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       // two screens up. (11.9.26)
       if (cur.subCat) { setSubCat(null); return; }
       if (cur.section) { setSection(null); return; }
+      if (cur.floor) { setFloor(null); return; }
       if (cur.trade) { setTrade(null); return; }
     };
     window.addEventListener("popstate", onPop);
@@ -6986,30 +7084,66 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       )))));
   };
 
+  // 07.11.26 — floors. A trade opens on its floors, each with the names of the
+  // contractors set for it (User settings); a floor opens the trade's screen
+  // for that floor.
+  const floorsAll = (projectFloors && projectFloors.length ? projectFloors : AW_FLOORS) || [];
+  const fl = floor || "";
+  const flTag = fl ? " \u00b7 \u05e7\u05d5\u05de\u05d4 " + fl : "";
+  const subsOnFloor = (tr, f) => list.filter((r) => r && r.active !== false && (r.kind || (r.pm ? "pm" : "sub")) === "sub" && r.trade === tr
+    && (!f || !Array.isArray(r.floors) || !r.floors.length || r.floors.map(String).indexOf(String(f)) >= 0));
+  const hideKey = fl ? `${trade}@${fl}` : String(trade || "");
+  const hideOf = ((subsData || {}).hide || {})[hideKey] || {};
+  const setHide = (part, keys, on) => {
+    const cur = { ...(((subsData || {}).hide || {})[hideKey] || {}) };
+    const m = { ...(cur[part] || {}) };
+    keys.forEach((k) => { if (on) m[k] = true; else delete m[k]; });
+    cur[part] = m;
+    onChangeSubsData({ ...(subsData || {}), hide: { ...((subsData || {}).hide || {}), [hideKey]: cur } });
+  };
+
   if (view === "board" && trade && section === "log") {
+    // On a floor: the updates for every floor and this floor's own; a new one
+    // is for this floor.
+    const allLogs = ((subsData || {}).logs || {})[trade] || [];
+    const onFl = (u) => !fl || !Array.isArray(u.floors) || !u.floors.length || u.floors.map(String).indexOf(String(fl)) >= 0;
+    const mine = allLogs.filter(onFl);
     return React9.createElement(SubsUpdateLog, {
       trade,
-      tradeLabel: tradeOf(trade).label || "",
+      tradeLabel: (tradeOf(trade).label || "") + flTag,
       projectId,
       canEdit,
       writtenBy: currentEmail,
       onAnnounce: () => subsAnnounce(projectId, trade),
-      entries: ((subsData || {}).logs || {})[trade] || [],
-      onChange: (next) => onChangeSubsData({ ...(subsData || {}), logs: { ...((subsData || {}).logs || {}), [trade]: next } })
+      entries: mine,
+      onChange: (next) => {
+        const ids = {};
+        mine.forEach((u) => { ids[u.id] = true; });
+        const others = allLogs.filter((u) => !ids[u.id] && !onFl(u));
+        const stamped = next.map((u) => (ids[u.id] || !fl ? u : { ...u, floors: [fl] }));
+        onChangeSubsData({ ...(subsData || {}), logs: { ...((subsData || {}).logs || {}), [trade]: others.concat(stamped) } });
+      }
     });
   }
 
   if (view === "board" && trade && section === "submittal") {
-    return React9.createElement(SubsSubmittalList, {
-      trade, tradeLabel: tradeOf(trade).label || "", submittals, submittalApprovals, onChangeApprovals, projectId, printBrand, boqData, boqFlags, submittalChkOff,
-      pickedCat: subCat,
-      onPickCat: (k) => goDeeper(() => setSubCat(k)),
-      onClearCat: () => { try { window.history.back(); } catch (e) {} },
+    return React9.createElement(SubsFloorList, {
+      kind: "sb", title: "Submittal \u2014 \u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "") + flTag, canEdit,
+      rows: subsSbRows(trade, submittals, submittalRowMeta, submittalApprovals, submittalChkOff),
+      hidden: hideOf.sb || {},
+      onHide: (k) => setHide("sb", [k], true),
+      onRestore: (keys) => setHide("sb", keys, false)
     });
   }
 
   if (view === "board" && trade && section === "sd") {
-    return React9.createElement(SubsSdList, { trade, tradeLabel: tradeOf(trade).label || "", sdRows, boqData, boqFlags });
+    return React9.createElement(SubsFloorList, {
+      kind: "sd", title: "SD \u2014 \u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "") + flTag, canEdit,
+      rows: subsSdRows(trade, sdRows, lliRows),
+      hidden: hideOf.sd || {},
+      onHide: (k) => setHide("sd", [k], true),
+      onRestore: (keys) => setHide("sd", keys, false)
+    });
   }
 
   if (view === "board" && trade && section === "standards") {
@@ -7032,8 +7166,9 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       projectName,
       isRTL,
       onAnnounce: (tr) => subsAnnounce(projectId, tr),
-      data: ((subsData || {}).weekly || {})[trade] || {},
-      onChange: (next) => onChangeSubsData({ ...(subsData || {}), weekly: { ...((subsData || {}).weekly || {}), [trade]: next } })
+      // On a floor: that floor's own week, the one its app shows with it.
+      data: ((subsData || {}).weekly || {})[fl ? `${trade}@${fl}` : trade] || {},
+      onChange: (next) => onChangeSubsData({ ...(subsData || {}), weekly: { ...((subsData || {}).weekly || {}), [fl ? `${trade}@${fl}` : trade]: next } })
     });
   }
 
@@ -7055,9 +7190,30 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     );
   }
 
-  if (view === "board" && trade) {
+  // A trade whose contractors are all set for every floor is one list, as
+  // before: no floors to choose.
+  const tradeByFloor = !!trade && list.some((r) => r && r.active !== false && (r.kind || (r.pm ? "pm" : "sub")) === "sub" && r.trade === trade && Array.isArray(r.floors) && r.floors.length);
+  if (view === "board" && trade && floorsAll.length && tradeByFloor && floor === null) {
+    const rows = [];
+    const first = floorsAll.length % 3;
+    if (first) rows.push(floorsAll.slice(0, first));
+    for (let i = first; i < floorsAll.length; i += 3) rows.push(floorsAll.slice(i, i + 3));
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-      React9.createElement("h3", { style: { margin: 0 } }, "\u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "")),
+      React9.createElement("h3", { style: { margin: 0 } }, "\u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "") + " \u2014 \u05d1\u05d7\u05d9\u05e8\u05ea \u05e7\u05d5\u05de\u05d4"),
+      React9.createElement("div", { className: "subsPyr" }, rows.map((row, ri) => React9.createElement("div", { key: ri, className: "subsPyrRow" },
+        row.map((f) => {
+          const names = subsOnFloor(trade, f).map((r) => [r.name, r.company].filter((x) => x && String(x).trim()).join(" · ")).filter(Boolean);
+          return React9.createElement("button", { key: f, type: "button", className: "dashCard subsFloorCard", onClick: () => goDeeper(() => { setFloor(String(f)); setSection(null); }) },
+            React9.createElement("span", { className: "fl" }, "\u05e7\u05d5\u05de\u05d4 ", React9.createElement("b", null, f)),
+            React9.createElement("span", { className: "nm" }, names.length ? names.join("\n") : "\u05dc\u05d0 \u05de\u05d5\u05d2\u05d3\u05e8 \u05e7\u05d1\u05dc\u05df"));
+        })))));
+  }
+
+  if (view === "board" && trade) {
+    const names = subsOnFloor(trade, fl).map((r) => [r.name, r.company].filter((x) => x && String(x).trim()).join(" · ")).filter(Boolean);
+    return React9.createElement("div", { className: "functionPageBody", style: wrapS },
+      React9.createElement("h3", { style: { margin: 0 } }, "\u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "") + flTag),
+      fl && names.length ? React9.createElement("p", { className: "panelSub", style: { margin: "-10px 0 0", textAlign: "center" } }, names.join(" | ")) : null,
       cubeGrid(SUB_SECTIONS, (k) => goDeeper(() => { setSubCat(null); setSection(k); }))
     );
   }
@@ -7185,7 +7341,7 @@ React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
       iconColor: SUB_HELMET,
       title: tr.label,
       sub: countFor(tr.key) + " \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e4\u05e2\u05d9\u05dc\u05d9\u05dd"
-    })), (k) => goDeeper(() => { setTrade(k); setSection(null); }))
+    })), (k) => goDeeper(() => { setTrade(k); setSection(null); setFloor(null); }))
   );
 }
 
@@ -8539,7 +8695,7 @@ function CardView({
     } })), isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
     projectId: project.id, projectName: project.name, projectEnd: project.endDate, currentEmail,
     subs: ((subsData || {}).list) || [],
-    printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" && !teamMode ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
+    printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { submittalRowMeta, lliRows, projectFloors: projFloorsList(project), subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" && !teamMode ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
     categories: BOARD_CATEGORIES.map((c) => ({ key: c.key, he: c.he, en: c.en })),
     brand: { accent: project.accent || null, clientLogo: project.clientLogoUrl || null, supervisionLogo: project.supervisionLogoUrl || null, brandLogo: DEFAULT_BRAND_LOGO_URL || null } })), showSchedule && /* @__PURE__ */ React14.createElement(
     ProjectScheduleCard,

@@ -249,12 +249,13 @@ var AW = (function(){
 
   // ------------------------------------------------------------- the floor
   // 07.11.26 — on a project with floors, after the project comes the floor:
-  // one of his (none set for him: any of the project's), or "כל הקומות" —
-  // always there, the whole project. Asked once each time the app is opened;
+  // one of his, or "כל הקומות" — always there, the whole project. A user
+  // set for every floor is not asked. Asked once each time the app is opened;
   // the chip under the project changes it. state.floor: "5", or "*" for all.
   function floorKey(){ return "awsub.floor|"+state.project; }
   function myFloors(){ var b=state.board||{}; return Array.isArray(b.myFloors)?b.myFloors:[]; }
-  function needsPick(){ return myFloors().length>0; }
+  // 07.11.26 — set for every floor: everything, as before, nothing to choose.
+  function needsPick(){ return myFloors().length>0 && !b_all(); }
   function b_all(){ return !!(state.board&&state.board.allFloors); }
   function floorChip(){
     if(!needsPick()) return '';
