@@ -59,25 +59,69 @@ function home(){
       AW.go({v:k});
     };
   });
+  // 07.11.26 — a day pressed in the week opens that day alone.
+  Array.prototype.forEach.call(app.querySelectorAll(".wkCard tr[data-day]"), function(tr){
+    tr.onclick=function(e){
+      e.stopPropagation(); AW.markSeen("weekly");
+      weekShown=AW.sundayOf(new Date());
+      AW.go({v:"weekly", day:Number(tr.getAttribute("data-day"))});
+    };
+  });
 }
 
 // ------------------------------------------------------------------ weekly
 // The week for every trade; a trade's own week is edited one day at a time,
 // so two people on different days never write over each other.
-function weekly(){
+// 07.11.26 — one day: the day pressed, in the same box, and under it the
+// contractors' editing as on the week. The arrows go a day at a time.
+function weekDay(day){
+  var app=AW.el();
+  if(!weekShown) weekShown=AW.sundayOf(new Date());
+  var d=AW.weekDays(weekShown)[day], c=dayCell(weekShown, day);
+  app.innerHTML=AW.head("לו״ז שבועי")+
+    '<div class="wkNav"><button id="wkPrev">‹</button><strong>יום '+E(d.name)+' <span class="num">'+E(AW.fmt(d.iso))+'</span></strong><button id="wkNext">›</button></div>'+
+    '<div class="wkAllBar"><button class="chip" id="wkAll">כל השבוע</button></div>'+
+    '<div class="rec" style="padding:8px"><table class="tt one"><tbody><tr class="'+(d.iso===AW.todayIso()?"today":"")+'"><th>'+E(d.name)+'<span class="num">'+E(AW.fmt(d.iso).slice(0,5))+'</span></th>'+
+      '<td class="'+(c?"":"none")+'">'+(c||"—")+'</td></tr></tbody></table></div>'+
+    tradeEditHtml();
+  AW.wireBack();
+  var step=function(n){
+    var i=day+n;
+    if(i<0){ weekShown=AW.shiftWeek(weekShown,-1); i=5; }
+    else if(i>5){ weekShown=AW.shiftWeek(weekShown,1); i=0; }
+    AW.replace({v:"weekly", day:i});
+  };
+  document.getElementById("wkPrev").onclick=function(){ step(-1); };
+  document.getElementById("wkNext").onclick=function(){ step(1); };
+  document.getElementById("wkAll").onclick=function(){ AW.replace({v:"weekly"}); };
+  wireTradeEdit(app);
+}
+function tradeEditHtml(){
+  return '<div class="lbl">עריכת הלו״ז לקבלן</div><div class="trGrid">'+
+    AW.TRADES.map(function(t){ return '<button class="trSq" data-tr="'+t.k+'">'+AW.icon(IC.trade)+'<span>'+E(t.t)+'</span></button>'; }).join("")+'</div>';
+}
+function wireTradeEdit(app){
+  Array.prototype.forEach.call(app.querySelectorAll("[data-tr]"), function(b){
+    b.onclick=function(){ weekBuf=null; AW.go({v:"weekEdit", trade:b.getAttribute("data-tr")}); };
+  });
+}
+function weekly(day){
+  if(day!=null && day>=0 && day<=5) return weekDay(day);
   var app=AW.el(), w=S.board.weekly||{};
   if(!weekShown) weekShown=AW.sundayOf(new Date());
   var days=AW.weekDays(weekShown);
   app.innerHTML=AW.head("לו״ז שבועי")+
     '<div class="wkNav"><button id="wkPrev">‹</button><strong class="num">'+E(AW.fmt(weekShown))+' – '+E(AW.fmt(days[5].iso))+'</strong><button id="wkNext">›</button></div>'+
-    '<div class="rec" style="padding:8px">'+AW.timetable(weekShown, function(i){ return dayCell(weekShown,i); })+'</div>'+
+    '<div class="rec wkPick" style="padding:8px">'+AW.timetable(weekShown, function(i){ return dayCell(weekShown,i); })+'</div>'+
     '<div class="lbl">עריכת הלו״ז לקבלן</div><div class="trGrid">'+
     AW.TRADES.map(function(t){ return '<button class="trSq" data-tr="'+t.k+'">'+AW.icon(IC.trade)+'<span>'+E(t.t)+'</span></button>'; }).join("")+'</div>';
   AW.wireBack();
   document.getElementById("wkPrev").onclick=function(){ weekShown=AW.shiftWeek(weekShown,-1); AW.render(true); };
   document.getElementById("wkNext").onclick=function(){ weekShown=AW.shiftWeek(weekShown,1); AW.render(true); };
-  Array.prototype.forEach.call(app.querySelectorAll("[data-tr]"), function(b){
-    b.onclick=function(){ weekBuf=null; AW.go({v:"weekEdit", trade:b.getAttribute("data-tr")}); };
+  wireTradeEdit(app);
+  // A day of the week pressed here opens that day alone too.
+  Array.prototype.forEach.call(app.querySelectorAll(".wkPick tr[data-day]"), function(tr){
+    tr.onclick=function(){ AW.go({v:"weekly", day:Number(tr.getAttribute("data-day"))}); };
   });
 }
 function weekEdit(trade){
@@ -189,7 +233,7 @@ function finishes(){ AW.finishesScreen(fin); }
 function draw(v){
   if(!S.board) return;
   switch(v.v){
-    case "weekly": return weekly();
+    case "weekly": return weekly(v.day);
     case "weekEdit": return weekEdit(v.trade);
     case "log": return logTrades();
     case "logTrade": return logTrade(v.trade);
