@@ -431,8 +431,9 @@ AW.itemList = function(o){
   };
   var h= o.simple ? '<div class="find"><input id="fq" type="search" placeholder="חיפוש חופשי" value="'+E(f.q||"")+'"></div>' :
     '<div class="find"><input id="fq" type="search" placeholder="חיפוש חופשי" value="'+E(f.q||"")+'">'+
-    '<div class="two"><select id="fc"><option value="">כל הקטגוריות</option>'+cats.map(function(c){
-      return '<option value="'+E(c)+'"'+(f.cat===c?" selected":"")+'>'+E(catName(c))+'</option>'; }).join("")+'</select>'+
+    // SD has no categories on the dashboard: the type marks only.
+    (o.kind==="sd" ? '<div>' : '<div class="two"><select id="fc"><option value="">כל הקטגוריות</option>'+cats.map(function(c){
+      return '<option value="'+E(c)+'"'+(f.cat===c?" selected":"")+'>'+E(catName(c))+'</option>'; }).join("")+'</select>')+
     '<select id="ft"><option value="">כל האיפיונים</option>'+types.map(function(t){
       return '<option value="'+E(t)+'"'+(f.type===t?" selected":"")+'>'+E(t)+'</option>'; }).join("")+'</select></div></div>';
   if(!shown.length) h+=AW.empty(items.length?"אין תוצאות לחיפוש.":"אין פריטים להצגה.");
@@ -440,10 +441,14 @@ AW.itemList = function(o){
     var id=r.id||r.code, st=stOf(r), open=f.open===id && o.kind!=="sd";
     var tn=o.simple?tone(r):null;
     // 07.11.26 — SD: the category's icon, the type mark, the category.
-    var pic = o.kind==="sd" ? '<span class="pic catIc">'+AW.catIcon(r.category, r.catHe)+'</span>'
-      : (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':(o.simple?'':'<span class="pic catIc">'+AW.catIcon(r.category, "")+'</span>'));
+    // SD has no category column on the dashboard: the icon reads the
+    // category when there is one, otherwise the words of the description,
+    // and the line under the type mark is the description.
+    var sdSub=String(r.description||"").split("\n")[0];
+    var pic = o.kind==="sd" ? '<span class="pic catIc">'+AW.catIcon(r.category, (r.catHe||"")+" "+(r.description||""))+'</span>'
+      : (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':'<span class="pic catIc">'+AW.catIcon(r.category, "")+'</span>');
     h+='<button class="item" data-id="'+E(id)+'"'+(tn?' style="background:'+tn.bg+';border-color:'+tn.bd+'"':'')+'>'+pic+
-      '<span class="tx"><b>'+E(o.kind==="sd" ? (r.typeId||"—") : (r.typeId||r.no||r.code||"—"))+'</b><span>'+E(catName(r.category, r))+'</span></span>'+
+      '<span class="tx"><b>'+E(o.kind==="sd" ? (r.typeId||"—") : (r.typeId||r.no||r.code||"—"))+'</b><span>'+E(o.kind==="sd" ? (sdSub||"—") : catName(r.category, r))+'</span></span>'+
       '<span class="st" style="color:'+st.c+';background:'+st.bg+'">'+E(st.t)+'</span></button>';
     if(open){
       var doc=r.doc || ((r.files||[]).filter(AW.isDoc)[0]) || null;
@@ -487,10 +492,10 @@ AW.sdCard = function(r){
   var E=AW.esc;
   var files=r.files||[];
   var ups=(r.updates||[]).slice().reverse();
-  var box=AW.pop("", '<div class="finCard">'+
-    '<div class="fr"><div><span class="lbl">קטגוריה</span><b>'+E(r.catHe||AW.CAT_HE[r.category]||"—")+'</b></div>'+
-      '<div><span class="lbl">איפיון</span><b>'+E(r.typeId||"—")+'</b></div></div>'+
-    '<div class="fd"><span class="lbl">תיאור</span><p>'+E(r.description||"—")+'</p></div>'+
+  // 07.11.26 — centred, all but the text of the description.
+  var box=AW.pop("", '<div class="finCard sdC">'+
+    '<div class="fd"><span class="lbl">איפיון</span><b>'+E(r.typeId||"—")+'</b></div>'+
+    '<div class="fd"><span class="lbl">תיאור</span><p class="tl">'+E(r.description||"—")+'</p></div>'+
     '<div class="fd"><span class="lbl">תאריך יעד</span><p class="num">'+E(r.dueAt?AW.fmt(r.dueAt):"—")+'</p></div>'+
     '<div class="sdActs">'+(ups.length?'<button class="eyeBtn" type="button" id="sdUps">'+AW.icon("M12 8v4l3 2M3 12a9 9 0 1 0 3-6.7M3 4v4h4")+'<span>צפייה בעדכונים ('+ups.length+')</span></button>':'<span class="noUps">אין עדכונים</span>')+
       (files.length?'<button class="eyeBtn" type="button" id="sdFile">'+AW.icon("M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z")+'<span>צפייה בקובץ</span></button>':'')+'</div>'+

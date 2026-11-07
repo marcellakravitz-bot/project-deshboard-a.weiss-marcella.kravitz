@@ -454,7 +454,10 @@ async function submittalsFor(grant: any, key: string) {
         decision,
         submitted: true,
         rev: Number(r.rev) || 0,
-        image: r.image && r.image.path ? await signed(r.image.path) : null,
+        // 07.11.26 — the submittal's own picture: a stored one, or the copy
+        // kept on the record (e.g. the one brought from LLI).
+        image: r.image && r.image.path ? await signed(r.image.path)
+          : (r.image && typeof r.image.thumb === "string" && r.image.thumb.length < 400000 ? r.image.thumb : null),
         doc: d ? { name: d.name || "submittal.html", type: d.type || "text/html", url: await signed(d.path) } : null,
         files: decision && APPROVED.indexOf(decision) >= 0 ? await signAll(r.attachments || []) : [],
       };
@@ -463,8 +466,10 @@ async function submittalsFor(grant: any, key: string) {
   for (const [code, m] of Object.entries<any>(rowMeta)) {
     if (!m || !Array.isArray(m.subs) || m.subs.indexOf(key) < 0) continue;
     if (sentCode[code] || offCodes[code] || !onFloors(m.floors, F)) continue;
+    const li = ((grant.lli || {})[code] || {}).image;
     rows.push(Promise.resolve({ id: "c:" + code, no: "", category: m.cat || "", typeId: String(m.mark || "").trim(),
-      description: m.desc || code, decision: null, submitted: false, rev: 0, image: null, doc: null, files: [] }));
+      description: m.desc || code, decision: null, submitted: false, rev: 0,
+      image: typeof li === "string" && li.length < 400000 ? li : null, doc: null, files: [] }));
   }
   return await Promise.all(rows);
 }
@@ -679,7 +684,8 @@ function tasksView(doc: any, catalog: any) {
 }
 async function editTasks(projectId: string, change: (doc: any) => any) {
   for (let attempt = 0; attempt < 5; attempt++) {
-    const { data: row } = await db.from("project_tasks").select("data, updated_at").eq("project_id", projectId).maybeSingle();
+    const { data: row, error: rerr } = await db.from("project_tasks").select("data, updated_at").eq("project_id", projectId).maybeSingle();
+    if (rerr) throw rerr;
     const doc = JSON.parse(JSON.stringify((row && row.data) || {}));
     if (!Array.isArray(doc.tasks)) doc.tasks = [];
     const next = change(doc);
@@ -713,7 +719,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 47,
+    fn: "sub-portal", version: 48,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -989,7 +995,10 @@ Deno.serve(async (req) => {
       const catalog = await loadCatalog();
 
       if (body.action === "tasks") {
-        const { data: row } = await db.from("project_tasks").select("data").eq("project_id", projectId).maybeSingle();
+        // 07.11.26 — a board that could not be read is an error, never an
+        // empty board (which showed every task as not done).
+        const { data: row, error: terr } = await db.from("project_tasks").select("data").eq("project_id", projectId).maybeSingle();
+        if (terr) { console.error("[sub-portal] tasks read", terr); return json({ error: "tasks-read", detail: terr.message }, 500); }
         const v = tasksView((row && row.data) || {}, catalog);
         return json({ cats: v.cats, tasks: v.tasks.map((t: any) => taskOut(t, phone as string)), me: grant.name || "" });
       }
