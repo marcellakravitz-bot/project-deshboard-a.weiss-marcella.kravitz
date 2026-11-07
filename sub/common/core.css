@@ -285,6 +285,8 @@ body.isPv .pvBadge{display:block;position:sticky;top:var(--barH);z-index:4;backg
 .finCard .fr>div{flex:1;min-width:0;background:#f4f6f9;border-radius:10px;padding:8px 10px}
 .finCard .lbl{display:block;font-size:11px;color:var(--steel);font-weight:600;margin-bottom:2px}
 .finCard b{font-size:14px;color:var(--navy);word-break:break-word}
+.finCard .fr.fc>div{text-align:center}
+.finCard .fr.fc b{display:block}
 .finCard .fd{margin-top:10px;background:#f4f6f9;border-radius:10px;padding:8px 10px}
 .finCard .fd p{margin:0;font-size:13.5px;line-height:1.65;white-space:pre-wrap}
 .finCard .fi{display:block;width:100%;max-height:50vh;object-fit:contain;margin-top:10px;border-radius:10px;background:#f4f6f9}

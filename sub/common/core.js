@@ -614,8 +614,10 @@ AW.wireFinishes = function(o, onChange){
       var code=tr.getAttribute("data-fin");
       var r=(o.items||[]).filter(function(x){ return x.code===code; })[0];
       if(!r) return;
+      // 07.11.26 — category and type mark centred, titles and values; the
+      // description as it was.
       AW.pop("", '<div class="finCard">'+
-        '<div class="fr"><div><span class="lbl">קטגוריה</span><b>'+E(r.category||"—")+'</b></div>'+
+        '<div class="fr fc"><div><span class="lbl">קטגוריה</span><b>'+E(r.category||"—")+'</b></div>'+
           '<div><span class="lbl">איפיון</span><b>'+E(r.typeMark||"—")+'</b></div></div>'+
         '<div class="fd"><span class="lbl">תיאור</span><p>'+E(r.desc||"—")+'</p></div>'+
         (r.image?'<img class="fi" src="'+E(r.image)+'" alt="">':'')+

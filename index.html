@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "07.11.2026 · build 283";
+var APP_BUILD = "07.11.2026 · build 284";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2334,7 +2334,11 @@ var pdfViewer = `
         .sdTable th, .sdTable td { padding-inline: 5px; }
         .sdTable .cRoom { width: 40px; }
         .sdTable .cCli { width: 64px; text-align: center; }
-        .lliTable .cApp { width: 120px; }
+        .lliTable .cApp { width: 64px; text-align: center; }
+        /* 07.11.26 — the app eye: pressed (navy) is shown, faded is not. */
+        .lliEye { width: 34px; height: 30px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: #b8bdc6; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; opacity: .7; }
+        .lliEye.on { color: #fff; background: #1d3f7a; border-color: #1d3f7a; opacity: 1; }
+        .lliEye:hover { opacity: 1; }
         .lliTable .cFloor { width: 76px; min-width: 76px; }
         .sdBackLli { display: block; margin: 3px auto 0; border: none; background: none; color: #2b6fd6; font: inherit; font-size: 10.5px; font-weight: 700; cursor: pointer; padding: 0; }
         .sdTable .cSec { width: 92px; text-align: center; }
@@ -5883,6 +5887,13 @@ var SUBS_PICK_OPTIONS = [
 function subsPickLabel(k) {
   const o = SUBS_PICK_OPTIONS.find((t) => t.key === k) || SUB_TRADES.find((t) => t.key === k);
   return (o && o.label) || k;
+}
+// 07.11.26 — an LLI row in the apps: the eye when she has pressed it; before
+// that, a row someone was ticked on ("צפייה אפליקציה") counts as shown.
+function lliAppOn(v) {
+  if (!v) return false;
+  if (v.appView !== void 0) return !!v.appView;
+  return Array.isArray(v.subs) && v.subs.length > 0;
 }
 function SubsTradePicker({ value, disabled, onChange }) {
   const picked = Array.isArray(value) ? value : [];
@@ -12788,6 +12799,8 @@ function LliCard({ appIsRTL, boqData, boqFlags, onChangeBoqFlags, rows, onChange
   // client / supervision sees it; before that, the old show tick does.
   const isHidden = (r) => {
     const own = data[r.code] || {};
+    // 07.11.26 — the eye ("אפליקציה"): on, the row is shown in the apps to all.
+    if (own.appView !== void 0) return !own.appView;
     if (Array.isArray(own.subs)) return own.subs.indexOf("client") < 0;
     const saved = own.hidden;
     return saved === void 0 ? r.defaultHidden : !!saved;
@@ -13525,7 +13538,7 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                 })(),
                 // 06.11.26 — who sees the row in the apps ("רשימת חומרי גמר"):
                 // the trades, the project manager, client / supervision.
-                canEdit ? sbH("th", { className: "cApp" }, isRTL ? "צפייה אפליקציה" : "App view") : null,
+                canEdit ? sbH("th", { className: "cApp" }, isRTL ? "אפליקציה" : "App") : null,
                 canEdit ? sbH("th", { className: "cGrip" }, "") : null,
                 thT("section", "cSec", L("section")),
                 thT("category", "cCat", L("category")),
@@ -13627,10 +13640,19 @@ var LLI_CONTRACTOR_KEYS = ["section", "category", "typeMark", "desc", "image", "
                           })
                         )
                       : null,
-                    // 06.11.26 — who sees the row in the apps.
+                    // 07.11.26 — shown in the apps (the finishes list, to everybody)
+                    // or not: the eye, pressed or faded.
                     canEdit
-                      ? sbH("td", { className: "cApp prKeep" },
-                          sbH(SubsTradePicker, { value: v.subs || [], disabled: !canEdit, onChange: (next) => patch(r.code, { subs: next }) }))
+                      ? sbH("td", { className: "cApp prKeep" }, (() => {
+                          const on = lliAppOn(v);
+                          return sbH("button", {
+                            type: "button", className: `lliEye ${on ? "on" : ""}`.trim(), "aria-pressed": on,
+                            title: isRTL ? (on ? "מוצג באפליקציה — לחיצה מסתירה" : "לא מוצג באפליקציה — לחיצה מציגה") : (on ? "Shown in the app — click to hide" : "Not in the app — click to show"),
+                            onClick: () => patch(r.code, { appView: !on })
+                          }, sbH("svg", { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" },
+                            sbH("path", { d: "M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" }),
+                            sbH("circle", { cx: 12, cy: 12, r: 3, fill: on ? "currentColor" : "none" })));
+                        })())
                       : null,
                     canEdit
                       ? sbH(

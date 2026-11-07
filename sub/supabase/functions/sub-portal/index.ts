@@ -621,9 +621,12 @@ const CAT_LABELS: Record<string, string> = {
   lighting: "תאורה", hvac: "מיזוג אוויר", plumbing: "אינסטלציה", security: "ביטחון, בקרה ותקשורת",
   av: "מולטימדיה", fire: "גילוי אש", joinery: "נגרות",
 };
-async function finishesFor(projectId: string, role: string, trade: string) {
-  const want = role === "pm" ? "pm" : role === "sub" ? trade : "client";
-  if (!want) return [];
+// 07.11.26 — the eye on the LLI board ("אפליקציה"): pressed, the row is on
+// everybody's list. A row never pressed counts as shown when someone was
+// ticked on it under the old "צפייה אפליקציה".
+const lliAppOn = (r: any) => !!r && typeof r === "object" && !r.removed &&
+  (r.appView !== undefined ? !!r.appView : (Array.isArray(r.subs) && r.subs.length > 0));
+async function finishesFor(projectId: string, _role: string, _trade: string) {
   const [{ data: lliRow }, { data: boqRow }, catalog] = await Promise.all([
     db.from("app_state").select("value").eq("key", `project-lli:${projectId}`).maybeSingle(),
     db.from("app_state").select("value").eq("key", `project-boq:${projectId}`).maybeSingle(),
@@ -638,7 +641,7 @@ async function finishesFor(projectId: string, role: string, trade: string) {
   const custom: Record<string, string> = {};
   for (const c of (Array.isArray(catalog.boardCats) ? catalog.boardCats : [])) if (c && c.key) custom[c.key] = c.he || c.en || c.key;
   const out: any[] = await Promise.all(Object.entries<any>(lli)
-    .filter(([, r]) => r && typeof r === "object" && !r.removed && Array.isArray(r.subs) && r.subs.indexOf(want) >= 0)
+    .filter(([, r]) => lliAppOn(r))
     .map(async ([code, r]) => {
       let image: string | null = null;
       if (typeof r.image === "string" && r.image) image = r.image;
@@ -769,7 +772,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 50,
+    fn: "sub-portal", version: 51,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -1003,8 +1006,7 @@ Deno.serve(async (req) => {
       // their own call ("finishes"), when the list is opened. Here only what
       // tells whether something on it changed.
       {
-        const want = role === "pm" ? "pm" : role === "sub" ? (grant.trade || "") : "client";
-        const fin = Object.entries<any>(grant.lli || {}).filter(([, r]) => r && !r.removed && Array.isArray(r.subs) && r.subs.indexOf(want) >= 0)
+        const fin = Object.entries<any>(grant.lli || {}).filter(([, r]) => lliAppOn(r))
           .map(([c, r]) => [c, r.category, r.typeMark, r.desc, typeof r.image === "string" ? r.image.length : (r.image && r.image.path) || ""]);
         const str = JSON.stringify(fin);
         let h = 5381;
