@@ -5888,12 +5888,10 @@ function subsPickLabel(k) {
   const o = SUBS_PICK_OPTIONS.find((t) => t.key === k) || SUB_TRADES.find((t) => t.key === k);
   return (o && o.label) || k;
 }
-// 07.11.26 — an LLI row in the apps: the eye when she has pressed it; before
-// that, a row someone was ticked on ("צפייה אפליקציה") counts as shown.
+// 07.11.26 — an LLI row in the apps: only when she pressed the eye. Nothing
+// is shown by default.
 function lliAppOn(v) {
-  if (!v) return false;
-  if (v.appView !== void 0) return !!v.appView;
-  return Array.isArray(v.subs) && v.subs.length > 0;
+  return !!v && v.appView === true;
 }
 function SubsTradePicker({ value, disabled, onChange }) {
   const picked = Array.isArray(value) ? value : [];

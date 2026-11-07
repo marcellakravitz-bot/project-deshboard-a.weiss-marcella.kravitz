@@ -622,10 +622,8 @@ const CAT_LABELS: Record<string, string> = {
   av: "מולטימדיה", fire: "גילוי אש", joinery: "נגרות",
 };
 // 07.11.26 — the eye on the LLI board ("אפליקציה"): pressed, the row is on
-// everybody's list. A row never pressed counts as shown when someone was
-// ticked on it under the old "צפייה אפליקציה".
-const lliAppOn = (r: any) => !!r && typeof r === "object" && !r.removed &&
-  (r.appView !== undefined ? !!r.appView : (Array.isArray(r.subs) && r.subs.length > 0));
+// everybody's list. Nothing is shown until she presses it.
+const lliAppOn = (r: any) => !!r && typeof r === "object" && !r.removed && r.appView === true;
 async function finishesFor(projectId: string, _role: string, _trade: string) {
   const [{ data: lliRow }, { data: boqRow }, catalog] = await Promise.all([
     db.from("app_state").select("value").eq("key", `project-lli:${projectId}`).maybeSingle(),
