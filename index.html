@@ -930,13 +930,12 @@ var cards = `
         }
         .dashCard:hover .cardTitle { color: var(--accent-ink); }
         .dashCard:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-        /* 07.11.26 — the empty cube that closes the board: a frame, nothing to press. */
-        .dashCard.dashFuture { cursor: default; border-style: dashed; background: transparent; }
-        .dashCard.dashFuture .cardIcon { color: var(--mist, #9aa0aa); }
-        .dashCard.dashFuture .cardTitle { color: var(--mist, #9aa0aa); font-weight: 600; }
-        .dashCard.dashFuture:hover { background: transparent; border-color: var(--line); box-shadow: none; }
-        .dashCard.dashFuture:hover .cardIcon { background: var(--bg); border-color: var(--line); color: var(--mist, #9aa0aa); }
-        .dashCard.dashFuture:hover .cardTitle { color: var(--mist, #9aa0aa); }
+        /* 07.11.26 — the empty cube that closes the board: white like the
+           others, nothing to press, no hover. */
+        .dashCard.dashFuture { cursor: default; }
+        .dashCard.dashFuture:hover { background: var(--surface); border-color: var(--line); box-shadow: none; }
+        .dashCard.dashFuture:hover .cardIcon { background: var(--bg); border-color: var(--line); color: inherit; }
+        .dashCard.dashFuture:hover .cardTitle { color: inherit; }
         .cardIcon {
           width: 28px; height: 28px; border-radius: 8px;
           background: var(--bg); border: 1px solid var(--line);
