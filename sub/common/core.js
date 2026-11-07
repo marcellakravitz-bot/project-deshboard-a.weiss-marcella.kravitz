@@ -43,7 +43,7 @@ var AW = (function(){
   var ROLE_HE = { pm:"מנהל פרויקט", sub:"קבלן", client:"לקוח / אדריכלים", supervision:"פיקוח" };
   var APP_DIR = { pm:"app-pm", sub:"app-sub", client:"app-client", supervision:"app-client" };
 
-  var state = { token:null, projects:[], project:null, board:null };
+  var state = { token:null, projects:[], project:null, board:null, floor:null };
 
   function esc(x){ return String(x==null?"":x).replace(/[&<>"]/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c]; }); }
@@ -97,7 +97,12 @@ var AW = (function(){
       .then(function(r){ return r.json().then(function(j){ return { ok:r.ok, status:r.status, data:j }; },
         function(){ return { ok:false, status:r.status, data:{} }; }); });
   }
-  function call(body){ body.token=body.token||state.token; return post(API, body); }
+  function call(body){
+    body.token=body.token||state.token;
+    // 07.11.26 — what he writes with a floor chosen is for that floor.
+    if(state.floor && (body.action==="add-log"||body.action==="set-week") && body.floor===undefined) body.floor=state.floor;
+    return post(API, body);
+  }
   function rjCall(body){ body.token=state.token; body.projectId=state.project; return post(RJ_API, body); }
 
   // ------------------------------------------------------------------ screen
@@ -223,8 +228,42 @@ var AW = (function(){
       (p.floors ? '<span class="pf">'+esc(p.floors)+'</span>' : '')+
       (p.dates ? '<span class="pd num">'+esc(p.dates)+'</span>' : '')+
       (line ? '<span class="ptr">'+esc(line)+'</span>' : '')+
+      floorChip()+
     '</div>';
   }
+
+  // ------------------------------------------------------------- the floor
+  // 07.11.26 — on a project with floors, after the project comes the floor:
+  // one of his (none set for him: any of the project's) or all of them. Asked
+  // once each time the app is opened; the chip under the project changes it.
+  function floorKey(){ return "awsub.floor|"+state.project; }
+  function myFloors(){ var b=state.board||{}; return Array.isArray(b.myFloors)?b.myFloors:[]; }
+  function needsPick(){ var f=myFloors(); return f.length>1 || (f.length===1 && b_all()); }
+  function b_all(){ return !!(state.board&&state.board.allFloors); }
+  function floorChip(){
+    if(!needsPick()) return (state.floor ? '<span class="pfl num">קומה '+esc(state.floor)+'</span>' : '');
+    return '<button class="floorChip" type="button">'+(state.floor?'קומה <b class="num">'+esc(state.floor)+'</b>':'כל הקומות')+' <span class="chg">החלפה</span></button>';
+  }
+  function floorPicker(){
+    var f=myFloors(), p=(state.board&&state.board.project)||{};
+    el().innerHTML='<div class="proj">'+(p.logo?'<img src="'+esc(p.logo)+'" alt="">':'')+'<span class="pn">'+esc(p.name||"")+'</span></div>'+
+      '<h2 class="flTitle">בחירת קומה</h2>'+
+      '<div class="flGrid">'+f.map(function(x){ return '<button class="flBtn num" data-f="'+esc(x)+'">'+esc(x)+'</button>'; }).join("")+'</div>'+
+      '<button class="flAll" data-f="">'+(b_all()?'כל הקומות':'כל הקומות שלי')+'</button>';
+    Array.prototype.forEach.call(el().querySelectorAll("[data-f]"), function(b){
+      b.onclick=function(){ chooseFloor(b.getAttribute("data-f")); };
+    });
+  }
+  function chooseFloor(fl){
+    state.floor=fl||"";
+    try{ sessionStorage.setItem(floorKey(), state.floor); }catch(e){}
+    stack.length=0;
+    loadBoard(false);
+  }
+  document.addEventListener("click", function(e){
+    var t=e.target && e.target.closest && e.target.closest(".floorChip");
+    if(t){ e.preventDefault(); floorPicker(); }
+  });
 
   // ------------------------------------------------------------- navigation
   // Every screen is a step pushed on the browser's history, so the phone's own
@@ -234,6 +273,7 @@ var AW = (function(){
   function go(v){ stack.push(v); history.pushState({aw:stack.length},""); render(); }
   function replace(v){ if(stack.length) stack[stack.length-1]=v; else stack.push(v); render(); }
   function render(keepScroll){
+    if(state.board && state.floor===null && needsPick()){ floorPicker(); return; }
     var y=window.scrollY;
     if(renderFn) renderFn(view());
     window.scrollTo(0, keepScroll?y:0);
@@ -278,6 +318,7 @@ var AW = (function(){
   function loadBoard(quiet){
     if(!quiet) busy("טוען את הפרויקט…");
     var body={action:"board", projectId:state.project};
+    if(state.floor) body.floor=state.floor;
     if(q.get("trade")) body.trade=q.get("trade");
     return call(body).then(function(r){
       if(r.ok){
@@ -286,6 +327,15 @@ var AW = (function(){
         if(first){
           var fk="awsub.first|"+state.project+"|"+(state.board.trade||"");
           try{ if(localStorage.getItem(fk)!=="1"){ markAllSeen(); localStorage.setItem(fk,"1"); } }catch(e){}
+        }
+        // One floor of his own: that floor, nothing to ask.
+        var mf=myFloors();
+        if(state.floor===null && mf.length===1 && !b_all()){ state.floor=mf[0]; }
+        if(state.floor===null){
+          var saved=null; try{ saved=sessionStorage.getItem(floorKey()); }catch(e){}
+          if(saved!==null && (saved==="" || mf.indexOf(saved)>=0)){ state.floor=saved; if(saved){ return loadBoard(quiet); } }
+          else if(needsPick()){ if(!quiet) floorPicker(); return true; }
+          else state.floor="";
         }
         if(!quiet) render();
         return true;
@@ -316,7 +366,7 @@ var AW = (function(){
     busy:busy, retry:retry, empty:empty, head:head, wireBack:wireBack, files:files, isDoc:isDoc,
     openDoc:openDoc, openFile:openFile, pop:pop, shrink:shrink, thumb:thumb,
     sundayOf:sundayOf, shiftWeek:shiftWeek, weekDays:weekDays, timetable:timetable,
-    isNew:isNew, markSeen:markSeen, projHead:projHead,
+    isNew:isNew, markSeen:markSeen, projHead:projHead, floorPicker:floorPicker,
     view:view, go:go, replace:replace, render:render, boot:boot, loadBoard:loadBoard, refresh:refresh,
     setBusyCheck:function(f){ busyCheck=f; }, signOut:signOut, toEntry:toEntry,
     el:el

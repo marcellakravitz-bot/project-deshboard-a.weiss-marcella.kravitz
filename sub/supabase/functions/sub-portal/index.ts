@@ -78,16 +78,48 @@ async function loadMeta(): Promise<Record<string, any>> {
     for (const p of (c?.projects || [])) {
       if (!p || !p.id) continue;
       const from = p.floorsFrom, to = p.floorsTo;
+      const floorList = projFloorsList(p);
       out[p.id] = {
         name: p.name || "",
         logo: p.clientLogoUrl || "",
-        floors: from || to ? `Floors ${from || ""}${from && to ? "-" : ""}${to || ""}` : "",
+        floorList,
+        floors: Array.isArray(p.floors) && p.floors.length ? `Floors ${floorsLabel(floorList)}`
+          : from || to ? `Floors ${from || ""}${from && to ? "-" : ""}${to || ""}` : "",
         dates: p.startDate || p.endDate ? `${fmtDate(p.startDate)} - ${fmtDate(p.endDate)}` : "",
       };
     }
   }
   return out;
 }
+// 07.11.26 — a project's floors (project settings: p.floors, or the older
+// floorsFrom / floorsTo read as the run between them), and "4-6, 10".
+function projFloorsList(p: any): string[] {
+  if (!p) return [];
+  if (Array.isArray(p.floors) && p.floors.length) return p.floors.map((x: any) => String(x).trim()).filter(Boolean);
+  const a = String(p.floorsFrom || "").trim(), b = String(p.floorsTo || "").trim();
+  if (/^-?\d+$/.test(a) && /^-?\d+$/.test(b)) {
+    const na = parseInt(a, 10), nb = parseInt(b, 10);
+    if (nb >= na && nb - na < 200) { const o: string[] = []; for (let i = na; i <= nb; i++) o.push(String(i)); return o; }
+  }
+  return [a, b].filter(Boolean);
+}
+function floorsLabel(list: string[]): string {
+  const xs = (list || []).map((x) => String(x).trim()).filter(Boolean);
+  const out: string[] = [];
+  for (let i = 0; i < xs.length;) {
+    let j = i;
+    while (j + 1 < xs.length && /^-?\d+$/.test(xs[j]) && /^-?\d+$/.test(xs[j + 1]) && parseInt(xs[j + 1], 10) === parseInt(xs[j], 10) + 1) j++;
+    out.push(j - i >= 2 ? `${xs[i]}-${xs[j]}` : j > i ? `${xs[i]}, ${xs[j]}` : xs[i]);
+    i = j + 1;
+  }
+  return out.join(", ");
+}
+const floorArr = (v: any): string[] => Array.isArray(v) ? v.map((x: any) => String(x).trim()).filter(Boolean) : [];
+// A row with no floors is for every floor; F null is every floor.
+const onFloors = (rowFloors: any, F: string[] | null) => {
+  const r = floorArr(rowFloors);
+  return !F || !r.length || r.some((f) => F.indexOf(f) >= 0);
+};
 function fmtDate(v: any) {
   if (!v) return "";
   const s = String(v).slice(0, 10);
@@ -157,12 +189,13 @@ async function notifyPhones(phones: string[], projectId: string, exclude?: strin
   }
   return report;
 }
-async function phonesFor(projectId: string, trade: string): Promise<string[]> {
+async function phonesFor(projectId: string, trade: string, floor?: string): Promise<string[]> {
   const projects = await loadProjects();
   const p = projects.filter((x: any) => x.id === projectId)[0];
   const list = ((p?.extras?.subsData || {}).list) || [];
   return list
     .filter((s: any) => s && s.active !== false && (s.pm || !trade || s.trade === trade))
+    .filter((s: any) => !floor || onFloors(s.floors, [floor]))
     .map((s: any) => normPhone(s.phone));
 }
 
@@ -224,7 +257,11 @@ const roleOf = (s: any) => (s && ["pm", "sub", "supervision", "client"].indexOf(
 // Only a project that has a name is a project: the empty slots of the first
 // template are never offered.
 function projOut(g: any, meta: Record<string, any>) {
-  return { id: g.projectId, trade: g.trade || "", role: g.role || (g.isPm ? "pm" : "sub"), isPm: !!g.isPm, ...(meta[g.projectId] || {}) };
+  const m = meta[g.projectId] || {};
+  const mine = floorArr(g.floors);
+  return { id: g.projectId, trade: g.trade || "", role: g.role || (g.isPm ? "pm" : "sub"), isPm: !!g.isPm, ...m,
+    // 07.11.26 — the floors he may choose between in the app.
+    myFloors: mine.length ? mine : (m.floorList || []), allFloors: !mine.length };
 }
 const named = (meta: Record<string, any>) => (g: any) => !!(meta[g.projectId] && String(meta[g.projectId].name || "").trim());
 function grantsFor(projects: any[], phone: string, code: string | null) {
@@ -244,6 +281,7 @@ function grantsFor(projects: any[], phone: string, code: string | null) {
         company: s.company || "",
         canWrite: role === "pm",
         isPm: role === "pm",
+        floors: floorArr(s.floors),
         extras: p.extras,
       });
     }
@@ -261,6 +299,8 @@ function grantsFor(projects: any[], phone: string, code: string | null) {
       name: prev.name || g.name,
       company: prev.company || g.company,
       trade: prev.trade || g.trade,
+      // Every floor on one of his rows is every floor.
+      floors: !prev.floors.length || !g.floors.length ? [] : Array.from(new Set(prev.floors.concat(g.floors))),
     });
   }
   return Array.from(merged.values());
@@ -297,7 +337,16 @@ async function boardFor(grant: any) {
   // exactly as an SD row does. One never ticked falls back to the folders the
   // trade has always seen. The "show" tick is gone from the dashboard.
   const cats = TRADE_CATS[trade] || [];
-  const ticked = (r: any) => Array.isArray(r.subs) ? r.subs.indexOf(trade) >= 0 : cats.indexOf(r.category) >= 0;
+  // 07.11.26 — a line with no submittal yet carries its app view and floors
+  // itself (submittalRowMeta, by BOQ code); a submittal's own win.
+  const F: string[] | null = grant.F || null;
+  const rowMeta = ex.submittalRowMeta || {};
+  const subsOfRec = (r: any) => Array.isArray(r.subs) ? r.subs : (rowMeta[r.boqCode] || {}).subs;
+  const floorsOfRec = (r: any) => Array.isArray(r.floors) ? r.floors : (rowMeta[r.boqCode] || {}).floors;
+  const ticked = (r: any) => {
+    const subs = subsOfRec(r);
+    return (Array.isArray(subs) ? subs.indexOf(trade) >= 0 : cats.indexOf(r.category) >= 0) && onFloors(floorsOfRec(r), F);
+  };
   const allSent = (ex.submittals || []).filter((r: any) => r && r.sent);
   const records = allSent.filter(ticked);
   const off = ex.submittalChkOff || {};
@@ -331,11 +380,14 @@ async function boardFor(grant: any) {
     };
   };
   for (const line of ((ex.subsData || {}).checklist || [])) {
-    if (!line || cats.indexOf(line.category) < 0 || off[line.code]) continue;
+    if (!line || off[line.code]) continue;
+    const meta = rowMeta[line.code] || {};
+    if (Array.isArray(meta.subs) ? meta.subs.indexOf(trade) < 0 : cats.indexOf(line.category) < 0) continue;
     // A line whose submittal was sent to other trades only is not his.
     const any = allSent.filter((r: any) => r.boqCode === line.code)
       .sort((a: any, b: any) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0];
-    if (any && Array.isArray(any.subs) && any.subs.indexOf(trade) < 0) continue;
+    if (any && Array.isArray(subsOfRec(any)) && subsOfRec(any).indexOf(trade) < 0) continue;
+    if (!onFloors(any ? floorsOfRec(any) : meta.floors, F)) continue;
     const rec = latestFor(line.code);
     if (rec) seen[rec.id] = true;
     const no = rec ? `${String(rec.category || "").toUpperCase()}-${String(rec.seq || "").padStart(3, "0")}` : "";
@@ -351,6 +403,7 @@ async function boardFor(grant: any) {
   const sdAp = ex.sdApprovals || {};
   for (const [code, row] of Object.entries<any>(ex.sdRows || {})) {
     if (((row || {}).subs || []).indexOf(trade) < 0) continue;
+    if (!onFloors((row || {}).floors, F)) continue;
     const approvedByClient = !!sdAp[code];
     const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
     sd.push({
@@ -365,6 +418,7 @@ async function boardFor(grant: any) {
 
   const log = [];
   for (const u of ((ex.subsData?.logs || {})[trade] || [])) {
+    if (!onFloors(u.floors, F)) continue;
     log.push({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) });
   }
   const specs = [];
@@ -389,7 +443,7 @@ async function boardFor(grant: any) {
     for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
     return String(h >>> 0);
   };
-  const weekly = (ex.subsData?.weekly || {})[trade] || {};
+  const weekly = weeklyFor(ex.subsData?.weekly || {}, trade, F, grant.floorChosen || "");
   const marks = {
     log: sign(log.map((x: any) => [x.date, x.subject, x.body, (x.files || []).length])),
     weekly: sign(weekly),
@@ -422,6 +476,29 @@ async function boardFor(grant: any) {
 //   sd         every SD row
 //   standards  every trade's checks
 // ---------------------------------------------------------------------------
+// 07.11.26 — what a subcontractor reads in his week: the week written for all
+// floors, then each of his floors' own (weekly["<trade>@<floor>"]), named.
+function weeklyFor(all: any, trade: string, F: string[] | null, chosen: string) {
+  const base = all[trade] || {};
+  const floors = chosen ? [chosen] : (F || []);
+  if (!floors.length) return base;
+  const out: Record<string, string[]> = {};
+  const weeks = new Set<string>(Object.keys(base));
+  floors.forEach((f) => Object.keys(all[`${trade}@${f}`] || {}).forEach((w) => weeks.add(w)));
+  weeks.forEach((w) => {
+    out[w] = Array.from({ length: 6 }, (_, i) => {
+      const parts: string[] = [];
+      const g = String((base[w] || [])[i] || "").trim();
+      if (g) parts.push(g);
+      floors.forEach((f) => {
+        const t = String(((all[`${trade}@${f}`] || {})[w] || [])[i] || "").trim();
+        if (t) parts.push(floors.length > 1 || g ? `קומה ${f}: ${t}` : t);
+      });
+      return parts.join("\n");
+    });
+  });
+  return out;
+}
 const ALL_TRADES = ["hvac", "electric", "plumbing", "drywall", "security", "paint"];
 async function pmBoard(grant: any) {
   const ex = grant.extras || {};
@@ -429,7 +506,10 @@ async function pmBoard(grant: any) {
   const sbAp = ex.submittalApprovals || {};
   const decisionOfRec = (r: any) =>
     ((sbAp[r?.id] || {}).review || {}).decision || ((r?.reviews || [])[0] || {}).decision || null;
-  const sent = (ex.submittals || []).filter((r: any) => r && r.sent && !r.hidden);
+  const F: string[] | null = grant.F || null;
+  const rowMeta = ex.submittalRowMeta || {};
+  const floorsOfRec = (r: any) => Array.isArray(r.floors) ? r.floors : (rowMeta[r.boqCode] || {}).floors;
+  const sent = (ex.submittals || []).filter((r: any) => r && r.sent && !r.hidden && onFloors(floorsOfRec(r), F));
   const latest: Record<string, any> = {};
   for (const r of sent) {
     const k = r.boqCode ? "b:" + r.boqCode : "i:" + r.id;
@@ -456,6 +536,7 @@ async function pmBoard(grant: any) {
   const off = ex.submittalChkOff || {};
   for (const line of (sdata.checklist || [])) {
     if (!line || off[line.code] || seenCode[line.code]) continue;
+    if (!onFloors((rowMeta[line.code] || {}).floors, F)) continue;
     submittals.push({ id: "c:" + line.code, no: "", category: line.category || "", typeId: "", description: line.title || line.code,
       decision: null, submitted: false, rev: 0, image: null, doc: null });
   }
@@ -464,6 +545,7 @@ async function pmBoard(grant: any) {
   const sdAp = ex.sdApprovals || {};
   for (const [code, row] of Object.entries<any>(ex.sdRows || {})) {
     if (!row || row.removed) continue;
+    if (!onFloors(row.floors, F)) continue;
     const approvedByClient = !!sdAp[code];
     const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
     sd.push({
@@ -481,6 +563,7 @@ async function pmBoard(grant: any) {
   for (const t of ALL_TRADES) {
     logs[t] = [];
     for (const u of ((sdata.logs || {})[t] || [])) {
+      if (!onFloors(u.floors, F)) continue;
       logs[t].push({ date: u.date, subject: u.subject, body: u.body, by: u.by || "", files: await signAll(u.atts || []) });
     }
   }
@@ -492,7 +575,11 @@ async function pmBoard(grant: any) {
     }
   }
   const weekly: Record<string, any> = {};
-  for (const t of ALL_TRADES) weekly[t] = (sdata.weekly || {})[t] || {};
+  // 07.11.26 — a floor chosen: that floor's own week, which is the one he
+  // edits; otherwise the week for all floors.
+  for (const t of ALL_TRADES) {
+    weekly[t] = grant.floorChosen ? ((sdata.weekly || {})[`${t}@${grant.floorChosen}`] || {}) : ((sdata.weekly || {})[t] || {});
+  }
   const sign = (v: unknown) => {
     const str = JSON.stringify(v ?? null);
     let h = 5381;
@@ -674,7 +761,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 45,
+    fn: "sub-portal", version: 46,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -760,28 +847,32 @@ Deno.serve(async (req) => {
           subject,
           body: String(body.text || "").trim(),
           atts,
+          // 07.11.26 — written with a floor chosen: for that floor.
+          ...(String(body.floor || "").trim() ? { floors: [String(body.floor).trim()] } : {}),
         };
         await editSubsRow(grant.projectId, (cur) => {
           cur.logs = cur.logs || {};
           cur.logs[trade] = (cur.logs[trade] || []).concat([entry]);
           return cur;
         });
-        await notifyPhones(await phonesFor(grant.projectId, trade), grant.projectId, phone);
+        await notifyPhones(await phonesFor(grant.projectId, trade, String(body.floor || "").trim()), grant.projectId, phone);
         return json({ ok: true });
       }
 
       const weekStart = String(body.weekStart || "").slice(0, 10);
       const day = Number(body.day);
       if (!weekStart || !(day >= 0 && day <= 5)) return json({ error: "bad week" }, 400);
+      const wFloor = String(body.floor || "").trim();
+      const wKey = wFloor ? `${trade}@${wFloor}` : trade;
       await editSubsRow(grant.projectId, (cur) => {
         cur.weekly = cur.weekly || {};
-        cur.weekly[trade] = cur.weekly[trade] || {};
-        const week = Array.from({ length: 6 }, (_, i) => (cur.weekly[trade][weekStart] || [])[i] || "");
+        cur.weekly[wKey] = cur.weekly[wKey] || {};
+        const week = Array.from({ length: 6 }, (_, i) => (cur.weekly[wKey][weekStart] || [])[i] || "");
         week[day] = String(body.text || "");
-        cur.weekly[trade][weekStart] = week;
+        cur.weekly[wKey][weekStart] = week;
         return cur;
       });
-      await notifyPhones(await phonesFor(grant.projectId, trade), grant.projectId, phone);
+      await notifyPhones(await phonesFor(grant.projectId, trade, wFloor), grant.projectId, phone);
       return json({ ok: true });
     }
 
@@ -844,7 +935,7 @@ Deno.serve(async (req) => {
       const ids = Object.keys(meta).filter((id) => (!pv.allowed || pv.allowed.indexOf(id) >= 0) && String((meta[id] || {}).name || "").trim());
       return json({
         preview: true,
-        projects: ids.map((id) => ({ id, trade: pv.as === "sub" ? "electric" : "", role: pv.as, isPm: pv.as === "pm", ...(meta[id] || {}) }))
+        projects: ids.map((id) => ({ id, trade: pv.as === "sub" ? "electric" : "", role: pv.as, isPm: pv.as === "pm", ...(meta[id] || {}), myFloors: (meta[id] || {}).floorList || [], allFloors: true }))
           .sort((a: any, b: any) => String(a.name || "").localeCompare(String(b.name || ""), "he")),
       });
     }
@@ -880,6 +971,14 @@ Deno.serve(async (req) => {
         sdApprovals: sdApProbe[grant.projectId] || grant.extras.sdApprovals || {},
       };
       const role = grant.role || (grant.isPm ? "pm" : "sub");
+      // 07.11.26 — floors. His own (none: all of the project's), and the one
+      // he chose in the app, if it is one of them.
+      const projFl: string[] = (meta[grant.projectId] || {}).floorList || [];
+      const mine = floorArr(grant.floors);
+      const choosable = mine.length ? mine : projFl;
+      const chosen = String(body.floor || "").trim();
+      grant.floorChosen = chosen && choosable.indexOf(chosen) >= 0 ? chosen : "";
+      grant.F = grant.floorChosen ? [grant.floorChosen] : (mine.length ? mine : null);
       const out: any = role === "pm" ? await pmBoard(grant)
         : role === "sub" ? await boardFor(grant)
         : { marks: {}, trade: "" };
@@ -892,6 +991,9 @@ Deno.serve(async (req) => {
         for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) | 0;
         out.marks = { ...(out.marks || {}), finishes: out.finishes.length ? String(h >>> 0) : "" };
       }
+      out.myFloors = choosable;
+      out.allFloors = !mine.length;
+      out.floor = grant.floorChosen;
       out.isPm = !!grant.isPm;
       out.canWrite = !!grant.canWrite;
       out.preview = !!pv;

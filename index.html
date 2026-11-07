@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 269";
+var APP_BUILD = "06.11.2026 · build 270";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2317,6 +2317,7 @@ var pdfViewer = `
         .sdTable .cRoom { width: 40px; }
         .sdTable .cCli { width: 64px; text-align: center; }
         .lliTable .cApp { width: 120px; }
+        .lliTable .cFloor { width: 76px; min-width: 76px; }
         .sdTable .cSec { width: 92px; text-align: center; }
         .sdTable .cCat { width: 96px; }
         .sdTable .cDesc { width: auto; text-align: start; }
@@ -2822,6 +2823,7 @@ var pdfViewer = `
         .sbTeachStar { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -58%); }
         /* The AI column and the BOQ check (22.10.26). */
         .sbBoardTable .sbAiCell { width: 30px; padding-inline: 2px; }
+        .sbBoardTable .sbFloorCell { width: 74px; min-width: 74px; padding-inline: 3px; }
         .sbAiMark { width: 24px; height: 24px; border-radius: 999px; border: 1px solid; font-weight: 800; font-size: 13px; cursor: pointer; padding: 0; line-height: 1; }
         .sbAiMark.ok { color: #1a7f4b; border-color: #b9dcc7; background: #eef6f0; }
         .sbAiMark.warn { color: #b45309; border-color: #f2c48d; background: #fff4e5; }
@@ -4535,6 +4537,33 @@ function initialsFromName(name) {
   const second = parts[1]?.[0] || parts[0]?.[1] || "";
   return (first + second).toUpperCase();
 }
+// 07.11.26 — a project's floors: the small boxes of project settings
+// (p.floors, in the order typed). Projects set before then carry only
+// floorsFrom / floorsTo, read here as the run between them.
+function projFloorsList(p) {
+  if (!p) return [];
+  if (Array.isArray(p.floors) && p.floors.length) return p.floors.map((x) => String(x).trim()).filter(Boolean);
+  const a = String(p.floorsFrom || "").trim(), b = String(p.floorsTo || "").trim();
+  if (/^-?\d+$/.test(a) && /^-?\d+$/.test(b)) {
+    const na = parseInt(a, 10), nb = parseInt(b, 10);
+    if (nb >= na && nb - na < 200) { const o = []; for (let i = na; i <= nb; i++) o.push(String(i)); return o; }
+  }
+  return [a, b].filter(Boolean);
+}
+// "4, 5, 6, 10" → "4-6, 10": a run of following numbers is written as its ends.
+function floorsLabel(list) {
+  const xs = (list || []).map((x) => String(x).trim()).filter(Boolean);
+  const out = [];
+  for (let i = 0; i < xs.length; ) {
+    let j = i;
+    while (j + 1 < xs.length && /^-?\d+$/.test(xs[j]) && /^-?\d+$/.test(xs[j + 1]) && parseInt(xs[j + 1], 10) === parseInt(xs[j], 10) + 1) j++;
+    out.push(j - i >= 2 ? `${xs[i]}-${xs[j]}` : j > i ? `${xs[i]}, ${xs[j]}` : xs[i]);
+    i = j + 1;
+  }
+  return out.join(", ");
+}
+// The floors of the project open on screen, for the floor lists in the tables.
+var AW_FLOORS = [];
 function isoToSlashDate(iso) {
   const [y, m, d] = iso.split("-");
   if (!y || !m || !d) return iso;
@@ -5859,6 +5888,58 @@ function SubsTradePicker({ value, disabled, onChange }) {
   );
 }
 
+// 07.11.26 — the floors a row (or an app user) belongs to. Nothing picked is
+// "כל הקומות". The list opens over the page, like the one above.
+function FloorsPicker({ value, disabled, onChange, options, compact }) {
+  const all = (options || AW_FLOORS || []).map(String);
+  const picked = (Array.isArray(value) ? value : []).map(String);
+  const [open, setOpen] = React9.useState(null);
+  const boxRef = React9.useRef(null);
+  const popRef = React9.useRef(null);
+  React9.useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => {
+      if (boxRef.current && boxRef.current.contains(e.target)) return;
+      if (popRef.current && popRef.current.contains(e.target)) return;
+      setOpen(null);
+    };
+    const onScroll = (e) => { if (popRef.current && popRef.current.contains(e.target)) return; setOpen(null); };
+    document.addEventListener("mousedown", onDoc);
+    window.addEventListener("scroll", onScroll, true);
+    return () => { document.removeEventListener("mousedown", onDoc); window.removeEventListener("scroll", onScroll, true); };
+  }, [open]);
+  const sorted = (xs) => all.filter((f) => xs.indexOf(f) >= 0).concat(xs.filter((f) => all.indexOf(f) < 0));
+  const toggle = (f) => {
+    const next = picked.indexOf(f) >= 0 ? picked.filter((x) => x !== f) : picked.concat([f]);
+    // Every floor ticked is the same as all of them.
+    onChange(all.length && all.every((x) => next.indexOf(x) >= 0) ? [] : sorted(next));
+  };
+  const label = picked.length ? floorsLabel(sorted(picked)) : "\u05db\u05dc \u05d4\u05e7\u05d5\u05de\u05d5\u05ea";
+  const openAt = () => {
+    const r = boxRef.current.getBoundingClientRect();
+    const h = Math.min(340, 60 + all.length * 26), below = window.innerHeight - r.bottom > h;
+    setOpen({ x: r.right, y: below ? r.bottom + 4 : Math.max(8, r.top - h - 4) });
+  };
+  return React9.createElement("div", { ref: boxRef, style: { position: "relative" } },
+    React9.createElement("button", {
+      type: "button", disabled, title: label,
+      onClick: () => (open ? setOpen(null) : openAt()),
+      style: { width: "100%", border: "1px solid var(--line)", borderRadius: 7, background: picked.length ? "#eef4ff" : "#fff", padding: compact ? "3px 4px" : "6px 8px", font: "inherit", fontSize: 12, fontWeight: 700, lineHeight: 1.35, cursor: disabled ? "default" : "pointer", whiteSpace: "normal", direction: "ltr", color: picked.length ? "#1d4f91" : "var(--mist)" }
+    }, label),
+    open && !disabled && createPortal(React9.createElement("div", {
+      ref: popRef, dir: "rtl",
+      style: { position: "fixed", zIndex: 1000, left: Math.max(8, open.x - 190), top: open.y, width: 190, maxHeight: 340, overflowY: "auto", background: "#fff", border: "1px solid var(--line)", borderRadius: 10, boxShadow: "0 10px 30px rgba(0,0,0,.16)", padding: "8px 10px", display: "flex", flexDirection: "column", gap: 6, fontFamily: "inherit" }
+    },
+      React9.createElement("label", { style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 800, cursor: "pointer", borderBottom: "1px solid var(--line)", paddingBottom: 6 } },
+        React9.createElement("input", { type: "checkbox", checked: picked.length === 0, onChange: () => onChange([]) }),
+        React9.createElement("span", null, "\u05db\u05dc \u05d4\u05e7\u05d5\u05de\u05d5\u05ea")),
+      all.length === 0
+        ? React9.createElement("span", { style: { fontSize: 12, color: "var(--mist)" } }, "\u05dc\u05d0 \u05d4\u05d5\u05d2\u05d3\u05e8\u05d5 \u05e7\u05d5\u05de\u05d5\u05ea \u05d1\u05d4\u05d2\u05d3\u05e8\u05ea \u05d4\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8.")
+        : all.map((f) => React9.createElement("label", { key: f, style: { display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, fontWeight: 600, cursor: "pointer" } },
+            React9.createElement("input", { type: "checkbox", checked: picked.indexOf(f) >= 0, onChange: () => toggle(f) }),
+            React9.createElement("span", null, "\u05e7\u05d5\u05de\u05d4 " + f)))), document.body)
+  );
+}
 
 // The update log: the first place in this cube where she writes rather than
 // ticks. Newest first, because on site that is the one anybody opens.
@@ -6730,7 +6811,7 @@ function SubsStandards({ tradeLabel, canEdit, trade, projectId, items, onChange 
   );
 }
 
-function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail, accessOnly }) {
+function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName, isRTL, currentEmail, accessOnly, projectFloors }) {
   const list = (subsData && subsData.list) || [];
   // 06.11.26 — accessOnly ("sub" | "pm"): only the access list, as it is opened
   // from User settings; the cube itself no longer carries the two buttons.
@@ -6989,10 +7070,13 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
               ["פיקוח", "לקוח", "אדריכלים"].map((w) => React9.createElement("option", { key: w, value: w }, w)))),
           (draft.kind || (draft.pm ? "pm" : "sub")) === "sub" && React9.createElement("label", { style: { fontSize: 12, fontWeight: 700 } }, "\u05ea\u05d7\u05d5\u05dd",
             React9.createElement("select", { style: inputS, value: draft.trade, onChange: (e) => setDraft({ ...draft, trade: e.target.value }) },
-              SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label))))),
+              SUB_TRADES.map((tr) => React9.createElement("option", { key: tr.key, value: tr.key }, tr.label)))),
+          // 07.11.26 — the floors this user works on (none picked: all floors).
+          React9.createElement("div", { style: { fontSize: 12, fontWeight: 700, display: "flex", flexDirection: "column", gap: 4 } }, "\u05e7\u05d5\u05de\u05d5\u05ea",
+            React9.createElement(FloorsPicker, { options: projectFloors, value: draft.floors || [], onChange: (floors) => setDraft({ ...draft, floors }) }))),
         React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: !(draft.name.trim() || draft.company.trim()) || !draft.phone.trim(), onClick: () => {
-            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: (draft.kind || "sub") === "sub" ? draft.trade : "", pm: !!draft.pm, kind: draft.kind || (draft.pm ? "pm" : "sub"), ...(draft.who ? { who: draft.who } : {}), active: true }]));
+            write(list.concat([{ id: "s-" + Date.now().toString(36), name: draft.name.trim(), company: draft.company.trim(), phone: draft.phone.trim(), code: makeSubCode(), trade: (draft.kind || "sub") === "sub" ? draft.trade : "", pm: !!draft.pm, kind: draft.kind || (draft.pm ? "pm" : "sub"), ...(draft.who ? { who: draft.who } : {}), floors: draft.floors || [], active: true }]));
             goBack();
           } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
           React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: goBack }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))));
@@ -7000,10 +7084,10 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
 React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", minWidth: 720, margin: "0 auto" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
-            ["\u05e9\u05dd", "\u05ea\u05e4\u05e7\u05d9\u05d3", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05d4\u05d6\u05de\u05e0\u05d4", "\u05e4\u05e2\u05d9\u05dc", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
+            ["\u05e9\u05dd", "\u05ea\u05e4\u05e7\u05d9\u05d3", "\u05d8\u05dc\u05e4\u05d5\u05df", "\u05e7\u05d5\u05d3", "\u05ea\u05d7\u05d5\u05dd", "\u05e7\u05d5\u05de\u05d5\u05ea", "\u05d4\u05d6\u05de\u05e0\u05d4", "\u05e4\u05e2\u05d9\u05dc", ""].map((h, i) => React9.createElement("th", { key: i, style: headS }, h)))),
           React9.createElement("tbody", null,
             rows.length === 0
-              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 8 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e3 \u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05d4\u05d6\u05d4."))
+              ? React9.createElement("tr", null, React9.createElement("td", { style: { ...cellS, color: "var(--mist)" }, colSpan: 9 }, "\u05d8\u05e8\u05dd \u05e0\u05d5\u05e1\u05e3 \u05de\u05e9\u05ea\u05de\u05e9 \u05dc\u05e4\u05e8\u05d5\u05d9\u05e7\u05d8 \u05d4\u05d6\u05d4."))
               : rows.map((r) => React9.createElement("tr", { key: r.id },
                   React9.createElement("td", { style: cellS }, r.name || "\u2014"),
                   React9.createElement("td", { style: cellS }, r.company || "\u2014"),
@@ -7012,6 +7096,8 @@ React9.createElement("div", { style: { width: "100%", overflowX: "auto" } },
                     React9.createElement("span", { style: { fontWeight: 800, letterSpacing: 1 } }, r.code || "\u2014"),
                     canEdit && React9.createElement("button", { type: "button", className: "ghostBtn", style: { marginInlineStart: 8, padding: "2px 8px", fontSize: 11 }, onClick: () => setField(r.id, "code", makeSubCode()) }, "\u05d7\u05d3\u05e9")),
                   React9.createElement("td", { style: cellS }, (typeof kindLabel === "function" ? kindLabel(r) : kindLabel) || (r.pm ? "\u05db\u05dc \u05d4\u05ea\u05d7\u05d5\u05de\u05d9\u05dd" : (tradeOf(r.trade).label || "\u2014"))),
+                  React9.createElement("td", { style: { ...cellS, minWidth: 96 } },
+                    React9.createElement(FloorsPicker, { options: projectFloors, value: r.floors || [], disabled: !canEdit, compact: true, onChange: (floors) => setField(r.id, "floors", floors) })),
                   React9.createElement("td", { style: { ...cellS, whiteSpace: "nowrap" } },
                     React9.createElement("button", {
                       type: "button",
@@ -8361,6 +8447,8 @@ function CardView({
   userPerms,
   submittalChkOff,
   onChangeChkOff,
+  submittalRowMeta,
+  onChangeRowMeta,
   onRestoreEverywhere,
   submittalClientOff,
   onChangeClientOff,
@@ -8456,7 +8544,7 @@ function CardView({
       projectName: project.name,
       allowDownload: false
     }
-  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null,
+  ), isSubmittal && /* @__PURE__ */ React14.createElement(SubmittalCard, { onChangeBoqFlags: appRole === "admin" ? onChangeBoqFlags : null, appIsRTL: isRTL, projectName: project.name, project, submittals, onChangeSubmittals, submittalQueue, onChangeQueue, viewerRole, submittalPerms, currentEmail, userSignatures, brandName, contacts, contactsCatalog, printBrand, boqData, boqFlags, lliRows, onChangeLliRows, userPerms, submittalChkOff, onChangeChkOff, submittalRowMeta, onChangeRowMeta, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null, submittalClientOff, onChangeClientOff, submittalReview, onChangeReview, submittalApprovals, onChangeApprovals }), isLli && /* @__PURE__ */ React14.createElement(LliCard, { appIsRTL: isRTL, boqData, boqFlags, onChangeBoqFlags, rows: lliRows, onChangeRows: onChangeLliRows, canEdit, projectId: project.id, projectName: project.name, printBrand, contacts, contactsCatalog, scheduleData, viewerRole, onChangeBoardCats, onRestoreEverywhere: appRole === "admin" ? onRestoreEverywhere : null,
     // 06.11.26 — a category changed on LLI is changed on SD and on a submittal
     // draft of the same line too. A submittal already sent keeps its folder:
     // its number was issued in it.
@@ -14257,6 +14345,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                     setPrintOff(next);
                   });
                 })(),
+                // 07.11.26 — the floors a drawing is for, as on the submittal board.
+                sbH("th", { className: "cFloor" }, isRTL ? "\u05e7\u05d5\u05de\u05d4" : "Floor"),
                 thS("section", "cSec", L("section")),
                 thS("category", "cCat", L("category")),
                 thS("typeMark", "cMark", L("typeMark")),
@@ -14274,7 +14364,7 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
               sbH(
                 "tbody",
                 { key: g.key },
-                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 11 : 9 }, g.title)),
+                sbH("tr", { className: "lliChapter" }, sbH("td", { colSpan: canEdit ? 12 : 10 }, g.title)),
                 g.rows.map((r) => {
                   const v = sdRowOf(data, r.code);
                   const hidden = isHidden(r);
@@ -14319,6 +14409,8 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                           })
                         )
                       : null,
+                    sbH("td", { className: "cFloor prKeep" },
+                      sbH(FloorsPicker, { value: v.floors || [], disabled: !canEdit, compact: true, onChange: (floors) => patch(r.code, { floors }) })),
                     sbH(
                       "td",
                       { className: "cSec" },
@@ -21802,9 +21894,23 @@ function SubmittalFolder({
   colHide,
   onToggleCol,
   onApprove,
-  onUnsend
+  onUnsend,
+  rowMeta,
+  onChangeRowMeta
 }) {
   const L = (k) => sbText(SB_L[k], lang);
+  // 07.11.26 — who sees a row in the apps, and its floors, can be set on every
+  // row, a submittal or not yet: on the submittal (all its revisions) when
+  // there is one, otherwise on the line itself (rowMeta, by BOQ code).
+  const metaKey = (r) => r.code || r.key;
+  const metaOf = (r) => (rowMeta || {})[metaKey(r)] || {};
+  const subsOfRow = (r) => (r.lead && Array.isArray(r.lead.subs) ? r.lead.subs : (metaOf(r).subs || []));
+  const floorsOfRow = (r) => (r.lead && Array.isArray(r.lead.floors) ? r.lead.floors : (metaOf(r).floors || []));
+  const setRowMeta = (r, patch) => {
+    if (r.lead && onPatchMany) { onPatchMany(r.hits.map((x) => x.id), patch); return; }
+    if (r.lead && onPatch) { onPatch(r.lead, patch); return; }
+    if (onChangeRowMeta) onChangeRowMeta({ ...(rowMeta || {}), [metaKey(r)]: { ...metaOf(r), ...patch } });
+  };
   const he = lang === "he";
   const lli = lliRows || {};
   // Which line has its BOQ lines opened out, and which row its other versions.
@@ -21828,7 +21934,7 @@ function SubmittalFolder({
     bySec[r.disc].push(r);
   });
   const showBands = allMode || order.length > 1;
-  const ncols = SB_BOARD_COLS.length + 2 + (canEdit ? 1 : 0) + (canEdit && onChangeClientOff ? 1 : 0);
+  const ncols = SB_BOARD_COLS.length + 3 + (canEdit ? 1 : 0) + (canEdit && onChangeClientOff ? 1 : 0);
   // 05.11.26 — the print V on every row, the rightmost column. Kept in a
   // module map as well, because the exports build their own rows.
   const [printOff, setPrintOffState] = useState6(() => ({ ...sbPrintOffMap }));
@@ -22017,6 +22123,9 @@ function SubmittalFolder({
             }, rec.boqCheck.issues ? "\u26a0" : "\u2713")
           : null
       ),
+      // 07.11.26 — the floors this row is for (nothing picked: all floors).
+      sbH("td", { className: "sbFloorCell prKeep" },
+        sbH(FloorsPicker, { value: floorsOfRow(r), disabled: !canEdit, compact: true, onChange: (floors) => setRowMeta(r, { floors }) })),
       // The submittal's number and version; the arrow opens the others filed
       // on the same row.
       sbH(
@@ -22074,13 +22183,11 @@ function SubmittalFolder({
       sbH(
         "td",
         { className: "sbTradeCell" },
-        rec
-          ? sbH(SubsTradePicker, {
-              value: rec.subs || [],
-              disabled: !canEdit,
-              onChange: (next) => onPatch && onPatch(rec, { subs: next })
-            })
-          : sbH("span", { className: "sbChkDash" }, "\u2014")
+        sbH(SubsTradePicker, {
+          value: subsOfRow(r),
+          disabled: !canEdit,
+          onChange: (next) => setRowMeta(r, { subs: next })
+        })
       ),
       sbH("td", { className: "sbThumbCell" }, r.img ? sbH("img", { className: "sbThumb", src: r.img, alt: "" }) : sbH("span", { className: "sbChkDash" }, "—")),
       sbH("td", { dir: "ltr" }, rec ? fmtSent(rec) : "—"),
@@ -22107,12 +22214,13 @@ function SubmittalFolder({
           { key: `${r.key}:l:${l.item.code}`, className: "sbChkLine" },
           prTd(null),
           sbH("td", { className: "sbAiCell" }),
+          sbH("td", { className: "sbFloorCell" }),
           sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
           sbH("td", { dir: "ltr", className: "sbChkCode" }, l.label),
           sbH("td", { className: "sbChkDesc", colSpan: 2, title: boqText(l.node, lang) },
             sbH("span", { className: "sbChkDescText" }, boqText(l.node, lang)),
             sbH("span", { className: `sbChkSpec ${eq ? "eq" : ""}` }, eq ? L("chkEquiv") : L("chkSpecific"))),
-          sbH("td", { colSpan: ncols - 5 })
+          sbH("td", { colSpan: ncols - 6 })
         ));
       });
     }
@@ -22125,6 +22233,7 @@ function SubmittalFolder({
           { key: `${r.key}:v:${s.id}`, className: "sbRowOlder" },
           prTd(null),
           sbH("td", { className: "sbAiCell" }),
+          sbH("td", { className: "sbFloorCell" }),
           sbH("td", { className: "sbNoCell" },
             sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
             sbH("span", { className: "sbNoRev" }, `Rev.${(Number(s.rev) || 0) + 1}`)),
@@ -22169,6 +22278,7 @@ function SubmittalFolder({
                 }, he ? "לקוח / פיקוח" : "Client / supervision");
               })() : null,
               sbH("th", { className: "sbAiCell", title: "\u05d1\u05d3\u05d9\u05e7\u05ea AI \u05de\u05d5\u05dc \u05db\u05ea\u05d1 \u05d4\u05db\u05de\u05d5\u05d9\u05d5\u05ea" }, "AI"),
+              sbH("th", { className: "sbFloorCell" }, he ? "\u05e7\u05d5\u05de\u05d4" : "Floor"),
               // 05.11.26 — the column title is the switch: dark prints, faded
               // and struck through is left out. No tick beside it.
               SB_BOARD_COLS.map((c) => sbH(
@@ -22429,6 +22539,8 @@ function SubmittalCard({
   userPerms,
   submittalChkOff,
   onChangeChkOff,
+  submittalRowMeta,
+  onChangeRowMeta,
   onRestoreEverywhere,
   submittalClientOff,
   onChangeClientOff,
@@ -22822,7 +22934,13 @@ function SubmittalCard({
           ...(preset.lliImage && !(rec.image && rec.image.thumb) ? { image: { name: "LLI", thumb: preset.lliImage, path: null, inline: true } } : {}),
           ...(preset.lliMark || preset.lliDesc ? {
             typeId: preset.lliMark || preset.text || rec.typeId,
-            itemDescription: preset.lliDesc && preset.lliDesc !== (preset.lliMark || preset.text) ? preset.lliDesc : (rec.itemDescription || "")
+            // 07.11.26 — the LLI description goes to "מידע נוסף", line for
+            // line as written there; the item description is left to be filled
+            // in on the submittal.
+            itemDescription: rec.itemDescription || "",
+            ...(preset.lliDesc && preset.lliDesc !== (preset.lliMark || preset.text)
+              ? { infoHe: rec.infoHe || preset.lliDesc, infoEn: rec.infoEn || preset.lliDesc }
+              : {})
           } : {})
         }
       : rec;
@@ -23192,6 +23310,8 @@ function SubmittalCard({
         // column with its send arrow is gone.
         clientOff: {},
         onChangeClientOff: null,
+        rowMeta: submittalRowMeta || {},
+        onChangeRowMeta: onChangeRowMeta || null,
         onRemoveChk: (catKey, code) => onChangeChkOff && onChangeChkOff({
           ...(submittalChkOff || {}),
           [catKey]: { ...((submittalChkOff || {})[catKey] || {}), [code]: true }
@@ -23971,7 +24091,7 @@ function UserSettingsScreen({ isRTL, projects, brandLogo, signatures, onSignatur
         pid ? React15.createElement(SubcontractorsCard, {
           key: view + ":" + pid, accessOnly: view === "pmAccess" ? "pm" : view === "supervision" ? "supervision" : view === "clients" ? "client" : "sub",
           subsData: (subsByProject || {})[pid] || {}, onChangeSubsData: (next) => onSubsChange && onSubsChange(pid, next),
-          canEdit: true, projectId: pid, projectName: proj.name || "", isRTL
+          canEdit: true, projectId: pid, projectName: proj.name || "", isRTL, projectFloors: projFloorsList(proj)
         }) : React15.createElement("p", { className: "panelSub", style: { textAlign: "center" } }, "אין פרויקטים.")));
   }
   if (view === "list") return /* @__PURE__ */ React15.createElement(React15.Fragment, null, mkBack(true), /* @__PURE__ */ React15.createElement(UserListPanel, { isRTL, projects, brandLogo, signatures, onSignatureChange, userPerms, setUserPerms, printSettings }));
@@ -24949,17 +25069,36 @@ function PlansUploadBlock({ isRTL, projectId, projectName, plans, onPlansChange,
   );
 }
 
+// 07.11.26 — the project's floors, one small box each, in one row; an empty
+// box at the end takes the next one.
+function FloorBoxes({ isRTL, value, onChange }) {
+  const list = (value || []).concat([""]);
+  const set = (i, v) => {
+    const next = list.slice();
+    next[i] = v.replace(/\s+/g, "");
+    onChange(next.filter((x, k) => x !== "" || k === next.length - 1).filter((x) => x !== ""));
+  };
+  return React15.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flexBasis: "100%" } },
+    isRTL ? "קומות" : "Floors",
+    React15.createElement("div", { dir: "ltr", style: { display: "flex", flexWrap: "wrap", gap: 6, alignItems: "center", justifyContent: isRTL ? "flex-end" : "flex-start" } },
+      list.map((v, i) => React15.createElement("input", {
+        key: i, value: v, placeholder: i === list.length - 1 ? "+" : "",
+        onChange: (e) => set(i, e.target.value),
+        style: { width: 46, height: 34, textAlign: "center", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, fontWeight: 700, background: v ? "#fff" : "#f6f7f9", padding: 0 }
+      })),
+      (value || []).length ? React15.createElement("span", { style: { fontSize: 12, color: "var(--mist)", marginInlineStart: 8 } }, "Floors " + floorsLabel(value)) : null));
+}
 function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange, plansByProject, onPlansChange, roomsByProject, onRoomsChange, offBoardsByProject }) {
   const inS = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff", width: "100%" };
   const [openId, setOpenId] = useState6(null);
-  const [draft, setDraft] = useState6({ name: "", floorsFrom: "", floorsTo: "", startDate: "", endDate: "", clientLogoUrl: null, supervisionLogoUrl: null, accent: null });
+  const [draft, setDraft] = useState6({ name: "", floors: [], startDate: "", endDate: "", clientLogoUrl: null, supervisionLogoUrl: null, accent: null });
   const toggleOpen = (p) => {
     if (openId === p.id) {
       setOpenId(null);
       return;
     }
     setOpenId(p.id);
-    setDraft({ name: p.name || "", floorsFrom: p.floorsFrom || "", floorsTo: p.floorsTo || "", startDate: p.startDate || "", endDate: p.endDate || "", clientLogoUrl: p.clientLogoUrl || null, supervisionLogoUrl: p.supervisionLogoUrl || null, accent: p.accent || null });
+    setDraft({ name: p.name || "", floors: projFloorsList(p), startDate: p.startDate || "", endDate: p.endDate || "", clientLogoUrl: p.clientLogoUrl || null, supervisionLogoUrl: p.supervisionLogoUrl || null, accent: p.accent || null });
   };
   const onLogoFile = (e) => {
     const f = e.target.files && e.target.files[0];
@@ -24979,11 +25118,12 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     e.target.value = "";
   };
   const save = (p) => {
-    onUpdate(p.id, { name: (draft.name || "").trim() || p.name, floorsFrom: draft.floorsFrom, floorsTo: draft.floorsTo, startDate: draft.startDate, endDate: draft.endDate, clientLogoUrl: draft.clientLogoUrl, supervisionLogoUrl: draft.supervisionLogoUrl, accent: draft.accent });
+    const fl = (draft.floors || []).map((x) => String(x).trim()).filter(Boolean);
+    onUpdate(p.id, { name: (draft.name || "").trim() || p.name, floors: fl, floorsFrom: fl[0] || "", floorsTo: fl[fl.length - 1] || "", startDate: draft.startDate, endDate: draft.endDate, clientLogoUrl: draft.clientLogoUrl, supervisionLogoUrl: draft.supervisionLogoUrl, accent: draft.accent });
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), field("מקומה", "Floors from", "floorsFrom"), field("עד קומה", "Floors to", "floorsTo"), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date"), field("\u05E8\u05D5\u05D5\u05D7 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9 %", "Main contractor markup %", "markupPct", "number")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.supervisionLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו פיקוח" : "Upload supervision logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onSupervisionLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setDraft((d) => ({ ...d, supervisionLogoUrl: null })) }, isRTL ? "הסרת לוגו פיקוח" : "Remove supervision logo") : null), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null })/* PlansUploadBlock hidden 24.10.2026 (build 218): plans are uploaded in the By Room cube now. Its code stays. */, /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), React15.createElement(FloorBoxes, { isRTL, value: draft.floors || [], onChange: (floors) => setDraft((d) => ({ ...d, floors })) }), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date"), field("\u05E8\u05D5\u05D5\u05D7 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9 %", "Main contractor markup %", "markupPct", "number")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.supervisionLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו פיקוח" : "Upload supervision logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onSupervisionLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setDraft((d) => ({ ...d, supervisionLogoUrl: null })) }, isRTL ? "הסרת לוגו פיקוח" : "Remove supervision logo") : null), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null })/* PlansUploadBlock hidden 24.10.2026 (build 218): plans are uploaded in the By Room cube now. Its code stays. */, /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -26684,6 +26824,7 @@ function ProjectDashboardApp() {
       projectName: p.name || t.projectName,
       floorsFrom: p.floorsFrom || defaults[0],
       floorsTo: p.floorsTo || defaults[1],
+      floors: Array.isArray(p.floors) ? p.floors : null,
       startDate: p.startDate,
       endDate: p.endDate,
       clientLogoUrl: p.clientLogoUrl
@@ -26696,6 +26837,7 @@ function ProjectDashboardApp() {
     }
   };
   const defaultFloorsParts = t.floorsValue.split(/[–-]/).map((s) => s.trim());
+  AW_FLOORS = projFloorsList(activeProject);
   const viewData = publicViewData || {
     contractorName: activeContractor.name || DEFAULT_BRAND_NAME,
     contractorLogoUrl: activeContractor.logoUrl,
@@ -26706,6 +26848,7 @@ function ProjectDashboardApp() {
     projectName: activeProject.name || t.projectName,
     floorsFrom: activeProject.floorsFrom || defaultFloorsParts[0],
     floorsTo: activeProject.floorsTo || defaultFloorsParts[1],
+    floors: Array.isArray(activeProject.floors) ? activeProject.floors : null,
     startDate: activeProject.startDate,
     endDate: activeProject.endDate,
     clientLogoUrl: activeProject.clientLogoUrl
@@ -26757,7 +26900,7 @@ function ProjectDashboardApp() {
       className: `clientLogoImg ${openCardKey || dataSourcesOpen ? "isLink" : ""}`.trim(),
       title: openCardKey || dataSourcesOpen ? (isRTL ? "חזרה לדשבורד הפרויקט" : "Back to the project dashboard") : void 0,
       onClick: () => { if (openCardKey || dataSourcesOpen) { setOpenCardKey(null); setDataSourcesOpen(false); window.scrollTo(0, 0); } }
-    }), /* @__PURE__ */ React15.createElement("span", { className: "metaProjectName" }, displayProjectName), /* @__PURE__ */ React15.createElement("span", { className: "metaFloors numerals" }, "Floors ", displayFloorsFrom, "-", displayFloorsTo), /* @__PURE__ */ React15.createElement("span", { className: "metaDates numerals", dir: "ltr" }, displayStartDate, " - ", displayEndDate))), view === "login" && /* @__PURE__ */ React15.createElement(
+    }), /* @__PURE__ */ React15.createElement("span", { className: "metaProjectName" }, displayProjectName), /* @__PURE__ */ React15.createElement("span", { className: "metaFloors numerals", dir: "ltr" }, "Floors ", Array.isArray(viewData.floors) && viewData.floors.length ? floorsLabel(viewData.floors) : `${displayFloorsFrom}-${displayFloorsTo}`), /* @__PURE__ */ React15.createElement("span", { className: "metaDates numerals", dir: "ltr" }, displayStartDate, " - ", displayEndDate))), view === "login" && /* @__PURE__ */ React15.createElement(
     LoginScreen,
     {
       t,
@@ -26936,6 +27079,9 @@ function ProjectDashboardApp() {
         // Checklist lines she took off the submittal board, per discipline.
         submittalChkOff: activeExtras.submittalChkOff || {},
         onChangeChkOff: (next) => updateProjectExtras(activeProject.id, { submittalChkOff: next }),
+        // 07.11.26 — app view and floors on a submittal line with no submittal yet.
+        submittalRowMeta: activeExtras.submittalRowMeta || {},
+        onChangeRowMeta: (next) => updateProjectExtras(activeProject.id, { submittalRowMeta: next }),
         // Documents the sorting could not place, kept for her to place.
         submittalReview: activeExtras.submittalReview || [],
         onChangeReview: (next) => updateProjectExtras(activeProject.id, { submittalReview: next }),
