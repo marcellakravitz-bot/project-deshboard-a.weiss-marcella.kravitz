@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 271";
+var APP_BUILD = "06.11.2026 · build 272";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2318,6 +2318,7 @@ var pdfViewer = `
         .sdTable .cCli { width: 64px; text-align: center; }
         .lliTable .cApp { width: 120px; }
         .lliTable .cFloor { width: 76px; min-width: 76px; }
+        .sdBackLli { display: block; margin: 3px auto 0; border: none; background: none; color: #2b6fd6; font: inherit; font-size: 10.5px; font-weight: 700; cursor: pointer; padding: 0; }
         .sdTable .cSec { width: 92px; text-align: center; }
         .sdTable .cCat { width: 96px; }
         .sdTable .cDesc { width: auto; text-align: start; }
@@ -13971,8 +13972,10 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
   const lliDescOf = (r) => String(((lliRows || {})[r.code] || {}).desc || "").trim();
   // 07.11.26 — not trimmed while typing: trimming the field she types in ate
   // every space the moment it was typed at the end of the mark.
-  const markOf = (r, v) => lliMarkOf(r) || String(v.typeMark || "");
-  const descOf = (r, v) => lliDescOf(r) || v.desc || r.title;
+  // 07.11.26 — LLI's mark and description are the default; once she edits
+  // them on SD (markOwn / descOwn), SD keeps its own and LLI is not changed.
+  const markOf = (r, v) => (v.markOwn ? String(v.typeMark || "") : (lliMarkOf(r) || String(v.typeMark || "")));
+  const descOf = (r, v) => (v.descOwn ? (v.desc || "") : (lliDescOf(r) || v.desc || r.title));
   // 06.11.26 — the client / supervision see an SD row when "צפייה אפליקציה"
   // has them ticked; rows never set keep the old show tick.
   const isHidden = (r) => {
@@ -14457,10 +14460,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                       sbH("input", {
                         type: "text", className: "lliIn", dir: "auto",
                         value: markOf(r, v),
-                        readOnly: !canEdit || !!lliMarkOf(r),
-                        title: lliMarkOf(r) ? (lang === "he" ? "מתעדכן מ-LLI — עריכה בלוח LLI" : "Kept on the LLI board") : undefined,
-                        onChange: (e) => patch(r.code, { typeMark: e.target.value })
-                      })
+                        readOnly: !canEdit,
+                        title: lliMarkOf(r) ? (v.markOwn ? (lang === "he" ? "נערך ב-SD (לא משנה את LLI)" : "Edited on SD") : (lang === "he" ? "מועתק מ-LLI — עריכה כאן נשמרת ל-SD בלבד" : "From LLI — an edit here is kept for SD only")) : undefined,
+                        onChange: (e) => patch(r.code, lliMarkOf(r) ? { typeMark: e.target.value, markOwn: true } : { typeMark: e.target.value })
+                      }),
+                      canEdit && v.markOwn && lliMarkOf(r) ? sbH("button", { type: "button", className: "sdBackLli", title: lang === "he" ? "חזרה לאיפיון מ-LLI" : "Back to LLI", onClick: () => patch(r.code, { markOwn: false }) }, "\u21ba LLI") : null
                     ),
                     sbH(
                       "td",
@@ -14471,10 +14475,11 @@ function SdCard({ appIsRTL, boqData, boqFlags, rows, onChangeRows, canEdit, proj
                         ref: autoGrow,
                         onInput: (e) => autoGrow(e.target),
                         value: descOf(r, v),
-                        readOnly: !canEdit || !!lliDescOf(r),
-                        title: lliDescOf(r) ? (lang === "he" ? "מתעדכן מ-LLI — עריכה בלוח LLI" : "Kept on the LLI board") : undefined,
-                        onChange: (e) => patch(r.code, { desc: e.target.value })
-                      })
+                        readOnly: !canEdit,
+                        title: lliDescOf(r) ? (v.descOwn ? (lang === "he" ? "נערך ב-SD (לא משנה את LLI)" : "Edited on SD") : (lang === "he" ? "מועתק מ-LLI — עריכה כאן נשמרת ל-SD בלבד" : "From LLI — an edit here is kept for SD only")) : undefined,
+                        onChange: (e) => patch(r.code, lliDescOf(r) ? { desc: e.target.value, descOwn: true } : { desc: e.target.value })
+                      }),
+                      canEdit && v.descOwn && lliDescOf(r) ? sbH("button", { type: "button", className: "sdBackLli", title: lang === "he" ? "חזרה לתיאור מ-LLI" : "Back to LLI", onClick: () => patch(r.code, { descOwn: false }) }, "\u21ba LLI") : null
                     ),
                     // Straight from the bill of quantities, and never converted:
                     // square metres of panel are not a number of panels.

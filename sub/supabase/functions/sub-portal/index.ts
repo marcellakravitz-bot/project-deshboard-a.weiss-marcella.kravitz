@@ -408,7 +408,7 @@ async function boardFor(grant: any) {
     const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
     sd.push({
       code,
-      description: row.desc || "",
+      description: sdDesc(grant, code, row),
       status: approvedByClient ? "approved" : (row.status || "required"),
       files: ok
         ? await signAll([(sdAp[code] || {}).file || row.file].filter(Boolean))
@@ -499,6 +499,12 @@ function weeklyFor(all: any, trade: string, F: string[] | null, chosen: string) 
   });
   return out;
 }
+// 07.11.26 — an SD row's description: the one LLI keeps, unless it was
+// edited on SD itself (descOwn).
+function sdDesc(grant: any, code: string, row: any) {
+  const lli = ((grant.lli || {})[code] || {});
+  return row.descOwn ? String(row.desc || "") : (String(lli.desc || "").trim() || row.desc || "");
+}
 const ALL_TRADES = ["hvac", "electric", "plumbing", "drywall", "security", "paint"];
 async function pmBoard(grant: any) {
   const ex = grant.extras || {};
@@ -550,7 +556,7 @@ async function pmBoard(grant: any) {
     const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;
     sd.push({
       code,
-      description: row.desc || "",
+      description: sdDesc(grant, code, row),
       category: row.category || "",
       typeId: String(row.typeMark || row.typeId || "").trim(),
       status: approvedByClient ? "approved" : (row.status || "required"),
@@ -983,6 +989,10 @@ Deno.serve(async (req) => {
         sdApprovals: sdApProbe[grant.projectId] || grant.extras.sdApprovals || {},
       };
       const role = grant.role || (grant.isPm ? "pm" : "sub");
+      try {
+        const { data: lr } = await db.from("app_state").select("value").eq("key", `project-lli:${grant.projectId}`).maybeSingle();
+        grant.lli = parse(lr?.value) || {};
+      } catch (_e) { grant.lli = {}; }
       // 07.11.26 — floors. His own (none: all of the project's), and the one
       // he chose in the app, if it is one of them.
       const projFl: string[] = (meta[grant.projectId] || {}).floorList || [];
