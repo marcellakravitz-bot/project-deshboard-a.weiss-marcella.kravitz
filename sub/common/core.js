@@ -65,7 +65,8 @@ var AW = (function(){
   function todayIso(){ var d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10); }
 
   // ------------------------------------------------------------------ server
-  var PV_READ={projects:1,board:1,tasks:1,vapid:1,lists:1,list:1};
+  // 07.11.26 — the finishes list is a read too (it was missing: the preview got an empty list).
+  var PV_READ={projects:1,board:1,tasks:1,vapid:1,lists:1,list:1,finishes:1};
   function pvToken(){
     try{ var t=window.parent&&window.parent!==window&&window.parent.__awAccessToken; if(t) return t; }catch(e){}
     try{
