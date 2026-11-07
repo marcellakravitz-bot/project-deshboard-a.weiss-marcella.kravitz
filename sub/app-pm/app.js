@@ -44,7 +44,8 @@ function home(){
   h+='<button class="wkCard" data-k="weekly">'+
     '<div class="wh"><b>לו״ז שבועי'+(AW.isNew("weekly")?'<span class="newStar">★ עדכון חדש</span>':'')+'</b><span class="num">'+E(AW.fmt(wk))+' – '+E(AW.fmt(days[5].iso))+'</span></div>'+
     AW.timetable(wk, function(i){ return dayCell(wk,i); })+'</button>';
-  if((b.schedule||[]).length) h+=longBtn("schedule","לו״ז פרויקט");
+  // 07.11.26 — always there; without a schedule it says so when opened.
+  h+=longBtn("schedule","לו״ז פרויקט");
   h+=longBtn("tasks","ניהול משימות")+longBtn("log","יומן עדכונים")+longBtn("rj","ריג'קטים")+
      longBtn("submittal","Submittal")+longBtn("sd","SD")+longBtn("standards","בדיקות ומכון התקנים")+longBtn("finishes","רשימת חומרי גמר");
   app.innerHTML=h;

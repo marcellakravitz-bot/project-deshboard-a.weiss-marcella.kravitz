@@ -97,10 +97,11 @@ var PMSchedule = (function(){
     var top=Math.min.apply(null, list.map(function(t){ return t.level; }).concat([99]));
     var rows=visible();
     var anyOpen=list.some(function(t,i){ return t.sum && hasKids(list,i) && !collapsed[t.id]; });
+    if(!list.length){ AW.el().innerHTML=AW.head("לו״ז פרויקט")+AW.empty("טרם עלה לו״ז פרויקט"); AW.wireBack(); return; }
     AW.el().innerHTML=AW.head("לו״ז פרויקט")+
       '<div class="schBar"><button id="schGantt" class="chip'+(gantt?" on":"")+'">גאנט</button>'+
       '<button id="schAll" class="chip">'+(anyOpen?"כיווץ הכל":"פתיחת הכל")+'</button></div>'+
-      (list.length ? (gantt ? ganttHtml(rows, top) : listHtml(rows, top)) : AW.empty("טרם הועלה לו״ז לפרויקט."));
+      (list.length ? (gantt ? ganttHtml(rows, top) : listHtml(rows, top)) : AW.empty("טרם עלה לו״ז פרויקט"));
     AW.wireBack();
     document.getElementById("schGantt").onclick=function(){ gantt=!gantt; AW.render(true); };
     document.getElementById("schAll").onclick=function(){
