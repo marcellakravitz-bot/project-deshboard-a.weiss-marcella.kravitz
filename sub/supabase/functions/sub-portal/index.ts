@@ -446,6 +446,12 @@ async function submittalsFor(grant: any, key: string) {
   for (const [hk, r] of Object.entries<any>(fam)) {
     if (subsOf(r).indexOf(key) < 0 || !onFloors(floorsOf(r), F)) continue;
     if (r.boqCode && offCodes[r.boqCode]) continue;
+    // 07.11.26 — what the app shows is what the board's row shows: the
+    // category, type mark and description of its LLI row first, then the
+    // submittal's own; the submittal's picture, else the LLI one.
+    const code = r.lliKey || r.boqCode || "";
+    const ll = code ? ((grant.lli || {})[code] || {}) : {};
+    const mm = code ? (rowMeta[code] || {}) : {};
     rows.push((async () => {
       const decision = decisionOf(r);
       const signedDoc = (sbAp[r.id] || {}).doc;
@@ -454,16 +460,17 @@ async function submittalsFor(grant: any, key: string) {
         id: r.id,
         hk,
         no: `${String(r.category || "").toUpperCase()}-${String(r.seq || "").padStart(3, "0")}`,
-        category: r.category || "",
-        typeId: String(r.typeId || "").trim(),
-        description: r.itemDescription || r.scope || r.boqText || "",
+        category: String(ll.category || mm.catOwn || r.category || "").trim(),
+        typeId: String(ll.typeMark || "").trim() || String(r.typeId || "").trim(),
+        description: String(ll.desc || "").trim() || r.itemDescription || r.scope || r.boqText || "",
         decision,
         submitted: true,
         rev: Number(r.rev) || 0,
         // 07.11.26 — the submittal's own picture: a stored one, or the copy
         // kept on the record (e.g. the one brought from LLI).
         image: r.image && r.image.path ? await signed(r.image.path)
-          : (r.image && typeof r.image.thumb === "string" && r.image.thumb.length < 400000 ? r.image.thumb : null),
+          : (r.image && typeof r.image.thumb === "string" && r.image.thumb.length < 400000 ? r.image.thumb
+          : (typeof ll.image === "string" && ll.image.length < 400000 ? ll.image : null)),
         doc: d ? { name: d.name || "submittal.html", type: d.type || "text/html", url: await signed(d.path) } : null,
         files: decision && APPROVED.indexOf(decision) >= 0 ? await signAll(r.attachments || []) : [],
       };
@@ -484,9 +491,9 @@ async function submittalsFor(grant: any, key: string) {
     const b = boq ? boq.lines[code] : null;
     const ov = (ex.boqFlagOverrides || {})[code] || {};
     const bf = boq ? (boq.flags[code] || {}) : {};
-    const mark = String(m.mark || "").trim() || String(ll.typeMark || "").trim();
-    const desc = String(m.desc || "").trim() || String(ll.desc || "").trim() || (b ? b.he : "");
-    const cat = [m.cat, ll.category, ov.category, bf.category, b ? b.cat : ""].map((c) => String(c || "").trim()).filter(Boolean)[0] || "";
+    const mark = String(ll.typeMark || "").trim() || String(m.mark || "").trim();
+    const desc = String(ll.desc || "").trim() || String(m.desc || "").trim() || (b ? b.he : "");
+    const cat = [ll.category, m.catOwn, m.cat, ov.category, bf.category, b ? b.cat : ""].map((c) => String(c || "").trim()).filter(Boolean)[0] || "";
     const li = ll.image;
     rows.push(Promise.resolve({ id: "c:" + code, hk: "b:" + code, no: "", code, category: cat, catHe: catLabel(grant, cat),
       typeId: mark, description: desc || code, decision: null, submitted: false, rev: 0,

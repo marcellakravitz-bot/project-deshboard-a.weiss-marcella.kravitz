@@ -346,6 +346,8 @@ body.isPv .pvBadge{display:block;position:sticky;top:var(--barH);z-index:4;backg
 
 /* 07.11.26 — category icons, the form viewer, SD card */
 .item .pic.catIc{display:flex;align-items:center;justify-content:center;background:#eef3fb;border-color:#d7e1f0}
+.item .pic.noImg{background:#f4f5f7;border-color:#e3e5ea;color:#9aa0aa}
+.item .pic.noImg svg{width:24px;height:24px}
 .catSvg{width:28px;height:28px;fill:none;stroke:#1f3b6e;stroke-width:1.5;stroke-linejoin:round;stroke-linecap:round}
 .catSvg .f{fill:#7d9fd8}.catSvg .f2{fill:#b3c8ec}
 .eyeBtn{display:inline-flex;align-items:center;gap:6px;border:1px solid #c9d6ea;background:#fff;color:#1d4f91;border-radius:999px;padding:6px 14px;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer}

@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "07.11.2026 · build 279";
+var APP_BUILD = "07.11.2026 · build 280";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -2791,8 +2791,8 @@ var pdfViewer = `
         .sbThumbCell { width: 130px; }
         .sbTradeCell { min-width: 120px; max-width: 170px; }
         .sbThumb { display: block; margin: 0 auto; max-width: 122px; max-height: 80px; object-fit: contain; border-radius: 4px; }
-        .sbBoardTable thead th:nth-child(n+9):nth-child(-n+12),
-        .sbBoardTable tbody tr:not(.sbChkLine):not(.sbBandRow) td:nth-child(n+9):nth-child(-n+12) {
+        .sbBoardTable thead th.sbNarrow,
+        .sbBoardTable tbody tr:not(.sbChkLine):not(.sbBandRow) td.sbNarrow {
           width: 1%; white-space: nowrap; padding-inline: 5px;
         }
         .sbSq.unsend { position: relative; color: #6b7280; }
@@ -2806,6 +2806,11 @@ var pdfViewer = `
         .sbSq.ok.on, .sbSq.ok.on:hover { background: #1a7f4b; border-color: #1a7f4b; color: #fff; }
         .sbBoardTable td.sbDescCell { min-width: 190px; white-space: pre-line; }
         .sbBoardTable td.sbItemCell { min-width: 70px; }
+        /* 07.11.26 — the category, beside the type mark: narrow, the name
+           wraps rather than widening the table. */
+        .sbBoardTable td.sbCatCell { width: 92px; max-width: 92px; padding-inline: 4px; }
+        .sbCatSel { width: 88px; max-width: 88px; font: inherit; font-size: 12px; padding: 3px 2px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); text-overflow: ellipsis; }
+        .sbCatRo { font-size: 12px; white-space: normal; }
         /* The row's buttons: a block of equal squares, the version across the
            top (21.10.26). */
         .sbBoardTable td.sbActions { white-space: normal; width: 74px; padding: 5px 6px; }
@@ -6453,9 +6458,9 @@ function subsLineInfo(code, m, lliRows, boqData, boqFlags) {
   const b = subsBoqIdx.map[code] || {};
   const f = boqFlagsOf((boqData || {}).flags, boqFlags, code) || {};
   return {
-    mark: String((m && m.mark) || "").trim() || String(ll.typeMark || "").trim(),
-    desc: String((m && m.desc) || "").trim() || String(ll.desc || "").trim() || b.he || "",
-    cat: (m && m.cat) || ll.category || f.category || b.cat || ""
+    mark: String(ll.typeMark || "").trim() || String((m && m.mark) || "").trim(),
+    desc: String(ll.desc || "").trim() || String((m && m.desc) || "").trim() || b.he || "",
+    cat: ll.category || (m && (m.catOwn || m.cat)) || f.category || b.cat || ""
   };
 }
 function subsSbRows(trade, submittals, rowMeta, approvals, chkOff, lliRows, boqData, boqFlags) {
@@ -21709,7 +21714,7 @@ function sbBoardGrid(opts) {
 // be a table of its own above the list; it is now simply the first rows of it.
 // -----------------------------------------------------------------------------
 function sbBoardRows(opts) {
-  const { list, boqData, boqFlags, chkOff, lliRows, categories, lang } = opts;
+  const { list, boqData, boqFlags, chkOff, lliRows, categories, lang, rowMeta } = opts;
   const lli = lliRows || {};
   const auto = (boqData || {}).flags || {};
   const norm = (x) => String(x || "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -21820,6 +21825,10 @@ function sbBoardRows(opts) {
   out.forEach((r) => {
     const lead = r.lead;
     r.mark = r.ownMark || famVal(lead, (y) => y.typeId) || "";
+    // 07.11.26 — the category column: the one on the LLI row, else the one
+    // picked on this board, else the folder the row sits in.
+    const ownLli = r.code ? (lli[r.code] || null) : null;
+    r.catKey = (ownLli && ownLli.category) || (r.code && ((rowMeta || {})[r.code] || {}).catOwn) || (r.cat && r.cat.key) || "";
     r.desc = r.ownDesc || (lead && lead.itemDescription) || (r.node ? boqText(r.node, lang) : "") || (lead && lead.boqText) || "";
     r.boq = r.kind === "line" ? (r.fromLli ? boqRefShown((lli[r.code] || {}).boqRef, lang) : r.code) : ((lead && lead.boqCode) || "");
     // 02.11.26 — no submittal picture yet: the one on the LLI row.
@@ -21883,6 +21892,8 @@ var SB_PHOTO_L = { en: "Photo", he: "תמונה" };
 var SB_BOARD_COLS = [
   { key: "submittalNo", label: (lg) => sbText(SB_L.submittalNo, lg), width: 15, kind: "text" },
   { key: "chkItem", label: (lg) => sbText(SB_L.chkItem, lg), width: 13, kind: "text" },
+  // 07.11.26 — the category, beside the type mark: the one set on LLI.
+  { key: "catCol", label: (lg) => sbText({ en: "Category", he: "\u05e7\u05d8\u05d2\u05d5\u05e8\u05d9\u05d4" }, lg), width: 12, kind: "text" },
   { key: "typeCol", label: (lg) => sbText(SB_L.typeCol, lg), width: 12, kind: "text" },
   { key: "chkDesc", label: (lg) => sbText(SB_L.chkDesc, lg), width: 34, kind: "text" },
   // 22.10.26 — the model, right after the description.
@@ -21896,6 +21907,8 @@ var SB_BOARD_COLS = [
   { key: "status", label: (lg) => sbText(SB_L.status, lg), width: 13, kind: "text" },
   { key: "clientOkCol", label: (lg) => sbText({ en: "Client approval", he: "\u05d0\u05d9\u05e9\u05d5\u05e8 \u05dc\u05e7\u05d5\u05d7" }, lg), width: 11, kind: "date" }
 ];
+// The four date and status columns take only the room they need.
+var SB_NARROW_COLS = { sentCol: 1, targetCol: 1, status: 1, clientOkCol: 1 };
 // 05.11.26 — the rows she took the print V off on the board. Every row prints
 // until then. Held for this page visit only.
 var sbPrintOffMap = {};
@@ -21913,6 +21926,7 @@ function sbBoardGridRaw(opts) {
     const cells = {
       submittalNo: lead ? sbNumber(lead.category, lead.seq) : "",
       chkItem: r.boq || "",
+      catCol: boardCatLabel(r.catKey, "", lang) || "",
       typeCol: r.mark,
       chkDesc: r.desc,
       modelCol: r.model,
@@ -22137,7 +22151,7 @@ function SubmittalFolder({
   // was filed here. A client sees only what was actually filed.
   // 06.11.26 — a row she took off the client's view is not on it.
   const cOff = clientOff || {};
-  const rowsAll = sbBoardRows({ list, boqData, boqFlags, chkOff, lliRows, categories: scope, lang })
+  const rowsAll = sbBoardRows({ list, boqData, boqFlags, chkOff, lliRows, categories: scope, lang, rowMeta })
     .filter((r) => canEdit || (r.lead && !cOff[r.key]));
   // Grouped by discipline, the groups in the order they first appear — the
   // same order the workbook and the PDF use.
@@ -22304,6 +22318,38 @@ function SubmittalFolder({
         : (he ? "\u05d4\u05dc\u05e7\u05d5\u05d7 \u05d0\u05d9\u05e9\u05e8" : "The client approved"), Check3, () => rec && onApprove && onApprove(r.approved || rec), !rec)
     );
   };
+  // 07.11.26 — the category of the row, as on LLI, and changed here as it is
+  // changed there: on the LLI row, and on the routing of the line so the row
+  // moves to that folder. A line already answered by a submittal keeps its
+  // folder (the number was issued in it): only its category changes.
+  const setCat = (r, key) => {
+    const code = r.code;
+    if (!code) return;
+    const cur = lli[code];
+    if (cur && onChangeLliRows) onChangeLliRows({ ...lli, [code]: { ...cur, category: key || null, subCategory: cur.category === key ? cur.subCategory : "" } });
+    if (onChangeRowMeta) onChangeRowMeta({ ...(rowMeta || {}), [code]: { ...((rowMeta || {})[code] || {}), catOwn: key || "", cat: key || "" } });
+    if (!r.hits.length && r.product && !r.fromLli && onChangeBoqFlags && key) {
+      const auto = (boqData || {}).flags || {};
+      const next = { ...(boqFlags || {}) };
+      (r.product.items || []).forEach((it) => {
+        const f = boqFlagsOf(auto, next, it.code);
+        next[it.code] = { submittal: f.submittal, sd: f.sd, lli: f.lli, group: f.group, category: key, main: f.main, accessory: f.accessory };
+      });
+      onChangeBoqFlags(next);
+    }
+  };
+  const catCell = (r) => {
+    const label = boardCatLabel(r.catKey, "", lang);
+    if (!canEdit || !r.code) return sbH("span", { className: "sbCatRo" }, label || "\u2014");
+    const opts = boardCatOptions(lang).filter((o) => !o.sub);
+    return sbH("select", {
+      className: "sbCatSel", value: r.catKey || "", title: label,
+      onChange: (e) => setCat(r, e.target.value)
+    },
+      r.catKey ? null : sbH("option", { value: "" }, "\u2014"),
+      opts.some((o) => o.cat === r.catKey) || !r.catKey ? null : sbH("option", { value: r.catKey }, label || r.catKey),
+      opts.map((o) => sbH("option", { key: o.cat, value: o.cat }, o.label)));
+  };
   const rowOf = (r) => {
     const rec = r.lead;
     const others = r.hits.filter((x) => !rec || x.id !== rec.id)
@@ -22381,6 +22427,7 @@ function SubmittalFolder({
           : null,
         lliChip(r)
       ),
+      sbH("td", { className: "sbCatCell" }, catCell(r)),
       sbH("td", { className: "sbItemCell", dir: "auto" }, r.mark || "—"),
       sbH(
         "td",
@@ -22404,11 +22451,11 @@ function SubmittalFolder({
         })
       ),
       sbH("td", { className: "sbThumbCell" }, r.img ? sbH("img", { className: "sbThumb", src: r.img, alt: "" }) : sbH("span", { className: "sbChkDash" }, "—")),
-      sbH("td", { dir: "ltr" }, rec ? fmtSent(rec) : "—"),
-      sbH("td", { dir: "ltr" }, r.due ? sbFmtDate(r.due) : "—"),
+      sbH("td", { dir: "ltr", className: "sbNarrow" }, rec ? fmtSent(rec) : "—"),
+      sbH("td", { dir: "ltr", className: "sbNarrow" }, r.due ? sbFmtDate(r.due) : "—"),
       sbH(
         "td",
-        { className: "sbStatusCell" },
+        { className: "sbStatusCell sbNarrow" },
         !rec
           ? sbH("span", { className: "sbChkMissing" }, L("chkMissing"))
           : sbH("div", { className: "sbStatusWrap" },
@@ -22416,7 +22463,7 @@ function SubmittalFolder({
               r.approved && r.approved.id !== rec.id ? sbH("span", { className: "sbChkStatRev" }, `Rev.${(Number(r.approved.rev) || 0) + 1}`) : null,
               !rec.sent && !r.approved ? sbH("span", { className: "sbDraftTag" }, L("draft")) : null)
       ),
-      sbH("td", { dir: "ltr" }, r.signed ? sbFmtDate(String(r.signed).slice(0, 10)) : "—"),
+      sbH("td", { dir: "ltr", className: "sbNarrow" }, r.signed ? sbFmtDate(String(r.signed).slice(0, 10)) : "—"),
       sbH("td", { className: "sbActions" }, actions(r, rec, true))
     );
     const kids = [];
@@ -22431,10 +22478,10 @@ function SubmittalFolder({
           sbH("td", { className: "sbFloorCell" }),
           sbH("td", { className: "sbChkLineTag" }, li === 0 ? L("belongTo") : ""),
           sbH("td", { dir: "ltr", className: "sbChkCode" }, l.label),
-          sbH("td", { className: "sbChkDesc", colSpan: 2, title: boqText(l.node, lang) },
+          sbH("td", { className: "sbChkDesc", colSpan: 3, title: boqText(l.node, lang) },
             sbH("span", { className: "sbChkDescText" }, boqText(l.node, lang)),
             sbH("span", { className: `sbChkSpec ${eq ? "eq" : ""}` }, eq ? L("chkEquiv") : L("chkSpecific"))),
-          sbH("td", { colSpan: ncols - 6 })
+          sbH("td", { colSpan: ncols - 7 })
         ));
       });
     }
@@ -22452,16 +22499,17 @@ function SubmittalFolder({
             sbH("span", { className: "sbNoMain" }, sbNumber(s.category, s.seq)),
             sbH("span", { className: "sbNoRev" }, `Rev.${(Number(s.rev) || 0) + 1}`)),
           sbH("td", { dir: "ltr" }, s.boqCode || "—"),
+          sbH("td", { className: "sbCatCell" }, boardCatLabel(s.category, "", lang) || "—"),
           sbH("td", { className: "sbItemCell", dir: "auto" }, s.typeId || "—"),
           sbH("td", { className: "sbItemCell", dir: "auto" }, s.itemDescription || "—"),
           sbH("td", { className: "sbItemCell", dir: "ltr" }, s.modelCode || "\u2014"),
           sbH("td", null, sbTradesLabel(s) || "—"),
           sbH("td", { className: "sbThumbCell" }, s.image && s.image.thumb ? sbH("img", { className: "sbThumb", src: s.image.thumb, alt: "" }) : sbH("span", { className: "sbChkDash" }, "—")),
-          sbH("td", { dir: "ltr" }, fmtSent(s)),
-          sbH("td", { dir: "ltr" }, s.requiredApprovalDate ? sbFmtDate(String(s.requiredApprovalDate).slice(0, 10)) : "—"),
-          sbH("td", { className: "sbStatusCell" }, sbH("div", { className: "sbStatusWrap" }, chip(st, s),
+          sbH("td", { dir: "ltr", className: "sbNarrow" }, fmtSent(s)),
+          sbH("td", { dir: "ltr", className: "sbNarrow" }, s.requiredApprovalDate ? sbFmtDate(String(s.requiredApprovalDate).slice(0, 10)) : "—"),
+          sbH("td", { className: "sbStatusCell sbNarrow" }, sbH("div", { className: "sbStatusWrap" }, chip(st, s),
             !s.sent && !signedAt ? sbH("span", { className: "sbDraftTag" }, L("draft")) : null)),
-          sbH("td", { dir: "ltr" }, signedAt ? sbFmtDate(signedAt.slice(0, 10)) : "—"),
+          sbH("td", { dir: "ltr", className: "sbNarrow" }, signedAt ? sbFmtDate(signedAt.slice(0, 10)) : "—"),
           sbH("td", { className: "sbActions" }, actions(r, s, false))
         ));
       });
@@ -22499,11 +22547,11 @@ function SubmittalFolder({
                 "th",
                 canEdit
                   ? {
-                      key: c.key, className: `sbColTh prColTh ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim(),
+                      key: c.key, className: `sbColTh prColTh ${SB_NARROW_COLS[c.key] ? "sbNarrow" : ""} ${hidden.indexOf(c.key) >= 0 ? "off" : ""}`.trim(),
                       title: prColTitle(lang, hidden.indexOf(c.key) < 0),
                       onClick: () => onToggleCol && onToggleCol(c.key)
                     }
-                  : { key: c.key, className: "sbColTh" },
+                  : { key: c.key, className: `sbColTh ${SB_NARROW_COLS[c.key] ? "sbNarrow" : ""}`.trim() },
                 c.label(lang)
               )),
               sbH("th", { className: "cAct" }, "")

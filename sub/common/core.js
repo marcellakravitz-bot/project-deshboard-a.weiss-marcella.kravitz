@@ -453,7 +453,8 @@ AW.itemList = function(o){
     // and the line under the type mark is the description.
     var sdSub=String(r.description||"").split("\n")[0];
     var pic = o.kind==="sd" ? '<span class="pic catIc">'+AW.catIcon(r.category, (r.catHe||"")+" "+(r.description||""))+'</span>'
-      : (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':'<span class="pic catIc">'+AW.catIcon(r.category, "")+'</span>');
+      // 07.11.26 — a submittal with no picture: a picture icon in the square.
+      : (r.image?'<img class="pic" src="'+E(r.image)+'" alt="">':'<span class="pic catIc noImg">'+AW.icon("M4 5h16v14H4zM4 16l5-5 4 4 3-3 4 4M15.5 9.5a1.5 1.5 0 1 0 0-.01")+'</span>');
     h+='<button class="item" data-id="'+E(id)+'"'+(tn?' style="background:'+tn.bg+';border-color:'+tn.bd+'"':'')+'>'+pic+
       '<span class="tx"><b>'+E(o.kind==="sd" ? (r.typeId||"—") : (r.typeId||r.no||AW.shortLine(r.description)||r.code||"—"))+'</b><span>'+E(o.kind==="sd" ? (sdSub||"—") : catName(r.category, r))+'</span></span>'+
       '<span class="st" style="color:'+st.c+';background:'+st.bg+'">'+E(st.t)+'</span></button>';
