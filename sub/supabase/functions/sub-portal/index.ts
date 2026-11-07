@@ -769,7 +769,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 49,
+    fn: "sub-portal", version: 50,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
