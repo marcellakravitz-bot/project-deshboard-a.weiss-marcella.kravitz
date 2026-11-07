@@ -577,7 +577,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "06.11.2026 · build 273";
+var APP_BUILD = "06.11.2026 · build 274";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6031,13 +6031,19 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
           (draft.atts || []).map((a, i) => React9.createElement(SubsAttachment, { key: a.path, att: a, onRemove: () => setDraft({ ...draft, atts: draft.atts.filter((_, j) => j !== i) }) })),
           React9.createElement("div", {
             tabIndex: 0,
-            onClick: () => { if (!pasteArmed) setPasteArmed(true); else if (fileRef.current) fileRef.current.click(); },
+            // 07.11.26 — as every picture box: a click asks where from (the
+            // computer, the image library, the clipboard), a right-click opens
+            // the menu, Ctrl+V pastes.
+            onClick: (e) => imgAsk(e, { projectId, multiple: true, onFile: (f) => addFiles(Array.isArray(f) ? f : [f]) }),
+            ...imgPickProps({ projectId, multiple: true, onFile: (f) => addFiles(Array.isArray(f) ? f : [f]) }),
             style: { width: 104, height: 104, border: pasteArmed ? "2px solid var(--steel)" : "1px dashed var(--line)", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 24, color: "var(--mist)", outline: "none", textAlign: "center", padding: 6 }
           },
             busy ? "\u2026" : "+",
-            pasteArmed && React9.createElement("span", { style: { fontSize: 10, lineHeight: 1.4, marginTop: 4 } }, "\u05d4\u05d3\u05d1\u05d9\u05e7\u05d9 \u05d0\u05d5 \u05dc\u05d7\u05e6\u05d9 \u05e9\u05d5\u05d1 \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4")),
-          React9.createElement("input", { ref: fileRef, type: "file", accept: "image/*,application/pdf", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } })),
-        React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d0\u05d5 PDF \u2014 \u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u05de\u05d0\u05e4\u05e9\u05e8\u05ea \u05d4\u05d3\u05d1\u05e7\u05d4, \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea \u05e4\u05d5\u05ea\u05d7\u05ea \u05d4\u05e2\u05dc\u05d0\u05ea \u05e7\u05d5\u05d1\u05e5.")),
+            React9.createElement("span", { style: { fontSize: 10, lineHeight: 1.4, marginTop: 4 } }, "\u05ea\u05de\u05d5\u05e0\u05d4")),
+          // A PDF is not a picture: its own small button.
+          React9.createElement("button", { type: "button", onClick: () => fileRef.current && fileRef.current.click(), style: { width: 104, height: 104, border: "1px dashed var(--line)", borderRadius: 10, background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--mist)", fontFamily: "inherit" } }, busy ? "\u2026" : "+ PDF"),
+          React9.createElement("input", { ref: fileRef, type: "file", accept: "application/pdf,image/*", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } })),
+        React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05ea\u05de\u05d5\u05e0\u05d5\u05ea \u05d0\u05d5 PDF \u2014 לחיצה על ״תמונה״ — מהמחשב, ממאגר התמונות או הדבקה; קליק ימני פותח תפריט; Ctrl+V מדביק.")),
       err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12, textAlign: "center" } }, err),
       React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: busy || !draft.subject.trim(), onClick: () => {
@@ -6136,13 +6142,19 @@ function SubsSpecsList({ trade, tradeLabel, projectId, canEdit, entries, onChang
           (draft.atts || []).map((a, i) => React9.createElement(SubsAttachment, { key: a.path, att: a, onRemove: () => setDraft({ ...draft, atts: draft.atts.filter((_, j) => j !== i) }) })),
           React9.createElement("div", {
             tabIndex: 0,
-            onClick: () => { if (!pasteArmed) setPasteArmed(true); else if (fileRef.current) fileRef.current.click(); },
+            // 07.11.26 — as every picture box: a click asks where from (the
+            // computer, the image library, the clipboard), a right-click opens
+            // the menu, Ctrl+V pastes.
+            onClick: (e) => imgAsk(e, { projectId, multiple: true, onFile: (f) => addFiles(Array.isArray(f) ? f : [f]) }),
+            ...imgPickProps({ projectId, multiple: true, onFile: (f) => addFiles(Array.isArray(f) ? f : [f]) }),
             style: { width: 104, height: 104, border: pasteArmed ? "2px solid var(--steel)" : "1px dashed var(--line)", borderRadius: 10, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", cursor: "pointer", fontSize: 24, color: "var(--mist)", outline: "none", textAlign: "center", padding: 6 }
           },
             busy ? "\u2026" : "+",
-            pasteArmed && React9.createElement("span", { style: { fontSize: 10, lineHeight: 1.4, marginTop: 4 } }, "\u05d4\u05d3\u05d1\u05d9\u05e7\u05d9 \u05d0\u05d5 \u05dc\u05d7\u05e6\u05d9 \u05e9\u05d5\u05d1 \u05dc\u05d4\u05e2\u05dc\u05d0\u05d4")),
-          React9.createElement("input", { ref: fileRef, type: "file", accept: "image/*,application/pdf", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } })),
-        React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05de\u05e1\u05de\u05da \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4 \u2014 \u05dc\u05d7\u05d9\u05e6\u05d4 \u05d0\u05d7\u05ea \u05de\u05d0\u05e4\u05e9\u05e8\u05ea \u05d4\u05d3\u05d1\u05e7\u05d4, \u05dc\u05d7\u05d9\u05e6\u05d4 \u05e0\u05d5\u05e1\u05e4\u05ea \u05e4\u05d5\u05ea\u05d7\u05ea \u05d4\u05e2\u05dc\u05d0\u05ea \u05e7\u05d5\u05d1\u05e5.")),
+            React9.createElement("span", { style: { fontSize: 10, lineHeight: 1.4, marginTop: 4 } }, "\u05ea\u05de\u05d5\u05e0\u05d4")),
+          // A PDF is not a picture: its own small button.
+          React9.createElement("button", { type: "button", onClick: () => fileRef.current && fileRef.current.click(), style: { width: 104, height: 104, border: "1px dashed var(--line)", borderRadius: 10, background: "#fff", cursor: "pointer", fontSize: 12, fontWeight: 700, color: "var(--mist)", fontFamily: "inherit" } }, busy ? "\u2026" : "+ PDF"),
+          React9.createElement("input", { ref: fileRef, type: "file", accept: "application/pdf,image/*", multiple: true, style: { display: "none" }, onChange: (e) => { addFiles(e.target.files); e.target.value = ""; } })),
+        React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } }, "\u05de\u05e1\u05de\u05da \u05d0\u05d5 \u05ea\u05de\u05d5\u05e0\u05d4 \u2014 לחיצה על ״תמונה״ — מהמחשב, ממאגר התמונות או הדבקה; קליק ימני פותח תפריט; Ctrl+V מדביק.")),
       err && React9.createElement("p", { style: { margin: 0, color: "#c0392b", fontSize: 12, textAlign: "center" } }, err),
       React9.createElement("div", { style: { display: "flex", gap: 10, justifyContent: "center" } },
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: formBtnS, disabled: busy || !draft.subject.trim(), onClick: () => {
