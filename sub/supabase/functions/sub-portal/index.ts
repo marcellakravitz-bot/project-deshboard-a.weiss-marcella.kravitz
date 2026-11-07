@@ -530,7 +530,8 @@ async function sdFor(grant: any, key: string) {
   for (const [code, row] of Object.entries<any>(ex.sdRows || {})) {
     if (!row || row.removed || (row.subs || []).indexOf(key) < 0 || !onFloors(row.floors, F)) continue;
     const lli = (grant.lli || {})[code] || {};
-    const cat = row.category || lli.category || "";
+    // 07.11.26 — one category on the three boards: the LLI row's first.
+    const cat = lli.category || row.category || "";
     rows.push((async () => {
       const approvedByClient = !!sdAp[code];
       const ok = approvedByClient || APPROVED.indexOf(row.status) >= 0;

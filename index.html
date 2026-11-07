@@ -6497,7 +6497,7 @@ function subsSdRows(trade, sdRows, lliRows) {
     if (!v || v.removed || (v.subs || []).indexOf(trade) < 0) return;
     const lli = (lliRows || {})[code] || {};
     const desc = v.descOwn ? (v.desc || "") : (String(lli.desc || "").trim() || v.desc || "");
-    out.push({ key: code, category: v.category || lli.category || "", description: desc || code, status: v.status });
+    out.push({ key: code, category: lli.category || v.category || "", description: desc || code, status: v.status });
   });
   return out;
 }
