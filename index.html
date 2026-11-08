@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "08.11.2026 · build 288";
+var APP_BUILD = "09.11.2026 · build 289";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -18914,6 +18914,8 @@ function sbFoldersFor(boqData, boqFlags, lliRows, list) {
     let need = false;
     try { need = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", key).length > 0; } catch (e) { need = false; }
     if (!need) need = Object.keys(lliRows || {}).some((k) => k.indexOf("m-") === 0 && lliRows[k] && lliRows[k].alsoSubmittal && lliRows[k].category === key);
+    // 09.11.26 — or a priced line LLI puts in it.
+    if (!need) { try { need = boqProducts(boqData, (boqData || {}).flags || {}, boqFlags, "submittal", "all").some((p) => ((lliRows || {})[p.code] || {}).category === key); } catch (e) { need = false; } }
     if (!need) need = (list || []).some((x) => x && x.category === key);
     return need;
   };
@@ -21846,6 +21848,18 @@ function sbBoardRows(opts) {
     .filter((x) => { const st = sbStatusOf(x); return st === "approved" || st === "approvedNoted"; })
     .sort((a, b) => String(sbSignedAt(b) || "").localeCompare(String(sbSignedAt(a) || "")))[0] || null;
   const out = [];
+  // 09.11.26 — a line sits in the folder of its category as LLI has it (C-3…
+  // C-12 are "תקרה" on LLI and were filed under architecture by the chapter),
+  // unless a submittal on it is already filed: then it stays where that
+  // submittal is.
+  const allProducts = boqProducts(boqData, auto, boqFlags, "submittal", "all");
+  const filedIn = {};
+  (list || []).forEach((s) => { [s.boqCode, s.lliKey].forEach((c) => { if (c && !filedIn[c]) filedIn[c] = s.category; }); });
+  const folderOf = (p) => {
+    const codes = [p.code].concat((p.items || []).map((it) => it.code));
+    const f = codes.map((c) => filedIn[c]).find(Boolean);
+    return f || ((lli[p.code] || {}).category) || p.category;
+  };
   (categories || []).forEach((cat) => {
     const off = ((chkOff || {})[cat.key]) || {};
     const mine = (list || []).filter((s) => s.category === cat.key);
@@ -21880,7 +21894,7 @@ function sbBoardRows(opts) {
       out.push(r);
     };
     // Priced lines, one row per product.
-    boqProducts(boqData, auto, boqFlags, "submittal", cat.key)
+    allProducts.filter((p) => folderOf(p) === cat.key)
       .filter((p) => !off[p.code])
       .forEach((p) => {
         const node = { he: p.he, en: p.en };
