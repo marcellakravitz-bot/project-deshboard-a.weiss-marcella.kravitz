@@ -58,6 +58,11 @@ async function ask(
   // which is the only honest way to recommend a document that exists. Left off
   // for every other job in this file: nothing else may touch the internet.
   webSearch = 0,
+  // 08.11.26 — how hard the model thinks before it answers. Left to its
+  // default ("high") a fill spent ~10,500 tokens thinking for ~1,200 of
+  // answer: 133 s on 07.11, and over the 150 s the platform allows on 08.11,
+  // when the call was cut off and the screen said "not connected".
+  effort = "",
 ): Promise<string> {
   // One user message, and nothing after it. Starting the answer for the model
   // (an "assistant" message carrying the opening brace) is refused outright by
@@ -65,7 +70,15 @@ async function ask(
   // to stop a preamble is to ask for no preamble, in the instructions, and to
   // strip one off if it arrives anyway (see parseJson).
   const messages: unknown[] = [{ role: "user", content }];
-  const res = await fetch(API, {
+  // 08.11.26 — never past the platform's 150 s: at 140 s the call is stopped
+  // and the screen is told so in words (a call the platform kills comes back
+  // with no answer at all).
+  const ctl = new AbortController();
+  const timer = setTimeout(() => ctl.abort(), 140_000);
+  let res: Response;
+  try {
+  res = await fetch(API, {
+    signal: ctl.signal,
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -80,9 +93,21 @@ async function ask(
       ...(webSearch
         ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: webSearch }] }
         : {}),
+      ...(effort ? { output_config: { effort } } : {}),
     }),
   });
-  const text = await res.text();
+  } catch (e) {
+    clearTimeout(timer);
+    if ((e as Error)?.name === "AbortError") throw new Error("timeout");
+    throw e;
+  }
+  let text = "";
+  try { text = await res.text(); } catch (e) {
+    clearTimeout(timer);
+    if ((e as Error)?.name === "AbortError") throw new Error("timeout");
+    throw e;
+  }
+  clearTimeout(timer);
   if (!res.ok) throw new Error(`upstream ${res.status}: ${text.slice(0, 400)}`);
   const data = JSON.parse(text);
   // "max_tokens" here means the answer was cut off mid-sentence. That is the
@@ -584,7 +609,9 @@ ${rules.map((r: string) => "- " + r).join("\n")}`
   // answer reached the 12,000-token ceiling and stopped mid-JSON. Twice the room,
   // and if it is still cut short, every product that WAS finished is kept rather
   // than losing the lot. Whatever happens is written to the log.
-  const raw = await ask(key, system, content, 24000);
+  // 08.11.26 — "low": reading what the papers say needs little thinking, and
+  // the answer comes in a fraction of the time.
+  const raw = await ask(key, system, content, 24000, 0, "low");
   const cut = lastStop === "max_tokens";
   console.log("[submittal-ai] fill", JSON.stringify({ stop: lastStop, usage: lastUsage, chars: raw.length, files: files.length, images: images.length, specChars: specText.length }));
   let out = cut ? null : parseJson(raw);
@@ -1482,6 +1509,7 @@ Deno.serve(async (req: Request) => {
     return await modeFill(key, body);
   } catch (e) {
     console.error("[submittal-ai]", e);
-    return json({ error: String((e as Error)?.message || e) }, 500);
+    const msg = String((e as Error)?.message || e);
+    return json({ error: msg }, msg === "timeout" ? 504 : 500);
   }
 });
