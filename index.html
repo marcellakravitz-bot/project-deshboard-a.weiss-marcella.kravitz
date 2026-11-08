@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "09.11.2026 · build 289";
+var APP_BUILD = "09.11.2026 · build 290";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -21853,6 +21853,8 @@ function sbBoardRows(opts) {
   // unless a submittal on it is already filed: then it stays where that
   // submittal is.
   const allProducts = boqProducts(boqData, auto, boqFlags, "submittal", "all");
+  const onBoard = {};
+  allProducts.forEach((p) => { [p.code].concat((p.items || []).map((it) => it.code)).forEach((c) => { if (c) onBoard[c] = true; }); });
   const filedIn = {};
   (list || []).forEach((s) => { [s.boqCode, s.lliKey].forEach((c) => { if (c && !filedIn[c]) filedIn[c] = s.category; }); });
   const folderOf = (p) => {
@@ -21918,7 +21920,11 @@ function sbBoardRows(opts) {
         const v = lli[k] || {};
         const text = v.desc || "";
         const node = { he: text, en: text };
-        const ref = boqRefCode(v.boqRef);
+        // 09.11.26 — the line of the bill of quantities it refers to is a row of
+        // its own: what was filed on that line is that row's, not this one's
+        // (C-8D showed C-8F's CEILING-004 because both refer to 22.02.0090).
+        const ref0 = boqRefCode(v.boqRef);
+        const ref = ref0 && !onBoard[ref0] ? ref0 : "";
         const row = {
           key: `${cat.key}:${k}`, cat, kind: "line", code: k, node, fromLli: true,
           product: { code: k, he: text, en: text, items: [], flags: {} }, lines: [],
