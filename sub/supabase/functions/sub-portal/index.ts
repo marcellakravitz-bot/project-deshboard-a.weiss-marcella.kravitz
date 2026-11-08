@@ -431,8 +431,15 @@ async function submittalsFor(grant: any, key: string) {
   const sbAp = ex.submittalApprovals || {};
   const offCodes: Record<string, boolean> = {};
   for (const m of Object.values<any>(ex.submittalChkOff || {})) if (m && typeof m === "object") Object.keys(m).forEach((c) => { offCodes[c] = true; });
-  const subsOf = (r: any) => Array.isArray(r.subs) ? r.subs : ((rowMeta[r.boqCode] || {}).subs || []);
-  const floorsOf = (r: any) => Array.isArray(r.floors) ? r.floors : (rowMeta[r.boqCode] || {}).floors;
+  // 09.11.26 — who sees a submittal: the ticks on the submittal itself and the
+  // ones on its line (by item number or LLI row), together.
+  const subsOf = (r: any) => {
+    const out: string[] = [];
+    [Array.isArray(r.subs) ? r.subs : [], (rowMeta[r.boqCode] || {}).subs || [], (rowMeta[r.lliKey] || {}).subs || []]
+      .forEach((l: any[]) => l.forEach((k) => { if (out.indexOf(k) < 0) out.push(k); }));
+    return out;
+  };
+  const floorsOf = (r: any) => Array.isArray(r.floors) ? r.floors : ((rowMeta[r.boqCode] || {}).floors || (rowMeta[r.lliKey] || {}).floors);
   const decisionOf = (r: any) => ((sbAp[r?.id] || {}).review || {}).decision || ((r?.reviews || [])[0] || {}).decision || null;
   const fam: Record<string, any> = {};
   const sentCode: Record<string, boolean> = {};
@@ -442,7 +449,35 @@ async function submittalsFor(grant: any, key: string) {
     const k = r.boqCode ? "b:" + r.boqCode : `s:${r.category}:${r.seq}`;
     if (!fam[k] || (Number(r.rev) || 0) > (Number(fam[k].rev) || 0)) fam[k] = r;
   }
+  // 09.11.26 — a submittal she opened by hand (no item number) and has not
+  // sent yet: shown as not submitted, like a line still waiting for one. A
+  // line of the bill of quantities already shows as such below.
   const rows: Promise<any>[] = [];
+  const drafts: Record<string, any> = {};
+  for (const r of (ex.submittals || [])) {
+    if (!r || r.sent || r.hidden || r.boqCode) continue;
+    const k = `s:${r.category}:${r.seq}`;
+    if (fam[k]) continue;
+    if (!drafts[k] || (Number(r.rev) || 0) > (Number(drafts[k].rev) || 0)) drafts[k] = r;
+  }
+  for (const [hk, r] of Object.entries<any>(drafts)) {
+    if (subsOf(r).indexOf(key) < 0 || !onFloors(floorsOf(r), F)) continue;
+    if (r.lliKey) sentCode[r.lliKey] = true;   // its LLI line is this row, not a second one
+    const code = r.lliKey || "";
+    const ll = code ? ((grant.lli || {})[code] || {}) : {};
+    const mm = code ? (rowMeta[code] || {}) : {};
+    rows.push((async () => ({
+      id: r.id, hk, no: `${String(r.category || "").toUpperCase()}-${String(r.seq || "").padStart(3, "0")}`,
+      category: String(ll.category || mm.catOwn || r.category || "").trim(),
+      typeId: String(ll.typeMark || "").trim() || String(r.typeId || "").trim(),
+      description: String(ll.desc || "").trim() || r.itemDescription || r.scope || "",
+      decision: null, submitted: false, rev: Number(r.rev) || 0,
+      image: r.image && r.image.path ? await signed(r.image.path)
+        : (r.image && typeof r.image.thumb === "string" && r.image.thumb.length < 400000 ? r.image.thumb
+        : (typeof ll.image === "string" && ll.image.length < 400000 ? ll.image : null)),
+      doc: null, files: [],
+    }))());
+  }
   for (const [hk, r] of Object.entries<any>(fam)) {
     if (subsOf(r).indexOf(key) < 0 || !onFloors(floorsOf(r), F)) continue;
     if (r.boqCode && offCodes[r.boqCode]) continue;
@@ -770,7 +805,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 51,
+    fn: "sub-portal", version: 52,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,

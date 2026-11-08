@@ -136,7 +136,9 @@ var AW = (function(){
     box.className="docView";
     box.innerHTML='<div class="docTop"><button class="docX" type="button" aria-label="סגירה">✕</button></div><div class="docBody"><p class="lead">טוען את הטופס…</p></div>';
     document.body.appendChild(box);
-    var close=function(){ box.remove(); };
+    // 09.11.26 — like a window: the phone's back closes it, the list stays.
+    history.pushState({awPop:1},"");
+    var close=function(){ if(!box.parentNode) return; box.remove(); if(history.state && history.state.awPop){ closingPop=true; history.back(); } };
     box.querySelector(".docX").onclick=close;
     fetch(url).then(function(r){ return r.text(); }).then(function(html){
       var W=794, body=box.querySelector(".docBody");
@@ -162,7 +164,12 @@ var AW = (function(){
     box.className="pop"+(center?" popC":"");
     box.innerHTML='<div class="popCard">'+(title?'<h3>'+title+'</h3>':'')+html+'<button class="x" type="button">סגירה</button></div>';
     document.body.appendChild(box);
-    var close=function(){ box.remove(); };
+    // 09.11.26 — a window is a step of its own in the history: the phone's
+    // back closes it and stays on the screen under it (it used to close the
+    // window AND leave the screen, which looked like a jump home).
+    history.pushState({awPop:1},"");
+    box.__aw=true;
+    var close=function(){ if(!box.parentNode) return; box.remove(); if(history.state && history.state.awPop) { closingPop=true; history.back(); } };
     box.onclick=function(e){ if(e.target===box) close(); };
     box.querySelector(".x").onclick=close;
     return box;
@@ -296,11 +303,18 @@ var AW = (function(){
     if(renderFn) renderFn(view());
     window.scrollTo(0, keepScroll?y:0);
   }
-  window.addEventListener("popstate", function(){
-    if(document.querySelector(".pop")){ document.querySelector(".pop").remove(); }
-    if(stack.length){ stack.pop(); render(); return; }
-    // Out of the app: back to the projects.
-    toEntry();
+  var closingPop=false;
+  // 09.11.26 — the screen is read from the step the browser landed on, so
+  // the app and the browser never disagree about where "back" leads.
+  window.addEventListener("popstate", function(e){
+    var open=document.querySelector(".pop, .docView");
+    if(open) open.remove();
+    if(closingPop){ closingPop=false; return; }
+    var st=e.state||{};
+    if(st.awPop) return;
+    var n=Number(st.aw)||0;
+    if(n<stack.length){ stack.length=n; render(); return; }
+    if(!open && n===0 && !stack.length) toEntry();
   });
   function toEntry(){
     location.href="../index.html"+(PREVIEW?"?preview="+encodeURIComponent(PREVIEW.who):"");
