@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "08.11.2026 · build 285";
+var APP_BUILD = "08.11.2026 · build 286";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -19199,6 +19199,14 @@ function sbAddDays(iso, days) {
 // Every date on the site, in the one shape she reads: dd/mm/yy. The century is
 // never in question on a construction project, and the two extra digits cost a
 // column its width (29.8.26).
+// 08.11.26 — a revision opened and not yet sent (no decision on it either) is
+// the next revision: pressing "Rev." again opens it rather than adding another
+// (two drafts 19 s apart made HVAC-004's next submission "Rev.4").
+function sbPendingRev(list, rec) {
+  return (list || []).filter((s) => s.category === rec.category && s.seq === rec.seq && !s.sent && !s.hidden &&
+    !((s.reviews || [])[0] || {}).decision)
+    .sort((a, b) => (Number(b.rev) || 0) - (Number(a.rev) || 0))[0] || null;
+}
 function sbNextRev(list, rec) {
   const revs = (list || [])
     .filter((s) => s.category === rec.category && s.seq === rec.seq)
@@ -22403,7 +22411,7 @@ function SubmittalFolder({
       { className: "sbActGrid" },
       rec
         ? sbH("button", { type: "button", className: "sbRevLong", title: L("newRevision"), onClick: () => onNewRevision(rec) },
-            sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${sbNextRev(list, rec) + 1}`)
+            sbH(RotateCcw, { size: 13, strokeWidth: 2.2 }), ` Rev.${(() => { const p = sbPendingRev(list, rec); return p ? (Number(p.rev) || 0) + 1 : sbNextRev(list, rec) + 1; })()}`)
         : sbH("button", { type: "button", className: "sbRevLong", title: L("chkAdd"),
             onClick: () => onCreate({ code: r.code, text: r.node ? boqText(r.node, lang) : "", subCategory: "", lliMark: r.ownMark || "", lliDesc: r.ownDesc || "", lliImage: (lli[r.code] || {}).image || null,
               // 07.11.26 — the form says the category of the row.
@@ -23368,6 +23376,9 @@ function SubmittalCard({
     setOpenId(withPreset.id);
   };
   const startRevision = (s) => {
+    const pending = sbPendingRev(list, s);
+    if (pending && pending.id !== s.id) { setDraft(pending); setOpenId(pending.id); return; }
+    if (pending && pending.id === s.id) { setDraft(s); setOpenId(s.id); return; }
     const rec = {
       ...s,
       id: `sb-${Date.now()}-${Math.round(Math.random() * 1e4)}`,
@@ -23430,6 +23441,12 @@ function SubmittalCard({
       // A copy that could not be kept must never stop an approval going
       // through. The decision is the thing; the paper is a convenience.
       console.warn("[awdash] could not keep a copy of the signed submittal", e);
+    }
+    // 08.11.26 — a decision came back on it, so it went out: it is marked sent
+    // (HVAC-004's second submission carried a rejection and still read as a
+    // draft, and the next revision was numbered past it).
+    if (!rec.sent && rv && rv.decision) {
+      commit((submittals || []).map((x) => (x.id === rec.id ? { ...x, sent: true, sentAt: x.sentAt || now } : x)));
     }
     if (onChangeApprovals) {
       onChangeApprovals({
