@@ -306,6 +306,38 @@ const css = `
 .fac table.finTbl td{padding:5px 4px}
 .fac table.finTbl .facIn{min-width:0;padding:5px 6px}
 .fac table.finTbl td.lbl{min-width:170px}
+/* 08.11.26 — the finishes table: what came from LLI as text (two lines a row),
+   round ticks, narrow tick columns, the heading fixed while the rows scroll. */
+.fac .finSearch{display:flex;align-items:center;gap:6px;border:1px solid var(--line,#e6e6e9);border-radius:9px;padding:5px 10px;margin:0 0 8px;max-width:360px;background:#fff}
+.fac .finSearch input{border:0;outline:0;font:inherit;font-size:13px;flex:1;min-width:0;background:transparent}
+.fac .finSearch button{border:0;background:none;cursor:pointer;color:#8a8d94;display:flex;padding:0}
+.fac .facWin.finWin{max-height:calc(100vh - 210px);overflow:auto}
+.fac table.finTbl{table-layout:auto}
+.fac table.finTbl thead th{position:sticky;top:0;z-index:3;background:#f4f6f9;box-shadow:0 1px 0 var(--line,#e6e6e9)}
+.fac table.finTbl td{height:58px;padding:5px 6px}
+.fac table.finTbl th.fK,.fac table.finTbl td.fK{width:62px;padding-inline:2px}
+.fac table.finTbl th.fK{font-size:11px}
+.fac table.finTbl td.fC{width:96px}
+.fac table.finTbl td.fM{width:1%;white-space:nowrap}
+.fac table.finTbl td.fS{width:120px}
+.fac table.finTbl td.fP{width:56px}
+.fac table.finTbl td.fA{width:1%}
+.fac table.finTbl td.fD{min-width:260px}
+.fac .finTx{font-size:13px;line-height:1.35;white-space:pre-wrap;word-break:break-word}
+.fac .finTx.m{font-weight:800;white-space:nowrap}
+.fac .finTx.d{text-align:start;font-weight:600}
+.fac .finGone{display:inline-block;margin-top:3px;font-size:11px;font-weight:700;color:#b26b00;background:#fdf1dc;border-radius:99px;padding:1px 8px}
+.fac .finPic.ro{cursor:default}
+.fac .finPic.ro:hover{border-color:#e3e5ea}
+.fac table.finTbl .tri{min-width:0;width:30px;height:30px;border-radius:50%;padding:0;display:inline-flex;align-items:center;justify-content:center}
+.fac table.finTbl .tri.na{font-size:9.5px}
+.fac .svcWin{width:min(620px,100%)}
+.fac .svcHead{display:flex;align-items:center;gap:8px;justify-content:center;position:relative;margin-bottom:12px;font-size:15px}
+.fac .svcX{border:0;background:none;cursor:pointer;color:#5b5e66;display:flex;padding:2px;position:absolute;right:0;top:50%;transform:translateY(-50%)}
+.fac .svcRead{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px;max-width:480px;margin:0 auto}
+.fac .svcRead>div{display:flex;flex-direction:column;gap:2px;text-align:center}
+.fac .svcRead span{font-size:11.5px;font-weight:700;color:#5b5e66}
+.fac .svcRead b,.fac .svcRead a{font-size:14px;color:inherit;text-decoration:none;font-weight:700}
 .fac .facPickRow .d{font-weight:600}.fac .facPickRow .c,.fac .facPickRow .s{color:#5b5e66;font-size:12.5px}
 @media (max-width:700px){.fac .facSvcGrid{grid-template-columns:1fr 1fr}.fac .facPickRow{grid-template-columns:22px 1fr 52px}.fac .facPickRow .c,.fac .facPickRow .m,.fac .facPickRow .s{display:none}}
 `;
@@ -629,6 +661,7 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
   const [pick, setPick] = useState({});
   const [q, setQ] = useState("");
   const [svcFor, setSvcFor] = useState(null);     // supplier name whose service department is open
+  const [tq, setTq] = useState("");               // 08.11.26 — free search over the table
   const rows = data.finishes || [];
   const patch = (id, fn) => edit((d) => { d.finishes = (d.finishes || []).map((r) => (r.id === id ? fn({ ...r }) : r)); return d; });
   const remove = (r) => {
@@ -641,7 +674,29 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
   const shownAvail = avail.filter((it) => !qq || `${it.mark} ${it.desc} ${it.supplier} ${it.categoryLabel}`.toLowerCase().includes(qq));
   // A row picked from LLI shows LLI's picture until one of its own is set.
   const lliByCode = useMemo(() => { const m = {}; (lliItems || []).forEach((it) => { m[it.code] = it; }); return m; }, [lliItems]);
-  const imageOf = (r) => r.image || (r.code && !r.noImage && (lliByCode[r.code] || {}).image) || null;
+  // 08.11.26 — a row picked from LLI follows LLI: its category, type mark,
+  // description, supplier and picture are LLI's, kept up to date here (and so
+  // in the service departments and the prints, which read the stored row). A
+  // row whose LLI line was deleted keeps what it had and says so.
+  const fromLli = (r) => !!(r.code && lliByCode[r.code]);
+  useEffect(() => {
+    if (!lliItems) return;
+    const want = (r) => {
+      if (!r.code) return null;
+      const it = lliByCode[r.code];
+      if (!it) return r.lliGone ? null : { lliGone: true };
+      const next = { category: it.categoryLabel || "", mark: it.mark || "", desc: it.descFull || it.desc || "", supplier: it.supplier || "", image: it.image || null };
+      const ch = {};
+      Object.keys(next).forEach((k) => { if ((r[k] || "") !== (next[k] || "")) ch[k] = next[k]; });
+      if (r.lliGone) ch.lliGone = false;
+      return Object.keys(ch).length ? ch : null;
+    };
+    if (!rows.some((r) => want(r))) return;
+    edit((d) => { d.finishes = (d.finishes || []).map((r) => { const c = want(r); return c ? { ...r, ...c } : r; }); return d; });
+  }, [lliItems, rows.length]);
+  const imageOf = (r) => (fromLli(r) ? lliByCode[r.code].image : r.image) || null;
+  const tqq = tq.trim().toLowerCase();
+  const shownRows = rows.filter((r) => !tqq || [r.category, r.mark, r.desc, r.supplier, r.note].join(" ").toLowerCase().includes(tqq));
   const putImage = async (r, f) => {
     if (!f) return;
     try {
@@ -678,7 +733,7 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
     if (!chosen.length) { setPicking(false); return; }
     edit((d) => {
       d.finishes = (d.finishes || []).concat(chosen.map((it) => ({
-        id: uid(), code: it.code, mark: it.mark, desc: it.desc, supplier: it.supplier, category: it.categoryLabel, image: it.image || null, note: "", cells: {}
+        id: uid(), code: it.code, mark: it.mark, desc: it.descFull || it.desc, supplier: it.supplier, category: it.categoryLabel, image: it.image || null, note: "", cells: {}
       })));
       return d;
     });
@@ -710,9 +765,18 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
   const doExport = async (kind, hdr) => {
     if (!boardExport || !rows.length) return;
     const H = hdr || finTitles();
-    const head = ["קטגוריה", "איפיון", "תיאור הסעיף", "ספק", "תמונה"].concat(FIN_COLS.map(([, l]) => l)).concat(["הערות"]);
+    // 08.11.26 — the PDF: no maintenance / warranty / 755 columns, and the
+    // service department written out (name, phone, mobile, e-mail); upright.
+    const pdf = kind === "pdf";
+    const cols = pdf ? FIN_COLS.filter(([k]) => k === "service") : FIN_COLS;
+    const head = ["קטגוריה", "איפיון", "תיאור הסעיף", "ספק", "תמונה"].concat(cols.map(([, l]) => l)).concat(["הערות"]);
     const imgCol = 4;
-    const widths = [13, 8, 24, 14, 11, 10, 9, 8, 10, 18];
+    const widths = pdf ? [11, 9, 26, 12, 11, 18, 13] : [13, 8, 24, 14, 11, 10, 9, 8, 10, 18];
+    const svcTxt = (r) => {
+      const sv = ((supLibFind(lib, r.supplier) || {}).data || {}).service || {};
+      const lines = [sv.name, sv.phone && `טלפון ${sv.phone}`, sv.mobile && `נייד ${sv.mobile}`, sv.email].filter((x) => String(x || "").trim());
+      return lines.length ? lines.join("\n") : (finCell(r, "service", lib) === "na" ? "ל״ר" : "");
+    };
     const cellTxt = (v) => (v === "v" || v === "auto" ? "V" : v === "na" ? "ל״ר" : "");
     const cats = [];
     rows.forEach((r) => { const c = String(r.category || "").trim() || "ללא קטגוריה"; if (!cats.includes(c)) cats.push(c); });
@@ -720,7 +784,7 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
     rows.forEach((r) => {
       const c = String(r.category || "").trim() || "ללא קטגוריה";
       body.push([String(r.category || "").trim(), r.mark || "", r.desc || "", r.supplier || "", ""]
-        .concat(FIN_COLS.map(([k]) => cellTxt(finCell(r, k, lib)))).concat([r.note || ""]));
+        .concat(cols.map(([k]) => (pdf && k === "service" ? svcTxt(r) : cellTxt(finCell(r, k, lib))))).concat([r.note || ""]));
       imgs.push(imageOf(r));
       const st = finRowState(r, lib);
       tone.push(st === "done" ? "ok" : "");
@@ -733,7 +797,7 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
         boardExport.pdf({
           title: H.title, subtitle: H.subtitle, issuedLabel: H.date,
           fileName: boardExport.fileName(REPORT, ""),
-          head, body: O.body, widths, sections: O.secs, imgCol, imgs: O.imgs, toneRows, noStamp: true
+          head, body: O.body, widths, sections: O.secs, imgCol, imgs: O.imgs, toneRows, noStamp: true, portrait: true
         });
       } else {
         const res = await boardExport.xlsx({
@@ -780,22 +844,31 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
       </label>`)}</div>
     </div>`}
     <datalist id=${listId}>${supNames.map((h) => html`<option key=${h} value=${h} />`)}</datalist>
-    <div className="facWin"><table className="finTbl">
-      <thead><tr><th>קטגוריה</th><th>איפיון</th><th style=${{ textAlign: "start" }}>תיאור הסעיף</th><th>ספק</th><th>תמונה</th>
-        ${FIN_COLS.map(([k, l]) => html`<th key=${k}>${l}</th>`)}<th>הערות</th><th></th></tr></thead>
+    <div className="finSearch"><${Search} size=${14} /><input value=${tq} placeholder="חיפוש חופשי ברשימה" onChange=${(e) => setTq(e.target.value)} />
+      ${tq && html`<button type="button" title="ניקוי" onClick=${() => setTq("")}><${X} size=${13} /></button>`}</div>
+    <div className="facWin finWin"><table className="finTbl">
+      <thead><tr><th className="fC">קטגוריה</th><th className="fM">איפיון</th><th className="fD">תיאור הסעיף</th><th className="fS">ספק</th><th className="fP">תמונה</th>
+        ${FIN_COLS.map(([k, l]) => html`<th key=${k} className="fK">${l}</th>`)}<th>הערות</th><th className="fA"></th></tr></thead>
       <tbody>
         ${rows.length === 0 && html`<tr><td colSpan=${7 + FIN_COLS.length} className="facEmpty">הרשימה ריקה — לחצי על "בחירה מתוך LLI"</td></tr>`}
-        ${rows.map((r, i) => {
+        ${rows.length > 0 && shownRows.length === 0 && html`<tr><td colSpan=${7 + FIN_COLS.length} className="facEmpty">לא נמצאו שורות לחיפוש</td></tr>`}
+        ${shownRows.map((r) => {
           const rs = finRowState(r, lib);
+          // 08.11.26 — what came from LLI is text, not a field: it changes on LLI.
+          // A row added by hand (no LLI line) keeps its fields.
+          const ro = !!r.code;
+          const txt = (v, cls, dir) => html`<div className=${`finTx ${cls || ""}`} dir=${dir || "auto"}>${v || "—"}</div>`;
           return html`<tr key=${r.id} className=${rs === "done" ? "ok" : rs === "na" ? "na" : ""}>
-            <td style=${{ width: 100 }}><input className="facIn" style=${{ fontSize: 12.5 }} value=${r.category || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, category: e.target.value }))} /></td>
-            <td style=${{ width: 70 }}><input className="facIn" dir="ltr" value=${r.mark || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, mark: e.target.value }))} /></td>
-            <td className="lbl"><input className="facIn" value=${r.desc || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, desc: e.target.value }))} /></td>
-            <td><input className="facIn" list=${listId} value=${r.supplier || ""} placeholder="שם הספק"
+            <td className="fC">${ro ? txt(r.category) : html`<input className="facIn" style=${{ fontSize: 12.5 }} value=${r.category || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, category: e.target.value }))} />`}</td>
+            <td className="fM">${ro ? txt(r.mark, "m", "ltr") : html`<input className="facIn" dir="ltr" value=${r.mark || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, mark: e.target.value }))} />`}</td>
+            <td className="lbl fD">${ro ? html`<${F}>${txt(r.desc, "d")}${r.lliGone && html`<span className="finGone">הוסר מ‑LLI</span>`}<//>`
+              : html`<input className="facIn" value=${r.desc || ""} onChange=${(e) => patch(r.id, (x) => ({ ...x, desc: e.target.value }))} />`}</td>
+            <td className="fS">${ro ? txt(r.supplier) : html`<input className="facIn" list=${listId} value=${r.supplier || ""} placeholder="שם הספק"
               onChange=${(e) => patch(r.id, (x) => ({ ...x, supplier: e.target.value }))}
-              onBlur=${(e) => { if (e.target.value.trim()) addSuppliersToContacts([e.target.value]); }} /></td>
-            <td style=${{ width: 60 }}>${(() => {
+              onBlur=${(e) => { if (e.target.value.trim()) addSuppliersToContacts([e.target.value]); }} />`}</td>
+            <td className="fP">${(() => {
               const src = imageOf(r);
+              if (ro) return html`<div className="finPic ro">${src ? html`<img src=${src} alt="" />` : html`<${ImagePlus} size=${16} />`}</div>`;
               return html`<div className="finPic" title="לחיצה: החלפת תמונה · לחצן ימני: ספריית התמונות"
                 onClick=${(e) => imgAsk(e, { projectId, onFile: (f) => putImage(r, f) })}
                 ...${imgPickProps({ projectId, onFile: (f) => putImage(r, f) })}>
@@ -806,18 +879,17 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
             })()}</td>
             ${FIN_COLS.map(([k]) => {
               const v = finCell(r, k, lib);
-              return html`<td key=${k} className=${v === "v" || v === "auto" ? "cellV" : v === "na" ? "cellNa" : ""}>
-                <div style=${{ display: "flex", gap: 4, justifyContent: "center", alignItems: "center" }}>
-                  <button type="button" className=${`tri ${v === "auto" ? "v" : v}`}
-                    title=${v === "auto" ? "פרטי מחלקת הבדק נמצאים במאגר הספקים" : "לחיצה: V ← לא רלוונטי ← ריק"}
-                    onClick=${() => patch(r.id, (x) => ({ ...x, cells: { ...(x.cells || {}), [k]: NEXT[v] } }))}>${v === "v" || v === "auto" ? "✓" : v === "na" ? "ל״ר" : ""}</button>
-                  ${k === "service" && r.supplier && html`<button type="button" className="facBtn icon" title="פרטי מחלקת בדק (במאגר הספקים)"
-                    onClick=${() => setSvcFor(svcFor === r.supplier ? null : r.supplier)}><${Pencil} size=${13} /></button>`}
-                </div></td>`;
+              // 08.11.26 — the service department: a round V when the suppliers'
+              // library has its details; pressed, a window with them.
+              const svc = k === "service";
+              return html`<td key=${k} className=${`fK ${v === "v" || v === "auto" ? "cellV" : v === "na" ? "cellNa" : ""}`}>
+                <button type="button" className=${`tri ${v === "auto" ? "v" : v}`}
+                  title=${svc ? (r.supplier ? "פרטי מחלקת הבדק" : "אין ספק בשורה") : "לחיצה: V ← לא רלוונטי ← ריק"}
+                  onClick=${() => svc ? (r.supplier && setSvcFor({ name: r.supplier, rowId: r.id })) : patch(r.id, (x) => ({ ...x, cells: { ...(x.cells || {}), [k]: NEXT[v] } }))}>${v === "v" || v === "auto" ? "✓" : v === "na" ? "ל״ר" : ""}</button></td>`;
             })}
             <td className="finNote"><input className="facIn" value=${r.note || ""} placeholder="הערות"
               onChange=${(e) => patch(r.id, (x) => ({ ...x, note: e.target.value }))} /></td>
-            <td style=${{ whiteSpace: "nowrap" }}>
+            <td className="fA" style=${{ whiteSpace: "nowrap" }}>
               ${mailOf(r.supplier) && html`<button type="button" className="facBtn icon" title="מייל לספק"
                 onClick=${() => openMail({ to: mailOf(r.supplier), subject, body: finMsg })}><${Mail} size=${14} /></button>`}
               <button type="button" className="facBtn icon" title="הסרה" onClick=${() => remove(r)}><${Trash2} size=${14} color="#b02a37" /></button>
@@ -826,20 +898,28 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
         })}
       </tbody>
     </table></div>
-    ${svcFor && html`<${ServiceBox} name=${svcFor} lib=${lib} reloadLib=${reloadLib} flash=${flash} print=${print} rows=${rows} onClose=${() => setSvcFor(null)} />`}
+    ${svcFor && html`<div className="facScrim" onClick=${() => setSvcFor(null)}><div className="facMailWin svcWin" onClick=${(e) => e.stopPropagation()}>
+      <${ServiceBox} name=${svcFor.name} lib=${lib} reloadLib=${reloadLib} flash=${flash} print=${print} rows=${rows} onClose=${() => setSvcFor(null)}
+        na=${(() => { const r = rows.find((x) => x.id === svcFor.rowId); return !!r && finCell(r, "service", lib) === "na"; })()}
+        onNa=${() => { const id = svcFor.rowId; patch(id, (x) => ({ ...x, cells: { ...(x.cells || {}), service: ((x.cells || {}).service === "na" ? "" : "na") } })); setSvcFor(null); }} /></div></div>`}
     <div className="facLegend">
       <span><i style=${{ background: "#e3f3e6" }} />V — התקבל</span>
       <span><i style=${{ background: "#f4f4f6" }} />לא רלוונטי</span>
-      <span>פרטי מחלקת בדק שנמצאים במאגר הספקים מסומנים V מעצמם</span>
+      <span>פרטי מחלקת בדק שנמצאים במאגר הספקים מסומנים V מעצמם · לחיצה על העיגול מציגה אותם</span>
     </div><//>`;
 }
 
 // The service department of one supplier — kept in the suppliers' library, so
 // it is filled once and counts on every project.
-function ServiceBox({ name, lib, reloadLib, flash, print, rows, onClose }) {
+function ServiceBox({ name, lib, reloadLib, flash, print, rows, onClose, na, onNa }) {
   const cur = supLibFind(lib, name);
   const [v, setV] = useState(() => ({ ...(((cur || {}).data || {}).service || {}) }));
+  const has = supLibHasService(cur);
+  // 08.11.26 — the details first, to read; editing when there are none yet or
+  // when she asks for it.
+  const [editing, setEditing] = useState(!has);
   const [busy, setBusy] = useState(false);
+  const FIELDS = [["name", "שם איש קשר"], ["phone", "טלפון"], ["mobile", "נייד"], ["email", "מייל"]];
   const save = async () => {
     setBusy(true);
     try {
@@ -852,16 +932,26 @@ function ServiceBox({ name, lib, reloadLib, flash, print, rows, onClose }) {
       flash("השמירה במאגר נכשלה: " + ((e && e.message) || ""));
     } finally { setBusy(false); }
   };
-  return html`<div className="facMsg">
-    <div style=${{ fontWeight: 800, marginBottom: 8 }}>פרטי מחלקת הבדק והשירות — ${name}${cur ? "" : " (ספק חדש במאגר)"}</div>
-    <div className="facSvcGrid">
-      ${[["name", "שם איש קשר"], ["phone", "מספר טלפון"], ["mobile", "מספר נייד"], ["email", "כתובת מייל"]].map(([k, l]) => html`
-        <label key=${k}>${l}<input className="facIn" dir=${k === "name" ? "rtl" : "ltr"} value=${v[k] || ""} onChange=${(e) => setV({ ...v, [k]: e.target.value })} /></label>`)}
+  return html`<div className="svcBox">
+    <div className="svcHead">
+      <button type="button" className="svcX" title="סגירה" onClick=${onClose}><${X} size=${18} /></button>
+      <b>פרטי מחלקת בדק · ${name}${cur ? "" : " (ספק חדש במאגר)"}</b>
     </div>
-    <div style=${{ display: "flex", gap: 8, justifyContent: "center", marginTop: 10 }}>
-      <button type="button" className="facBtn primary" disabled=${busy} onClick=${save}><${Save} size=${15} /> שמירה במאגר הספקים</button>
+    ${editing
+      ? html`<div className="facSvcGrid">
+          ${FIELDS.map(([k, l]) => html`
+            <label key=${k}>${l}<input className="facIn" dir=${k === "name" ? "rtl" : "ltr"} value=${v[k] || ""} onChange=${(e) => setV({ ...v, [k]: e.target.value })} /></label>`)}
+        </div>`
+      : html`<div className="svcRead">
+          ${FIELDS.map(([k, l]) => html`<div key=${k}><span>${l}</span>${k === "email" && v[k] ? html`<a href=${"mailto:" + v[k]} dir="ltr">${v[k]}</a>`
+            : (k === "phone" || k === "mobile") && v[k] ? html`<a href=${"tel:" + v[k]} dir="ltr">${v[k]}</a>` : html`<b dir=${k === "name" ? "rtl" : "ltr"}>${v[k] || "—"}</b>`}</div>`)}
+        </div>`}
+    <div style=${{ display: "flex", gap: 8, justifyContent: "center", marginTop: 12, flexWrap: "wrap" }}>
+      ${editing
+        ? html`<button type="button" className="facBtn primary" disabled=${busy} onClick=${save}><${Save} size=${15} /> שמירה במאגר הספקים</button>`
+        : html`<button type="button" className="facBtn" onClick=${() => setEditing(true)}><${Pencil} size=${14} /> עריכה</button>`}
       <button type="button" className="facBtn" onClick=${() => print && print.serviceSheet([{ name, product: rows.filter((r) => r.supplier === name).map((r) => r.desc).join(", "), service: v }])}><${Printer} size=${15} /> PDF</button>
-      <button type="button" className="facBtn" onClick=${onClose}><${X} size=${15} /> סגירה</button>
+      ${onNa && html`<button type="button" className="facBtn" onClick=${onNa}>${na ? "ביטול לא רלוונטי" : "לא רלוונטי לשורה"}</button>`}
     </div>
   </div>`;
 }

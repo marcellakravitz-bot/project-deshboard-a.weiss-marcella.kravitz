@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "08.11.2026 · build 286";
+var APP_BUILD = "08.11.2026 · build 287";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -981,6 +981,8 @@ var cards = `
            shrank to its content, so every folder of the facility file came out
            a different (narrower) width. */
         .functionPage.wide:has(.fac), .functionPage.wide:has(.tsk) { width: 100%; }
+        /* 08.11.26 — the facility file's finishes list: the whole width. */
+        .functionPage.wide:has(.finTbl) { padding-inline: 8px; }
         /* 06.11.26 — the SD board takes the whole width, with a narrow
            gutter, so its table fits without side scrolling. */
         .functionPage.wide:has(.sdTable) { width: 100%; padding-inline: 6px; }
@@ -12100,7 +12102,7 @@ function awPrintWhenPaged(w, minDelay) {
 }
 function boardExportPdf(opts) {
   const { title, subtitle, head, body, widths, accent, brand, isRTL, imgCol, imgs,
-          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections, imgH, secFlow, summary } = opts;
+          alertRows, toneRows, noStamp, issuedLabel, fileName, win, sections, imgH, secFlow, summary, portrait } = opts;
   const P = boardExportPalette(accent);
   const dir = isRTL ? "rtl" : "ltr";
   const b = brand || {};
@@ -12151,7 +12153,7 @@ function boardExportPdf(opts) {
   // ---------------------------------------------------------------------------
   const html = `<!doctype html><html dir="${dir}" lang="${isRTL ? "he" : "en"}"><head><meta charset="utf-8"><title>${esc(fileName || title)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;600;700&display=swap');
-${printSheetCss({ landscape: true, accent: P.accent, marginMm: 7, framePad: "3mm 5mm" })}
+${printSheetCss({ landscape: !portrait, accent: P.accent, marginMm: 7, framePad: "3mm 5mm" })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: ${P.ink}; direction: ${dir}; }
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px;
   border-bottom: 2.5px solid #d5d9df; padding-bottom: 5px; margin-bottom: 7px; }
@@ -12499,6 +12501,8 @@ function lliItemsFor(boqData, boqFlags, lliRows, contacts, catalog, lang) {
       code,
       mark: String(v.typeMark || "").trim(),
       desc: String(v.desc || title || "").split("\n")[0].trim(),
+      // 08.11.26 — the whole description, for the facility file's table.
+      descFull: String(v.desc || title || "").trim(),
       supplier: String(v.supplier || boardTradeCompany(contacts, catalog, cat, lang) || "").trim(),
       category: cat,
       categoryLabel: cat ? sbText(boardCategoryOf(cat) || { he: "", en: "" }, lang) : "",
