@@ -33,7 +33,7 @@ import htm from "https://esm.sh/htm@3.1.1";
 import {
   Phone, Layers, ShieldCheck, BadgeCheck, PenTool, HardHat, Flame, FolderOpen, Map as MapIcon,
   Plus, Mail, Copy, Trash2, Printer, Pencil, Save, ChevronDown, ChevronUp, X, ListPlus, Search, ArrowRight,
-  FileText, FileSpreadsheet, ImagePlus, Wrench,
+  FileText, FileSpreadsheet, ImagePlus, Wrench, Ban, Eye,
 } from "lucide-react";
 import { supabase, printSheetCss, printedStampText, supLibLoad, supLibFind, supLibSave, supLibHasService, supLibNorm, PrintLangAsk, imgAsk, imgPickProps, imgLibAdd } from "../sign.js";
 
@@ -330,7 +330,14 @@ const css = `
 .fac .finPic.ro{cursor:default}
 .fac .finPic.ro:hover{border-color:#e3e5ea}
 .fac table.finTbl .tri{min-width:0;width:30px;height:30px;border-radius:50%;padding:0;display:inline-flex;align-items:center;justify-content:center}
-.fac table.finTbl .tri.na{font-size:9.5px}
+.fac table.finTbl .tri.na{color:#8a8d94;background:#e9ebef;border-color:#d3d6dc}
+.fac table.finTbl td.fK{background:transparent}
+.fac table.finTbl tr.ok td,.fac table.finTbl tr.na td{background:transparent}
+.fac table.finTbl th,.fac table.finTbl td{border-inline-start:1px solid #eceef1}
+.fac table.finTbl th:first-child,.fac table.finTbl td:first-child{border-inline-start:0}
+.fac .finK{display:flex;align-items:center;justify-content:center;gap:3px}
+.fac .finEye{border:0;background:none;cursor:pointer;color:#c3c6cc;display:flex;padding:2px}
+.fac .finEye.on{color:#1d3f7a}
 .fac .svcWin{width:min(620px,100%)}
 .fac .svcHead{display:flex;align-items:center;gap:8px;justify-content:center;position:relative;margin-bottom:12px;font-size:15px}
 .fac .svcX{border:0;background:none;cursor:pointer;color:#5b5e66;display:flex;padding:2px;position:absolute;right:0;top:50%;transform:translateY(-50%)}
@@ -775,9 +782,9 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
     const svcTxt = (r) => {
       const sv = ((supLibFind(lib, r.supplier) || {}).data || {}).service || {};
       const lines = [sv.name, sv.phone && `טלפון ${sv.phone}`, sv.mobile && `נייד ${sv.mobile}`, sv.email].filter((x) => String(x || "").trim());
-      return lines.length ? lines.join("\n") : (finCell(r, "service", lib) === "na" ? "ל״ר" : "");
+      return finCell(r, "service", lib) === "na" ? "לא רלוונטי" : lines.join("\n");
     };
-    const cellTxt = (v) => (v === "v" || v === "auto" ? "V" : v === "na" ? "ל״ר" : "");
+    const cellTxt = (v) => (v === "v" || v === "auto" ? "V" : v === "na" ? "לא רלוונטי" : "");
     const cats = [];
     rows.forEach((r) => { const c = String(r.category || "").trim() || "ללא קטגוריה"; if (!cats.includes(c)) cats.push(c); });
     const body = [], imgs = [], tone = [], secs = [], ranks = [];
@@ -882,10 +889,18 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
               // 08.11.26 — the service department: a round V when the suppliers'
               // library has its details; pressed, a window with them.
               const svc = k === "service";
-              return html`<td key=${k} className=${`fK ${v === "v" || v === "auto" ? "cellV" : v === "na" ? "cellNa" : ""}`}>
+              // 08.11.26 — every circle: one press green, another grey (not
+              // relevant), another empty. The colour is in the circle only. The
+              // service department's details open from the eye beside it.
+              const hasSvc = svc && r.supplier && supLibHasService(supLibFind(lib, r.supplier));
+              return html`<td key=${k} className="fK">
+                <div className="finK">
                 <button type="button" className=${`tri ${v === "auto" ? "v" : v}`}
-                  title=${svc ? (r.supplier ? "פרטי מחלקת הבדק" : "אין ספק בשורה") : "לחיצה: V ← לא רלוונטי ← ריק"}
-                  onClick=${() => svc ? (r.supplier && setSvcFor({ name: r.supplier, rowId: r.id })) : patch(r.id, (x) => ({ ...x, cells: { ...(x.cells || {}), [k]: NEXT[v] } }))}>${v === "v" || v === "auto" ? "✓" : v === "na" ? "ל״ר" : ""}</button></td>`;
+                  title=${v === "na" ? "לא רלוונטי — לחיצה מנקה" : "לחיצה: V ← לא רלוונטי ← ריק"}
+                  onClick=${() => patch(r.id, (x) => ({ ...x, cells: { ...(x.cells || {}), [k]: NEXT[v] } }))}>${v === "v" || v === "auto" ? "✓" : v === "na" ? html`<${Ban} size=${15} strokeWidth=${2.2} />` : ""}</button>
+                ${svc && r.supplier && html`<button type="button" className=${`finEye ${hasSvc ? "on" : ""}`} title=${hasSvc ? "פרטי מחלקת הבדק" : "הוספת פרטי מחלקת בדק"}
+                  onClick=${() => setSvcFor({ name: r.supplier, rowId: r.id })}><${Eye} size=${14} /></button>`}
+                </div></td>`;
             })}
             <td className="finNote"><input className="facIn" value=${r.note || ""} placeholder="הערות"
               onChange=${(e) => patch(r.id, (x) => ({ ...x, note: e.target.value }))} /></td>
@@ -903,9 +918,9 @@ function FinishesChapter({ data, edit, bar, projectName, print, flash, lliItems,
         na=${(() => { const r = rows.find((x) => x.id === svcFor.rowId); return !!r && finCell(r, "service", lib) === "na"; })()}
         onNa=${() => { const id = svcFor.rowId; patch(id, (x) => ({ ...x, cells: { ...(x.cells || {}), service: ((x.cells || {}).service === "na" ? "" : "na") } })); setSvcFor(null); }} /></div></div>`}
     <div className="facLegend">
-      <span><i style=${{ background: "#e3f3e6" }} />V — התקבל</span>
-      <span><i style=${{ background: "#f4f4f6" }} />לא רלוונטי</span>
-      <span>פרטי מחלקת בדק שנמצאים במאגר הספקים מסומנים V מעצמם · לחיצה על העיגול מציגה אותם</span>
+      <span><i style=${{ background: "#cfead6", borderRadius: "50%" }} />V — התקבל</span>
+      <span><i style=${{ background: "#e9ebef", borderRadius: "50%" }} />לא רלוונטי</span>
+      <span>פרטי מחלקת בדק שבמאגר הספקים מסומנים V מעצמם · העין מציגה אותם</span>
     </div><//>`;
 }
 
