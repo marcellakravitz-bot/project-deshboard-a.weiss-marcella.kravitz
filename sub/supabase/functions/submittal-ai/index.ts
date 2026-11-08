@@ -249,6 +249,22 @@ function repairJson(body: string): Record<string, unknown> | null {
 // =============================================================================
 const FILL_SYSTEM = `You fill in an equipment/material submittal form for a construction project, reading ONLY the specification documents you are given.
 
+WHAT THIS JOB IS (08.11.26) — EXTRACTION, NOT STUDY.
+You are NOT asked to learn or summarise the specification. Find these things
+and nothing else:
+  · what each document IS (its type: datasheet, catalogue, CE certificate,
+    Israeli standard certificate, test report, warranty ...)  -> fileNotes
+  · the exact, formal name of the product(s) as printed     -> itemDescription
+  · the models and catalogue numbers (מק"ט) as printed       -> modelCode / infoHe
+  · the manufacturer as printed                             -> manufacturer
+  · a two-line brief of what the product is for              -> infoEn / infoHe
+  · expiry dates and papers that are missing                 -> checks
+Look for them where they are printed (the title, the header, the ordering
+table, the certificate's face) and stop. Do not deliberate at length: if a
+value is printed, copy it; if it is not, return "".
+These fields are NOT yours on this job and come back empty:
+subCategory "", conflicts [], boq "", docs {}.
+
 HARD RULES
 1. EVERY VALUE MUST HAVE A SOURCE, and the only sources are the documents
    assigned to THIS submittal, the project's own specification, and what the
@@ -302,33 +318,20 @@ HARD RULES
    submit: is there a datasheet at all; is a standard or type certificate
    present; does anything carry an expiry or a valid-until date, and has it
    passed. Put that in "checks".
-7. TICK ONLY WHAT IS ACTUALLY THERE. The submitted-documents boxes describe
-   what is in this package, not what a product like this usually needs.
-8. THE REVIEW AND APPROVAL SECTION IS NOT YOURS. Never decide approved,
+7. THE REVIEW AND APPROVAL SECTION IS NOT YOURS. Never decide approved,
    approved-as-noted, resubmit or not-approved; never write a signature; never
    write a comment as though the approving authority had written it. That
    section belongs to a person.
 
 FIELDS
-typeId           WHAT IDENTIFIES THIS ITEM ON THIS PROJECT. Work down this
-                 order and stop at the first one you can honestly give:
-                   1. PROJECT IDENTIFIER + GENERAL PRODUCT NAME, when the
-                      project's own type, architectural type, architectural
-                      code or specification gives one:
-                        "FL7A | LVT Flooring"
-                        "CL1 | Acoustic Ceiling"
-                        "FN12 | Acoustic Wall Panel"
-                        "WB1 | Whiteboard"
-                   2. THE GENERAL PRODUCT NAME on its own, when there is no
-                      project identifier: "Electrical Cable", "Water Softener",
-                      "מזגן מיני מרכזי".
-                   3. THE SUB-CATEGORY, when even a product name cannot be
-                      established.
-                 NEVER put a manufacturer, a model, a catalogue number or a
-                 barcode in this field — they have fields of their own. Never
-                 invent a project identifier that the project did not give you.
-itemDescription  WHAT ITEM IS BEING SUBMITTED FOR APPROVAL. The product type
-                 or name, then AT MOST TWO details that identify it — the two
+typeId           the project's own type mark when one is given to you below,
+                 then " | " and the general product name ("FL7A | LVT Flooring");
+                 with no type mark, the general product name alone ("מזגן מיני
+                 מרכזי"). Never a manufacturer, model or catalogue number here,
+                 and never a project identifier you were not given.
+itemDescription  WHAT ITEM IS BEING SUBMITTED FOR APPROVAL: THE PRODUCT'S
+                 EXACT, FORMAL NAME AS THE MANUFACTURER PRINTS IT (series and
+                 product name), then AT MOST TWO details that identify it — the two
                  that matter most to someone recognising it (material and
                  finish, or size and application). Not three, not a list.
                  ONE LINE. Six to twelve words, written as a line somebody
@@ -401,26 +404,11 @@ infoHe           the same — Hebrew.
                  when the documents make that relationship clear. Include ONLY
                  numbers that belong to this submittal — never copy every
                  number out of a catalogue full of other products.
-subCategory      a concise professional sub-category naming the product family
-                 or technical subject: Cables, Electrical Panels, Lighting
-                 Fixtures, BMS, Acoustic Ceilings, Flooring, Sanitary Fixtures,
-                 Air Conditioning Units, Air Distribution, Insulation. Do not
-                 simply repeat the discipline when something more specific can
-                 be identified. It may ONLY be one of the values in the supplied
-                 list, copied exactly; if none of them fits, return "".
-                 This is the ONLY project-details field you may decide. The
-                 project name, the date, the contractor, the required approval
-                 date, the discipline, who submitted it and the e-mail are set
-                 by the system and must not be touched.
 pages            the 1-based page numbers this product's information came from
 files            the FILE NAMES, exactly as given to you, of every document
                  that belongs to this product — the datasheet and the
                  certificate and the test report together. This is what decides
                  which papers are filed under which submittal.
-conflicts        where two of the assigned documents state DIFFERENT things
-                 about the same fact, do not choose between them and do not
-                 hide it: name the fact and the files, one short line each, in
-                 the reader's language. [] when there are none.
 checks           what you found when you looked at the papers themselves:
                  { "expires": "YYYY-MM-DD" or "",   the earliest expiry or
                                                     valid-until date on any of
@@ -434,43 +422,6 @@ checks           what you found when you looked at the papers themselves:
                    "note": "" }                     one short sentence, in the
                                                     reader's language, only if
                                                     something is genuinely wrong
-boq              THE CHECKLIST LINE THIS PRODUCT ANSWERS. A list of item
-                 numbers and names is given to you: it is the approvals this
-                 discipline is already waiting for, taken from the bill of
-                 quantities. Find the one this product is the answer to and
-                 return its item number, copied exactly.
-
-                 MATCH ON WHAT THE PRODUCT IS, NOT ON THE WORDING. The checklist
-                 line was written by a quantity surveyor and the datasheet by a
-                 manufacturer; they will not use the same words, and they must
-                 not need to.
-                   · A type code decides it. "N2XY" on the datasheet and "N2XY"
-                     on the line is the same product, whatever else either says.
-                     So do FL-01, OD1, XLPE, Series 700.
-                   · SIZE AND SPECIFICATION NEVER SEPARATE. One checklist line
-                     covers a product in every size, cross-section, diameter,
-                     colour and rating it comes in: a datasheet for
-                     "N2XY 5x2.5" answers "כבלי N2XY"; a 4" ball valve answers
-                     "מגופים כדוריים"; a 600x600 grille answers "גריל OD1".
-                     NEVER return "" because the numbers differ.
-                   · A document that covers a family answers the family's line
-                     once. Ten cross-sections in one catalogue is ONE match,
-                     not ten.
-                   · Hebrew singular and plural are the same word: כבל / כבלים,
-                     מגוף / מגופים, דלת / דלתות, גוף תאורה / גופי תאורה.
-
-                 Return "" only when nothing on that list is the KIND of thing
-                 this product is — never a number that is not on the list, and
-                 never a guess between two lines that fit equally well.
-docs             which of the submitted-documents boxes the uploaded material
-                 actually contains. true only for a kind of document you can
-                 see in front of you; leave the rest out. The keys are:
-                 datasheet, sample, shopDrawing, certificates,
-                 testReports, sustainability, installation, other.
-                 A datasheet is not a certificate, and a catalogue page is not
-                 a test report — do not tick a box because the product would
-                 normally have one.
-
 fileNotes        ONE ENTRY PER UPLOADED FILE, at the top level of the answer
                  (not inside a product), in the order the files were given:
                  { "file": the file name exactly as given,
@@ -560,9 +511,7 @@ async function modeFill(key: string, body: Record<string, any>) {
     body.kind === "system"
       ? `THE PERSON SUBMITTING SAYS: these ${files.length} documents are the components of ONE SYSTEM. Follow SYSTEM MODE.`
       : `THE PERSON SUBMITTING SAYS: these ${files.length} documents describe a PRODUCT (or products) — not one system.`,
-    checklist.length
-      ? `CHECKLIST — the approvals already waited for in this discipline. Put each product on the line it answers by returning that line's item number in "boq":\n${checklist.map((c: any) => `${c.code}  ${c.name || ""}`).join("\n")}`
-      : "",
+    // 08.11.26 — no checklist matching on a fill (she does that herself).
   ].filter(Boolean).join("\n");
 
   // Text when the PDF has a text layer; pictures of the pages when it does not.
