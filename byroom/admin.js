@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 15 · 10.11.2026
+//  byroom build 16 · 10.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 15 · 10.11.2026";
+export const BYROOM_BUILD = "byroom build 16 · 10.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -96,6 +96,7 @@ const css = `
 .bra-rooms tr.det>td{background:#f4f8fd;box-shadow:inset -4px 0 0 #1d5fa8;border-bottom:2px solid #1d5fa8;padding:10px 14px}
 .bra-rooms .arr{font-size:11px;color:#1d5fa8}.bra-rooms tr.rw.on .arr{color:#14181f}
 .bra-rooms thead th{position:sticky;top:0;background:#fff;z-index:2;box-shadow:0 1px 0 #e6e6e9}
+.bra-rooms td.rdel{width:34px;text-align:center}.bra-rooms td.rdel .bra-trash{opacity:.55}.bra-rooms tr.rw:hover td.rdel .bra-trash{opacity:1}
 .bra-rooms td.ntc{max-width:220px;font-size:12px;color:#5b5e66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bra-mk.nodet b{color:#8a6d1f;border-bottom:1px dashed #c9a24a}
 .bra-pend{background:#fff1d6;color:#8a5a00;border-radius:8px;padding:1px 7px;font-size:11px;font-weight:600;white-space:nowrap}
@@ -1272,6 +1273,22 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
     try { must(await supabase.rpc("byroom_set_mark", { p_project: projectId, p_floor: r.floor, p_room: r.room_no, p_kind: f.kind, p_code: f.code, p_add: false })); setTick((t) => t + 1); }
     catch (e) { alert(e.message); }
   };
+  // delete a room from the list (build 16): an approved room becomes "removed" and is logged; a room the plans
+  // only proposed has its proposals dismissed. Either way it can come back if a later version reads it again.
+  const removeRoom = async (r) => {
+    const pp = pendOf(r);
+    if (!confirm(`למחוק את חדר ${r.room_no}${r.name ? ` (${r.name})` : ""} מקומה ${r.floor}?\n${r.pendingOnly ? "ההצעות שלו מהתוכניות יבוטלו." : `החדר ו-${r.fin.length} האיפיונים שלו יוסרו מהרשימה ומהקישור ללקוח בפרסום הבא.`}\nאם החדר ייקרא שוב בגרסה הבאה, הוא יוצע שוב לאישור.`)) return;
+    try {
+      if (pp.length) must(await supabase.from("byroom_room_review").update({ decision: "unchanged", note: "נמחק ברשימת החדרים" }).in("id", pp.map((i) => i.id)));
+      if (!r.pendingOnly) {
+        const { data: u } = await supabase.auth.getUser();
+        must(await supabase.from("byroom_rooms").update({ status: "removed", updated_at: new Date().toISOString() }).eq("id", r.id));
+        must(await supabase.from("byroom_room_approvals").insert({ set_id: null, project_id: projectId, floor: r.floor, approved_email: u?.user?.email ?? null, left_pending: 0,
+          items: [{ room: r.room_no, field: "room", before: { value: r.room_no }, after: null, manual: "removed", note: "החדר נמחק ברשימת החדרים" }] }));
+      }
+      setOpen(null); setTick((t) => t + 1);
+    } catch (e) { alert("המחיקה נכשלה: " + e.message); }
+  };
   // an approved code with no details whose variant was meant: swap it in the room, and remember the choice
   const pickApproved = async (r, kind, from, to) => {
     if (!confirm(`בחדר ${r.room_no}: להחליף את ${from} ב-${to}?\nהבחירה נזכרת — בגרסאות הבאות ${from} בחדר הזה יוצע כ-${to}.`)) return;
@@ -1312,15 +1329,16 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
       <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>תוכנית קומה</button>
     </div>
     <div className="bra-scroll"><table>
-      <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th><th>הערות</th></tr></thead>
+      <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th><th>הערות</th><th></th></tr></thead>
       <tbody>${list.map((r) => { const on = open === r.id; const pp = pendOf(r); const nt = notes.get(key(r))?.note ?? ""; return html`<${React.Fragment} key=${r.id}>
         <tr className=${"rw" + (on ? " on" : "")} onClick=${() => setOpen(on ? null : r.id)}>
           <td>${r.floor}</td><td><span className="arr">${on ? "▲" : "▼"}</span> <b dir="ltr">${r.room_no}</b>
             ${pp.length ? html`<div><span className="bra-pend">${r.pendingOnly ? "חדר חדש · " : ""}${pp.length} ממתינים</span></div>` : null}</td>
           <td>${r.name ?? ""}</td><td>${r.area ? `${Number(r.area)} מ"ר` : ""}</td>
           ${cell(r, "FL")}${cell(r, "FN")}${cell(r, "CL")}<td>${others(r).map((f) => chip(f, r))}</td>
-          <td className="ntc" title=${nt}>${nt}</td></tr>
-        ${on ? html`<tr className="det"><td colSpan="9">
+          <td className="ntc" title=${nt}>${nt}</td>
+          <td className="rdel"><button type="button" className="bra-trash" title="מחיקת החדר" aria-label="מחיקת החדר" onClick=${(e) => { e.stopPropagation(); removeRoom(r); }}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg></button></td></tr>
+        ${on ? html`<tr className="det"><td colSpan="10">
           ${(() => { const base = pp.filter((i) => ["room", "name", "area", "boundary"].includes(i.field)); return base.length ? html`<div style=${{ marginBottom: "8px" }}>
             ${base.map((it) => html`<${PendingLine} key=${it.id} it=${it} ticked=${sel.has(it.id)} onToggle=${() => toggle(it.id)} lookup=${lookup} catalog=${catalog} lliAll=${lliAll} onPick=${pickPending} />`)}</div>` : null; })()}
           ${[...new Set([...r.fin.map((f) => f.kind), ...pp.filter((i) => !["room", "name", "area", "boundary"].includes(i.field)).map((i) => i.field)])].sort(kindOrder).map((k) => html`<div key=${k} style=${{ marginBottom: "8px" }}>
