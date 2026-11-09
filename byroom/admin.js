@@ -1085,7 +1085,7 @@ function exportPdf(rows, title, projectName, brand, floor) {
     const body = kinds.map((k) => `<h3>${esc(catHe(k))}</h3><table><thead><tr><th class="v"></th><th class="code">מס' איפיון</th><th>איפיון</th><th class="img">תמונה</th><th class="nt">הערה</th></tr></thead><tbody>${r.items.filter((i) => i.kind === k).map((i) => `<tr>
       <td class="v">${i.verified ? '<span class="ok">✓</span>' : ""}</td>
       <td class="code" dir="ltr">${esc(i.code)}</td>
-      <td class="txt">${i.mname ? `<b>${esc(i.mname)}</b>` : ""}${i.desc ? `<div>${esc(i.desc).replace(/\n/g, "<br>")}</div>` : ""}${i.supplier ? `<div class="sup">ספק: ${esc(i.supplier)}</div>` : ""}${i.state !== ST_PUB ? `<div>${badge(i.state)}</div>` : ""}</td>
+      <td class="txt">${i.mname ? `<b>${esc(i.mname)}</b>` : ""}${i.desc ? `<div>${esc(i.desc).replace(/\n/g, "<br>")}</div>` : ""}${i.supplier ? `<div class="sup">ספק: ${esc(i.supplier)}</div>` : ""}${i.state !== ST_PUB && i.state !== ST_APPROVED ? `<div>${badge(i.state)}</div>` : ""}</td>
       <td class="img">${i.image ? `<img src="${esc(i.image)}" alt="">` : ""}</td>
       <td class="nt">${esc(i.mnote).replace(/\n/g, "<br>")}</td></tr>`).join("")}</tbody></table>`).join("");
     return `<section class="page">
@@ -1109,7 +1109,7 @@ function exportPdf(rows, title, projectName, brand, floor) {
     h3{font-size:14px;margin:3mm 0 1.5mm;padding:1mm 2mm;background:#eef1f5;border-radius:1.5mm}
     table{width:100%;border-collapse:collapse}th{font-size:10.5px;color:#5b5e66;text-align:right;font-weight:600;border-bottom:1px solid #c9ccd2;padding:1mm 1.5mm}
     td{vertical-align:top;padding:2mm 1.5mm;border-bottom:1px solid #e6e8ec;font-size:11.5px}
-    .v{width:7mm;text-align:center}.ok{display:inline-block;width:5mm;height:5mm;border-radius:50%;background:#2e9e57;color:#fff;font-size:10px;line-height:5mm;text-align:center}
+    .v{width:7mm;text-align:center}td.v{vertical-align:middle}.ok{display:inline-block;width:5mm;height:5mm;border-radius:50%;background:#2e9e57;color:#fff;font-size:10px;line-height:5mm;text-align:center}
     td.code,th.code{width:22mm;text-align:center}td.code{font-weight:700}th.img,td.img{width:26mm;text-align:center}td.img img{width:24mm;height:24mm;object-fit:contain}th.nt,td.nt{width:40mm}td.nt{color:#3b3e45}
     .sup{color:#5b5e66;margin-top:1mm}.none{color:#9a9da5;font-size:12px}
     .gnote{margin-top:5mm;border:1px solid #c9ccd2;border-radius:2mm;padding:3mm;font-size:12px}
