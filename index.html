@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "09.11.2026 · build 293";
+var APP_BUILD = "10.11.2026 · build 294";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -8642,6 +8642,17 @@ function byRoomMarks(roomsData, boqData, boqFlags, lliRows, lang) {
     extra[mk] = { supplier: String(v.supplier || "").trim(), status: v.status ? lliStatusLabel(v.status, lang) : "" };
   });
   const m = { ...(base.marks || {}) };
+  // 10.11.2026 (build 294): every LLI row ticked BY ROOM reaches By Room — also a row that lliRoomMarks() skips
+  // because the bill of quantities no longer lists it as an LLI product (it was ticked, so she meant it).
+  const seen = new Set(Object.keys(fromLli).map((k) => String(fromLli[k].mark || "").trim().toUpperCase()));
+  Object.keys(lliRows || {}).forEach((code) => {
+    const v = (lliRows || {})[code];
+    const mark = String((v && v.typeMark) || "").trim();
+    if (!v || !v.byRoom || !mark || seen.has(mark.toUpperCase())) return;
+    seen.add(mark.toUpperCase());
+    const cat = v.category || roomCatOfMark(mark);
+    fromLli[roomMarkKey(cat, mark)] = { cat, mark, name: mark, desc: String(v.desc || "").trim(), image: v.image || null, fromLli: true };
+  });
   Object.keys(fromLli).forEach((k) => {
     const own = m[k] || {};
     const lli = fromLli[k];

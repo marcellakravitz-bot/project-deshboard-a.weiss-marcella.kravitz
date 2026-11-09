@@ -786,9 +786,24 @@ export function markList(marks) {
   }
   return [...by.values()].sort((a, b) => a.code.localeCompare(b.code, "en", { numeric: true }));
 }
+/** The codes written inside an LLI type mark: "C-8D - HOLD" → C8D, "N09 + N10" → N09, N10, "N02 - חלופה א'" → N02. */
+const CODE_TOKEN = /(?<![A-Z0-9])[A-Z][A-Z.]{0,3}[- ]?\d+[A-Z0-9.]*(?![A-Z])/g;
+export const markTokens = (mark) => [...new Set((String(mark || "").toUpperCase().match(CODE_TOKEN) || []).map(canonMark).filter(Boolean))];
 export function markIndex(marks) {
-  const by = new Map(markList(marks).map((m) => [m.code, m]));
-  return (kind, code) => by.get(String(code || "").trim().toUpperCase()) ?? null;
+  const list = markList(marks);
+  const by = new Map(list.map((m) => [m.code, m]));
+  const byCanon = new Map(list.map((m) => [canonMark(m.code), m]));
+  // a plan code that is only the start of an LLI mark: C-8D → "C-8D - HOLD". Used only when exactly one mark fits (build 14)
+  const tok = new Map();
+  for (const m of list) for (const t of markTokens(m.code)) { if (t === canonMark(m.code)) continue; if (!tok.has(t)) tok.set(t, []); tok.get(t).push(m); }
+  return (kind, code) => {
+    const up = String(code || "").trim().toUpperCase();
+    const c = canonMark(up);
+    const hit = by.get(up) ?? byCanon.get(c);
+    if (hit) return hit;
+    const t = tok.get(c);
+    return t && t.length === 1 ? { ...t[0], via: t[0].code } : null;
+  };
 }
 
 /** Copy the defined marks into byroom_marks: the QR page shows them, and the processing job reads them
@@ -883,7 +898,7 @@ function MarkLine({ projectId, kind, code, lookup, manual, onRemove, lliAll, onT
     </div>
     ${m?.image ? html`<img src=${m.image} alt="" />` : html`<div className="noimg" />`}
     <div style=${{ flex: 1, minWidth: 0 }}>
-      <div><b dir="ltr">${code}</b>${m?.name && m.name !== code && !edit ? html` · ${m.name}` : null}${m?.fromLli ? html`<span className="bra-tag">LLI</span>` : null}${m?.edited ? html`<span className="bra-tag" style=${{ color: "#8a5a00", background: "#fff1d6" }} title=${`נערך ב-By Room${m.edited.by ? " · " + m.edited.by : ""}${m.edited.at ? " · " + fmtDate(m.edited.at) : ""} — ה-LLI לא השתנה`}>נערך</span>` : null}${manual ? html`<span className="bra-tag" style=${{ color: "#8a3f07", background: "#f7efe3" }}>נוסף ידנית</span>` : null}
+      <div><b dir="ltr">${code}</b>${m?.via ? html`<span style=${{ fontSize: "12px", color: "#5b5e66" }}> (ב-LLI: <span dir="auto">${m.via}</span>)</span>` : null}${m?.name && m.name !== code && m.name !== m.via && !edit ? html` · ${m.name}` : null}${m?.fromLli ? html`<span className="bra-tag">LLI</span>` : null}${m?.edited ? html`<span className="bra-tag" style=${{ color: "#8a5a00", background: "#fff1d6" }} title=${`נערך ב-By Room${m.edited.by ? " · " + m.edited.by : ""}${m.edited.at ? " · " + fmtDate(m.edited.at) : ""} — ה-LLI לא השתנה`}>נערך</span>` : null}${manual ? html`<span className="bra-tag" style=${{ color: "#8a3f07", background: "#f7efe3" }}>נוסף ידנית</span>` : null}
         ${m && !edit && editsOk ? html`<button type="button" className="bra-link" title="עריכת השם והתיאור ב-By Room בלבד — ה-LLI לא משתנה" onClick=${() => setEdit({ name: m.name && m.name !== code ? m.name : "", desc: m.desc ?? "" })}>✎ עריכה</button>` : null}</div>
       ${edit ? html`<div className="bra-edit">
           <input value=${edit.name} placeholder="שם האיפיון" onInput=${(e) => setEdit({ ...edit, name: e.target.value })} />
@@ -1112,7 +1127,7 @@ function variantsOf(code, catalog, lliAll) {
   const pool = new Map();
   for (const m of catalog) pool.set(canonMark(m.code), m.code);
   for (const k of Object.keys(lliAll || {})) if (!pool.has(canonMark(k))) pool.set(canonMark(k), k.trim());
-  return [...pool].filter(([k]) => k !== c && k.startsWith(c) && /^[A-Z][A-Z0-9]?$/.test(k.slice(c.length)))
+  return [...pool].filter(([k, v]) => k !== c && ((k.startsWith(c) && /^[A-Z][A-Z0-9]?$/.test(k.slice(c.length))) || markTokens(v).includes(c)))
     .map(([, v]) => v).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 }
 /** Remember "in this room the plan's C-2 is C-2A": the processing job proposes it in later versions. */
