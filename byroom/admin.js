@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 12 · 9.11.2026
+//  byroom build 13 · 9.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 12 · 9.11.2026";
+export const BYROOM_BUILD = "byroom build 13 · 9.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -138,16 +138,20 @@ table.bra-files td{overflow-wrap:anywhere}
 .bra-mk b{font-size:13px}.bra-mk span{font-size:11px;color:#5b5e66;max-width:180px}
 .bra-mkrow{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f1f4}
 .bra-mkrow.ver img,.bra-mkrow.ver .noimg{outline:2px solid #2e9e57;outline-offset:1px}
-.bra-mkside{display:flex;flex-direction:column;align-items:center;gap:6px;width:34px;flex:none}
+.bra-mkside{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:34px;flex:none;align-self:center}
 .bra-vc{width:26px;height:26px;border-radius:50%;border:2px solid #b9bcc4;background:#fff;color:transparent;font-weight:800;font-size:14px;line-height:1;cursor:pointer;padding:0}
 .bra-vc:hover{border-color:#2e9e57;color:#9fd3b1}.bra-vc.on{background:#2e9e57;border-color:#2e9e57;color:#fff}
-.bra-mknote{width:260px;flex:none}.bra-mknote textarea{width:100%;box-sizing:border-box;font-family:inherit;font-size:12.5px;border:1px solid #dfe1e6;border-radius:8px;padding:5px 7px;resize:vertical}
+.bra-mknote{width:520px;max-width:42%;flex:none}.bra-mknote textarea{min-height:64px}.bra-mknote textarea{width:100%;box-sizing:border-box;font-family:inherit;font-size:12.5px;border:1px solid #dfe1e6;border-radius:8px;padding:5px 7px;resize:vertical}
 .bra-mknote .st{font-size:11px;color:#8a6d1f;min-height:14px}
 .bra-link{border:0;background:none;color:#1d5fa8;cursor:pointer;font-size:12px;margin-inline-start:8px;padding:0}
 .bra-edit{display:flex;flex-direction:column;gap:5px;margin-top:4px;max-width:640px}.bra-edit input,.bra-edit textarea{font-family:inherit;font-size:13px;border:1px solid #cfd2d8;border-radius:8px;padding:5px 7px}
 .bra-mk.ok b::after{content:" ✓";color:#2e9e57}
-.bra-mkrow img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #e6e6e9}
-.bra-mkrow .noimg{width:64px;height:64px;border-radius:8px;background:#f2f3f6}
+.bra-mkrow img{width:96px;height:96px;object-fit:contain;background:#fff;border-radius:8px;border:1px solid #e6e6e9;align-self:center;flex:none}
+.bra-mkrow .noimg{width:96px;height:96px;border-radius:8px;background:#f2f3f6;align-self:center;flex:none}
+.bra-combo{position:relative;display:inline-block}.bra-combo input{width:190px;padding-inline-end:22px}.bra-combo .arr{position:absolute;inset-inline-end:7px;top:50%;transform:translateY(-50%);pointer-events:none;color:#5b5e66;font-size:12px}
+.bra-combo-list{position:absolute;top:calc(100% + 3px);inset-inline-start:0;min-width:100%;max-height:260px;overflow:auto;background:#fff;border:1px solid #cfd2d8;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,.12);z-index:30;padding:3px}
+.bra-combo-list button{display:block;width:100%;text-align:start;border:0;background:none;padding:6px 9px;border-radius:6px;cursor:pointer;font:inherit;font-size:13px;white-space:nowrap}
+.bra-combo-list button:hover,.bra-combo-list button.on{background:#eef3fb}.bra-combo-list .new{color:#1d5fa8;border-top:1px solid #eee}.bra-combo-list .empty{padding:6px 9px;color:#9a9da5;font-size:12px}
 .bra-tag{font-size:10px;font-weight:700;color:#1d5fa8;background:#e3eefb;border-radius:6px;padding:1px 5px;margin-inline-start:4px}
 .bra-msgbox{white-space:pre-wrap;background:#f6f6f7;border:1px solid #e6e6e9;border-radius:10px;padding:12px;font-size:14px;line-height:1.55}
 @media print{.bra-noprint{display:none!important}.bra-qrgrid{grid-template-columns:repeat(3,1fr)}.bra-qr{break-inside:avoid}}
@@ -935,12 +939,42 @@ function RecentChanges({ projectId, floor, room }) {
     <tbody>${rows.map((r, k) => html`<tr key=${k}><td dir="auto">${r.what}</td><td>${fmtDate(r.at)}</td><td>${r.version}</td><td>${r.from}</td></tr>`)}</tbody></table>`;
 }
 
-function AddMark({ projectId, room, catalog, onDone }) {
+/** Category picker that searches as you type (build 13): every category of the site and of this project's LLI,
+ *  closest first; a name that is not there becomes a new category of By Room ("וילונות"). */
+function CatCombo({ value, options, onPick }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const cur = options.find((o) => o.k === value)?.t ?? value;
+  const t = text.trim().toLowerCase();
+  const score = (o) => { const x = o.t.toLowerCase(); return !t ? 1 : x.startsWith(t) ? 3 : x.split(/[\s/,-]+/).some((w) => w.startsWith(t)) ? 2 : x.includes(t) ? 1 : 0; };
+  const hits = options.map((o) => [o, score(o)]).filter(([, n]) => n).sort((a, b) => b[1] - a[1] || a[0].t.localeCompare(b[0].t, "he")).map(([o]) => o);
+  const exact = options.some((o) => o.t.toLowerCase() === t);
+  const pick = (k) => { onPick(k); setOpen(false); setText(""); };
+  return html`<div className="bra-combo" onBlur=${(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { setOpen(false); setText(""); } }}>
+    <input value=${open ? text : cur} placeholder="קטגוריה — הקלידי לחיפוש" onFocus=${() => setOpen(true)} onInput=${(e) => { setText(e.target.value); setOpen(true); }}
+      onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); if (hits[0]) pick(hits[0].k); else if (t) pick(text.trim()); } if (e.key === "Escape") { setOpen(false); setText(""); } }} />
+    <span className="arr">▾</span>
+    ${open ? html`<div className="bra-combo-list">
+      ${hits.map((o) => html`<button type="button" key=${o.k} className=${o.k === value ? "on" : ""} onMouseDown=${(e) => e.preventDefault()} onClick=${() => pick(o.k)}>${o.t}</button>`)}
+      ${t && !exact ? html`<button type="button" className="new" onMouseDown=${(e) => e.preventDefault()} onClick=${() => pick(text.trim())}>+ קטגוריה חדשה: ${text.trim()}</button>` : null}
+      ${!hits.length && !t ? html`<div className="empty">אין קטגוריות</div>` : null}
+    </div>` : null}
+  </div>`;
+}
+
+function AddMark({ projectId, room, catalog, kindsInUse = [], onDone }) {
   const [code, setCode] = useState("");
   const [kind, setKind] = useState("FL");
   const [busy, setBusy] = useState(false);
   const known = catalog.find((m) => m.code === code.trim().toUpperCase());
-  const kinds = [["FL", "ריצוף"], ["FN", "חיפוי קירות"], ["CL", "תקרה"], ...CATS.filter((c) => !KIND_OF_CAT[c.key]).map((c) => [kindOfCat(c.key), c.he])];
+  // every category: floor / wall / ceiling, the site's and this project's LLI categories, and any already used in rooms
+  const options = useMemo(() => {
+    const m = new Map([["FL", "ריצוף"], ["FN", "חיפוי קירות"], ["CL", "תקרה"]]);
+    for (const c of CATS) if (!KIND_OF_CAT[c.key] && c.he) m.set(kindOfCat(c.key), c.he);
+    for (const x of catalog) if (x.kind && !m.has(x.kind)) m.set(x.kind, catHe(x.kind));
+    for (const k of kindsInUse) if (k && !m.has(k)) m.set(k, catHe(k));
+    return [...m].map(([k, t]) => ({ k, t: String(t) }));
+  }, [catalog, kindsInUse]);
   const add = async () => {
     setBusy(true);
     try { must(await supabase.rpc("byroom_set_mark", { p_project: projectId, p_floor: room.floor, p_room: room.room_no, p_kind: known?.kind ?? kind, p_code: code, p_add: true })); setCode(""); onDone(); }
@@ -952,9 +986,8 @@ function AddMark({ projectId, room, catalog, onDone }) {
     <input list="bra-marks" placeholder="קוד, למשל FL-7A" value=${code} onInput=${(e) => setCode(e.target.value)} style=${{ width: "150px" }} dir="ltr" />
     <datalist id="bra-marks">${catalog.map((m) => html`<option key=${m.code} value=${m.code}>${m.name ?? ""}</option>`)}</datalist>
     ${known ? html`<span style=${{ fontSize: "13px" }}>${catHe(known.kind)}${known.name && known.name !== known.code ? ` · ${known.name}` : ""}</span>`
-      : html`<select value=${kind} onChange=${(e) => setKind(e.target.value)}>${kinds.map(([k, t]) => html`<option key=${k} value=${k}>${t}</option>`)}</select>`}
+      : html`<${CatCombo} value=${kind} options=${options} onPick=${setKind} />`}
     <button className="bra-btn primary small" disabled=${!code.trim() || busy} onClick=${add}>הוספה</button>
-    <span style=${{ fontSize: "12px", color: "#5b5e66" }}>נרשם ביומן, ומגיע ללקוח בפרסום הבא.</span>
   </div>`;
 }
 
@@ -1190,6 +1223,7 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
   const chip = (f, r) => { const m = lookup(f.kind, f.code); return html`<span className=${"bra-mk" + (m ? "" : " nodet") + (r && meta.get(mkey(r, f.kind, f.code))?.verified ? " ok" : "")} key=${f.kind + f.code} title=${m ? "" : "אין פירוט ב-LLI"}><b dir="ltr">${f.code}${f.source === "manual" ? "*" : ""}</b>${m?.name && m.name !== f.code ? html`<span>${m.name}</span>` : null}</span>`; };
   const cell = (r, k) => html`<td>${codes(r, k).map((f) => chip(f, r))}</td>`;
   const marksN = new Set(rooms.flatMap((r) => r.fin.map((f) => f.kind + "|" + f.code))).size;
+  const kindsAll = [...new Set(rooms.flatMap((r) => r.fin.map((f) => f.kind)))];
   const shownPending = list.flatMap(pendOf);
   const toggle = (id) => setSel((t) => { const n = new Set(t); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const approve = async () => {
@@ -1256,7 +1290,7 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
       <span style=${{ flex: 1 }} />
       <button className="bra-btn" disabled=${exporting} title="כל החדרים שבסינון: מה שפורסם, מה שאושר וטרם פורסם, ומה שממתין לאישור בגרסאות" onClick=${() => doExport("xlsx")}>${exporting === "xlsx" ? "מכין…" : "ייצוא לאקסל"}</button>
       <button className="bra-btn" disabled=${exporting} title="כרטיס לכל חדר — נפתח חלון הדפסה; לשמירה כ-PDF בוחרים 'שמירה כ-PDF'" onClick=${() => doExport("pdf")}>${exporting === "pdf" ? "מכין…" : "PDF"}</button>
-      <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>מפת קומה</button>
+      <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>תוכנית קומה</button>
     </div>
     <div className="bra-scroll"><table>
       <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th><th>הערות</th></tr></thead>
@@ -1282,11 +1316,11 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
             <button className="bra-btn primary small" disabled=${busy || !pp.some((i) => sel.has(i.id))} onClick=${approve}>${L.approveSel}</button></div>` : null}
           ${!metaOk && r.fin.length ? html`<div style=${{ fontSize: "12px", color: "#8a6d1f" }}>V ירוק והערה לכל איפיון: צריך להריץ פעם אחת ב-Supabase את <code>004_mark_edits.sql</code>.</div>` : null}
           ${!r.fin.length && !r.pendingOnly ? html`<p style=${{ color: "#9a9da5" }}>אין איפיונים לחדר הזה.</p>` : null}
-          ${r.pendingOnly ? html`<p style=${{ color: "#5b5e66" }}>החדר עדיין לא אושר — אחרי אישור V אפשר להוסיף לו איפיונים ידנית.</p>` : html`<${AddMark} projectId=${projectId} room=${r} catalog=${catalog} onDone=${() => setTick((t) => t + 1)} />`}
+          ${r.pendingOnly ? html`<p style=${{ color: "#5b5e66" }}>החדר עדיין לא אושר — אחרי אישור V אפשר להוסיף לו איפיונים ידנית.</p>` : html`<${AddMark} projectId=${projectId} room=${r} catalog=${catalog} kindsInUse=${kindsAll} onDone=${() => setTick((t) => t + 1)} />`}
           <${RoomNote} projectId=${projectId} room=${r} note=${notes.get(key(r))} ok=${notesOk} onSaved=${(n) => setNotes((m) => new Map(m).set(key(r), n))} />
           <div style=${{ marginTop: "14px", display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
-            ${r.pendingOnly ? null : html`<button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setRecent(!recent)}>${recent ? "▲ סגירת השינויים האחרונים" : "▼ שינויים אחרונים (Recent Changes)"}</button>`}
-            <button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setMapFloor(r.floor)}>הצגה על מפת הקומה</button></div>
+            ${r.pendingOnly ? null : html`<button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setRecent(!recent)}>${recent ? "▲ סגירת השינויים האחרונים" : "▼ שינויים אחרונים"}</button>`}
+            <button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setMapFloor(r.floor)}>הצגה על תוכנית הקומה</button></div>
           ${recent && !r.pendingOnly ? html`<div style=${{ marginTop: "8px" }}><${RecentChanges} projectId=${projectId} floor=${r.floor} room=${r.room_no} /></div>` : null}
         </td></tr>` : null}
       </${React.Fragment}>`; })}</tbody></table></div>
@@ -1310,13 +1344,13 @@ function RoomNote({ projectId, room, note, ok, onSaved }) {
   };
   if (!ok) return html`<div style=${{ marginTop: "10px", fontSize: "12px", color: "#8a6d1f" }}>הערות לחדר: צריך להריץ פעם אחת ב-Supabase את <code>003_notes_choices.sql</code>.</div>`;
   return html`<div style=${{ marginTop: "12px" }}>
-    <div style=${{ fontWeight: 700, marginBottom: "4px" }}>הערות כלליות לחדר <span style=${{ fontWeight: 400, fontSize: "12px", color: "#5b5e66" }}>— נכנסות לדוח אקסל / PDF, לא מוצגות ללקוח</span></div>
+    <div style=${{ fontWeight: 700, marginBottom: "4px" }}>הערות כלליות לחדר</div>
     <textarea value=${v} rows="2" style=${{ width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: "13px" }} placeholder="למשל: נדרש לוודא גוון מול האדריכל"
       onClick=${(e) => e.stopPropagation()} onInput=${(e) => setV(e.target.value)} />
-    <div className="bra-row" style=${{ gap: "8px", justifyContent: "center", marginTop: "6px" }}>
+    <div style=${{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", marginTop: "6px", textAlign: "center" }}>
       <button className="bra-btn primary" style=${{ minWidth: "140px" }} disabled=${!dirty || state === "saving"} onClick=${save}>${state === "saving" ? "שומר…" : "שמירה"}</button>
       ${state === "saved" ? html`<span style=${{ color: "#1f7a3a", fontSize: "12px" }}>נשמר</span>` : dirty ? html`<span style=${{ color: "#8a6d1f", fontSize: "12px" }}>לא נשמר</span>` : null}
-      ${note?.updated_at ? html`<span style=${{ color: "#5b5e66", fontSize: "12px" }}>עודכן ${fmtDate(note.updated_at)}${note.updated_email ? ` · ${note.updated_email}` : ""}</span>` : null}
+      ${note?.updated_at ? html`<span style=${{ color: "#5b5e66", fontSize: "12px" }}>עודכן ע"י ${note.updated_email || "—"} · ${fmtDate(note.updated_at)}</span>` : null}
     </div></div>`;
 }
 
@@ -1463,7 +1497,7 @@ function previewApi(projectId, projectName, marks, brand) {
     home: async () => {
       const r = must(await supabase.from("byroom_rooms").select("floor, room_no, name").eq("project_id", projectId).eq("status", "active"));
       const floors = [...new Set(r.map((x) => x.floor))].sort((a, b) => Number(a) - Number(b));
-      return { project: { name: projectName, clientLogo: brand?.clientLogo, supervisionLogo: brand?.supervisionLogo, categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he })) },
+      return { project: { name: projectName, clientLogo: brand?.clientLogo, supervisionLogo: brand?.supervisionLogo, categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he })), roomNotes: await roomNotesFor(projectId) },
         floors: floors.map((f) => ({ floor: f, rooms: r.filter((x) => x.floor === f).map((x) => ({ n: x.room_no, name: x.name })) })) };
     },
     floor: async (f) => {
@@ -1477,13 +1511,21 @@ function previewApi(projectId, projectName, marks, brand) {
   };
 }
 
+/** The general room notes, as {"floor|room": note}: they go to the client with the publish (build 13). */
+async function roomNotesFor(projectId) {
+  const { data, error } = await supabase.from("byroom_room_notes").select("floor, room_no, note").eq("project_id", projectId);
+  if (error) return {};
+  return Object.fromEntries((data ?? []).filter((n) => n.note?.trim()).map((n) => [n.floor + "|" + n.room_no, n.note.trim()]));
+}
+
 async function publishNow(projectId, projectName, marks, brand) {
-  if (!confirm(`לפרסם ללקוח את כל מה שאושר בפרויקט ${projectName}?\nמהרגע הזה הקישורים וקודי ה-QR יציגו את הנתונים המעודכנים.`)) return;
+  if (!confirm(`לפרסם ללקוח את כל מה שאושר בפרויקט ${projectName}?\nמהרגע הזה הקישורים וקודי ה-QR יציגו את הנתונים המעודכנים, כולל ההערות הכלליות לחדרים.`)) return;
   try {
     await syncMarks(projectId, marks);
+    const roomNotes = await roomNotesFor(projectId);
     const r = must(await supabase.rpc("byroom_publish", { p_project: projectId, p_meta: {
       name: projectName, clientLogo: brand?.clientLogo ?? null, supervisionLogo: brand?.supervisionLogo ?? null,
-      categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he, en: c.en })) } }));
+      categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he, en: c.en })), roomNotes } }));
     alert(`פורסם: ${r.rooms} חדרים ב-${r.floors} קומות.`);
   } catch (e) { alert(e.message); }
 }

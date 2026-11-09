@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/view.js — the client's By Room: view only, mobile first. A. Weiss · By Room
-//  byroom build 7 · 25.10.2026
+//  byroom build 13 · 9.11.2026
 //
 //  One copy, used by the phone page opened from a QR code or a link (byroom/index.html)
 //  and by the By Room cube for a signed-in client inside the dashboard.
@@ -32,14 +32,14 @@ const ORDER = ["FL", "FN", "CL", "lighting"];
 const TX = {
   he: {
     byRoom: "חיפוש לפי חדר", byPlan: "חיפוש לפי תוכנית", search: "מספר חדר או שם החדר", floor: "קומה", room: "חדר",
-    back: "חזרה", home: "מסך ראשי", showPlan: "הצגה על התוכנית", none: "לא הוגדרו איפיונים לחדר הזה",
+    back: "חזרה", home: "מסך ראשי", showPlan: "הצגה על התוכנית", none: "לא הוגדרו איפיונים לחדר הזה", notes: "הערות",
     supplier: "ספק", status: "סטטוס", loading: "טוען…", noRooms: "לא נמצא חדר", tap: "הקישו על חדר בתוכנית",
     notYet: "עדיין לא פורסמו חדרים בפרויקט הזה", all: "כל הקומה", lighting: "תאורה",
     tagline: "חומרי גמר ואיפיונים לפי חדר", enter: "כניסה", sqm: 'מ"ר', close: "סגירה",
   },
   en: {
     byRoom: "Search by room", byPlan: "Search by plan", search: "Room number or name", floor: "Floor", room: "Room",
-    back: "Back", home: "Home", showPlan: "Show on plan", none: "No finishes defined for this room",
+    back: "Back", home: "Home", showPlan: "Show on plan", none: "No finishes defined for this room", notes: "Notes",
     supplier: "Supplier", status: "Status", loading: "Loading…", noRooms: "No room found", tap: "Tap a room on the plan",
     notYet: "No rooms have been published in this project yet", all: "Whole floor", lighting: "Lighting",
     tagline: "Finishes and specifications by room", enter: "Enter", sqm: "m²", close: "Close",
@@ -95,6 +95,7 @@ export const viewCss = `
 .brv-res .nm{flex:1;font-size:16px}
 .brv-res .fl{font-size:13px;color:var(--steel);white-space:nowrap}
 .brv-msg{padding:28px 18px;text-align:center;color:var(--steel)}
+.brv-note{margin-top:16px;padding:10px 12px;border:1px solid #f1d38c;background:#fffaf0;border-radius:12px;font-size:14px;white-space:pre-wrap;text-align:start}.brv-note b{display:block;margin-bottom:3px}
 .brv-chips{display:flex;gap:8px;overflow:auto;padding:10px 14px;background:#fff;border-bottom:1px solid var(--ln)}
 .brv-chip{flex:none;padding:9px 16px;border-radius:999px;border:1px solid var(--ln);background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
 .brv-chip.on{background:var(--ai);border-color:var(--ai);color:#fff}
@@ -228,7 +229,7 @@ function groupItems(items) {
   return [...g.entries()].sort((a, b) => catOrder(a[0], b[0]));
 }
 
-function RoomCard({ room, floor, cats, onItem, onPlan }) {
+function RoomCard({ room, floor, cats, note, onItem, onPlan }) {
   if (!room) return html`<div className="brv-card"><div className="brv-msg">${T.loading}</div></div>`;
   const groups = groupItems(room.items);
   return html`<div className="brv-card">
@@ -245,6 +246,7 @@ function RoomCard({ room, floor, cats, onItem, onPlan }) {
         <span style=${{ color: "var(--mist,#9a9da5)", fontSize: "18px" }}>‹</span>
       </button>`)}
     </div>`)}
+    ${note ? html`<div className="brv-note"><b>${T.notes}</b><div>${note}</div></div>` : null}
     ${onPlan ? html`<div style=${{ marginTop: "18px" }}><button className="brv-btn p" onClick=${onPlan}>${T.showPlan}</button></div>` : null}
   </div>`;
 }
@@ -319,7 +321,7 @@ export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false 
   if (err) return html`<div className="brv" dir=${dir} style=${style}><style>${viewCss}</style><div className="brv-msg">${err}</div></div>`;
   if (!home) return html`<div className="brv" dir=${dir}><style>${viewCss}</style><div className="brv-msg">${T.loading}</div></div>`;
 
-  const cardBody = card && html`<${RoomCard} room=${roomData} floor=${card.floor} cats=${cats} onItem=${setItem} onPlan=${card.from === "search" ? toPlan : null} />`;
+  const cardBody = card && html`<${RoomCard} room=${roomData} floor=${card.floor} cats=${cats} note=${roomData ? p.roomNotes?.[card.floor + "|" + roomData.n] : null} onItem=${setItem} onPlan=${card.from === "search" ? toPlan : null} />`;
   const fd = floorData[floor];
   // opening: client logo, then supervision, then A. Weiss, then the project name (as it was set up), the line, and "Enter"
   const seq = [p.clientLogo && "c", p.supervisionLogo && "s", "aw"].filter(Boolean);
