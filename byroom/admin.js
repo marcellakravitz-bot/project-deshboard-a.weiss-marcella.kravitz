@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 10 · 9.11.2026
+//  byroom build 11 · 9.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 10 · 9.11.2026";
+export const BYROOM_BUILD = "byroom build 11 · 9.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -98,11 +98,7 @@ const css = `
 .bra-pbox{background:#fffaf0;border:1px solid #f1d38c;border-radius:10px;padding:8px 10px;margin-bottom:10px}
 .bra-pline{display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px dashed #f1e3bf}.bra-pline:last-of-type{border-bottom:0}
 .bra-approvebar{background:#fffaf0;border:1px solid #f1d38c;border-radius:10px;padding:6px 10px;margin-bottom:8px}
-.bra.bra-full{position:fixed;inset:0;z-index:900;background:#f4f5f7;padding:10px 14px;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box}
-.bra.bra-full .bra-panel{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 14px}
-.bra.bra-full .bra-rooms{flex:1;min-height:0;display:flex;flex-direction:column}
-.bra.bra-full .bra-rooms .bra-scroll{flex:1;min-height:0;max-height:none}
-.bra.bra-full .bra-foot{margin-top:8px}
+.bra-rooms .bra-scroll{max-height:calc(var(--appvh, 100vh) - 230px);min-height:420px}
 .bra-hc{font-size:11px;font-weight:400;color:#5b5e66;margin-top:2px;white-space:nowrap}
 .bra-warn{position:relative}.bra-x{position:absolute;top:6px;left:8px;border:0;background:none;font-size:17px;line-height:1;color:#8a6d1f;cursor:pointer;padding:2px 4px}
 .bra-x:hover{color:#000}
@@ -139,7 +135,16 @@ table.bra-files td{overflow-wrap:anywhere}
 .bra-sec{margin-top:22px;border-top:1px solid #e6e6e9;padding-top:4px}
 .bra-mk{display:inline-flex;flex-direction:column;margin:0 0 4px 8px;vertical-align:top}
 .bra-mk b{font-size:13px}.bra-mk span{font-size:11px;color:#5b5e66;max-width:180px}
-.bra-mkrow{display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid #f0f1f4}
+.bra-mkrow{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #f0f1f4}
+.bra-mkrow.ver img,.bra-mkrow.ver .noimg{outline:2px solid #2e9e57;outline-offset:1px}
+.bra-mkside{display:flex;flex-direction:column;align-items:center;gap:6px;width:34px;flex:none}
+.bra-vc{width:26px;height:26px;border-radius:50%;border:2px solid #b9bcc4;background:#fff;color:transparent;font-weight:800;font-size:14px;line-height:1;cursor:pointer;padding:0}
+.bra-vc:hover{border-color:#2e9e57;color:#9fd3b1}.bra-vc.on{background:#2e9e57;border-color:#2e9e57;color:#fff}
+.bra-mknote{width:260px;flex:none}.bra-mknote textarea{width:100%;box-sizing:border-box;font-family:inherit;font-size:12.5px;border:1px solid #dfe1e6;border-radius:8px;padding:5px 7px;resize:vertical}
+.bra-mknote .st{font-size:11px;color:#8a6d1f;min-height:14px}
+.bra-link{border:0;background:none;color:#1d5fa8;cursor:pointer;font-size:12px;margin-inline-start:8px;padding:0}
+.bra-edit{display:flex;flex-direction:column;gap:5px;margin-top:4px;max-width:640px}.bra-edit input,.bra-edit textarea{font-family:inherit;font-size:13px;border:1px solid #cfd2d8;border-radius:8px;padding:5px 7px}
+.bra-mk.ok b::after{content:" ✓";color:#2e9e57}
 .bra-mkrow img{width:64px;height:64px;object-fit:cover;border-radius:8px;border:1px solid #e6e6e9}
 .bra-mkrow .noimg{width:64px;height:64px;border-radius:8px;background:#f2f3f6}
 .bra-tag{font-size:10px;font-weight:700;color:#1d5fa8;background:#e3eefb;border-radius:6px;padding:1px 5px;margin-inline-start:4px}
@@ -745,6 +750,18 @@ function Review({ set, files, onApproved, L }) {
 // A mark's KIND is what By Room stores: FL / FN / CL for flooring / wall finishes / ceiling, the category key otherwise.
 export const kindOfCat = (cat) => { const k = KIND_OF_CAT[cat] ?? cat ?? "other"; return /^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(k) ? k : "other"; };
 
+/** The LLI marks with the By Room edits laid over them: name / description replaced, the LLI wording kept beside. */
+function mergeEdits(marks, edits) {
+  if (!edits?.size) return marks;
+  const out = {};
+  for (const [key, v] of Object.entries(marks || {})) {
+    const code = String(v?.mark || key.split("|")[1] || "").trim().toUpperCase();
+    const e = edits.get(code);
+    out[key] = e ? { ...v, name: e.name || v.name, desc: e.description ?? v.desc, edited: { at: e.updated_at, by: e.updated_email }, lliName: v.name, lliDesc: v.desc } : v;
+  }
+  return out;
+}
+
 /** Every defined mark, one per code: [{code, kind, name, desc, image, supplier, status, fromLli}] */
 export function markList(marks) {
   const by = new Map();
@@ -824,21 +841,60 @@ function lliFind(lliAll, code) {
   return k ? { mark: k, ...lliAll[k] } : null;
 }
 
-function MarkLine({ kind, code, lookup, manual, onRemove, lliAll, onTickByRoom, variants = [], onPick }) {
+function MarkLine({ projectId, kind, code, lookup, manual, onRemove, lliAll, onTickByRoom, variants = [], onPick, meta, onMeta, editsOk, onEdited }) {
   const m = lookup(kind, code);
   const hit = !m ? lliFind(lliAll, code) : null;
-  return html`<div className="bra-mkrow">
+  const [edit, setEdit] = useState(null);                   // {name, desc} while editing the wording
+  const [note, setNote] = useState(meta?.note ?? "");
+  const [noteSt, setNoteSt] = useState(null);
+  useEffect(() => { setNote(meta?.note ?? ""); }, [meta?.updated_at, code]);
+  const saveNote = async () => {
+    if (note === (meta?.note ?? "")) return;
+    setNoteSt("saving"); const ok = await onMeta({ note: note.trim() }); setNoteSt(ok ? "saved" : null); if (ok) setTimeout(() => setNoteSt(null), 1500);
+  };
+  const saveEdit = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = await supabase.from("byroom_mark_edits").upsert({ project_id: projectId, code: String(code).trim().toUpperCase(), name: edit.name.trim() || null,
+      description: edit.desc, updated_at: new Date().toISOString(), updated_email: u?.user?.email ?? null }, { onConflict: "project_id,code" });
+    if (error) { alert("לא נשמר: " + error.message); return; }
+    setEdit(null); onEdited?.();
+  };
+  const resetEdit = async () => {
+    if (!confirm(`להחזיר את ${code} לנוסח שב-LLI?`)) return;
+    const { error } = await supabase.from("byroom_mark_edits").delete().eq("project_id", projectId).eq("code", String(code).trim().toUpperCase());
+    if (error) { alert(error.message); return; }
+    setEdit(null); onEdited?.();
+  };
+  const v = !!meta?.verified;
+  return html`<div className=${"bra-mkrow" + (v ? " ver" : "")}>
+    <div className="bra-mkside">
+      ${onMeta ? html`<button type="button" className=${"bra-vc" + (v ? " on" : "")} title=${v ? `אומת 100%${meta.verified_email ? " · " + meta.verified_email : ""}${meta.verified_at ? " · " + fmtDate(meta.verified_at) : ""} — לחיצה מבטלת` : "סימון: בדקתי — האיפיון הזה שייך לחדר הזה ב-100%"}
+        onClick=${() => onMeta({ verified: !v })}>✓</button>` : null}
+      ${onRemove ? html`<button type="button" className="bra-trash" title="הסרת האיפיון מהחדר" aria-label="הסרת האיפיון מהחדר" onClick=${onRemove}><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18" /><path d="M8 6V4h8v2" /><path d="M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg></button>` : null}
+    </div>
     ${m?.image ? html`<img src=${m.image} alt="" />` : html`<div className="noimg" />`}
-    <div style=${{ flex: 1 }}>
-      <div><b dir="ltr">${code}</b>${m?.name && m.name !== code ? html` · ${m.name}` : null}${m?.fromLli ? html`<span className="bra-tag">LLI</span>` : null}${manual ? html`<span className="bra-tag" style=${{ color: "#8a3f07", background: "#f7efe3" }}>נוסף ידנית</span>` : null}</div>
-      ${m?.desc ? html`<div style=${{ fontSize: "13px", color: "#3b3e45", whiteSpace: "pre-wrap" }}>${m.desc}</div>` : null}
-      ${m?.supplier ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>ספק: ${m.supplier}</div>` : null}
+    <div style=${{ flex: 1, minWidth: 0 }}>
+      <div><b dir="ltr">${code}</b>${m?.name && m.name !== code && !edit ? html` · ${m.name}` : null}${m?.fromLli ? html`<span className="bra-tag">LLI</span>` : null}${m?.edited ? html`<span className="bra-tag" style=${{ color: "#8a5a00", background: "#fff1d6" }} title=${`נערך ב-By Room${m.edited.by ? " · " + m.edited.by : ""}${m.edited.at ? " · " + fmtDate(m.edited.at) : ""} — ה-LLI לא השתנה`}>נערך</span>` : null}${manual ? html`<span className="bra-tag" style=${{ color: "#8a3f07", background: "#f7efe3" }}>נוסף ידנית</span>` : null}
+        ${m && !edit && editsOk ? html`<button type="button" className="bra-link" title="עריכת השם והתיאור ב-By Room בלבד — ה-LLI לא משתנה" onClick=${() => setEdit({ name: m.name && m.name !== code ? m.name : "", desc: m.desc ?? "" })}>✎ עריכה</button>` : null}</div>
+      ${edit ? html`<div className="bra-edit">
+          <input value=${edit.name} placeholder="שם האיפיון" onInput=${(e) => setEdit({ ...edit, name: e.target.value })} />
+          <textarea rows="3" value=${edit.desc} placeholder="תיאור" onInput=${(e) => setEdit({ ...edit, desc: e.target.value })} />
+          <div style=${{ fontSize: "12px", color: "#5b5e66" }}>השינוי חל על ${code} בכל החדרים ב-By Room, בדוחות ובקישור ללקוח (אחרי פרסום). ה-LLI לא משתנה.</div>
+          <div className="bra-row" style=${{ gap: "6px" }}><button className="bra-btn small primary" onClick=${saveEdit}>שמירה</button><button className="bra-btn small" onClick=${() => setEdit(null)}>ביטול</button>
+            ${m?.edited ? html`<button className="bra-btn small" onClick=${resetEdit}>חזרה לנוסח ה-LLI</button>` : null}</div>
+          ${m?.edited && (m.lliDesc || m.lliName) ? html`<div style=${{ fontSize: "12px", color: "#9a9da5", whiteSpace: "pre-wrap" }}>בנוסח ה-LLI: ${m.lliName && m.lliName !== code ? m.lliName + " · " : ""}${m.lliDesc ?? ""}</div>` : null}
+        </div>`
+      : html`${m?.desc ? html`<div style=${{ fontSize: "13px", color: "#3b3e45", whiteSpace: "pre-wrap" }}>${m.desc}</div>` : null}
+      ${m?.supplier ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>ספק: ${m.supplier}</div>` : null}`}
       ${!m ? (hit && !hit.ticked ? html`<div style=${{ fontSize: "12px", color: "#8a6d1f" }}>קיים ב-LLI${hit.mark !== String(code).trim().toUpperCase() ? ` (${hit.mark})` : ""} אבל לא מסומן BY ROOM
           ${onTickByRoom ? html` <button className="bra-btn small" style=${{ marginInlineStart: "6px" }} onClick=${() => onTickByRoom(hit.mark)}>סימון BY ROOM</button>` : null}</div>`
         : html`<div style=${{ fontSize: "12px", color: "#9a9da5" }}>לא קיים ב-LLI — אין שורה עם האיפיון הזה</div>`) : null}
       ${!m && onPick ? html`<${Variants} list=${variants} onPick=${onPick} />` : null}
     </div>
-    ${onRemove ? html`<button className="bra-btn small" title="הסרת האיפיון מהחדר" onClick=${onRemove}>הסרה</button>` : null}
+    ${onMeta ? html`<div className="bra-mknote">
+      <textarea rows="2" value=${note} placeholder="הערה לאיפיון בחדר הזה" onInput=${(e) => setNote(e.target.value)} onBlur=${saveNote} />
+      <div className="st">${noteSt === "saving" ? "שומר…" : noteSt === "saved" ? html`<span style=${{ color: "#1f7a3a" }}>נשמר</span>` : note !== (meta?.note ?? "") ? "יישמר ביציאה מהשדה" : ""}</div>
+    </div>` : null}
   </div>`;
 }
 
@@ -890,7 +946,7 @@ function AddMark({ projectId, room, catalog, onDone }) {
     catch (e) { alert(e.message); }
     setBusy(false);
   };
-  return html`<div className="bra-row" style=${{ marginTop: "10px", padding: "10px", background: "#fff", border: "1px dashed #cfd2d8", borderRadius: "10px" }}>
+  return html`<div className="bra-row" style=${{ marginTop: "10px", padding: "10px", background: "#fff", border: "1px dashed #cfd2d8", borderRadius: "10px", justifyContent: "center" }}>
     <b style=${{ fontSize: "13px" }}>הוספת איפיון לחדר:</b>
     <input list="bra-marks" placeholder="קוד, למשל FL-7A" value=${code} onInput=${(e) => setCode(e.target.value)} style=${{ width: "150px" }} dir="ltr" />
     <datalist id="bra-marks">${catalog.map((m) => html`<option key=${m.code} value=${m.code}>${m.name ?? ""}</option>`)}</datalist>
@@ -908,7 +964,7 @@ async function allRows(q) {          // past the 1000-row page of the API
   const out = [];
   for (let from = 0; ; from += 1000) { const r = must(await q().range(from, from + 999)); out.push(...r); if (r.length < 1000) return out; }
 }
-async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes = new Map() }) {
+async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes = new Map(), meta = new Map() }) {
   const rows = [];
   const detail = (kind, code) => { const m = lookup(kind, code); return { mname: m?.name && m.name !== code ? m.name : "", desc: m?.desc ?? "", supplier: m?.supplier ?? "", lli: m?.status ?? "", image: m?.image ?? null }; };
   const have = new Set();
@@ -940,7 +996,11 @@ async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes 
       }
     }
   }
-  for (const r of rows) r.note = notes.get(r.floor + "|" + r.room)?.note ?? "";
+  for (const r of rows) {
+    r.note = notes.get(r.floor + "|" + r.room)?.note ?? "";
+    const mt = r.code ? meta.get(r.floor + "|" + r.room + "|" + r.kind + "|" + String(r.code).toUpperCase()) : null;
+    r.mnote = mt?.note ?? ""; r.verified = !!mt?.verified;
+  }
   const n = (s) => { const m = /^(\d+)(.*)$/.exec(s ?? ""); return m ? [Number(m[1]), m[2]] : [1e9, s ?? ""]; };
   return rows.sort((a, b) => Number(a.floor) - Number(b.floor) || n(a.room)[0] - n(b.room)[0] || String(n(a.room)[1]).localeCompare(n(b.room)[1])
     || kindOrder(a.kind || "zz", b.kind || "zz") || String(a.code).localeCompare(String(b.code), "en", { numeric: true }));
@@ -948,40 +1008,61 @@ async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes 
 async function exportXlsx(rows, title) {
   const mod = await import("xlsx");
   const X = mod.utils ? mod : mod.default;
-  const head = ["קומה", "מספר חדר", "שם החדר", 'שטח (מ"ר)', "קטגוריה", "מס' איפיון", "שם האיפיון", "תיאור", "ספק", "סטטוס LLI", "מקור", "מצב", "הערות לחדר"];
-  const data = [head, ...rows.map((r) => [r.floor, r.room, r.name, r.area != null ? Number(r.area) : "", r.kind ? catHe(r.kind) : "", r.code, r.mname, r.desc, r.supplier, r.lli, r.src, r.state, r.note])];
+  const head = ["קומה", "מספר חדר", "שם החדר", 'שטח (מ"ר)', "קטגוריה", "מס' איפיון", "שם האיפיון", "תיאור", "ספק", "סטטוס LLI", "מקור", "מצב", "אומת ✓", "הערה לאיפיון", "הערות כלליות לחדר"];
+  const data = [head, ...rows.map((r) => [r.floor, r.room, r.name, r.area != null ? Number(r.area) : "", r.kind ? catHe(r.kind) : "", r.code, r.mname, r.desc, r.supplier, r.lli, r.src, r.state, r.verified ? "✓" : "", r.mnote, r.note])];
   const ws = X.utils.aoa_to_sheet(data);
-  ws["!cols"] = [6, 10, 22, 9, 14, 12, 22, 50, 18, 14, 9, 26, 40].map((w) => ({ wch: w }));
+  ws["!cols"] = [6, 10, 22, 9, 14, 12, 22, 50, 18, 14, 9, 26, 8, 30, 40].map((w) => ({ wch: w }));
   ws["!autofilter"] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: head.length - 1 } }) };
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, "By Room");
   wb.Workbook = { Views: [{ RTL: true }] };
   X.writeFile(wb, title.replace(/[\\/:*?"<>|]/g, "-") + ".xlsx");
 }
+/** PDF in the A. Weiss format (build 11): one room per page; the A. Weiss logo on the right, floor and room on the
+ *  left, no other logo. Opens the print window; "שמירה כ-PDF" there saves it. */
 function exportPdf(rows, title, projectName, brand, floor) {
   const rooms = new Map();
   for (const r of rows) { const k = r.floor + "|" + r.room; if (!rooms.has(k)) rooms.set(k, { ...r, items: [] }); if (r.code) rooms.get(k).items.push(r); }
   const badge = (st) => `<span class="st ${st === ST_PUB ? "pub" : st === ST_APPROVED ? "ok" : "wait"}">${esc(st)}</span>`;
-  const logo = (src) => (src ? `<img class="logo" src="${esc(src)}" alt="">` : "<span></span>");
-  const cards = [...rooms.values()].map((r) => {
+  const logo = brand?.brandLogo ? `<img class="logo" src="${esc(brand.brandLogo)}" alt="">` : `<b class="logo-t">א. וייס הנדסה</b>`;
+  const today = new Date().toLocaleDateString("he-IL");
+  const pages = [...rooms.values()].map((r) => {
     const kinds = [...new Set(r.items.map((i) => i.kind))].sort(kindOrder);
-    const body = kinds.map((k) => `<h4>${esc(catHe(k))}</h4><table><tbody>${r.items.filter((i) => i.kind === k).map((i) => `<tr>
-      <td class="code" dir="ltr">${esc(i.code)}</td><td class="txt"><b>${esc(i.mname)}</b>${i.desc ? `<div>${esc(i.desc).replace(/\n/g, "<br>")}</div>` : ""}${i.supplier ? `<div class="sup">ספק: ${esc(i.supplier)}</div>` : ""}</td>
-      <td class="img">${i.image ? `<img src="${esc(i.image)}" alt="">` : ""}</td><td class="stc">${badge(i.state)}</td></tr>`).join("")}</tbody></table>`).join("");
-    return `<section class="room"><div class="rh"><b dir="ltr">${esc(r.room)}</b> <span>${esc(r.name)}</span><small>קומה ${esc(r.floor)}${r.area ? ` · ${Number(r.area)} מ"ר` : ""}</small></div>${r.note ? `<div class="note"><b>הערות:</b> ${esc(r.note).replace(/\n/g, "<br>")}</div>` : ""}${body || '<p class="none">אין איפיונים לחדר הזה</p>'}</section>`;
+    const body = kinds.map((k) => `<h3>${esc(catHe(k))}</h3><table><thead><tr><th class="v"></th><th class="code">מס' איפיון</th><th>איפיון</th><th class="img">תמונה</th><th class="nt">הערה</th></tr></thead><tbody>${r.items.filter((i) => i.kind === k).map((i) => `<tr>
+      <td class="v">${i.verified ? '<span class="ok">✓</span>' : ""}</td>
+      <td class="code" dir="ltr">${esc(i.code)}</td>
+      <td class="txt">${i.mname ? `<b>${esc(i.mname)}</b>` : ""}${i.desc ? `<div>${esc(i.desc).replace(/\n/g, "<br>")}</div>` : ""}${i.supplier ? `<div class="sup">ספק: ${esc(i.supplier)}</div>` : ""}${i.state !== ST_PUB ? `<div>${badge(i.state)}</div>` : ""}</td>
+      <td class="img">${i.image ? `<img src="${esc(i.image)}" alt="">` : ""}</td>
+      <td class="nt">${esc(i.mnote).replace(/\n/g, "<br>")}</td></tr>`).join("")}</tbody></table>`).join("");
+    return `<section class="page">
+      <header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div><div class="sub">חומרי גמר לפי חדר</div></div>
+        <div class="l"><div class="fl">קומה ${esc(r.floor)}</div><div class="rn" dir="ltr">${esc(r.room)}</div></div></header>
+      <div class="rname">${esc(r.name)}${r.area ? ` <small>· ${Number(r.area)} מ"ר</small>` : ""}</div>
+      ${body || '<p class="none">אין איפיונים לחדר הזה</p>'}
+      ${r.note ? `<div class="gnote"><b>הערות כלליות:</b><div>${esc(r.note).replace(/\n/g, "<br>")}</div></div>` : ""}
+      <footer>א. וייס הנדסה · ${esc(projectName)} · ${today}</footer>
+    </section>`;
   }).join("");
   printPage(title, `<style>
-    .top{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #14181f;padding-bottom:4mm;margin-bottom:6mm}
-    .top .logo{max-height:16mm;max-width:45mm;object-fit:contain}.top h1{font-size:20px;margin:0;text-align:center}.top h1 small{display:block;font-size:12px;font-weight:400;color:#5b5e66}
-    .room{border:1px solid #c9ccd2;border-radius:3mm;padding:4mm;margin-bottom:5mm;break-inside:avoid}
-    .rh{font-size:17px;margin-bottom:2mm}.rh small{float:left;font-size:12px;color:#5b5e66;margin-top:4px}
-    h4{margin:3mm 0 1mm;font-size:13px;color:#14181f;border-bottom:1px solid #eee}
-    table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1.5mm;border-bottom:1px solid #f0f0f2;font-size:11.5px}
-    td.code{width:20mm;font-weight:700}td.img{width:22mm}td.img img{width:20mm;height:20mm;object-fit:contain}td.stc{width:30mm;text-align:left}
-    .sup{color:#5b5e66;margin-top:1mm}.note{background:#fff8e6;border:1px solid #f1d38c;border-radius:2mm;padding:2mm;font-size:12px;margin:1mm 0 2mm}.none{color:#9a9da5;font-size:12px}
-    .st{font-size:10px;border-radius:8px;padding:1px 6px;white-space:nowrap}.st.pub{background:#e3f1e7;color:#1f7a3a}.st.ok{background:#e7eef8;color:#1d5fa8}.st.wait{background:#fff1d6;color:#8a5a00}
-    @page{size:A4;margin:10mm}body{margin:0}
-  </style><div class="top">${logo(brand?.clientLogo)}<h1>${esc(projectName)} — חומרי גמר לפי חדר<small>${floor ? `קומה ${esc(floor)} · ` : ""}${esc(new Date().toLocaleDateString("he-IL"))} · ${rooms.size} חדרים</small></h1>${logo(brand?.supervisionLogo)}</div>${cards}`);
+    @page{size:A4;margin:12mm}body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .page{break-after:page;page-break-after:always;position:relative;min-height:268mm;padding-bottom:10mm;box-sizing:border-box}
+    .page:last-child{break-after:auto;page-break-after:auto}
+    header{display:flex;align-items:center;justify-content:space-between;border-bottom:2.5px solid #14181f;padding-bottom:4mm;margin-bottom:5mm}
+    header .r,header .l{width:55mm}header .l{text-align:left}header .c{flex:1;text-align:center}
+    .logo{max-height:18mm;max-width:55mm;object-fit:contain}.logo-t{font-size:16px}
+    .pn{font-size:18px;font-weight:700}.sub{font-size:12px;color:#5b5e66}
+    .fl{font-size:13px;color:#5b5e66}.rn{font-size:30px;font-weight:800;line-height:1.1}
+    .rname{font-size:18px;font-weight:700;margin-bottom:3mm}.rname small{font-weight:400;color:#5b5e66;font-size:13px}
+    h3{font-size:14px;margin:5mm 0 1.5mm;padding:1mm 2mm;background:#eef1f5;border-radius:1.5mm}
+    table{width:100%;border-collapse:collapse}th{font-size:10.5px;color:#5b5e66;text-align:right;font-weight:600;border-bottom:1px solid #c9ccd2;padding:1mm 1.5mm}
+    td{vertical-align:top;padding:2mm 1.5mm;border-bottom:1px solid #e6e8ec;font-size:11.5px}
+    .v{width:7mm;text-align:center}.ok{display:inline-block;width:5mm;height:5mm;border-radius:50%;background:#2e9e57;color:#fff;font-size:10px;line-height:5mm;text-align:center}
+    td.code,th.code{width:22mm}td.code{font-weight:700}th.img,td.img{width:26mm}td.img img{width:24mm;height:24mm;object-fit:contain}th.nt,td.nt{width:40mm}td.nt{color:#3b3e45}
+    .sup{color:#5b5e66;margin-top:1mm}.none{color:#9a9da5;font-size:12px}
+    .gnote{margin-top:5mm;border:1px solid #c9ccd2;border-radius:2mm;padding:3mm;font-size:12px}
+    .st{font-size:9.5px;border-radius:8px;padding:0 6px;white-space:nowrap}.st.ok{background:#e7eef8;color:#1d5fa8}.st.wait{background:#fff1d6;color:#8a5a00}
+    footer{position:absolute;bottom:0;left:0;right:0;font-size:9.5px;color:#9a9da5;text-align:center;border-top:1px solid #e6e8ec;padding-top:1.5mm}
+  </style>${pages}`);
 }
 
 // ----------------------------------------------------------------------------- room list helpers (build 10)
@@ -1025,11 +1106,13 @@ function PendingLine({ it, ticked, onToggle, lookup, catalog, lliAll, onPick }) 
   </div>`;
 }
 
-function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, full, setFull, L }) {
+function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, editsOk, onEdited, L }) {
   const [rooms, setRooms] = useState(null);
   const [pend, setPend] = useState(new Map());
   const [notes, setNotes] = useState(new Map());
   const [notesOk, setNotesOk] = useState(true);
+  const [meta, setMeta] = useState(new Map());              // per mark in a room: note + green V (build 11)
+  const [metaOk, setMetaOk] = useState(true);
   const [pubAt, setPubAt] = useState(null);
   const [floor, setFloor] = useState("");
   const [q, setQ] = useState("");
@@ -1061,6 +1144,9 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
     }
     const { data: nd, error: ne } = await supabase.from("byroom_room_notes").select("floor, room_no, note, updated_at, updated_email").eq("project_id", projectId);
     setNotesOk(!ne);
+    const { data: md, error: me } = await supabase.from("byroom_room_marks").select("floor, room_no, kind, code, note, verified, verified_at, verified_email, updated_at").eq("project_id", projectId);
+    setMetaOk(!me);
+    setMeta(new Map((md ?? []).map((x) => [x.floor + "|" + x.room_no + "|" + x.kind + "|" + String(x.code).toUpperCase(), x])));
     setNotes(new Map((nd ?? []).map((n) => [n.floor + "|" + n.room_no, n])));
     // a room the plans propose that is not approved yet still gets a row, so it can be ticked from here
     const rows = r.map((x) => ({ ...x, fin: f.filter((y) => y.room_id === x.id) }));
@@ -1078,6 +1164,19 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
   if (!rooms) return html`<p>…</p>`;
   if (!rooms.length) return html`<p>עדיין אין חדרים. מעלים תוכניות ב"${L.upload}", ואחרי העיבוד הם יופיעו כאן לאישור.</p>`;
   const key = (r) => r.floor + "|" + r.room_no;
+  const mkey = (r, kind, code) => key(r) + "|" + kind + "|" + String(code).toUpperCase();
+  const saveMeta = async (r, kind, code, patch) => {
+    const cur = meta.get(mkey(r, kind, code));
+    const { data: u } = await supabase.auth.getUser();
+    const now = new Date().toISOString();
+    const row = { project_id: projectId, floor: r.floor, room_no: r.room_no, kind, code: String(code).toUpperCase(), note: cur?.note ?? "", verified: !!cur?.verified,
+      verified_at: cur?.verified_at ?? null, verified_email: cur?.verified_email ?? null, ...patch, updated_at: now };
+    if ("verified" in patch) { row.verified_at = patch.verified ? now : null; row.verified_email = patch.verified ? u?.user?.email ?? null : null; }
+    const { error } = await supabase.from("byroom_room_marks").upsert(row, { onConflict: "project_id,floor,room_no,kind,code" });
+    if (error) { alert("לא נשמר: " + error.message + (metaOk ? "" : "\n(צריך להריץ ב-Supabase את 004_mark_edits.sql)")); return false; }
+    setMeta((m) => new Map(m).set(mkey(r, kind, code), row));
+    return true;
+  };
   const pendOf = (r) => pend.get(key(r)) ?? [];
   const floors = [...new Set(rooms.map((r) => r.floor))].sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
   const unpublished = (r) => !pubAt || new Date(r.updated_at) > new Date(pubAt);
@@ -1087,8 +1186,8 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
     || r.fin.some((f) => f.code.toLowerCase().includes(qq) || (lookup(f.kind, f.code)?.name ?? "").toLowerCase().includes(qq)))).sort((a, b) => Number(a.floor) - Number(b.floor) || sortRooms(a, b));
   const codes = (r, k) => r.fin.filter((f) => f.kind === k).sort((a, b) => a.code.localeCompare(b.code, "en", { numeric: true }));
   const others = (r) => r.fin.filter((f) => !["FL", "FN", "CL"].includes(f.kind));
-  const chip = (f) => { const m = lookup(f.kind, f.code); return html`<span className=${"bra-mk" + (m ? "" : " nodet")} key=${f.kind + f.code} title=${m ? "" : "אין פירוט ב-LLI"}><b dir="ltr">${f.code}${f.source === "manual" ? "*" : ""}</b>${m?.name && m.name !== f.code ? html`<span>${m.name}</span>` : null}</span>`; };
-  const cell = (r, k) => html`<td>${codes(r, k).map(chip)}</td>`;
+  const chip = (f, r) => { const m = lookup(f.kind, f.code); return html`<span className=${"bra-mk" + (m ? "" : " nodet") + (r && meta.get(mkey(r, f.kind, f.code))?.verified ? " ok" : "")} key=${f.kind + f.code} title=${m ? "" : "אין פירוט ב-LLI"}><b dir="ltr">${f.code}${f.source === "manual" ? "*" : ""}</b>${m?.name && m.name !== f.code ? html`<span>${m.name}</span>` : null}</span>`; };
+  const cell = (r, k) => html`<td>${codes(r, k).map((f) => chip(f, r))}</td>`;
   const marksN = new Set(rooms.flatMap((r) => r.fin.map((f) => f.kind + "|" + f.code))).size;
   const shownPending = list.flatMap(pendOf);
   const toggle = (id) => setSel((t) => { const n = new Set(t); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -1107,7 +1206,7 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
   const doExport = async (kind) => {
     setExporting(kind);
     try {
-      const rows = await exportRows({ projectId, rooms: list.filter((r) => !r.pendingOnly), floor, unpublished, lookup, notes });
+      const rows = await exportRows({ projectId, rooms: list.filter((r) => !r.pendingOnly), floor, unpublished, lookup, notes, meta });
       if (!rows.length) { alert("אין מה לייצא בסינון הזה"); return; }
       const title = `By Room - ${projectName}${floor ? ` - קומה ${floor}` : ""} - ${new Date().toLocaleDateString("he-IL").replace(/\./g, "-")}`;
       if (kind === "xlsx") await exportXlsx(rows, title); else exportPdf(rows, title, projectName, brand, floor);
@@ -1144,7 +1243,7 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
       <div className="bra-row" style=${{ marginBottom: "8px" }}><button className="bra-btn" onClick=${() => { setMapFloor(null); setMap(null); }}>${L.back}</button>
         ${floors.length > 1 ? html`<select value=${mapFloor} onChange=${(e) => setMapFloor(e.target.value)}>${floors.map((f) => html`<option key=${f} value=${f}>${L.floor} ${f}</option>`)}</select>` : html`<b>${L.floor} ${mapFloor}</b>`}
         ${sel1 ? html`<span>${L.room} <b>${sel1.room_no}</b> ${sel1.name ?? ""}</span>` : html`<span style=${{ color: "#5b5e66" }}>לחיצה על חדר במפה פותחת אותו ברשימה</span>`}</div>
-      <div className="brv" style=${{ height: full ? "calc(100vh - 150px)" : "70vh", border: "1px solid #e6e6e9", borderRadius: "12px", overflow: "hidden" }}>
+      <div className="brv" style=${{ height: "calc(var(--appvh, 100vh) - 230px)", border: "1px solid #e6e6e9", borderRadius: "12px", overflow: "hidden" }}>
         <${FloorMap} map=${map} selected=${sel1?.room_no ?? null} onPick=${(n) => { const r = rooms.find((x) => x.floor === mapFloor && x.room_no === n); if (r) { setOpen(r.id); setMapFloor(null); setFloor(r.floor); setQ(""); } }} /></div></div>`;
   }
   return html`<div className="bra-rooms">
@@ -1157,7 +1256,6 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
       <button className="bra-btn" disabled=${exporting} title="כל החדרים שבסינון: מה שפורסם, מה שאושר וטרם פורסם, ומה שממתין לאישור בגרסאות" onClick=${() => doExport("xlsx")}>${exporting === "xlsx" ? "מכין…" : "ייצוא לאקסל"}</button>
       <button className="bra-btn" disabled=${exporting} title="כרטיס לכל חדר — נפתח חלון הדפסה; לשמירה כ-PDF בוחרים 'שמירה כ-PDF'" onClick=${() => doExport("pdf")}>${exporting === "pdf" ? "מכין…" : "PDF"}</button>
       <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>מפת קומה</button>
-      <button className="bra-btn" title=${full ? "חזרה לתצוגה בתוך הדשבורד" : "רשימת החדרים על כל המסך"} onClick=${() => setFull(!full)}>${full ? "יציאה ממסך מלא" : "מסך מלא"}</button>
     </div>
     ${shownPending.length ? html`<div className="bra-row bra-approvebar">
       <b>אישור V מכאן:</b>
@@ -1173,7 +1271,7 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
           <td>${r.floor}</td><td><span className="arr">${on ? "▲" : "▼"}</span> <b dir="ltr">${r.room_no}</b>
             ${pp.length ? html`<div><span className="bra-pend">${r.pendingOnly ? "חדר חדש · " : ""}${pp.length} ממתינים</span></div>` : null}</td>
           <td>${r.name ?? ""}</td><td>${r.area ? `${Number(r.area)} מ"ר` : ""}</td>
-          ${cell(r, "FL")}${cell(r, "FN")}${cell(r, "CL")}<td>${others(r).map(chip)}</td>
+          ${cell(r, "FL")}${cell(r, "FN")}${cell(r, "CL")}<td>${others(r).map((f) => chip(f, r))}</td>
           <td className="ntc" title=${nt}>${nt}</td></tr>
         ${on ? html`<tr className="det"><td colSpan="9">
           ${pp.length ? html`<div className="bra-pbox"><div style=${{ fontWeight: 700, marginBottom: "4px" }}>ממתין לאישור (V)</div>
@@ -1182,8 +1280,10 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
               <button className="bra-btn primary small" disabled=${busy || !pp.some((i) => sel.has(i.id))} onClick=${approve}>${L.approveSel}</button></div></div>` : null}
           ${[...new Set(r.fin.map((f) => f.kind))].sort(kindOrder).map((k) => html`<div key=${k} style=${{ marginBottom: "8px" }}>
             <div style=${{ fontWeight: 700, color: "var(--accent-ink,#000)", margin: "4px 0" }}>${catHe(k)}</div>
-            ${codes(r, k).map((f) => html`<${MarkLine} key=${f.code} kind=${k} code=${f.code} lookup=${lookup} manual=${f.source === "manual"} onRemove=${() => remove(r, f)} lliAll=${lliAll} onTickByRoom=${onTickByRoom}
-              variants=${lookup(k, f.code) ? [] : variantsOf(f.code, catalog, lliAll)} onPick=${(v) => pickApproved(r, k, f.code, v)} />`)}</div>`)}
+            ${codes(r, k).map((f) => html`<${MarkLine} key=${f.code} projectId=${projectId} kind=${k} code=${f.code} lookup=${lookup} manual=${f.source === "manual"} onRemove=${() => remove(r, f)} lliAll=${lliAll} onTickByRoom=${onTickByRoom}
+              variants=${lookup(k, f.code) ? [] : variantsOf(f.code, catalog, lliAll)} onPick=${(v) => pickApproved(r, k, f.code, v)}
+              meta=${meta.get(mkey(r, k, f.code))} onMeta=${metaOk ? (patch) => saveMeta(r, k, f.code, patch) : null} editsOk=${editsOk} onEdited=${onEdited} />`)}</div>`)}
+          ${!metaOk && r.fin.length ? html`<div style=${{ fontSize: "12px", color: "#8a6d1f" }}>V ירוק והערה לכל איפיון: צריך להריץ פעם אחת ב-Supabase את <code>004_mark_edits.sql</code>.</div>` : null}
           ${!r.fin.length && !r.pendingOnly ? html`<p style=${{ color: "#9a9da5" }}>אין איפיונים לחדר הזה.</p>` : null}
           ${r.pendingOnly ? html`<p style=${{ color: "#5b5e66" }}>החדר עדיין לא אושר — אחרי אישור V אפשר להוסיף לו איפיונים ידנית.</p>` : html`<${AddMark} projectId=${projectId} room=${r} catalog=${catalog} onDone=${() => setTick((t) => t + 1)} />`}
           <${RoomNote} projectId=${projectId} room=${r} note=${notes.get(key(r))} ok=${notesOk} onSaved=${(n) => setNotes((m) => new Map(m).set(key(r), n))} />
@@ -1213,11 +1313,11 @@ function RoomNote({ projectId, room, note, ok, onSaved }) {
   };
   if (!ok) return html`<div style=${{ marginTop: "10px", fontSize: "12px", color: "#8a6d1f" }}>הערות לחדר: צריך להריץ פעם אחת ב-Supabase את <code>003_notes_choices.sql</code>.</div>`;
   return html`<div style=${{ marginTop: "12px" }}>
-    <div style=${{ fontWeight: 700, marginBottom: "4px" }}>הערות לחדר <span style=${{ fontWeight: 400, fontSize: "12px", color: "#5b5e66" }}>— נכנסות לדוח אקסל / PDF, לא מוצגות ללקוח</span></div>
+    <div style=${{ fontWeight: 700, marginBottom: "4px" }}>הערות כלליות לחדר <span style=${{ fontWeight: 400, fontSize: "12px", color: "#5b5e66" }}>— נכנסות לדוח אקסל / PDF, לא מוצגות ללקוח</span></div>
     <textarea value=${v} rows="2" style=${{ width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: "13px" }} placeholder="למשל: נדרש לוודא גוון מול האדריכל"
       onClick=${(e) => e.stopPropagation()} onInput=${(e) => setV(e.target.value)} />
-    <div className="bra-row" style=${{ gap: "8px" }}>
-      <button className="bra-btn small primary" disabled=${!dirty || state === "saving"} onClick=${save}>${state === "saving" ? "שומר…" : "שמירה"}</button>
+    <div className="bra-row" style=${{ gap: "8px", justifyContent: "center", marginTop: "6px" }}>
+      <button className="bra-btn primary" style=${{ minWidth: "140px" }} disabled=${!dirty || state === "saving"} onClick=${save}>${state === "saving" ? "שומר…" : "שמירה"}</button>
       ${state === "saved" ? html`<span style=${{ color: "#1f7a3a", fontSize: "12px" }}>נשמר</span>` : dirty ? html`<span style=${{ color: "#8a6d1f", fontSize: "12px" }}>לא נשמר</span>` : null}
       ${note?.updated_at ? html`<span style=${{ color: "#5b5e66", fontSize: "12px" }}>עודכן ${fmtDate(note.updated_at)}${note.updated_email ? ` · ${note.updated_email}` : ""}</span>` : null}
     </div></div>`;
@@ -1394,20 +1494,27 @@ async function publishNow(projectId, projectName, marks, brand) {
 // ============================================================================= the screen
 // One toolbar, like the other boards: upload · versions · rooms · links / QR · preview. Publish sits at the bottom:
 // upload, check the rooms, look at the preview, then publish (her order, 25.10.26).
-export function ByRoomAdmin({ projectId, projectName, marks, categories, brand, lliAll, onTickByRoom, isRTL = true }) {
+export function ByRoomAdmin({ projectId, projectName, marks: lliMarks, categories, brand, lliAll, onTickByRoom, isRTL = true }) {
   const L = W.he;
   CATS = categories || [];
+  // a mark's wording edited in By Room takes the place of the LLI wording here only (build 11)
+  const [edits, setEdits] = useState(new Map());
+  const [editsOk, setEditsOk] = useState(true);
+  const loadEdits = async () => {
+    const { data, error } = await supabase.from("byroom_mark_edits").select("code, name, description, updated_at, updated_email").eq("project_id", projectId);
+    setEditsOk(!error); setEdits(new Map((data ?? []).map((e) => [String(e.code).toUpperCase(), e])));
+  };
+  useEffect(() => { loadEdits(); }, [projectId]);
+  const marks = useMemo(() => mergeEdits(lliMarks, edits), [lliMarks, edits]);
   syncMarksNow = () => syncMarks(projectId, marks);
   const [tab, setTab] = useState("versions");
   const [openSet, setOpenSet] = useState(null);
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [full, setFullS] = useState(() => { try { return localStorage.getItem("byroom-full") !== "0"; } catch (e) { return true; } });
-  const setFull = (v) => { setFullS(v); try { localStorage.setItem("byroom-full", v ? "1" : "0"); } catch (e) {} };
   const api = useMemo(() => previewApi(projectId, projectName, marks, brand), [projectId, projectName, marks, brand]);
   const tabs = [["upload", L.upload], ["versions", "גרסאות"], ["rooms", L.roomsList], ["qr", L.qr]];
   const on = { background: "#14181f", color: "#fff", borderColor: "#14181f" };
-  return html`<div className=${"bra" + (tab === "rooms" && full ? " bra-full" : "")} dir="rtl">
+  return html`<div className="bra" dir="rtl">
     <style>${css}${viewCss}</style>
     <div className="lliBar bra-noprint" style=${{ marginBottom: "12px" }}>
       ${tabs.map(([k, t]) => html`<button key=${k} type="button" className="ghostBtn small" style=${tab === k ? on : undefined} onClick=${() => { setTab(k); setOpenSet(null); }}>${t}</button>`)}
@@ -1416,7 +1523,7 @@ export function ByRoomAdmin({ projectId, projectName, marks, categories, brand, 
     <div className="bra-panel">
       ${tab === "upload" && html`<${UploadForm} projectId=${projectId} L=${L} onCancel=${() => setTab("versions")} onDone=${(id) => { setOpenSet(id); setTab("versions"); }} />`}
       ${tab === "versions" && html`<${UploadTab} projectId=${projectId} projectName=${projectName} L=${L} openId=${openSet} onOpened=${() => setOpenSet(null)} />`}
-      ${tab === "rooms" && html`<${RoomsTab} projectId=${projectId} projectName=${projectName} marks=${marks} brand=${brand} lliAll=${lliAll} onTickByRoom=${onTickByRoom} full=${full} setFull=${setFull} L=${L} />`}
+      ${tab === "rooms" && html`<${RoomsTab} projectId=${projectId} projectName=${projectName} marks=${marks} brand=${brand} lliAll=${lliAll} onTickByRoom=${onTickByRoom} editsOk=${editsOk} onEdited=${loadEdits} L=${L} />`}
       ${tab === "qr" && html`<${QrLinks} projectId=${projectId} projectName=${projectName} L=${L} />`}
     </div>
     <div className="bra-foot bra-noprint"><button type="button" className="ghostBtn" disabled=${busy}
