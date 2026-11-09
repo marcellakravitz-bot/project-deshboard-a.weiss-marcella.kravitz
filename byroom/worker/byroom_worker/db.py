@@ -95,6 +95,16 @@ class DB:
         """The project's marks, as the dashboard copied them from LLI: {code: category}."""
         return {r["code"]: r["category"] for r in self.q("select code, category from byroom_marks where project_id = %s", project_id)}
 
+    def mark_choices(self, project_id, floor):
+        """Variant choices made in the room list: {(room_no, kind, canon(from)): to}. No table yet = no choices."""
+        from .crosscheck import canon
+        try:
+            rows = self.q("select room_no, kind, from_code, to_code from byroom_mark_choices where project_id = %s and floor = %s", project_id, floor)
+        except Exception:                                   # 003_notes_choices.sql not run yet
+            self.c.rollback()
+            return {}
+        return {(r["room_no"], r["kind"], canon(r["from_code"])): r["to_code"] for r in rows}
+
     # ---------------------------------------------------------------- write the cross-check
     def write_crosscheck(self, s, res, job):
         sid = s["id"]

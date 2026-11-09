@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 9 · 9.11.2026
+//  byroom build 10 · 9.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 9 · 9.11.2026";
+export const BYROOM_BUILD = "byroom build 10 · 9.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -87,6 +87,22 @@ const css = `
 .bra-bar>i{display:block;height:100%;background:var(--accent,#17181c)}
 .bra-warn{background:#fff6e0;border:1px solid #f1d38c;border-radius:10px;padding:10px 12px;margin:8px 0}
 .bra-err{color:#b02a37}
+.bra-rooms tr.rw{cursor:pointer}.bra-rooms tr.rw:hover td{background:#f6f7f9}
+.bra-rooms tr.rw.on td{background:#dfe9f7;font-weight:600}.bra-rooms tr.rw.on td:first-child{box-shadow:inset -4px 0 0 #1d5fa8}
+.bra-rooms tr.det>td{background:#f4f8fd;box-shadow:inset -4px 0 0 #1d5fa8;border-bottom:2px solid #1d5fa8;padding:10px 14px}
+.bra-rooms .arr{font-size:11px;color:#1d5fa8}.bra-rooms tr.rw.on .arr{color:#14181f}
+.bra-rooms thead th{position:sticky;top:0;background:#fff;z-index:2;box-shadow:0 1px 0 #e6e6e9}
+.bra-rooms td.ntc{max-width:220px;font-size:12px;color:#5b5e66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bra-mk.nodet b{color:#8a6d1f;border-bottom:1px dashed #c9a24a}
+.bra-pend{background:#fff1d6;color:#8a5a00;border-radius:8px;padding:1px 7px;font-size:11px;font-weight:600;white-space:nowrap}
+.bra-pbox{background:#fffaf0;border:1px solid #f1d38c;border-radius:10px;padding:8px 10px;margin-bottom:10px}
+.bra-pline{display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px dashed #f1e3bf}.bra-pline:last-of-type{border-bottom:0}
+.bra-approvebar{background:#fffaf0;border:1px solid #f1d38c;border-radius:10px;padding:6px 10px;margin-bottom:8px}
+.bra.bra-full{position:fixed;inset:0;z-index:900;background:#f4f5f7;padding:10px 14px;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box}
+.bra.bra-full .bra-panel{flex:1;min-height:0;display:flex;flex-direction:column;padding:12px 14px}
+.bra.bra-full .bra-rooms{flex:1;min-height:0;display:flex;flex-direction:column}
+.bra.bra-full .bra-rooms .bra-scroll{flex:1;min-height:0;max-height:none}
+.bra.bra-full .bra-foot{margin-top:8px}
 .bra-hc{font-size:11px;font-weight:400;color:#5b5e66;margin-top:2px;white-space:nowrap}
 .bra-warn{position:relative}.bra-x{position:absolute;top:6px;left:8px;border:0;background:none;font-size:17px;line-height:1;color:#8a6d1f;cursor:pointer;padding:2px 4px}
 .bra-x:hover{color:#000}
@@ -808,7 +824,7 @@ function lliFind(lliAll, code) {
   return k ? { mark: k, ...lliAll[k] } : null;
 }
 
-function MarkLine({ kind, code, lookup, manual, onRemove, lliAll, onTickByRoom }) {
+function MarkLine({ kind, code, lookup, manual, onRemove, lliAll, onTickByRoom, variants = [], onPick }) {
   const m = lookup(kind, code);
   const hit = !m ? lliFind(lliAll, code) : null;
   return html`<div className="bra-mkrow">
@@ -820,6 +836,7 @@ function MarkLine({ kind, code, lookup, manual, onRemove, lliAll, onTickByRoom }
       ${!m ? (hit && !hit.ticked ? html`<div style=${{ fontSize: "12px", color: "#8a6d1f" }}>קיים ב-LLI${hit.mark !== String(code).trim().toUpperCase() ? ` (${hit.mark})` : ""} אבל לא מסומן BY ROOM
           ${onTickByRoom ? html` <button className="bra-btn small" style=${{ marginInlineStart: "6px" }} onClick=${() => onTickByRoom(hit.mark)}>סימון BY ROOM</button>` : null}</div>`
         : html`<div style=${{ fontSize: "12px", color: "#9a9da5" }}>לא קיים ב-LLI — אין שורה עם האיפיון הזה</div>`) : null}
+      ${!m && onPick ? html`<${Variants} list=${variants} onPick=${onPick} />` : null}
     </div>
     ${onRemove ? html`<button className="bra-btn small" title="הסרת האיפיון מהחדר" onClick=${onRemove}>הסרה</button>` : null}
   </div>`;
@@ -891,7 +908,7 @@ async function allRows(q) {          // past the 1000-row page of the API
   const out = [];
   for (let from = 0; ; from += 1000) { const r = must(await q().range(from, from + 999)); out.push(...r); if (r.length < 1000) return out; }
 }
-async function exportRows({ projectId, rooms, floor, unpublished, lookup }) {
+async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes = new Map() }) {
   const rows = [];
   const detail = (kind, code) => { const m = lookup(kind, code); return { mname: m?.name && m.name !== code ? m.name : "", desc: m?.desc ?? "", supplier: m?.supplier ?? "", lli: m?.status ?? "", image: m?.image ?? null }; };
   const have = new Set();
@@ -923,6 +940,7 @@ async function exportRows({ projectId, rooms, floor, unpublished, lookup }) {
       }
     }
   }
+  for (const r of rows) r.note = notes.get(r.floor + "|" + r.room)?.note ?? "";
   const n = (s) => { const m = /^(\d+)(.*)$/.exec(s ?? ""); return m ? [Number(m[1]), m[2]] : [1e9, s ?? ""]; };
   return rows.sort((a, b) => Number(a.floor) - Number(b.floor) || n(a.room)[0] - n(b.room)[0] || String(n(a.room)[1]).localeCompare(n(b.room)[1])
     || kindOrder(a.kind || "zz", b.kind || "zz") || String(a.code).localeCompare(String(b.code), "en", { numeric: true }));
@@ -930,10 +948,10 @@ async function exportRows({ projectId, rooms, floor, unpublished, lookup }) {
 async function exportXlsx(rows, title) {
   const mod = await import("xlsx");
   const X = mod.utils ? mod : mod.default;
-  const head = ["קומה", "מספר חדר", "שם החדר", 'שטח (מ"ר)', "קטגוריה", "מס' איפיון", "שם האיפיון", "תיאור", "ספק", "סטטוס LLI", "מקור", "מצב"];
-  const data = [head, ...rows.map((r) => [r.floor, r.room, r.name, r.area != null ? Number(r.area) : "", r.kind ? catHe(r.kind) : "", r.code, r.mname, r.desc, r.supplier, r.lli, r.src, r.state])];
+  const head = ["קומה", "מספר חדר", "שם החדר", 'שטח (מ"ר)', "קטגוריה", "מס' איפיון", "שם האיפיון", "תיאור", "ספק", "סטטוס LLI", "מקור", "מצב", "הערות לחדר"];
+  const data = [head, ...rows.map((r) => [r.floor, r.room, r.name, r.area != null ? Number(r.area) : "", r.kind ? catHe(r.kind) : "", r.code, r.mname, r.desc, r.supplier, r.lli, r.src, r.state, r.note])];
   const ws = X.utils.aoa_to_sheet(data);
-  ws["!cols"] = [6, 10, 22, 9, 14, 12, 22, 50, 18, 14, 9, 26].map((w) => ({ wch: w }));
+  ws["!cols"] = [6, 10, 22, 9, 14, 12, 22, 50, 18, 14, 9, 26, 40].map((w) => ({ wch: w }));
   ws["!autofilter"] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: head.length - 1 } }) };
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, "By Room");
@@ -950,7 +968,7 @@ function exportPdf(rows, title, projectName, brand, floor) {
     const body = kinds.map((k) => `<h4>${esc(catHe(k))}</h4><table><tbody>${r.items.filter((i) => i.kind === k).map((i) => `<tr>
       <td class="code" dir="ltr">${esc(i.code)}</td><td class="txt"><b>${esc(i.mname)}</b>${i.desc ? `<div>${esc(i.desc).replace(/\n/g, "<br>")}</div>` : ""}${i.supplier ? `<div class="sup">ספק: ${esc(i.supplier)}</div>` : ""}</td>
       <td class="img">${i.image ? `<img src="${esc(i.image)}" alt="">` : ""}</td><td class="stc">${badge(i.state)}</td></tr>`).join("")}</tbody></table>`).join("");
-    return `<section class="room"><div class="rh"><b dir="ltr">${esc(r.room)}</b> <span>${esc(r.name)}</span><small>קומה ${esc(r.floor)}${r.area ? ` · ${Number(r.area)} מ"ר` : ""}</small></div>${body || '<p class="none">אין איפיונים לחדר הזה</p>'}</section>`;
+    return `<section class="room"><div class="rh"><b dir="ltr">${esc(r.room)}</b> <span>${esc(r.name)}</span><small>קומה ${esc(r.floor)}${r.area ? ` · ${Number(r.area)} מ"ר` : ""}</small></div>${r.note ? `<div class="note"><b>הערות:</b> ${esc(r.note).replace(/\n/g, "<br>")}</div>` : ""}${body || '<p class="none">אין איפיונים לחדר הזה</p>'}</section>`;
   }).join("");
   printPage(title, `<style>
     .top{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #14181f;padding-bottom:4mm;margin-bottom:6mm}
@@ -960,21 +978,69 @@ function exportPdf(rows, title, projectName, brand, floor) {
     h4{margin:3mm 0 1mm;font-size:13px;color:#14181f;border-bottom:1px solid #eee}
     table{width:100%;border-collapse:collapse}td{vertical-align:top;padding:1.5mm;border-bottom:1px solid #f0f0f2;font-size:11.5px}
     td.code{width:20mm;font-weight:700}td.img{width:22mm}td.img img{width:20mm;height:20mm;object-fit:contain}td.stc{width:30mm;text-align:left}
-    .sup{color:#5b5e66;margin-top:1mm}.none{color:#9a9da5;font-size:12px}
+    .sup{color:#5b5e66;margin-top:1mm}.note{background:#fff8e6;border:1px solid #f1d38c;border-radius:2mm;padding:2mm;font-size:12px;margin:1mm 0 2mm}.none{color:#9a9da5;font-size:12px}
     .st{font-size:10px;border-radius:8px;padding:1px 6px;white-space:nowrap}.st.pub{background:#e3f1e7;color:#1f7a3a}.st.ok{background:#e7eef8;color:#1d5fa8}.st.wait{background:#fff1d6;color:#8a5a00}
     @page{size:A4;margin:10mm}body{margin:0}
   </style><div class="top">${logo(brand?.clientLogo)}<h1>${esc(projectName)} — חומרי גמר לפי חדר<small>${floor ? `קומה ${esc(floor)} · ` : ""}${esc(new Date().toLocaleDateString("he-IL"))} · ${rooms.size} חדרים</small></h1>${logo(brand?.supervisionLogo)}</div>${cards}`);
 }
 
-function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, L }) {
+// ----------------------------------------------------------------------------- room list helpers (build 10)
+/** Variants of a code in the project: C-2 → C-2A, C-2B (a letter suffix; C-21 is not a variant of C-2). */
+function variantsOf(code, catalog, lliAll) {
+  const c = canonMark(code);
+  if (!c) return [];
+  const pool = new Map();
+  for (const m of catalog) pool.set(canonMark(m.code), m.code);
+  for (const k of Object.keys(lliAll || {})) if (!pool.has(canonMark(k))) pool.set(canonMark(k), k.trim());
+  return [...pool].filter(([k]) => k !== c && k.startsWith(c) && /^[A-Z][A-Z0-9]?$/.test(k.slice(c.length)))
+    .map(([, v]) => v).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+}
+/** Remember "in this room the plan's C-2 is C-2A": the processing job proposes it in later versions. */
+async function saveChoice(projectId, floor, room, kind, from, to) {
+  const { data: u } = await supabase.auth.getUser();
+  const { error } = await supabase.from("byroom_mark_choices").upsert({ project_id: projectId, floor, room_no: room, kind, from_code: from, to_code: to,
+    chosen_at: new Date().toISOString(), chosen_email: u?.user?.email ?? null }, { onConflict: "project_id,floor,room_no,kind,from_code" });
+  if (error) alert("ההחלפה נעשתה, אבל הבחירה לא נשמרה לגרסאות הבאות (צריך להריץ ב-Supabase את 003_notes_choices.sql): " + error.message);
+}
+const Variants = ({ list, onPick }) => list.length ? html`<div style=${{ fontSize: "12px", marginTop: "3px" }}>
+  <span style=${{ color: "#1d5fa8" }}>אולי התכוונת ל: </span>${list.map((v) => html`<button key=${v} className="bra-btn small" dir="ltr" style=${{ marginInlineStart: "4px" }}
+    title="החלפה לאיפיון הזה בחדר הזה — והבחירה נזכרת בגרסאות הבאות" onClick=${() => onPick(v)}>${v}</button>`)}</div>` : null;
+
+/** One proposal waiting for V, inside the room list. */
+function PendingLine({ it, ticked, onToggle, lookup, catalog, lliAll, onPick }) {
+  const p = it.proposed || {}, c = it.current || {};
+  const isMark = !["room", "name", "area", "boundary"].includes(it.field);
+  const codes = isMark ? p.codes || [] : [];
+  const val = isMark ? null : it.field === "boundary" ? (p.poly ? "גבול נסגר" : "גבול לא נסגר") : it.field === "room" ? (it.change_type === "removed" ? "החדר לא נמצא בגרסה" : it.change_type === "new" ? "חדר חדש" : "קיים") : (p.value ?? "—");
+  const cur = it.change_type === "changed" ? (isMark ? (c.codes || []).join(", ") : c.value) : null;
+  return html`<div className="bra-pline">
+    <input type="checkbox" checked=${ticked} onChange=${onToggle} />
+    <div style=${{ flex: 1 }}>
+      <div><b>${catHe(it.field)}</b> · ${isMark ? (codes.length ? codes.map((x, i) => { const m = lookup(it.field, x); return html`<span key=${x}>${i ? ", " : ""}<b dir="ltr">${x}</b>${m?.name && m.name !== x ? ` ${m.name}` : ""}</span>`; }) : "—") : String(val)}
+        <span style=${{ marginInlineStart: "6px" }}>${pill(it.status)}</span> <span style=${{ fontSize: "12px", color: "#5b5e66" }}>${CHANGE[it.change_type] ?? ""} · ${it.set.name}${it.set.revision ? " " + it.set.revision : ""}</span></div>
+      ${cur != null && cur !== "" ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>היום: ${String(cur)}</div>` : null}
+      ${it.note ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>${it.note}</div>` : null}
+      ${codes.filter((x) => !lookup(it.field, x)).map((x) => html`<div key=${x}><${Variants} list=${variantsOf(x, catalog, lliAll)} onPick=${(v) => onPick(it, x, v)} /></div>`)}
+    </div>
+  </div>`;
+}
+
+function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, full, setFull, L }) {
   const [rooms, setRooms] = useState(null);
+  const [pend, setPend] = useState(new Map());
+  const [notes, setNotes] = useState(new Map());
+  const [notesOk, setNotesOk] = useState(true);
   const [pubAt, setPubAt] = useState(null);
   const [floor, setFloor] = useState("");
   const [q, setQ] = useState("");
+  const [onlyPending, setOnlyPending] = useState(false);
   const [open, setOpen] = useState(null);
+  const [recent, setRecent] = useState(false);
   const [mapFloor, setMapFloor] = useState(null);
   const [map, setMap] = useState(null);
   const [tick, setTick] = useState(0);
+  const [sel, setSel] = useState(new Set());
+  const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(null);
   const lookup = useMemo(() => markIndex(marks), [marks]);
   const catalog = useMemo(() => markList(marks), [marks]);
@@ -984,27 +1050,64 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
     const f = [];
     for (let i = 0; i < ids.length; i += 300) f.push(...must(await supabase.from("byroom_room_finishes").select("room_id, kind, code, source").in("room_id", ids.slice(i, i + 300))));
     setPubAt(must(await supabase.from("byroom_projects").select("published_at").eq("project_id", projectId).limit(1)).at(0)?.published_at ?? null);
-    setRooms(r.map((x) => ({ ...x, fin: f.filter((y) => y.room_id === x.id) })));
-  })(); }, [projectId, tick]);
+    // waiting for V: the newest version of each floor that is still under review
+    const sets = must(await supabase.from("byroom_plan_sets").select("id, floor, name, revision, created_at").eq("project_id", projectId).in("status", ["review", "partly_approved"]).order("created_at"));
+    const newest = new Map(); for (const x of sets) newest.set(x.floor, x);
+    const pm = new Map();
+    for (const st of newest.values()) {
+      const rr = await allRows(() => supabase.from("byroom_room_review").select("id, set_id, room_no, field, proposed, current, change_type, status, note, decision").eq("set_id", st.id).order("id"));
+      const last = new Map(); for (const x of rr) last.set(x.room_no + "|" + x.field, x);
+      for (const x of last.values()) if (x.decision === "pending") { const k = st.floor + "|" + x.room_no; if (!pm.has(k)) pm.set(k, []); pm.get(k).push({ ...x, set: st }); }
+    }
+    const { data: nd, error: ne } = await supabase.from("byroom_room_notes").select("floor, room_no, note, updated_at, updated_email").eq("project_id", projectId);
+    setNotesOk(!ne);
+    setNotes(new Map((nd ?? []).map((n) => [n.floor + "|" + n.room_no, n])));
+    // a room the plans propose that is not approved yet still gets a row, so it can be ticked from here
+    const rows = r.map((x) => ({ ...x, fin: f.filter((y) => y.room_id === x.id) }));
+    const have = new Set(rows.map((x) => x.floor + "|" + x.room_no));
+    for (const [k, items] of pm) if (!have.has(k)) {
+      const [fl, no] = k.split("|");
+      rows.push({ id: "p:" + k, floor: fl, room_no: no, name: items.find((i) => i.field === "name")?.proposed?.value ?? "", area: items.find((i) => i.field === "area")?.proposed?.value ?? null, fin: [], pendingOnly: true });
+    }
+    setPend(pm); setRooms(rows); setSel(new Set());
+  })().catch((e) => alert(e.message)); }, [projectId, tick]);
   useEffect(() => { if (!mapFloor) return; (async () => {
     setMap(must(await supabase.from("byroom_floor_maps").select("data").eq("project_id", projectId).eq("floor", mapFloor).eq("approved", true).order("created_at", { ascending: false }).limit(1)).at(0)?.data ?? null);
   })(); }, [mapFloor, projectId]);
+  useEffect(() => { setRecent(false); }, [open]);
   if (!rooms) return html`<p>…</p>`;
-  if (!rooms.length) return html`<p>עדיין אין חדרים מאושרים. מעלים תוכניות ב"${L.upload}", ואחרי הבדיקה מאשרים ב-V.</p>`;
+  if (!rooms.length) return html`<p>עדיין אין חדרים. מעלים תוכניות ב"${L.upload}", ואחרי העיבוד הם יופיעו כאן לאישור.</p>`;
+  const key = (r) => r.floor + "|" + r.room_no;
+  const pendOf = (r) => pend.get(key(r)) ?? [];
   const floors = [...new Set(rooms.map((r) => r.floor))].sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
   const unpublished = (r) => !pubAt || new Date(r.updated_at) > new Date(pubAt);
   const qq = q.trim().toLowerCase();
-  const list = rooms.filter((r) => (!floor || r.floor === floor) && (!qq || r.room_no.toLowerCase().includes(qq) || (r.name ?? "").toLowerCase().includes(qq)
+  const list = rooms.filter((r) => (!floor || r.floor === floor) && (!onlyPending || pendOf(r).length) && (!qq || r.room_no.toLowerCase().includes(qq) || (r.name ?? "").toLowerCase().includes(qq)
+    || (notes.get(key(r))?.note ?? "").toLowerCase().includes(qq)
     || r.fin.some((f) => f.code.toLowerCase().includes(qq) || (lookup(f.kind, f.code)?.name ?? "").toLowerCase().includes(qq)))).sort((a, b) => Number(a.floor) - Number(b.floor) || sortRooms(a, b));
   const codes = (r, k) => r.fin.filter((f) => f.kind === k).sort((a, b) => a.code.localeCompare(b.code, "en", { numeric: true }));
   const others = (r) => r.fin.filter((f) => !["FL", "FN", "CL"].includes(f.kind));
-  const chip = (f) => { const m = lookup(f.kind, f.code); return html`<span className="bra-mk" key=${f.kind + f.code}><b dir="ltr">${f.code}${f.source === "manual" ? "*" : ""}</b>${m?.name && m.name !== f.code ? html`<span>${m.name}</span>` : null}</span>`; };
+  const chip = (f) => { const m = lookup(f.kind, f.code); return html`<span className=${"bra-mk" + (m ? "" : " nodet")} key=${f.kind + f.code} title=${m ? "" : "אין פירוט ב-LLI"}><b dir="ltr">${f.code}${f.source === "manual" ? "*" : ""}</b>${m?.name && m.name !== f.code ? html`<span>${m.name}</span>` : null}</span>`; };
   const cell = (r, k) => html`<td>${codes(r, k).map(chip)}</td>`;
   const marksN = new Set(rooms.flatMap((r) => r.fin.map((f) => f.kind + "|" + f.code))).size;
+  const shownPending = list.flatMap(pendOf);
+  const toggle = (id) => setSel((t) => { const n = new Set(t); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const approve = async () => {
+    const all = [...pend.values()].flat().filter((i) => sel.has(i.id));
+    const bySet = new Map(); for (const i of all) { if (!bySet.has(i.set_id)) bySet.set(i.set_id, []); bySet.get(i.set_id).push(i.id); }
+    setBusy(true);
+    try {
+      let ok = 0, stale = 0;
+      for (const [set, ids] of bySet) { const r = must(await supabase.rpc("byroom_approve_items", { p_set: set, p_ids: ids })); ok += r.approved || 0; if (!r.approved) stale += ids.length; }
+      alert(`אושרו ${ok} שורות${stale ? ` · ${stale} כבר לא היו עדכניות (הייתה הצלבה חדשה) — הרשימה נטענה מחדש` : ""}`);
+      setTick((t) => t + 1);
+    } catch (e) { alert(e.message); }
+    setBusy(false);
+  };
   const doExport = async (kind) => {
     setExporting(kind);
     try {
-      const rows = await exportRows({ projectId, rooms: list, floor, unpublished, lookup });
+      const rows = await exportRows({ projectId, rooms: list.filter((r) => !r.pendingOnly), floor, unpublished, lookup, notes });
       if (!rows.length) { alert("אין מה לייצא בסינון הזה"); return; }
       const title = `By Room - ${projectName}${floor ? ` - קומה ${floor}` : ""} - ${new Date().toLocaleDateString("he-IL").replace(/\./g, "-")}`;
       if (kind === "xlsx") await exportXlsx(rows, title); else exportPdf(rows, title, projectName, brand, floor);
@@ -1016,46 +1119,108 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
     try { must(await supabase.rpc("byroom_set_mark", { p_project: projectId, p_floor: r.floor, p_room: r.room_no, p_kind: f.kind, p_code: f.code, p_add: false })); setTick((t) => t + 1); }
     catch (e) { alert(e.message); }
   };
+  // an approved code with no details whose variant was meant: swap it in the room, and remember the choice
+  const pickApproved = async (r, kind, from, to) => {
+    if (!confirm(`בחדר ${r.room_no}: להחליף את ${from} ב-${to}?\nהבחירה נזכרת — בגרסאות הבאות ${from} בחדר הזה יוצע כ-${to}.`)) return;
+    try {
+      must(await supabase.rpc("byroom_set_mark", { p_project: projectId, p_floor: r.floor, p_room: r.room_no, p_kind: kind, p_code: to, p_add: true }));
+      must(await supabase.rpc("byroom_set_mark", { p_project: projectId, p_floor: r.floor, p_room: r.room_no, p_kind: kind, p_code: from, p_add: false }));
+      await saveChoice(projectId, r.floor, r.room_no, kind, from, to);
+      setTick((t) => t + 1);
+    } catch (e) { alert(e.message); }
+  };
+  // a proposal waiting for V: change what will be approved, and remember the choice
+  const pickPending = async (it, from, to) => {
+    try {
+      const codes = [...new Set((it.proposed?.codes ?? []).map((x) => (x === from ? to : x)))];
+      must(await supabase.from("byroom_room_review").update({ proposed: { ...it.proposed, codes }, note: [it.note, `נבחר ${to} במקום ${from}`].filter(Boolean).join(" · ") }).eq("id", it.id));
+      await saveChoice(projectId, it.set.floor, it.room_no, it.field, from, to);
+      setTick((t) => t + 1);
+    } catch (e) { alert(e.message); }
+  };
   if (mapFloor) {
-    const sel = rooms.find((r) => r.floor === mapFloor && r.id === open);
+    const sel1 = rooms.find((r) => r.floor === mapFloor && r.id === open);
     return html`<div>
       <div className="bra-row" style=${{ marginBottom: "8px" }}><button className="bra-btn" onClick=${() => { setMapFloor(null); setMap(null); }}>${L.back}</button>
         ${floors.length > 1 ? html`<select value=${mapFloor} onChange=${(e) => setMapFloor(e.target.value)}>${floors.map((f) => html`<option key=${f} value=${f}>${L.floor} ${f}</option>`)}</select>` : html`<b>${L.floor} ${mapFloor}</b>`}
-        ${sel ? html`<span>${L.room} <b>${sel.room_no}</b> ${sel.name ?? ""}</span>` : html`<span style=${{ color: "#5b5e66" }}>לחיצה על חדר במפה פותחת אותו ברשימה</span>`}</div>
-      <div className="brv" style=${{ height: "70vh", border: "1px solid #e6e6e9", borderRadius: "12px", overflow: "hidden" }}>
-        <${FloorMap} map=${map} selected=${sel?.room_no ?? null} onPick=${(n) => { const r = rooms.find((x) => x.floor === mapFloor && x.room_no === n); if (r) { setOpen(r.id); setMapFloor(null); setFloor(r.floor); setQ(""); } }} /></div></div>`;
+        ${sel1 ? html`<span>${L.room} <b>${sel1.room_no}</b> ${sel1.name ?? ""}</span>` : html`<span style=${{ color: "#5b5e66" }}>לחיצה על חדר במפה פותחת אותו ברשימה</span>`}</div>
+      <div className="brv" style=${{ height: full ? "calc(100vh - 150px)" : "70vh", border: "1px solid #e6e6e9", borderRadius: "12px", overflow: "hidden" }}>
+        <${FloorMap} map=${map} selected=${sel1?.room_no ?? null} onPick=${(n) => { const r = rooms.find((x) => x.floor === mapFloor && x.room_no === n); if (r) { setOpen(r.id); setMapFloor(null); setFloor(r.floor); setQ(""); } }} /></div></div>`;
   }
-  return html`<div>
-    <div className="bra-row" style=${{ marginBottom: "10px" }}>
+  return html`<div className="bra-rooms">
+    <div className="bra-row" style=${{ marginBottom: "8px" }}>
       <select value=${floor} onChange=${(e) => setFloor(e.target.value)}><option value="">כל הקומות</option>${floors.map((f) => html`<option key=${f} value=${f}>${L.floor} ${f}</option>`)}</select>
-      <input type="search" placeholder="חיפוש חדר, שם או איפיון" value=${q} onInput=${(e) => setQ(e.target.value)} style=${{ minWidth: "220px" }} />
-      <span style=${{ color: "#5b5e66" }}>${list.length} חדרים · ${marksN} איפיונים</span>
+      <input type="search" placeholder="חיפוש חדר, שם, איפיון או הערה" value=${q} onInput=${(e) => setQ(e.target.value)} style=${{ minWidth: "220px" }} />
+      <label><input type="checkbox" checked=${onlyPending} onChange=${(e) => setOnlyPending(e.target.checked)} /> רק חדרים עם ממתינים</label>
+      <span style=${{ color: "#5b5e66" }}>${list.length} חדרים · ${marksN} איפיונים${shownPending.length ? ` · ${shownPending.length} ממתינים לאישור` : ""}</span>
       <span style=${{ flex: 1 }} />
       <button className="bra-btn" disabled=${exporting} title="כל החדרים שבסינון: מה שפורסם, מה שאושר וטרם פורסם, ומה שממתין לאישור בגרסאות" onClick=${() => doExport("xlsx")}>${exporting === "xlsx" ? "מכין…" : "ייצוא לאקסל"}</button>
       <button className="bra-btn" disabled=${exporting} title="כרטיס לכל חדר — נפתח חלון הדפסה; לשמירה כ-PDF בוחרים 'שמירה כ-PDF'" onClick=${() => doExport("pdf")}>${exporting === "pdf" ? "מכין…" : "PDF"}</button>
       <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>מפת קומה</button>
+      <button className="bra-btn" title=${full ? "חזרה לתצוגה בתוך הדשבורד" : "רשימת החדרים על כל המסך"} onClick=${() => setFull(!full)}>${full ? "יציאה ממסך מלא" : "מסך מלא"}</button>
     </div>
+    ${shownPending.length ? html`<div className="bra-row bra-approvebar">
+      <b>אישור V מכאן:</b>
+      <button className="bra-btn small" onClick=${() => setSel(new Set(shownPending.map((i) => i.id)))}>סימון הכל (${shownPending.length})</button>
+      <button className="bra-btn small" onClick=${() => setSel(new Set(shownPending.filter((i) => i.status === "certain").map((i) => i.id)))}>${L.selectCertain}</button>
+      <button className="bra-btn small" onClick=${() => setSel(new Set())}>${L.clear}</button>
+      <span style=${{ flex: 1 }} /><b>${sel.size} מסומנות</b>
+      <button className="bra-btn primary" disabled=${!sel.size || busy} onClick=${approve}>${busy ? "מאשר…" : L.approveSel}</button></div>` : null}
     <div className="bra-scroll"><table>
-      <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th></tr></thead>
-      <tbody>${list.map((r) => html`<${React.Fragment} key=${r.id}>
-        <tr style=${{ cursor: "pointer", background: open === r.id ? "var(--accent-soft,#eceef1)" : undefined }} onClick=${() => setOpen(open === r.id ? null : r.id)}>
-          <td>${r.floor}</td><td><b dir="ltr">${r.room_no}</b> <span style=${{ fontSize: "11px", color: "#5b5e66" }}>${open === r.id ? "▲" : "▼"}</span>
-</td>
+      <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th><th>הערות</th></tr></thead>
+      <tbody>${list.map((r) => { const on = open === r.id; const pp = pendOf(r); const nt = notes.get(key(r))?.note ?? ""; return html`<${React.Fragment} key=${r.id}>
+        <tr className=${"rw" + (on ? " on" : "")} onClick=${() => setOpen(on ? null : r.id)}>
+          <td>${r.floor}</td><td><span className="arr">${on ? "▲" : "▼"}</span> <b dir="ltr">${r.room_no}</b>
+            ${pp.length ? html`<div><span className="bra-pend">${r.pendingOnly ? "חדר חדש · " : ""}${pp.length} ממתינים</span></div>` : null}</td>
           <td>${r.name ?? ""}</td><td>${r.area ? `${Number(r.area)} מ"ר` : ""}</td>
-          ${cell(r, "FL")}${cell(r, "FN")}${cell(r, "CL")}<td>${others(r).map(chip)}</td></tr>
-        ${open === r.id ? html`<tr><td colSpan="8" style=${{ background: "#fafafa" }}>
+          ${cell(r, "FL")}${cell(r, "FN")}${cell(r, "CL")}<td>${others(r).map(chip)}</td>
+          <td className="ntc" title=${nt}>${nt}</td></tr>
+        ${on ? html`<tr className="det"><td colSpan="9">
+          ${pp.length ? html`<div className="bra-pbox"><div style=${{ fontWeight: 700, marginBottom: "4px" }}>ממתין לאישור (V)</div>
+            ${pp.map((it) => html`<${PendingLine} key=${it.id} it=${it} ticked=${sel.has(it.id)} onToggle=${() => toggle(it.id)} lookup=${lookup} catalog=${catalog} lliAll=${lliAll} onPick=${pickPending} />`)}
+            <div className="bra-row" style=${{ marginTop: "6px" }}><button className="bra-btn small" onClick=${() => setSel((t) => new Set([...t, ...pp.map((i) => i.id)]))}>סימון כל החדר</button>
+              <button className="bra-btn primary small" disabled=${busy || !pp.some((i) => sel.has(i.id))} onClick=${approve}>${L.approveSel}</button></div></div>` : null}
           ${[...new Set(r.fin.map((f) => f.kind))].sort(kindOrder).map((k) => html`<div key=${k} style=${{ marginBottom: "8px" }}>
             <div style=${{ fontWeight: 700, color: "var(--accent-ink,#000)", margin: "4px 0" }}>${catHe(k)}</div>
-            ${codes(r, k).map((f) => html`<${MarkLine} key=${f.code} kind=${k} code=${f.code} lookup=${lookup} manual=${f.source === "manual"} onRemove=${() => remove(r, f)} lliAll=${lliAll} onTickByRoom=${onTickByRoom} />`)}</div>`)}
-          ${!r.fin.length ? html`<p style=${{ color: "#9a9da5" }}>אין איפיונים לחדר הזה.</p>` : null}
-          <${AddMark} projectId=${projectId} room=${r} catalog=${catalog} onDone=${() => setTick((t) => t + 1)} />
-          <div style=${{ margin: "14px 0 4px", fontWeight: 700 }}>שינויים אחרונים (Recent Changes)</div>
-          <${RecentChanges} projectId=${projectId} floor=${r.floor} room=${r.room_no} />
+            ${codes(r, k).map((f) => html`<${MarkLine} key=${f.code} kind=${k} code=${f.code} lookup=${lookup} manual=${f.source === "manual"} onRemove=${() => remove(r, f)} lliAll=${lliAll} onTickByRoom=${onTickByRoom}
+              variants=${lookup(k, f.code) ? [] : variantsOf(f.code, catalog, lliAll)} onPick=${(v) => pickApproved(r, k, f.code, v)} />`)}</div>`)}
+          ${!r.fin.length && !r.pendingOnly ? html`<p style=${{ color: "#9a9da5" }}>אין איפיונים לחדר הזה.</p>` : null}
+          ${r.pendingOnly ? html`<p style=${{ color: "#5b5e66" }}>החדר עדיין לא אושר — אחרי אישור V אפשר להוסיף לו איפיונים ידנית.</p>` : html`<${AddMark} projectId=${projectId} room=${r} catalog=${catalog} onDone=${() => setTick((t) => t + 1)} />`}
+          <${RoomNote} projectId=${projectId} room=${r} note=${notes.get(key(r))} ok=${notesOk} onSaved=${(n) => setNotes((m) => new Map(m).set(key(r), n))} />
+          ${r.pendingOnly ? null : html`<div style=${{ marginTop: "10px" }}>
+            <button className="bra-btn small" onClick=${() => setRecent(!recent)}>${recent ? "▲" : "▼"} שינויים אחרונים (Recent Changes)</button>
+            ${recent ? html`<div style=${{ marginTop: "6px" }}><${RecentChanges} projectId=${projectId} floor=${r.floor} room=${r.room_no} /></div>` : null}</div>`}
           <div style=${{ marginTop: "10px" }}><button className="bra-btn small" onClick=${() => setMapFloor(r.floor)}>הצגה על מפת הקומה</button></div>
         </td></tr>` : null}
-      </${React.Fragment}>`)}</tbody></table></div>
-    <p style=${{ fontSize: "12px", color: "#5b5e66" }}>השם, התיאור, התמונה והספק של כל איפיון נמשכים מה-LLI (שורות BY ROOM). * = נוסף ידנית.</p>
+      </${React.Fragment}>`; })}</tbody></table></div>
+    <p style=${{ fontSize: "12px", color: "#5b5e66", margin: "6px 0 0" }}>השם, התיאור, התמונה והספק של כל איפיון נמשכים מה-LLI (שורות BY ROOM). * = נוסף ידנית. איפיון בצבע חום עם קו מקווקו = אין לו פירוט ב-LLI.</p>
   </div>`;
+}
+
+/** The administrator's note on a room: saved on "שמירה", goes into the Excel / PDF report, not to the client. */
+function RoomNote({ projectId, room, note, ok, onSaved }) {
+  const [v, setV] = useState(note?.note ?? "");
+  const [state, setState] = useState(null);
+  useEffect(() => { setV(note?.note ?? ""); }, [room.floor, room.room_no, note?.updated_at]);
+  const dirty = v !== (note?.note ?? "");
+  const save = async () => {
+    setState("saving");
+    const { data: u } = await supabase.auth.getUser();
+    const row = { project_id: projectId, floor: room.floor, room_no: room.room_no, note: v.trim(), updated_at: new Date().toISOString(), updated_email: u?.user?.email ?? null };
+    const { error } = await supabase.from("byroom_room_notes").upsert(row, { onConflict: "project_id,floor,room_no" });
+    if (error) { setState(null); alert("ההערה לא נשמרה: " + error.message); return; }
+    onSaved(row); setState("saved"); setTimeout(() => setState(null), 1800);
+  };
+  if (!ok) return html`<div style=${{ marginTop: "10px", fontSize: "12px", color: "#8a6d1f" }}>הערות לחדר: צריך להריץ פעם אחת ב-Supabase את <code>003_notes_choices.sql</code>.</div>`;
+  return html`<div style=${{ marginTop: "12px" }}>
+    <div style=${{ fontWeight: 700, marginBottom: "4px" }}>הערות לחדר <span style=${{ fontWeight: 400, fontSize: "12px", color: "#5b5e66" }}>— נכנסות לדוח אקסל / PDF, לא מוצגות ללקוח</span></div>
+    <textarea value=${v} rows="2" style=${{ width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: "13px" }} placeholder="למשל: נדרש לוודא גוון מול האדריכל"
+      onClick=${(e) => e.stopPropagation()} onInput=${(e) => setV(e.target.value)} />
+    <div className="bra-row" style=${{ gap: "8px" }}>
+      <button className="bra-btn small primary" disabled=${!dirty || state === "saving"} onClick=${save}>${state === "saving" ? "שומר…" : "שמירה"}</button>
+      ${state === "saved" ? html`<span style=${{ color: "#1f7a3a", fontSize: "12px" }}>נשמר</span>` : dirty ? html`<span style=${{ color: "#8a6d1f", fontSize: "12px" }}>לא נשמר</span>` : null}
+      ${note?.updated_at ? html`<span style=${{ color: "#5b5e66", fontSize: "12px" }}>עודכן ${fmtDate(note.updated_at)}${note.updated_email ? ` · ${note.updated_email}` : ""}</span>` : null}
+    </div></div>`;
 }
 
 // ----------------------------------------------------------------------------- work files of one version
@@ -1237,10 +1402,12 @@ export function ByRoomAdmin({ projectId, projectName, marks, categories, brand, 
   const [openSet, setOpenSet] = useState(null);
   const [preview, setPreview] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [full, setFullS] = useState(() => { try { return localStorage.getItem("byroom-full") !== "0"; } catch (e) { return true; } });
+  const setFull = (v) => { setFullS(v); try { localStorage.setItem("byroom-full", v ? "1" : "0"); } catch (e) {} };
   const api = useMemo(() => previewApi(projectId, projectName, marks, brand), [projectId, projectName, marks, brand]);
   const tabs = [["upload", L.upload], ["versions", "גרסאות"], ["rooms", L.roomsList], ["qr", L.qr]];
   const on = { background: "#14181f", color: "#fff", borderColor: "#14181f" };
-  return html`<div className="bra" dir="rtl">
+  return html`<div className=${"bra" + (tab === "rooms" && full ? " bra-full" : "")} dir="rtl">
     <style>${css}${viewCss}</style>
     <div className="lliBar bra-noprint" style=${{ marginBottom: "12px" }}>
       ${tabs.map(([k, t]) => html`<button key=${k} type="button" className="ghostBtn small" style=${tab === k ? on : undefined} onClick=${() => { setTab(k); setOpenSet(null); }}>${t}</button>`)}
@@ -1249,7 +1416,7 @@ export function ByRoomAdmin({ projectId, projectName, marks, categories, brand, 
     <div className="bra-panel">
       ${tab === "upload" && html`<${UploadForm} projectId=${projectId} L=${L} onCancel=${() => setTab("versions")} onDone=${(id) => { setOpenSet(id); setTab("versions"); }} />`}
       ${tab === "versions" && html`<${UploadTab} projectId=${projectId} projectName=${projectName} L=${L} openId=${openSet} onOpened=${() => setOpenSet(null)} />`}
-      ${tab === "rooms" && html`<${RoomsTab} projectId=${projectId} projectName=${projectName} marks=${marks} brand=${brand} lliAll=${lliAll} onTickByRoom=${onTickByRoom} L=${L} />`}
+      ${tab === "rooms" && html`<${RoomsTab} projectId=${projectId} projectName=${projectName} marks=${marks} brand=${brand} lliAll=${lliAll} onTickByRoom=${onTickByRoom} full=${full} setFull=${setFull} L=${L} />`}
       ${tab === "qr" && html`<${QrLinks} projectId=${projectId} projectName=${projectName} L=${L} />`}
     </div>
     <div className="bra-foot bra-noprint"><button type="button" className="ghostBtn" disabled=${busy}

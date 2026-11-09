@@ -433,6 +433,34 @@ def run(files, current=None, set_meta=None, defined=None):
     return {"items": items, "sources": sources, "views": views, "map": floor_map, "warnings": warnings, "summary": summary}
 
 
+def apply_choices(res, choices, current):
+    """Choices the administrator made in the room list (build 9): a code read from the plans that is really one of
+    its variants in this room — the plan says C-2, the LLI has C-2A / C-2B, she picked C-2A. The next versions
+    propose her choice, say so in the note, and a room that already has it is "same" instead of a change.
+    choices: {(room_no, kind, canon(from_code)): to_code}"""
+    if not choices:
+        return 0
+    n = 0
+    for it in res["items"]:
+        if it["field"] in BASE_FIELDS or not isinstance(it.get("proposed"), dict):
+            continue
+        p = it["proposed"]
+        codes = p.get("codes") or []
+        swap = {c: choices.get((it["room_no"], it["field"], canon(c))) for c in codes}
+        swap = {a: b for a, b in swap.items() if b and canon(b) != canon(a)}
+        if not swap:
+            continue
+        p["codes"] = sorted({swap.get(c, c) for c in codes})
+        if p.get("alternatives"):
+            p["alternatives"] = {k: sorted({swap.get(c, c) for c in v}) for k, v in p["alternatives"].items()}
+        msg = "לפי בחירה קודמת: " + ", ".join(f"{b} במקום {a}" for a, b in swap.items())
+        it["note"] = f"{it['note']} · {msg}" if it.get("note") else msg
+        if it.get("change_type") != "removed" and _same(it["field"], _current_value(current.get(it["room_no"]), it["field"]), p):
+            it["change_type"], it["decision"] = "same", "unchanged"
+        n += 1
+    return n
+
+
 def _room_key(n):
     m = re.match(r"(\d+)(.*)", n)
     return (int(m.group(1)), m.group(2)) if m else (10 ** 9, n)

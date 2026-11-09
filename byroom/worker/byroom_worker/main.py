@@ -142,6 +142,9 @@ def _run_crosscheck(db, storage, set_id):
                           "file_date": (f["detected"] or {}).get("file_date"), "data": data})
         current = db.current_rooms(s["project_id"], s["floor"])
         res = crosscheck.run(files, current, s, defined=db.defined_marks(s["project_id"]))
+        chosen = crosscheck.apply_choices(res, db.mark_choices(s["project_id"], s["floor"]), current)
+        if chosen:
+            res["summary"]["choices_applied"] = chosen
         db.write_crosscheck(s, res, job)
         db.job_done(job, res["summary"], res["warnings"], None)
         log("cross-check", json.dumps(res["summary"], ensure_ascii=False))
