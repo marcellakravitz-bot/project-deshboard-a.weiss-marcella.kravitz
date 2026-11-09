@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 13 · 9.11.2026
+//  byroom build 14 · 10.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 13 · 9.11.2026";
+export const BYROOM_BUILD = "byroom build 14 · 10.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -64,7 +64,11 @@ const BASE_FIELDS = ["room", "name", "boundary", "area", "FL", "FN", "CL"];
 const FIELD_HE = { room: "חדר", name: "שם", boundary: "גבול", area: "שטח", FL: "ריצוף", FN: "חיפויים", CL: "תקרה", other: "איפיונים נוספים", lighting: "תאורה" };
 // category names for marks beyond FL / FN / CL (joinery, lighting...) come from the dashboard's own category list
 let CATS = [];
-const catHe = (k) => FIELD_HE[k] ?? CATS.find((c) => c.key === k)?.he ?? k;
+// A category typed in By Room ("וילונות") travels as a Latin key, because category keys are Latin in the database:
+// "h-" + three base-36 digits per letter, up to 12 letters. catHe() reads it back (build 14).
+const nameToKind = (name) => "h-" + [...String(name).trim().slice(0, 12)].map((ch) => Math.min(ch.codePointAt(0), 46655).toString(36).padStart(3, "0")).join("");
+const kindToName = (k) => { try { return String(k).slice(2).match(/.{3}/g).map((x) => String.fromCodePoint(parseInt(x, 36))).join(""); } catch (e) { return k; } };
+const catHe = (k) => FIELD_HE[k] ?? CATS.find((c) => c.key === k)?.he ?? (/^h-/.test(k ?? "") ? kindToName(k) : k);
 
 const css = `
 .bra{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px}
@@ -774,7 +778,7 @@ export function markList(marks) {
     if (!v || v.hidden) continue;
     const [cat, mk] = key.split("|");
     const code = String(v.mark || mk || "").trim().toUpperCase();
-    if (!code || !/[0-9]/.test(code)) continue;
+    if (!code) continue;          // a mark without digits ("וילון האפלה") counts too (build 14); the processing job ignores it
     const prev = by.get(code);
     const m = { ...v, code, kind: kindOfCat(v.cat || cat) };
     // two entries for one code: the one with more to say wins
@@ -944,19 +948,20 @@ function RecentChanges({ projectId, floor, room }) {
 function CatCombo({ value, options, onPick }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
-  const cur = options.find((o) => o.k === value)?.t ?? value;
+  const cur = options.find((o) => o.k === value)?.t ?? catHe(value);
   const t = text.trim().toLowerCase();
   const score = (o) => { const x = o.t.toLowerCase(); return !t ? 1 : x.startsWith(t) ? 3 : x.split(/[\s/,-]+/).some((w) => w.startsWith(t)) ? 2 : x.includes(t) ? 1 : 0; };
   const hits = options.map((o) => [o, score(o)]).filter(([, n]) => n).sort((a, b) => b[1] - a[1] || a[0].t.localeCompare(b[0].t, "he")).map(([o]) => o);
   const exact = options.some((o) => o.t.toLowerCase() === t);
   const pick = (k) => { onPick(k); setOpen(false); setText(""); };
   return html`<div className="bra-combo" onBlur=${(e) => { if (!e.currentTarget.contains(e.relatedTarget)) { setOpen(false); setText(""); } }}>
-    <input value=${open ? text : cur} placeholder="קטגוריה — הקלידי לחיפוש" onFocus=${() => setOpen(true)} onInput=${(e) => { setText(e.target.value); setOpen(true); }}
-      onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); if (hits[0]) pick(hits[0].k); else if (t) pick(text.trim()); } if (e.key === "Escape") { setOpen(false); setText(""); } }} />
+    <input value=${open ? text : cur} placeholder="קטגוריה — הקלידי לחיפוש" onFocus=${() => { setOpen(true); setText(""); }} onClick=${() => { if (!open) { setOpen(true); setText(""); } }}
+      onInput=${(e) => { setText(open ? e.target.value : e.target.value.slice(String(cur).length)); setOpen(true); }}
+      onKeyDown=${(e) => { if (e.key === "Enter") { e.preventDefault(); if (hits[0]) pick(hits[0].k); else if (t) pick(nameToKind(text.trim())); } if (e.key === "Escape") { setOpen(false); setText(""); } }} />
     <span className="arr">▾</span>
     ${open ? html`<div className="bra-combo-list">
       ${hits.map((o) => html`<button type="button" key=${o.k} className=${o.k === value ? "on" : ""} onMouseDown=${(e) => e.preventDefault()} onClick=${() => pick(o.k)}>${o.t}</button>`)}
-      ${t && !exact ? html`<button type="button" className="new" onMouseDown=${(e) => e.preventDefault()} onClick=${() => pick(text.trim())}>+ קטגוריה חדשה: ${text.trim()}</button>` : null}
+      ${t && !exact ? html`<button type="button" className="new" onMouseDown=${(e) => e.preventDefault()} onClick=${() => pick(nameToKind(text.trim()))}>+ קטגוריה חדשה: ${text.trim().slice(0, 12)}</button>` : null}
       ${!hits.length && !t ? html`<div className="empty">אין קטגוריות</div>` : null}
     </div>` : null}
   </div>`;

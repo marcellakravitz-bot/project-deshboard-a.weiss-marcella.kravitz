@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/view.js — the client's By Room: view only, mobile first. A. Weiss · By Room
-//  byroom build 13 · 9.11.2026
+//  byroom build 14 · 10.11.2026
 //
 //  One copy, used by the phone page opened from a QR code or a link (byroom/index.html)
 //  and by the By Room cube for a signed-in client inside the dashboard.
@@ -131,7 +131,9 @@ export const viewCss = `
 @media (min-width:900px){.brv-home h1,.brv-splash h1{font-size:34px}.brv-list{max-width:760px;width:100%;margin:0 auto}}
 `;
 
-const catLabel = (k, cats) => KIND[k]?.[LANG] ?? (k === "lighting" ? T.lighting : (() => { const c = cats?.find((c) => c.key === k); return (LANG === "en" ? c?.en || c?.he : c?.he) ?? k; })());
+// a category typed in By Room travels as "h-" + three base-36 digits per letter (admin.js, build 14)
+const kindToName = (k) => { try { return String(k).slice(2).match(/.{3}/g).map((x) => String.fromCodePoint(parseInt(x, 36))).join(""); } catch (e) { return k; } };
+const catLabel = (k, cats) => KIND[k]?.[LANG] ?? (k === "lighting" ? T.lighting : (() => { const c = cats?.find((c) => c.key === k); return (LANG === "en" ? c?.en || c?.he : c?.he) ?? (/^h-/.test(k ?? "") ? kindToName(k) : k); })());
 const catOrder = (a, b) => { const x = ORDER.indexOf(a), y = ORDER.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.localeCompare(b); };
 const roomSort = (a, b) => { const x = /^(\d+)(.*)$/.exec(a.n), y = /^(\d+)(.*)$/.exec(b.n); return x && y ? Number(x[1]) - Number(y[1]) || x[2].localeCompare(y[2]) : a.n.localeCompare(b.n); };
 const AW_LOGO = new URL("../sub/logo.png", import.meta.url).href;   // the same logo the subcontractor app shows
