@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 14 · 10.11.2026
+//  byroom build 15 · 10.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 14 · 10.11.2026";
+export const BYROOM_BUILD = "byroom build 15 · 10.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -1089,12 +1089,11 @@ function exportPdf(rows, title, projectName, brand, floor) {
       <td class="img">${i.image ? `<img src="${esc(i.image)}" alt="">` : ""}</td>
       <td class="nt">${esc(i.mnote).replace(/\n/g, "<br>")}</td></tr>`).join("")}</tbody></table>`).join("");
     return `<section class="page">
-      <header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div><div class="sub">חומרי גמר לפי חדר</div></div>
-        <div class="l"><div class="fl">קומה ${esc(r.floor)}</div><div class="rn" dir="ltr">${esc(r.room)}</div></div></header>
-      <div class="rname">${esc(r.name)}${r.area ? ` <small>· ${Number(r.area)} מ"ר</small>` : ""}</div>
+      <header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div>${r.name ? `<div class="rnm">${esc(r.name)}</div>` : ""}</div>
+        <div class="l"><div class="fl">קומה ${esc(r.floor)}</div><div class="rn" dir="ltr">${esc(r.room)}</div>${r.area ? `<div class="fl">${Number(r.area)} מ"ר</div>` : ""}</div></header>
       ${body || '<p class="none">אין איפיונים לחדר הזה</p>'}
       ${r.note ? `<div class="gnote"><b>הערות כלליות:</b><div>${esc(r.note).replace(/\n/g, "<br>")}</div></div>` : ""}
-      <footer>א. וייס הנדסה · ${esc(projectName)} · ${today}</footer>
+      <footer dir="rtl"><bdi>By RooM</bdi> · <bdi>${esc(projectName)}</bdi> · <bdi>${today}</bdi></footer>
     </section>`;
   }).join("");
   printPage(title, `<style>
@@ -1102,16 +1101,16 @@ function exportPdf(rows, title, projectName, brand, floor) {
     .page{break-after:page;page-break-after:always;position:relative;min-height:268mm;padding-bottom:10mm;box-sizing:border-box}
     .page:last-child{break-after:auto;page-break-after:auto}
     header{display:flex;align-items:center;justify-content:space-between;border-bottom:2.5px solid #14181f;padding-bottom:4mm;margin-bottom:5mm}
-    header .r,header .l{width:55mm}header .l{text-align:left}header .c{flex:1;text-align:center}
+    header .r,header .l{width:55mm}header .l{text-align:center;display:flex;flex-direction:column;align-items:center;margin-inline-start:auto;max-width:40mm}header .c{flex:1;text-align:center}
     .logo{max-height:18mm;max-width:55mm;object-fit:contain}.logo-t{font-size:16px}
-    .pn{font-size:18px;font-weight:700}.sub{font-size:12px;color:#5b5e66}
+    .pn{font-size:18px;font-weight:700}.rnm{font-size:16px;font-weight:600;margin-top:1mm}
     .fl{font-size:13px;color:#5b5e66}.rn{font-size:30px;font-weight:800;line-height:1.1}
-    .rname{font-size:18px;font-weight:700;margin-bottom:3mm}.rname small{font-weight:400;color:#5b5e66;font-size:13px}
-    h3{font-size:14px;margin:5mm 0 1.5mm;padding:1mm 2mm;background:#eef1f5;border-radius:1.5mm}
+    
+    h3{font-size:14px;margin:3mm 0 1.5mm;padding:1mm 2mm;background:#eef1f5;border-radius:1.5mm}
     table{width:100%;border-collapse:collapse}th{font-size:10.5px;color:#5b5e66;text-align:right;font-weight:600;border-bottom:1px solid #c9ccd2;padding:1mm 1.5mm}
     td{vertical-align:top;padding:2mm 1.5mm;border-bottom:1px solid #e6e8ec;font-size:11.5px}
     .v{width:7mm;text-align:center}.ok{display:inline-block;width:5mm;height:5mm;border-radius:50%;background:#2e9e57;color:#fff;font-size:10px;line-height:5mm;text-align:center}
-    td.code,th.code{width:22mm}td.code{font-weight:700}th.img,td.img{width:26mm}td.img img{width:24mm;height:24mm;object-fit:contain}th.nt,td.nt{width:40mm}td.nt{color:#3b3e45}
+    td.code,th.code{width:22mm;text-align:center}td.code{font-weight:700}th.img,td.img{width:26mm;text-align:center}td.img img{width:24mm;height:24mm;object-fit:contain}th.nt,td.nt{width:40mm}td.nt{color:#3b3e45}
     .sup{color:#5b5e66;margin-top:1mm}.none{color:#9a9da5;font-size:12px}
     .gnote{margin-top:5mm;border:1px solid #c9ccd2;border-radius:2mm;padding:3mm;font-size:12px}
     .st{font-size:9.5px;border-radius:8px;padding:0 6px;white-space:nowrap}.st.ok{background:#e7eef8;color:#1d5fa8}.st.wait{background:#fff1d6;color:#8a5a00}
