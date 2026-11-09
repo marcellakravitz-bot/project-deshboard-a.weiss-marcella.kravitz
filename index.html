@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "09.11.2026 · build 292";
+var APP_BUILD = "09.11.2026 · build 293";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -8607,6 +8607,30 @@ var FacilityLazy = React14.lazy(() => import("./facility/admin.js" + MODULE_V).t
 // What each mark IS, for By Room (25.10.2026, builds 221-222): the LLI rows ticked BY ROOM, under what she corrected
 // on the room list — the same merge the old room screen made — plus the LLI supplier and status (222).
 // Read only; LLI stays the place it is maintained.
+// By Room (09.11.2026, build 293): every LLI type mark, ticked BY ROOM or not, so the room list can say
+// "in the LLI but not ticked BY ROOM" instead of "no details", and tick it from there.
+function byRoomLliAll(lliRows) {
+  const out = {};
+  Object.keys(lliRows || {}).forEach((code) => {
+    const v = (lliRows || {})[code];
+    const mk = String((v && v.typeMark) || "").trim().toUpperCase();
+    if (!v || !mk) return;
+    const o = out[mk] || (out[mk] = { ticked: false, rows: [] });
+    o.rows.push(code);
+    if (v.byRoom) o.ticked = true;
+  });
+  return out;
+}
+function byRoomTick(lliRows, onChangeLliRows, mark) {
+  const mk = String(mark || "").trim().toUpperCase();
+  const next = { ...(lliRows || {}) };
+  let n = 0;
+  Object.keys(next).forEach((code) => {
+    const v = next[code];
+    if (v && String(v.typeMark || "").trim().toUpperCase() === mk && !v.byRoom) { next[code] = { ...v, byRoom: true }; n++; }
+  });
+  if (n) onChangeLliRows(next);
+}
 function byRoomMarks(roomsData, boqData, boqFlags, lliRows, lang) {
   const base = roomsData || roomsBlank();
   const fromLli = lliRoomMarks(boqData, boqFlags, lliRows, lang);
@@ -8810,7 +8834,7 @@ function CardView({
     } })), isRejects && appRole === "admin" && React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(RejectsLazy, {
     projectId: project.id, projectName: project.name, projectEnd: project.endDate, currentEmail,
     subs: ((subsData || {}).list) || [],
-    printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { submittalRowMeta, lliRows, projectFloors: projFloorsList(project), subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" && !teamMode ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"),
+    printParts: { brand: printBrand, accent: CONTACTS_DOC_ACCENT, paginateJs: printPaginateJs, whenPaged: awPrintWhenPaged } })), isSubs && /* @__PURE__ */ React14.createElement(SubcontractorsCard, { submittalRowMeta, lliRows, projectFloors: projFloorsList(project), subsData, onChangeSubsData, canEdit: appRole === "admin", projectId: project.id, scheduleData, submittals, submittalApprovals, onChangeApprovals, sdRows, boqData, boqFlags, submittalChkOff, printBrand, projectName: project.name, isRTL, currentEmail }), showRooms && /* @__PURE__ */ React14.createElement(React14.Suspense, { fallback: "\u2026" }, React14.createElement(appRole === "admin" && !teamMode ? ByRoomAdminLazy : ByRoomMemberLazy, { projectId: project.id, projectName: project.name, isRTL, marks: byRoomMarks(roomsData, boqData, boqFlags, lliRows, isRTL ? "he" : "en"), lliAll: byRoomLliAll(lliRows), onTickByRoom: appRole === "admin" && onChangeLliRows ? (mk) => byRoomTick(lliRows, onChangeLliRows, mk) : null,
     categories: BOARD_CATEGORIES.map((c) => ({ key: c.key, he: c.he, en: c.en })),
     brand: { accent: project.accent || null, clientLogo: project.clientLogoUrl || null, supervisionLogo: project.supervisionLogoUrl || null, brandLogo: DEFAULT_BRAND_LOGO_URL || null } })), showSchedule && /* @__PURE__ */ React14.createElement(
     ProjectScheduleCard,
