@@ -1187,10 +1187,10 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
           ${!r.fin.length && !r.pendingOnly ? html`<p style=${{ color: "#9a9da5" }}>אין איפיונים לחדר הזה.</p>` : null}
           ${r.pendingOnly ? html`<p style=${{ color: "#5b5e66" }}>החדר עדיין לא אושר — אחרי אישור V אפשר להוסיף לו איפיונים ידנית.</p>` : html`<${AddMark} projectId=${projectId} room=${r} catalog=${catalog} onDone=${() => setTick((t) => t + 1)} />`}
           <${RoomNote} projectId=${projectId} room=${r} note=${notes.get(key(r))} ok=${notesOk} onSaved=${(n) => setNotes((m) => new Map(m).set(key(r), n))} />
-          ${r.pendingOnly ? null : html`<div style=${{ marginTop: "12px", textAlign: "center" }}>
-            <button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setRecent(!recent)}>${recent ? "▲ סגירת השינויים האחרונים" : "▼ שינויים אחרונים (Recent Changes)"}</button>
-            ${recent ? html`<div style=${{ marginTop: "8px", textAlign: "start" }}><${RecentChanges} projectId=${projectId} floor=${r.floor} room=${r.room_no} /></div>` : null}</div>`}
-          <div style=${{ marginTop: "10px" }}><button className="bra-btn small" onClick=${() => setMapFloor(r.floor)}>הצגה על מפת הקומה</button></div>
+          <div style=${{ marginTop: "14px", display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap" }}>
+            ${r.pendingOnly ? null : html`<button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setRecent(!recent)}>${recent ? "▲ סגירת השינויים האחרונים" : "▼ שינויים אחרונים (Recent Changes)"}</button>`}
+            <button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setMapFloor(r.floor)}>הצגה על מפת הקומה</button></div>
+          ${recent && !r.pendingOnly ? html`<div style=${{ marginTop: "8px" }}><${RecentChanges} projectId=${projectId} floor=${r.floor} room=${r.room_no} /></div>` : null}
         </td></tr>` : null}
       </${React.Fragment}>`; })}</tbody></table></div>
     <p style=${{ fontSize: "12px", color: "#5b5e66", margin: "6px 0 0" }}>השם, התיאור, התמונה והספק של כל איפיון נמשכים מה-LLI (שורות BY ROOM). * = נוסף ידנית. איפיון בצבע חום עם קו מקווקו = אין לו פירוט ב-LLI.</p>
