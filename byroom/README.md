@@ -16,6 +16,7 @@ byroom build 10 · 9.11.2026 · worker 6 (אתר: build 293)
 | `config.js` | כתובת פונקציות השרת (אותו פרויקט Supabase כמו ב-`sign.js`) | GitHub, `byroom/` |
 | `supabase/001_byroom.sql` | 12 הטבלאות, ההרשאות ופונקציית האישור | Supabase (הורץ 25.10.2026) |
 | `supabase/002_publish.sql` | שלב הפרסום, קטלוג האיפיונים, כל קטגוריה (לא רק ריצוף/חיפוי/תקרה), הוספת איפיון ידנית | Supabase (הורץ 25.10.2026) |
+| `supabase/003_notes_choices.sql` | הערות לחדר (`byroom_room_notes`) ובחירות גרסת איפיון (`byroom_mark_choices`) | Supabase (הורץ 9.11.2026) |
 | `supabase/functions/byroom-admin` | צד השרת של המנהל: העלאה ל-Google Cloud, הפעלת עיבוד, ניקוי, קישור PDF | Supabase › Edge Functions |
 | `supabase/functions/byroom-public` | מה שהקישור / QR קורא: רק הנתונים שפורסמו | Supabase › Edge Functions (בלי אימות JWT) |
 | `supabase/functions/_shared/gcp.ts` | גישה ל-Google Cloud משותפת לשתי הפונקציות | עם הפונקציות |
@@ -36,7 +37,7 @@ byroom build 10 · 9.11.2026 · worker 6 (אתר: build 293)
 6. מנהל מסמן V ולוחץ "אישור שינויים מסומנים". רק `byroom_approve_items()` כותבת לנתונים המאושרים.
 7. **פרסום ללקוח**: רק `byroom_publish()` מעבירה את המאושר ל-`byroom_published`, שממנו קוראים הלקוח והקישורים.
 
-## שינויים ב-build 10 / worker 6 (9.11.2026) — דורש הרצת `supabase/003_notes_choices.sql`
+## שינויים ב-build 10 / worker 6 (9.11.2026) — `003_notes_choices.sql` הורץ 9.11.2026
 
 - **רשימת חדרים על כל המסך** (ברירת מחדל; כפתור "יציאה ממסך מלא"), הטבלה ממלאת את הגובה עם כותרת נעוצה — בלי גלילת עמוד.
 - **חדר פתוח מול סגור:** שורה פתוחה בכחול עם פס צד, והפירוט שלה באותו גוון.
