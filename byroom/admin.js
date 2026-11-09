@@ -96,7 +96,8 @@ const css = `
 .bra-mk.nodet b{color:#8a6d1f;border-bottom:1px dashed #c9a24a}
 .bra-pend{background:#fff1d6;color:#8a5a00;border-radius:8px;padding:1px 7px;font-size:11px;font-weight:600;white-space:nowrap}
 .bra-pbox{background:#fffaf0;border:1px solid #f1d38c;border-radius:10px;padding:8px 10px;margin-bottom:10px}
-.bra-pline{display:flex;gap:8px;align-items:flex-start;padding:4px 0;border-bottom:1px dashed #f1e3bf}.bra-pline:last-of-type{border-bottom:0}
+.bra-pline{display:flex;gap:10px;align-items:flex-start;padding:8px 10px 8px 0;border-bottom:1px solid #f0f1f4;border-inline-start:4px solid #f0a020;padding-inline-start:10px;margin:2px 0}
+.bra-pline input[type=checkbox]{margin-top:3px;accent-color:#f0a020}
 .bra-approvebar{background:#fffaf0;border:1px solid #f1d38c;border-radius:10px;padding:6px 10px;margin-bottom:8px}
 .bra-rooms .bra-scroll{max-height:calc(var(--appvh, 100vh) - 230px);min-height:420px}
 .bra-hc{font-size:11px;font-weight:400;color:#5b5e66;margin-top:2px;white-space:nowrap}
@@ -1088,7 +1089,7 @@ const Variants = ({ list, onPick }) => list.length ? html`<div style=${{ fontSiz
     title="החלפה לאיפיון הזה בחדר הזה — והבחירה נזכרת בגרסאות הבאות" onClick=${() => onPick(v)}>${v}</button>`)}</div>` : null;
 
 /** One proposal waiting for V, inside the room list. */
-function PendingLine({ it, ticked, onToggle, lookup, catalog, lliAll, onPick }) {
+function PendingLine({ it, ticked, onToggle, lookup, catalog, lliAll, onPick, inKind }) {
   const p = it.proposed || {}, c = it.current || {};
   const isMark = !["room", "name", "area", "boundary"].includes(it.field);
   const codes = isMark ? p.codes || [] : [];
@@ -1097,7 +1098,7 @@ function PendingLine({ it, ticked, onToggle, lookup, catalog, lliAll, onPick }) 
   return html`<div className="bra-pline">
     <input type="checkbox" checked=${ticked} onChange=${onToggle} />
     <div style=${{ flex: 1 }}>
-      <div><b>${catHe(it.field)}</b> · ${isMark ? (codes.length ? codes.map((x, i) => { const m = lookup(it.field, x); return html`<span key=${x}>${i ? ", " : ""}<b dir="ltr">${x}</b>${m?.name && m.name !== x ? ` ${m.name}` : ""}</span>`; }) : "—") : String(val)}
+      <div>${inKind ? null : html`<b>${catHe(it.field)}</b> · `}${isMark ? (codes.length ? codes.map((x, i) => { const m = lookup(it.field, x); return html`<span key=${x}>${i ? ", " : ""}<b dir="ltr">${x}</b>${m?.name && m.name !== x ? ` ${m.name}` : ""}</span>`; }) : "—") : String(val)}
         <span style=${{ marginInlineStart: "6px" }}>${pill(it.status)}</span> <span style=${{ fontSize: "12px", color: "#5b5e66" }}>${CHANGE[it.change_type] ?? ""} · ${it.set.name}${it.set.revision ? " " + it.set.revision : ""}</span></div>
       ${cur != null && cur !== "" ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>היום: ${String(cur)}</div>` : null}
       ${it.note ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>${it.note}</div>` : null}
@@ -1274,15 +1275,18 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
           ${cell(r, "FL")}${cell(r, "FN")}${cell(r, "CL")}<td>${others(r).map((f) => chip(f, r))}</td>
           <td className="ntc" title=${nt}>${nt}</td></tr>
         ${on ? html`<tr className="det"><td colSpan="9">
-          ${pp.length ? html`<div className="bra-pbox"><div style=${{ fontWeight: 700, marginBottom: "4px" }}>ממתין לאישור (V)</div>
-            ${pp.map((it) => html`<${PendingLine} key=${it.id} it=${it} ticked=${sel.has(it.id)} onToggle=${() => toggle(it.id)} lookup=${lookup} catalog=${catalog} lliAll=${lliAll} onPick=${pickPending} />`)}
-            <div className="bra-row" style=${{ marginTop: "6px" }}><button className="bra-btn small" onClick=${() => setSel((t) => new Set([...t, ...pp.map((i) => i.id)]))}>סימון כל החדר</button>
-              <button className="bra-btn primary small" disabled=${busy || !pp.some((i) => sel.has(i.id))} onClick=${approve}>${L.approveSel}</button></div></div>` : null}
-          ${[...new Set(r.fin.map((f) => f.kind))].sort(kindOrder).map((k) => html`<div key=${k} style=${{ marginBottom: "8px" }}>
+          ${(() => { const base = pp.filter((i) => ["room", "name", "area", "boundary"].includes(i.field)); return base.length ? html`<div style=${{ marginBottom: "8px" }}>
+            ${base.map((it) => html`<${PendingLine} key=${it.id} it=${it} ticked=${sel.has(it.id)} onToggle=${() => toggle(it.id)} lookup=${lookup} catalog=${catalog} lliAll=${lliAll} onPick=${pickPending} />`)}</div>` : null; })()}
+          ${[...new Set([...r.fin.map((f) => f.kind), ...pp.filter((i) => !["room", "name", "area", "boundary"].includes(i.field)).map((i) => i.field)])].sort(kindOrder).map((k) => html`<div key=${k} style=${{ marginBottom: "8px" }}>
             <div style=${{ fontWeight: 700, color: "var(--accent-ink,#000)", margin: "4px 0" }}>${catHe(k)}</div>
+            ${pp.filter((i) => i.field === k).map((it) => html`<${PendingLine} key=${it.id} it=${it} inKind=${true} ticked=${sel.has(it.id)} onToggle=${() => toggle(it.id)} lookup=${lookup} catalog=${catalog} lliAll=${lliAll} onPick=${pickPending} />`)}
             ${codes(r, k).map((f) => html`<${MarkLine} key=${f.code} projectId=${projectId} kind=${k} code=${f.code} lookup=${lookup} manual=${f.source === "manual"} onRemove=${() => remove(r, f)} lliAll=${lliAll} onTickByRoom=${onTickByRoom}
               variants=${lookup(k, f.code) ? [] : variantsOf(f.code, catalog, lliAll)} onPick=${(v) => pickApproved(r, k, f.code, v)}
               meta=${meta.get(mkey(r, k, f.code))} onMeta=${metaOk ? (patch) => saveMeta(r, k, f.code, patch) : null} editsOk=${editsOk} onEdited=${onEdited} />`)}</div>`)}
+          ${pp.length ? html`<div className="bra-row" style=${{ justifyContent: "center", gap: "8px", margin: "6px 0 10px" }}>
+            <span style=${{ fontSize: "12px", color: "#8a5a00" }}>${pp.length === 1 ? "שורה אחת עם פס כתום ממתינה" : `${pp.length} שורות עם פס כתום ממתינות`} לאישור</span>
+            <button className="bra-btn small" onClick=${() => setSel((t) => new Set([...t, ...pp.map((i) => i.id)]))}>סימון כל החדר</button>
+            <button className="bra-btn primary small" disabled=${busy || !pp.some((i) => sel.has(i.id))} onClick=${approve}>${L.approveSel}</button></div>` : null}
           ${!metaOk && r.fin.length ? html`<div style=${{ fontSize: "12px", color: "#8a6d1f" }}>V ירוק והערה לכל איפיון: צריך להריץ פעם אחת ב-Supabase את <code>004_mark_edits.sql</code>.</div>` : null}
           ${!r.fin.length && !r.pendingOnly ? html`<p style=${{ color: "#9a9da5" }}>אין איפיונים לחדר הזה.</p>` : null}
           ${r.pendingOnly ? html`<p style=${{ color: "#5b5e66" }}>החדר עדיין לא אושר — אחרי אישור V אפשר להוסיף לו איפיונים ידנית.</p>` : html`<${AddMark} projectId=${projectId} room=${r} catalog=${catalog} onDone=${() => setTick((t) => t + 1)} />`}
