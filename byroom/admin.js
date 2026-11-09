@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 11 · 9.11.2026
+//  byroom build 12 · 9.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 11 · 9.11.2026";
+export const BYROOM_BUILD = "byroom build 12 · 9.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -1258,13 +1258,6 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
       <button className="bra-btn" disabled=${exporting} title="כרטיס לכל חדר — נפתח חלון הדפסה; לשמירה כ-PDF בוחרים 'שמירה כ-PDF'" onClick=${() => doExport("pdf")}>${exporting === "pdf" ? "מכין…" : "PDF"}</button>
       <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>מפת קומה</button>
     </div>
-    ${shownPending.length ? html`<div className="bra-row bra-approvebar">
-      <b>אישור V מכאן:</b>
-      <button className="bra-btn small" onClick=${() => setSel(new Set(shownPending.map((i) => i.id)))}>סימון הכל (${shownPending.length})</button>
-      <button className="bra-btn small" onClick=${() => setSel(new Set(shownPending.filter((i) => i.status === "certain").map((i) => i.id)))}>${L.selectCertain}</button>
-      <button className="bra-btn small" onClick=${() => setSel(new Set())}>${L.clear}</button>
-      <span style=${{ flex: 1 }} /><b>${sel.size} מסומנות</b>
-      <button className="bra-btn primary" disabled=${!sel.size || busy} onClick=${approve}>${busy ? "מאשר…" : L.approveSel}</button></div>` : null}
     <div className="bra-scroll"><table>
       <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th><th>הערות</th></tr></thead>
       <tbody>${list.map((r) => { const on = open === r.id; const pp = pendOf(r); const nt = notes.get(key(r))?.note ?? ""; return html`<${React.Fragment} key=${r.id}>
