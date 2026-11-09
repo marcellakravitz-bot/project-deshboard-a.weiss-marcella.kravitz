@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 7 · 25.10.2026
+//  byroom build 8 · 9.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 7 · 25.10.2026";
+export const BYROOM_BUILD = "byroom build 8 · 9.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -87,6 +87,9 @@ const css = `
 .bra-bar>i{display:block;height:100%;background:var(--accent,#17181c)}
 .bra-warn{background:#fff6e0;border:1px solid #f1d38c;border-radius:10px;padding:10px 12px;margin:8px 0}
 .bra-err{color:#b02a37}
+.bra-hc{font-size:11px;font-weight:400;color:#5b5e66;margin-top:2px;white-space:nowrap}
+.bra-warn{position:relative}.bra-x{position:absolute;top:6px;left:8px;border:0;background:none;font-size:17px;line-height:1;color:#8a6d1f;cursor:pointer;padding:2px 4px}
+.bra-x:hover{color:#000}
 .bra input,.bra select{font:inherit;padding:6px 8px;border:1px solid #cfd3db;border-radius:8px;background:#fff}
 .bra-cell{min-width:90px}.bra-cell .v{font-weight:600}.bra-cell .cur{color:#9a9da5;text-decoration:line-through;font-size:12px}
 .bra-cell .alt{font-size:12px;color:#5b5e66}
@@ -131,6 +134,17 @@ table.bra-files td{overflow-wrap:anywhere}
 // ----------------------------------------------------------------------------- helpers
 const fmtSize = (n) => (n > 1e9 ? (n / 1e9).toFixed(2) + " GB" : n > 1e6 ? (n / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(n / 1e3)) + " KB");
 const fmtDate = (s) => (s ? new Date(s).toLocaleString("he-IL", { dateStyle: "short", timeStyle: "short" }) : "");
+/** Per review column: how many rows are "ודאי" out of all rows (approved ones included — it measures the reading). */
+const certainCounts = (rows) => {
+  const out = {};
+  for (const r of rows) {
+    if (r.change_type === "removed") continue;
+    const col = ["room", ...BASE_FIELDS].includes(r.field) ? r.field : "other";
+    const c = (out[col] ||= { certain: 0, total: 0 });
+    c.total++; if (r.status === "certain") c.certain++;
+  }
+  return out;
+};
 const pill = (st) => { const s = STATUS[st]; return s ? html`<span className="bra-pill" style=${{ color: s.c, background: s.bg }}>${s.he}</span>` : null; };
 const fn = async (body) => {
   const { data, error } = await supabase.functions.invoke("byroom-admin", { body });
@@ -258,6 +272,57 @@ async function uploadGzip(session, file, onProgress) {
   onProgress(1);
 }
 
+// ----------------------------------------------------------------------------- stuck processing (build 8)
+// The cloud stops a job at its one-hour limit (or when it runs out of memory) without the job writing "failed",
+// so the file stayed "מעבד" and the screen polled forever. A job older than the limit is now marked as stopped,
+// a job that never started is marked too, and the rest of the version is cross-checked so it is not held back.
+const STUCK_MIN = 65, NOSTART_MIN = 15;
+const minsAgo = (t) => (t ? (Date.now() - new Date(t).getTime()) / 60000 : Infinity);
+const BUSY_FILE = ["uploaded", "processing"];
+async function sweepStuck(setId) {
+  const set = must(await supabase.from("byroom_plan_sets").select("*").eq("id", setId).single());
+  if (set.status !== "processing") return false;
+  const files = must(await supabase.from("byroom_plan_files").select("*").eq("set_id", setId).neq("status", "removed"));
+  const jobs = must(await supabase.from("byroom_parse_jobs").select("*").eq("set_id", setId).order("created_at", { ascending: false }).limit(60));
+  let changed = false;
+  for (const f of files.filter((x) => BUSY_FILE.includes(x.status))) {
+    const j = jobs.find((x) => x.kind === "parse" && x.file_id === f.id);
+    let why = null;
+    if (j && ["running", "queued"].includes(j.status)) {
+      if (minsAgo(j.started_at || j.created_at) > STUCK_MIN) why = "העיבוד נעצר: רץ יותר משעה בלי לסיים (מגבלת השרת). לרוב הקובץ כבד מדי — אפשר ללחוץ \"עיבוד מחדש\"";
+    } else if ((!j || new Date(j.created_at) < new Date(set.updated_at)) && minsAgo(set.updated_at) > NOSTART_MIN) {
+      why = "העיבוד לא התחיל אחרי " + NOSTART_MIN + " דקות. אפשר ללחוץ \"עיבוד מחדש\"";
+    }
+    if (!why) continue;
+    if (j && ["running", "queued"].includes(j.status)) must(await supabase.from("byroom_parse_jobs").update({ status: "failed", finished_at: new Date().toISOString(), error: why }).eq("id", j.id));
+    must(await supabase.from("byroom_plan_files").update({ status: "failed", error: why }).eq("id", f.id));
+    f.status = "failed"; changed = true;
+  }
+  const cj = jobs.find((x) => x.kind === "crosscheck");
+  if (cj && cj.status === "running" && minsAgo(cj.started_at) > STUCK_MIN) {
+    must(await supabase.from("byroom_parse_jobs").update({ status: "failed", finished_at: new Date().toISOString(), error: "ההצלבה נעצרה אחרי שעה בלי לסיים" }).eq("id", cj.id));
+    must(await supabase.from("byroom_plan_sets").update({ status: set.processed_at ? "review" : "failed", updated_at: new Date().toISOString() }).eq("id", setId));
+    return true;
+  }
+  if (changed && !files.some((x) => ["pending", "uploading", ...BUSY_FILE].includes(x.status))) {
+    // what the worker would have done when its last file finished: cross-check the files that were read
+    if (files.some((x) => x.status === "ready")) { try { await fn({ action: "crosscheck", set_id: setId }); } catch (e) { console.warn("byroom crosscheck after stuck", e); } }
+    else must(await supabase.from("byroom_plan_sets").update({ status: "failed", updated_at: new Date().toISOString() }).eq("id", setId));
+  }
+  return changed;
+}
+
+/** A notice at the bottom that can be closed. Closed notices stay closed in this browser (key = what it is about). */
+const hiddenKey = "byroom-hidden-notices";
+const readHidden = () => { try { return new Set(JSON.parse(localStorage.getItem(hiddenKey) || "[]")); } catch (e) { return new Set(); } };
+function useHidden() {
+  const [h, setH] = useState(readHidden);
+  const hide = (k) => setH((x) => { const n = new Set(x); n.add(k); try { localStorage.setItem(hiddenKey, JSON.stringify([...n].slice(-300))); } catch (e) {} return n; });
+  return [h, hide];
+}
+const Notice = ({ err, onClose, children }) => html`<div className=${"bra-warn" + (err ? " bra-err" : "")} style=${{ paddingLeft: "30px" }}>
+  <button className="bra-x" title="סגירה" aria-label="סגירה" onClick=${onClose}>×</button>${children}</div>`;
+
 // ----------------------------------------------------------------------------- data
 const useInterval = (fn, ms, on) => useEffect(() => { if (!on) return; const t = setInterval(fn, ms); return () => clearInterval(t); }, [on, ms]);
 
@@ -350,6 +415,7 @@ function UploadForm({ projectId, onDone, onCancel, L }) {
   const [prog, setProg] = useState({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  useEffect(() => { if (msg !== L.canClose) return; const t = setTimeout(() => setMsg(null), 20000); return () => clearTimeout(t); }, [msg]);
   const add = (list) => {
     const rows = stageRows(list, v.floor.trim());
     // the floor and revision fill themselves from the first file names that carry them; she can change them
@@ -392,22 +458,31 @@ function UploadForm({ projectId, onDone, onCancel, L }) {
       <button className="bra-btn" disabled=${busy} onClick=${onCancel}>${L.cancel}</button>
       ${ready && (!v.floor.trim() || !v.name.trim()) ? html`<span className="bra-err">חסרים ${[!v.name.trim() && "שם", !v.floor.trim() && "קומה"].filter(Boolean).join(" ו")}</span>` : null}
     </div>
-    ${msg && html`<div className="bra-warn">${msg}</div>`}
+    ${msg && html`<${Notice} onClose=${() => setMsg(null)}>${msg}</${Notice}>`}
   </div>`;
 }
 
 function UploadTab({ projectId, projectName, L, openId, onOpened }) {
   const [sets, setSets] = useState(null);
   const [open, setOpen] = useState(openId ?? null);
+  const sweptAt = useRef({});
   useEffect(() => { if (openId) { setOpen(openId); onOpened?.(); } }, [openId]);
   const load = async () => {
     const s = must(await supabase.from("byroom_plan_sets").select("*").eq("project_id", projectId).order("created_at", { ascending: false }));
     const ids = s.map((x) => x.id);
     const f = ids.length ? must(await supabase.from("byroom_plan_files").select("set_id, format").in("set_id", ids).neq("status", "removed")) : [];
+    // a version "בעיבוד" for a long time: check whether its job was stopped (at most once in 2 minutes per version)
+    let swept = false;
+    for (const x of s.filter((y) => y.status === "processing" && minsAgo(y.updated_at) > NOSTART_MIN)) {
+      if (Date.now() - (sweptAt.current[x.id] || 0) < 120000) continue;
+      sweptAt.current[x.id] = Date.now();
+      try { swept = (await sweepStuck(x.id)) || swept; } catch (e) { console.warn("byroom sweep", e); }
+    }
+    if (swept) return load();
     setSets(s.map((x) => ({ ...x, nfiles: f.filter((y) => y.set_id === x.id).length, formats: [...new Set(f.filter((y) => y.set_id === x.id).map((y) => y.format.toUpperCase()))].join(" · ") })));
   };
   useEffect(() => { load(); }, [projectId]);
-  useInterval(load, 8000, !open && sets?.some((s) => ["uploading", "processing"].includes(s.status)));
+  useInterval(load, 8000, !open && sets?.some((s) => s.status === "processing" || (s.status === "uploading" && minsAgo(s.updated_at) < 30)));
   if (open) return html`<${SetScreen} setId=${open} projectName=${projectName} L=${L} onBack=${() => { setOpen(null); load(); }} />`;
   if (!sets) return html`<p>…</p>`;
   return html`<div>
@@ -439,15 +514,25 @@ function SetScreen({ setId, projectName, onBack, L }) {
   const [prog, setProg] = useState({});
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null);
+  useEffect(() => { if (msg !== L.canClose) return; const t = setTimeout(() => setMsg(null), 20000); return () => clearTimeout(t); }, [msg]);
   const [adding, setAdding] = useState(false);
 
+  const sweptAt = useRef(0);
+  const [hidden, hide] = useHidden();
   const load = async () => {
+    if (Date.now() - sweptAt.current > 60000) { sweptAt.current = Date.now(); try { await sweepStuck(setId); } catch (e) { console.warn("byroom sweep", e); } }
     setSet(must(await supabase.from("byroom_plan_sets").select("*").eq("id", setId).single()));
     setFiles(must(await supabase.from("byroom_plan_files").select("*").eq("set_id", setId).neq("status", "removed").order("created_at")));
     setJobs(must(await supabase.from("byroom_parse_jobs").select("*").eq("set_id", setId).order("created_at", { ascending: false }).limit(30)));
   };
   useEffect(() => { load(); }, [setId]);
-  const live = set && ["uploading", "processing"].includes(set.status) || files.some((f) => ["uploaded", "processing"].includes(f.status));
+  // polling stops by itself: a stopped job is marked failed by sweepStuck, and an upload left half-way is not polled
+  const live = set && set.status === "processing" || files.some((f) => BUSY_FILE.includes(f.status));
+  const runningFor = (f) => { const j = jobs.find((x) => x.kind === "parse" && x.file_id === f.id && x.status === "running"); return j ? Math.max(0, Math.round(minsAgo(j.started_at))) : null; };
+  // only the newest job of each file (and the newest cross-check) can be a current failure; older ones are history
+  const lastJobs = [...new Map(jobs.map((j) => [j.kind + "|" + (j.file_id ?? ""), j]).reverse()).values()];
+  const failures = lastJobs.filter((j) => j.status === "failed" && !hidden.has("job:" + j.id) && (!j.file_id || files.some((f) => f.id === j.file_id && f.status === "failed")));
+  const warnKey = "warn:" + setId + ":" + (set?.processed_at ?? "");
   useInterval(load, 5000, live && !busy);
 
   const uploadMore = async () => {
@@ -475,7 +560,7 @@ function SetScreen({ setId, projectName, onBack, L }) {
       <tbody>${files.map((f) => html`<tr key=${f.id}>
         <td className="nm"><bdi dir="auto">${f.original_name}</bdi>${f.error ? html`<div className="bra-err clamp" dir="auto" title=${f.error}>${f.error}</div>` : null}</td>
         <td>${TYPES[f.plan_type]}</td><td>${f.floor}</td><td>${fmtSize(f.size_bytes)}</td>
-        <td>${FILE_ST[f.status]}${f.status === "uploading" ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>${L.resumeHint}</div>` : null}</td>
+        <td>${FILE_ST[f.status]}${f.status === "processing" && runningFor(f) != null ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>${runningFor(f)} דק׳</div>` : null}${f.status === "uploading" ? html`<div style=${{ fontSize: "12px", color: "#5b5e66" }}>${L.resumeHint}</div>` : null}</td>
         <td style=${{ fontSize: "12px" }}>${f.detected?.content_hint ? `${TYPES[f.detected.content_hint] ?? f.detected.content_hint}${f.detected.content_hint !== f.plan_type && f.detected.content_hint !== "MODEL" ? " ⚠" : ""}` : ""}
           ${f.detected?.dates?.length ? html`<div>תאריכים: ${f.detected.dates.slice(0, 3).join(", ")}</div>` : null}</td>
         <td><div className="bra-acts">
@@ -491,10 +576,10 @@ function SetScreen({ setId, projectName, onBack, L }) {
         <label><input type="checkbox" checked=${confirmed} disabled=${busy} onChange=${(e) => setConfirmed(e.target.checked)} /> ${L.confirm}</label>
         <button className="bra-btn primary" disabled=${!confirmed || busy} onClick=${uploadMore}>${L.send}</button></div>`}`
       : html`<button className="bra-btn small" style=${{ marginTop: "8px" }} onClick=${() => setAdding(true)}>＋ הוספת קובץ לגרסה</button>`}
-    ${msg && html`<div className="bra-warn">${msg}</div>`}
+    ${msg && html`<${Notice} onClose=${() => setMsg(null)}>${msg}</${Notice}>`}
 
-    ${note.warnings?.length ? html`<div className="bra-warn"><b>${L.warnings}</b><ul>${note.warnings.map((w, i) => html`<li key=${i}>${w}</li>`)}</ul></div>` : null}
-    ${jobs.filter((j) => j.status === "failed").slice(0, 3).map((j) => html`<div className="bra-warn bra-err" key=${j.id}>${j.kind === "crosscheck" ? "הצלבה" : "עיבוד"} נכשל: ${j.error}</div>`)}
+    ${note.warnings?.length && !hidden.has(warnKey) ? html`<${Notice} onClose=${() => hide(warnKey)}><b>${L.warnings}</b><ul>${note.warnings.map((w, i) => html`<li key=${i}>${w}</li>`)}</ul></${Notice}>` : null}
+    ${failures.map((j) => html`<${Notice} err key=${j.id} onClose=${() => hide("job:" + j.id)}>${j.kind === "crosscheck" ? "הצלבה" : "עיבוד"} נכשל${j.file_id ? ` (${files.find((f) => f.id === j.file_id)?.original_name ?? ""})` : ""}: ${j.error}</${Notice}>`)}
     ${files.some((f) => ["ready", "failed"].includes(f.status)) ? html`<div className="bra-row" style=${{ margin: "8px 0" }}>
       ${files.some((f) => f.status === "ready") ? html`<button className="bra-btn small" onClick=${async () => { await fn({ action: "crosscheck", set_id: setId }); load(); }}>${L.crosscheck}</button>` : null}
       <button className="bra-btn small" title="קורא שוב את כל קבצי הגרסה (אחרי עדכון של שרת העיבוד), ובסוף מצליב"
@@ -523,6 +608,18 @@ function Review({ set, files, onApproved, L }) {
     setItems([...last.values()]);
   };
   useEffect(() => { load(); }, [set.id, set.processed_at]);
+  // the previous version of the same floor, to see whether the reading got better (build 8)
+  const [prev, setPrev] = useState(null);
+  useEffect(() => { (async () => {
+    try {
+      const p = must(await supabase.from("byroom_plan_sets").select("id, name, revision, created_at").eq("project_id", set.project_id).eq("floor", set.floor)
+        .lt("created_at", set.created_at).in("status", ["review", "partly_approved", "approved"]).order("created_at", { ascending: false }).limit(1))[0];
+      if (!p) return setPrev(null);
+      const rows = must(await supabase.from("byroom_room_review").select("room_no, field, status, change_type").eq("set_id", p.id).order("id"));
+      const last = new Map(); for (const r of rows) last.set(r.room_no + "|" + r.field, r);
+      setPrev({ ...p, counts: certainCounts([...last.values()]) });
+    } catch (e) { console.warn("byroom previous version", e); setPrev(null); }
+  })(); }, [set.id]);
   if (!items) return html`<p>…</p>`;
 
   const byRoom = new Map();
@@ -535,6 +632,8 @@ function Review({ set, files, onApproved, L }) {
     if (!showSame && f.every((i) => i.decision !== "pending")) return false;
     return filter === "all" || f.some((i) => i.status === filter && (showSame || i.decision === "pending"));
   });
+  // "סימון הכל": every pending row of the rooms on screen; with a status filter, only rows of that status (build 8)
+  const allShown = visible.flatMap((r) => Object.values(byRoom.get(r))).filter((i) => i.decision === "pending" && (filter === "all" || i.status === filter));
   const toggle = (id) => setTick((t) => { const n = new Set(t); n.has(id) ? n.delete(id) : n.add(id); return n; });
   const approve = async () => {
     setBusy(true);
@@ -551,6 +650,14 @@ function Review({ set, files, onApproved, L }) {
     load();
   };
   const counts = Object.fromEntries(Object.keys(STATUS).map((k) => [k, pending.filter((i) => i.status === k).length]));
+  const cc = certainCounts(items);
+  const head = (col, label) => {
+    const c = cc[col] || { certain: 0, total: 0 };
+    const p = prev?.counts?.[col];
+    const d = p ? c.certain - p.certain : null;
+    return html`<th key=${col}>${label}${c.total ? html`<div className="bra-hc" title=${`ודאי מתוך כל השורות בעמודה${p ? ` · בגרסה הקודמת (${prev.name}${prev.revision ? " " + prev.revision : ""}): ${p.certain}/${p.total}` : ""}`}>
+      ודאי ${c.certain}/${c.total}${d ? html` <span style=${{ color: d > 0 ? "#1f7a3a" : "#b02a37" }}>${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>` : p ? html` <span style=${{ color: "#5b5e66" }}>=</span>` : null}</div>` : null}</th>`;
+  };
 
   const cell = (it) => {
     if (!it) return html`<td className="bra-cell">${L.none}</td>`;
@@ -586,13 +693,14 @@ function Review({ set, files, onApproved, L }) {
       </select>
       <label><input type="checkbox" checked=${showSame} onChange=${(e) => setShowSame(e.target.checked)} /> ${L.showSame}</label>
       <button className="bra-btn small" onClick=${() => setTick(new Set(pending.filter((i) => i.status === "certain").map((i) => i.id)))}>${L.selectCertain}</button>
+      <button className="bra-btn small" title="מסמן V על כל השורות הממתינות שמוצגות כרגע (לפי הסינון שנבחר)" onClick=${() => setTick(new Set(allShown.map((i) => i.id)))}>סימון הכל (${allShown.length})</button>
       <button className="bra-btn small" onClick=${() => setTick(new Set())}>${L.clear}</button>
       <span style=${{ flex: 1 }} />
       <b>${tick.size} מסומנות</b>
       <button className="bra-btn primary" disabled=${!tick.size || busy} onClick=${approve}>${L.approveSel}</button>
     </div>
     <div className="bra-scroll"><table>
-      <thead><tr><th>${L.room}</th>${FIELDS.map((f) => html`<th key=${f}>${FIELD_HE[f]}</th>`)}<th>${L.note}</th></tr></thead>
+      <thead><tr>${head("room", L.room)}${FIELDS.map((f) => head(f, FIELD_HE[f]))}<th>${L.note}</th></tr></thead>
       <tbody>${visible.map((r) => {
         const f = byRoom.get(r);
         const notes = Object.values(f).map((i) => i.note).filter(Boolean);

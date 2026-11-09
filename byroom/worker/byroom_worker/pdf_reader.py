@@ -74,6 +74,43 @@ def _line_text(ws):
     return " ".join(_txt(w) for w in ws)
 
 
+NOT_NAME = re.compile(r"^(room|rm|no|nr|p|level|floor|lvl|mm|cm|m|mr|חדר|מס|קומה|מפלס)\.?['׳]?$", re.I)
+
+
+def _side_name(n, same, h, direction, gap=1.2):
+    """The name box beside a room number on the same line: the run of words that starts within `gap` text heights
+    of the number on one side. Kept only when it reads as a name — letters, not a number, a code, a scale or a
+    word like "Room" / "No." that makes the number part of a phrase."""
+    if direction == "left":
+        first = [w for w in same if 0 <= n["x0"] - w["x1"] < gap * h]
+        key = lambda w: -w["x1"]
+    else:
+        first = [w for w in same if 0 <= w["x0"] - n["x1"] < gap * h]
+        key = lambda w: w["x0"]
+    if not first:
+        return None
+    run = [sorted(first, key=key)[0]]
+    grown = True
+    while grown:                                         # words of the same box: small gaps, away from the number
+        grown = False
+        for w in same:
+            if w in run:
+                continue
+            away = w["x1"] <= n["x0"] if direction == "left" else w["x0"] >= n["x1"]
+            if away and any(-0.2 * h < w["x0"] - r["x1"] < 0.9 * h or -0.2 * h < r["x0"] - w["x1"] < 0.9 * h for r in run):
+                run.append(w); grown = True
+    texts = [w["text"].strip() for w in run]
+    near = _txt(sorted(first, key=key)[0])
+    if NOT_NAME.match(near) or ":" in near:
+        return None
+    if all(NUM.match(t) or ROOM_NO.match(t) or CODE_RE.match(t) or MARK_RE.match(t) or AREA_UNIT.match(t) for t in texts):
+        return None
+    letters = sum(len(HEB.findall(t)) + len(LATIN.findall(t)) for t in texts)
+    if letters < 2:
+        return None
+    return {"text": _line_text(run), "x0": min(w["x0"] for w in run), "x1": max(w["x1"] for w in run)}
+
+
 def _tags(words):
     """Room tags as architects draw them: a room number standing alone on its line, its name on the lines just under
     it, and the area ("12 m²") under the name. Nothing is assumed about fonts, layers or blocks."""
@@ -86,9 +123,20 @@ def _tags(words):
             continue
         h = max(4.0, n["bottom"] - n["top"])
         x, y = cx(n), cy(n)
-        # a number that is part of a phrase ("Center 119 P.", "1:50") is not a room tag
-        if any(w is not n and abs(cy(w) - y) < 0.5 * h and (0 <= n["x0"] - w["x1"] < 1.2 * h or 0 <= w["x0"] - n["x1"] < 1.2 * h) for w in words):
+        # a number with words right beside it on BOTH sides is part of a phrase ("Center 119 P."), not a room tag.
+        # A name on ONE side only is the two-box tag: [420][OFFICE] / [משרד][420] (build 5, 9.11.2026)
+        same = [w for w in words if w is not n and abs(cy(w) - y) < 0.5 * h]
+        left = [w for w in same if 0 <= n["x0"] - w["x1"] < 1.2 * h]
+        right = [w for w in same if 0 <= w["x0"] - n["x1"] < 1.2 * h]
+        if left and right:
             continue
+        side = None
+        if left or right:
+            side = _side_name(n, same, h, "left" if left else "right")
+            if side is None:                                # the neighbour is not a name ("No. 420", "420 mm")
+                continue
+        if side:
+            x = (min(n["x0"], side["x0"]) + max(n["x1"], side["x1"])) / 2     # the tag is both boxes together
         below = [w for w in words if w is not n and 0.4 * h < cy(w) - y < 7 * h and abs(cx(w) - x) < 14 * h]
         lines = []
         for w in sorted(below, key=lambda w: cy(w)):
@@ -126,8 +174,16 @@ def _tags(words):
             last = ly
             if len(name) >= 3:
                 break
+        if not side and not name:
+            # no name under the number: a name box standing a little apart on the same line ([420]   [OFFICE])
+            for d in ("left", "right"):
+                side = _side_name(n, same, h, d, gap=4.0)
+                if side:
+                    break
+        if side:
+            name.insert(0, side["text"])
         nm = re.sub(r"(\s+\d+[.,]\d+)+$", "", " ".join(name).strip())      # a dimension caught at the end of the name
-        out.append({"room": t, "x": x, "y": y, "h": h, "area": area, "name": nm})
+        out.append({"room": t, "x": cx(n), "y": y, "h": h, "area": area, "name": nm, "layout": "side" if side else "stacked"})
     return out
 
 
