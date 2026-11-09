@@ -615,6 +615,26 @@ async function pmBoard(grant: any) {
     weekly[t] = weeklyFor(sdata.weekly || {}, t, F, grant.floorChosen || "");
     weeklyEdit[t] = grant.floorChosen ? ((sdata.weekly || {})[`${t}@${grant.floorChosen}`] || {}) : ((sdata.weekly || {})[t] || {});
   }
+  // 09.11.26 — every trade's week as written: for all floors ("") and for
+  // each floor of its own, so the app can show a day split by floor and edit
+  // the floor chosen. Only the floors he may see (F); his floor chosen: that one.
+  const weeklyRaw: Record<string, Record<string, any>> = {};
+  const tradeFloors: Record<string, string[]> = {};
+  const wAll = sdata.weekly || {};
+  const regList = (sdata.list || []).filter((s: any) => s && s.active !== false && roleOf(s) === "sub");
+  for (const t of ALL_TRADES) {
+    const parts: Record<string, any> = { "": wAll[t] || {} };
+    for (const k of Object.keys(wAll)) {
+      if (k.indexOf(t + "@") !== 0) continue;
+      const f = k.slice(t.length + 1);
+      if (grant.floorChosen ? f !== grant.floorChosen : (F && F.indexOf(f) < 0)) continue;
+      parts[f] = wAll[k] || {};
+    }
+    weeklyRaw[t] = parts;
+    const fl: string[] = [];
+    regList.filter((s: any) => s.trade === t).forEach((s: any) => floorArr(s.floors).forEach((f) => { if (fl.indexOf(f) < 0) fl.push(f); }));
+    tradeFloors[t] = fl;
+  }
   // 07.11.26 — לו"ז פרויקט: the project schedule, to read.
   const schedule = ((ex.scheduleData || {}).tasks || []).map((t: any) => ({
     id: String(t.id), name: String(t.nameHe || t.name || ""), level: Number(t.level) || 1,
@@ -631,13 +651,15 @@ async function pmBoard(grant: any) {
     trade: "",
     weekly,
     weeklyEdit,
+    weeklyRaw,
+    tradeFloors,
     schedule,
     logs,
     submittals,
     sd,
     standards,
     marks: {
-      weekly: sign(weekly),
+      weekly: sign([weekly, weeklyRaw]),
       schedule: sign(schedule.map((t: any) => [t.id, t.start, t.finish, t.pc])),
       log: sign(Object.values(logs).map((l: any) => l.map((x: any) => [x.date, x.subject, x.body]))),
       submittal: sign(submittals.map((x: any) => [x.no, x.decision, x.submitted])),
@@ -805,7 +827,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 52,
+    fn: "sub-portal", version: 53,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,

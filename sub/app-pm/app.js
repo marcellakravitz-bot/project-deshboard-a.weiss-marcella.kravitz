@@ -20,18 +20,40 @@ var IC={
   trade:"M2 20h20M5 20V9l7-5 7 5v11M9 20v-6h6v6"
 };
 var lists={ submittal:{filter:{}}, sd:{filter:{}} };
-var logDraft=null, weekBuf=null, weekShown=null;
+var logDraft=null, weekBuf=null, weekShown=null, weekFloor=null;
 
 function longBtn(k, title, extra, id){
   return '<button class="longBtn"'+(id?' id="'+id+'"':' data-k="'+k+'"')+'>'+'<span class="ico">'+AW.icon(IC[k]||IC.log)+'</span><span class="t">'+E(title)+'</span>'+(AW.isNew(k)?'<span class="newStar">★ עדכון חדש</span>':'')+
     (extra?'<span class="n">'+E(extra)+'</span>':'')+'</button>';
 }
-// One day of the week, every trade that has work written for it.
+// 09.11.26 — the floors in the project's order, then by number.
+function floorSort(list){
+  var order=(S.board.myFloors||[]).map(String);
+  return list.slice().sort(function(a,b){
+    var ia=order.indexOf(a), ib=order.indexOf(b);
+    if(ia>=0&&ib>=0) return ia-ib;
+    if(ia>=0||ib>=0) return ia>=0?-1:1;
+    var na=parseFloat(a), nb=parseFloat(b);
+    return (isNaN(na)||isNaN(nb)) ? a.localeCompare(b,"he") : na-nb;
+  });
+}
+// One day of the week, every trade that has work written for it. A trade
+// written per floor: its box split, קומה 7 – … then under a fine line קומה 8 – …
 function dayCell(wk, i){
-  var w=(S.board.weekly||{});
+  var w=(S.board.weekly||{}), raw=S.board.weeklyRaw;
   return AW.TRADES.map(function(t){
-    var txt=String((((w[t.k]||{})[wk])||[])[i]||"").trim();
-    return txt ? '<span class="tr"><b>'+E(t.t)+':</b> '+E(txt)+'</span>' : "";
+    var parts=raw&&raw[t.k];
+    if(!parts){
+      var txt=String((((w[t.k]||{})[wk])||[])[i]||"").trim();
+      return txt ? '<span class="tr"><b>'+E(t.t)+':</b> '+E(txt)+'</span>' : "";
+    }
+    var gen=String(((parts[""]||{})[wk]||[])[i]||"").trim();
+    var fl=floorSort(Object.keys(parts).filter(function(f){ return f!==""; }))
+      .map(function(f){ return {f:f, t:String(((parts[f]||{})[wk]||[])[i]||"").trim()}; })
+      .filter(function(x){ return x.t; });
+    if(!gen&&!fl.length) return "";
+    return '<span class="tr"><b>'+E(t.t)+':</b>'+(gen?' '+E(gen):'')+
+      fl.map(function(x,n){ return '<span class="trFl'+(!gen&&!n?' first':'')+'"><i>קומה <span class="num">'+E(x.f)+'</span></i> – '+E(x.t)+'</span>'; }).join("")+'</span>';
   }).join("");
 }
 
@@ -102,7 +124,7 @@ function tradeEditHtml(){
 }
 function wireTradeEdit(app){
   Array.prototype.forEach.call(app.querySelectorAll("[data-tr]"), function(b){
-    b.onclick=function(){ weekBuf=null; AW.go({v:"weekEdit", trade:b.getAttribute("data-tr")}); };
+    b.onclick=function(){ weekBuf=null; weekFloor=null; AW.go({v:"weekEdit", trade:b.getAttribute("data-tr")}); };
   });
 }
 function weekly(day){
@@ -127,11 +149,33 @@ function weekly(day){
 function weekEdit(trade){
   var app=AW.el();
   if(!weekShown) weekShown=AW.sundayOf(new Date());
-  var stored=(((S.board.weeklyEdit||S.board.weekly||{})[trade]||{})[weekShown])||[];
+  // 09.11.26 — the floor written for: chosen above the days. A floor chosen
+  // for the app: that floor. Otherwise כל הקומות and the floors of the
+  // trade's contractors (or the project's, if none has floors of his own).
+  var raw=(S.board.weeklyRaw||{})[trade];
+  var appFl=S.board.floor||"";
+  var opts=[];
+  if(raw){
+    if(appFl) opts=[appFl];
+    else {
+      var tf=((S.board.tradeFloors||{})[trade]||[]).map(String);
+      var base=tf.length?tf:(S.board.myFloors||[]).map(String);
+      Object.keys(raw).forEach(function(f){ if(f&&base.indexOf(f)<0) base.push(f); });
+      opts=[""].concat(floorSort(base));
+    }
+    if(weekFloor===null||opts.indexOf(weekFloor)<0){
+      var tf2=((S.board.tradeFloors||{})[trade]||[]).map(String);
+      weekFloor=appFl||(tf2.length&&opts.indexOf(floorSort(tf2)[0])>=0?floorSort(tf2)[0]:"");
+    }
+  }
+  var stored=raw ? ((raw[weekFloor||""]||{})[weekShown]||[]) : ((((S.board.weeklyEdit||S.board.weekly||{})[trade]||{})[weekShown])||[]);
   var days=AW.weekDays(weekShown);
   var val=function(i){ return weekBuf&&weekBuf[i]!=null ? weekBuf[i] : (stored[i]||""); };
   var dirty=!!weekBuf&&Object.keys(weekBuf).some(function(i){ return (weekBuf[i]||"")!==(stored[i]||""); });
-  app.innerHTML=AW.head("לו״ז שבועי - קבלן "+E(AW.tradeHe(trade))+(AW.state.floor?" · קומה "+E(AW.state.floor):""))+
+  app.innerHTML=AW.head("לו״ז שבועי - קבלן "+E(AW.tradeHe(trade))+(raw?"":(AW.state.floor&&AW.state.floor!=="*"?" · קומה "+E(AW.state.floor):"")))+
+    (raw&&opts.length>1 ? '<div class="lbl">קומה</div><div class="chips wkFl">'+opts.map(function(f){
+      return '<button class="chip'+(f===weekFloor?' on':'')+'" data-fl="'+E(f)+'">'+(f?'קומה <span class="num">'+E(f)+'</span>':'כל הקומות')+'</button>';
+    }).join("")+'</div>' : (raw&&weekFloor ? '<div class="lbl">קומה <span class="num">'+E(weekFloor)+'</span></div>' : ''))+
     '<div class="wkNav"><button id="wkPrev">‹</button><strong class="num">'+E(AW.fmt(weekShown))+' – '+E(AW.fmt(days[5].iso))+'</strong><button id="wkNext">›</button></div>'+
     days.map(function(d,i){
       return '<div class="wkDay"><div class="wkHead">'+d.name+'<span class="num">'+E(AW.fmt(d.iso))+'</span></div>'+
@@ -139,6 +183,16 @@ function weekEdit(trade){
     }).join("")+
     '<div class="writeBar"><button id="wkSave"'+(dirty?"":" disabled")+'>'+(dirty?"שמירה":"נשמר")+'</button></div>';
   AW.wireBack();
+  Array.prototype.forEach.call(app.querySelectorAll(".wkFl [data-fl]"), function(c){
+    c.onclick=function(){
+      var f=c.getAttribute("data-fl");
+      if(f===weekFloor) return;
+      if(dirty||(weekBuf&&Object.keys(weekBuf).some(function(i){ return (weekBuf[i]||"")!==(stored[i]||""); }))){
+        if(!confirm("השינויים בקומה הזו לא נשמרו. לעבור בכל זאת?")) return;
+      }
+      weekFloor=f; weekBuf=null; AW.render(true);
+    };
+  });
   Array.prototype.forEach.call(app.querySelectorAll(".wkDay textarea"), function(t){
     t.oninput=function(){ weekBuf=weekBuf||{}; weekBuf[t.getAttribute("data-d")]=t.value;
       var sv=document.getElementById("wkSave"); sv.disabled=false; sv.textContent="שמירה"; };
@@ -153,7 +207,9 @@ function weekEdit(trade){
     var chain=Promise.resolve(), failed=false;
     changed.forEach(function(i){
       chain=chain.then(function(){
-        return AW.call({action:"set-week", projectId:S.project, trade:trade, weekStart:weekShown, day:Number(i), text:weekBuf[i]||""})
+        var body={action:"set-week", projectId:S.project, trade:trade, weekStart:weekShown, day:Number(i), text:weekBuf[i]||""};
+        if(raw) body.floor=weekFloor||"";
+        return AW.call(body)
           .then(function(r){ if(!r.ok) failed=true; });
       });
     });

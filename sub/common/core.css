@@ -308,6 +308,10 @@ body.isPv .pvBadge{display:block;position:sticky;top:var(--barH);z-index:4;backg
 
 /* 07.11.26 — a day's text may hold several lines (floors). */
 .wkCard .tr,.rec .tr{white-space:pre-line}
+.tt td .tr .trFl{display:block;margin-top:3px;padding-top:3px;border-top:1px solid #e3e6ec;font-weight:400}
+.tt td .tr .trFl.first{border-top:0;margin-top:0;padding-top:0}
+.tt td .tr .trFl i{font-style:normal;font-weight:700;color:var(--navy)}
+.wkFl{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}
 /* 07.11.26 — לו"ז פרויקט */
 .schBar{display:flex;gap:8px;justify-content:center;margin:0 0 10px}
 .schTbl{width:100%;border-collapse:separate;border-spacing:0;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;table-layout:fixed}
