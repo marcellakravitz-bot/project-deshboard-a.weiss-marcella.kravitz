@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "09.11.2026 · build 290";
+var APP_BUILD = "09.11.2026 · build 291";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -7221,7 +7221,8 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   if (view === "board" && trade && section === "weekly") {
     return React9.createElement(SubsWeekly, {
       trade,
-      tradeLabel: tradeOf(trade).label || "",
+      // 09.11.26 — on a floor, the floor is in the title (and on the print).
+      tradeLabel: (tradeOf(trade).label || "") + flTag,
       canEdit,
       printBrand,
       projectName,
@@ -7247,7 +7248,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   if (view === "board" && trade && section) {
     const sec = SUB_SECTIONS.find((x) => x.key === section) || {};
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
-      React9.createElement("h3", { style: { margin: 0 } }, sec.title + " \u2014 \u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || ""))
+      React9.createElement("h3", { style: { margin: 0 } }, sec.title + " \u2014 \u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "") + flTag)
     );
   }
 
