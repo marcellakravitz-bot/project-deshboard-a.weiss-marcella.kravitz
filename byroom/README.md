@@ -18,7 +18,7 @@ byroom build 17 · 10.11.2026 · worker 6 (אתר: build 294)
 | `supabase/002_publish.sql` | שלב הפרסום, קטלוג האיפיונים, כל קטגוריה (לא רק ריצוף/חיפוי/תקרה), הוספת איפיון ידנית | Supabase (הורץ 25.10.2026) |
 | `supabase/003_notes_choices.sql` | הערות לחדר (`byroom_room_notes`) ובחירות גרסת איפיון (`byroom_mark_choices`) | Supabase (הורץ 9.11.2026) |
 | `supabase/004_mark_edits.sql` | נוסח איפיון שנערך ב-By Room (`byroom_mark_edits`), והערה + V ירוק לכל איפיון בחדר (`byroom_room_marks`) | Supabase (הורץ 9.11.2026) |
-| `supabase/005_room_groups.sql` | קבוצות חדרים (`byroom_room_groups`: קומה, שם, גמרים, חדרים) | Supabase |
+| `supabase/005_room_groups.sql` | קבוצות חדרים (`byroom_room_groups`: קומה, שם, גמרים, חדרים) | Supabase (הורץ 10.11.2026) |
 | `supabase/functions/byroom-admin` | צד השרת של המנהל: העלאה ל-Google Cloud, הפעלת עיבוד, ניקוי, קישור PDF | Supabase › Edge Functions |
 | `supabase/functions/byroom-public` | מה שהקישור / QR קורא: רק הנתונים שפורסמו | Supabase › Edge Functions (בלי אימות JWT) |
 | `supabase/functions/_shared/gcp.ts` | גישה ל-Google Cloud משותפת לשתי הפונקציות | עם הפונקציות |
@@ -39,7 +39,7 @@ byroom build 17 · 10.11.2026 · worker 6 (אתר: build 294)
 6. מנהל מסמן V ולוחץ "אישור שינויים מסומנים". רק `byroom_approve_items()` כותבת לנתונים המאושרים.
 7. **פרסום ללקוח**: רק `byroom_publish()` מעבירה את המאושר ל-`byroom_published`, שממנו קוראים הלקוח והקישורים.
 
-## שינויים ב-build 17 (10.11.2026) — דורש הרצת `supabase/005_room_groups.sql`
+## שינויים ב-build 17 (10.11.2026) — `005_room_groups.sql` הורץ 10.11.2026
 
 - **קבוצות חדרים:** "+ קבוצה חדשה" או גלגל השיניים בשורת הקבוצה (הסגולה) — שם, איפיונים לכל החדרים, וחדרים (סינון לפי מספר/שם, "סימון כל התוצאות", "העתקה מחדר", הצעות של חדרים עם גמרים זהים). "אישור — החלה על N החדרים" כותב את הגמרים לכל חדר (`byroom_set_mark`, נרשם כידני) ושומר את הקבוצה. קבוצה בתוך קומה אחת.
 - **שורת הקבוצה** סגולה, כמו שורת חדר; פתיחה מציגה את החדרים שלה כשורות רגילות. **חדר שהגמרים שלו כבר לא זהים לקבוצה** (הוספה/הסרה/אישור שינוי) **יוצא מהקבוצה אוטומטית** בטעינה הבאה, עם הודעה.
