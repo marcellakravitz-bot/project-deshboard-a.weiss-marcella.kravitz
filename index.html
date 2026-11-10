@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.11.2026 · build 295";
+var APP_BUILD = "10.11.2026 · build 296";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -25328,13 +25328,31 @@ function boqxShrink(blob, max) {
   });
 }
 function boqxCanon(s) { return String(s || "").toUpperCase().replace(/[^A-Z0-9֐-׿]/g, ""); }
+const boqxHandled = (v) => !!(v && (v.ordered || v.po || v.supplier || v.poDate || v.byRoom));
+// What a new version of the file would change, before anything is written (10.11.26, her rule): a line already
+// ordered whose description changed, and lines that are no longer in the file. She decides on both.
+function boqxPlan(lliRows, src, lines) {
+  const rows = lliRows || {};
+  const keyOf = (ln) => `m-bx${src.id}-${boqxCanon(ln.code) || ln.row}`;
+  const inFile = new Set(lines.map(keyOf));
+  const changed = [];
+  for (const ln of lines) {
+    const cur = rows[keyOf(ln)];
+    if (cur && (cur.ordered || cur.po) && cur.bxDesc != null && cur.bxDesc !== ln.desc) changed.push({ key: keyOf(ln), code: ln.code, oldDesc: cur.desc, newDesc: ln.desc });
+  }
+  const missing = Object.keys(rows).filter((k) => (rows[k] || {}).bx === src.id && !inFile.has(k))
+    .map((k) => ({ key: k, code: rows[k].typeMark, desc: rows[k].desc, handled: boqxHandled(rows[k]) }));
+  return { changed, missing };
+}
 // Merge the lines of one extra BOQ into the LLI rows. What the file owns is refreshed; what she typed stays.
-function boqxMerge(lliRows, src, lines, pictures) {
+// decide.update: rows already ordered whose new description she accepted; decide.remove: missing rows she removes.
+function boqxMerge(lliRows, src, lines, pictures, decide) {
+  const upd = (decide && decide.update) || new Set(), rem = (decide && decide.remove) || new Set();
   const next = { ...(lliRows || {}) };
   const mine = Object.keys(next).filter((k) => (next[k] || {}).bx === src.id);
   let n = Object.keys(next).filter((k) => k.indexOf("m-") === 0).length;
   const keep = new Set();
-  let added = 0, updated = 0;
+  let added = 0, updated = 0, held = 0;
   for (const ln of lines) {
     const key = `m-bx${src.id}-${boqxCanon(ln.code) || ln.row}`;
     keep.add(key);
@@ -25344,23 +25362,28 @@ function boqxMerge(lliRows, src, lines, pictures) {
       next[key] = { ...lliBlankRow(), typeMark: ln.code, desc: ln.desc, unit: ln.unit, qtyBoq: ln.qty, category: src.category || null,
         image: pic, bx: src.id, bxDesc: ln.desc, bxImage: !!pic, manualIndex: ++n, boqRef: "" };
       added++;
-    } else {
-      next[key] = { ...cur, typeMark: ln.code, unit: ln.unit, qtyBoq: ln.qty,
-        // her own wording and her own picture win over the file's
-        desc: cur.desc === cur.bxDesc || !cur.desc ? ln.desc : cur.desc, bxDesc: ln.desc,
-        image: cur.bxImage || !cur.image ? pic || cur.image : cur.image, bxImage: cur.bxImage || !cur.image ? !!pic : false };
-      updated++;
+      continue;
     }
+    const descChanged = cur.bxDesc != null && cur.bxDesc !== ln.desc;
+    const ordered = cur.ordered || cur.po;
+    let desc = cur.desc, extra = {};
+    if (descChanged && ordered) {
+      if (upd.has(key)) { desc = ln.desc; extra = { bxPrevDesc: cur.desc, bxChangedAt: new Date().toISOString() }; }
+      else { held++; extra = { bxPending: ln.desc }; }                // kept as it was ordered; the file's wording waits beside it
+    } else if (cur.desc === cur.bxDesc || !cur.desc) desc = ln.desc;  // her own wording wins over the file's
+    next[key] = { ...cur, ...extra, typeMark: ln.code, unit: ln.unit, qtyBoq: ln.qty, desc, bxDesc: ln.desc, bxGone: false,
+      image: cur.bxImage || !cur.image ? pic || cur.image : cur.image, bxImage: cur.bxImage || !cur.image ? !!pic : false };
+    if (extra.bxChangedAt || !extra.bxPending) delete next[key].bxPending;
+    updated++;
   }
-  // a line that left the file: its row goes, unless something was done with it on the board
+  // a line that left the file goes only if she said so; otherwise it stays, marked as no longer in the file
   let removed = 0, kept = 0;
   for (const k of mine) {
     if (keep.has(k)) continue;
-    const v = next[k];
-    if (v.ordered || v.po || v.supplier || v.poDate || v.byRoom) { next[k] = { ...v, bx: null, bxGone: true }; kept++; }
-    else { delete next[k]; removed++; }
+    if (rem.has(k)) { delete next[k]; removed++; }
+    else { next[k] = { ...next[k], bxGone: true }; kept++; }
   }
-  return { rows: next, added, updated, removed, kept };
+  return { rows: next, added, updated, removed, kept, held };
 }
 function boqxDrop(lliRows, srcId) {
   const next = { ...(lliRows || {}) };
@@ -25378,6 +25401,7 @@ function BoqExtraBlock({ isRTL, projectId, list, lliRows, onApply }) {
   const [draft, setDraft] = useState6(null);
   const [busy, setBusy] = useState6(null);
   const [msg, setMsg] = useState6(null);
+  const [review, setReview] = useState6(null);             // {plan, upd:Set, rem:Set, finish} before a new version is written
   const t = (he, en) => (isRTL ? he : en);
   const items = list || [];
   const cats = BOARD_CATEGORIES.map((c) => ({ key: c.key, he: c.he, en: c.en }));
@@ -25434,12 +25458,19 @@ function BoqExtraBlock({ isRTL, projectId, list, lliRows, onApply }) {
       const src = { ...(draft.replace || { id: Date.now().toString(36) }), name: draft.name.trim(), category: draft.category || null,
         file: { name: draft.file.name, size: draft.file.size, path: stored.path || null }, sheet: draft.sheet, headerRow: draft.headerRow,
         rolesByHeader, lines: lines.length, pictures: Object.keys(pictures).length, uploadedAt: new Date().toISOString() };
-      const m = boqxMerge(lliRows, src, lines, pictures);
-      const nextList = draft.replace ? items.map((x) => (x.id === src.id ? src : x)) : [...items, src];
-      onApply({ boqExtras: nextList, lliRows: m.rows });
-      setMsg(t(`פרק "${src.name}": ${m.added} שורות חדשות ב-LLI, ${m.updated} עודכנו${m.removed ? `, ${m.removed} הוסרו` : ""}${m.kept ? `, ${m.kept} נשארו כי כבר טופלו` : ""} · ${src.pictures} תמונות.`,
-        `Chapter "${src.name}": ${m.added} new LLI rows, ${m.updated} updated · ${src.pictures} pictures.`));
-      setDraft(null);
+      const finish = (upd, rem) => {
+        const m = boqxMerge(lliRows, src, lines, pictures, { update: upd, remove: rem });
+        const nextList = draft.replace ? items.map((x) => (x.id === src.id ? src : x)) : [...items, src];
+        onApply({ boqExtras: nextList, lliRows: m.rows });
+        setMsg(t(`פרק "${src.name}": ${m.added} שורות חדשות ב-LLI, ${m.updated} עודכנו${m.removed ? `, ${m.removed} הוסרו` : ""}${m.kept ? `, ${m.kept} נשארו למרות שאינן בקובץ` : ""}${m.held ? `, ב-${m.held} שהוזמנו נשאר התיאור הקודם` : ""} · ${src.pictures} תמונות.`,
+          `Chapter "${src.name}": ${m.added} new LLI rows, ${m.updated} updated · ${src.pictures} pictures.`));
+        setDraft(null); setReview(null);
+      };
+      const plan = boqxPlan(lliRows, src, lines);
+      if (plan.changed.length || plan.missing.length) {
+        // her decision first: nothing is written until she confirms the window
+        setReview({ plan, upd: new Set(plan.changed.map((x) => x.key)), rem: new Set(plan.missing.filter((x) => !x.handled).map((x) => x.key)), finish });
+      } else finish(new Set(), new Set());
     } catch (ex) { setMsg(t("הייבוא נכשל: ", "Import failed: ") + (ex.message || ex)); }
     setBusy(null);
   };
@@ -25463,6 +25494,32 @@ function BoqExtraBlock({ isRTL, projectId, list, lliRows, onApply }) {
       sbH("label", { className: "sbLinkBtn", style: { cursor: "pointer" } }, t("החלפת קובץ", "Replace file"),
         sbH("input", { type: "file", accept: ".xlsx,.xlsm,.xls,.csv", style: { display: "none" }, onChange: (e) => onFile(e, src) })),
       sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => remove(src) }, sbH(Trash2, { size: 13, strokeWidth: 2 }), " ", t("הסרה", "Remove")))),
+    review ? createPortal(sbH("div", { className: "boqModal", style: { position: "fixed", inset: 0, background: "rgba(20,24,31,.45)", zIndex: 9000, display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }, dir: isRTL ? "rtl" : "ltr" },
+      sbH("div", { style: { background: "#fff", borderRadius: 14, maxWidth: 880, width: "100%", maxHeight: "86vh", overflow: "auto", padding: "16px 18px", boxShadow: "0 10px 40px rgba(0,0,0,.25)" } },
+        sbH("div", { style: { fontWeight: 800, fontSize: 16, marginBottom: 10 } }, t("לפני העדכון — צריך את ההחלטה שלך", "Before the update — your decision")),
+        review.plan.changed.length ? sbH("div", { style: { marginBottom: 14 } },
+          sbH("div", { style: { fontWeight: 700, color: "#b25b00", marginBottom: 6 } }, t(`${review.plan.changed.length} שורות שכבר הוזמנו — התיאור השתנה בקובץ החדש`, `${review.plan.changed.length} ordered rows whose description changed`)),
+          review.plan.changed.map((x) => sbH("label", { key: x.key, style: { display: "grid", gridTemplateColumns: "24px 90px 1fr 1fr", gap: 8, alignItems: "start", padding: "6px 0", borderBottom: "1px solid var(--line-soft)", fontSize: 12.5, cursor: "pointer" } },
+            sbH("input", { type: "checkbox", checked: review.upd.has(x.key), onChange: () => setReview((r) => { const u = new Set(r.upd); u.has(x.key) ? u.delete(x.key) : u.add(x.key); return { ...r, upd: u }; }) }),
+            sbH("b", { dir: "ltr" }, x.code),
+            sbH("div", { style: { whiteSpace: "pre-line", color: "#8a8f98", textDecoration: review.upd.has(x.key) ? "line-through" : "none" } }, sbH("div", { style: { fontWeight: 700, color: "#5b5e66" } }, t("כפי שהוזמן", "As ordered")), x.oldDesc),
+            sbH("div", { style: { whiteSpace: "pre-line", color: review.upd.has(x.key) ? "#14181f" : "#8a8f98" } }, sbH("div", { style: { fontWeight: 700, color: "#1a7f4b" } }, t("בקובץ החדש", "In the new file")), x.newDesc))),
+          sbH("div", { style: { fontSize: 12, color: "var(--mist)", marginTop: 4 } }, t("מסומן = התיאור מתעדכן (הקודם נשמר בשורה). לא מסומן = נשאר כפי שהוזמן, והתיאור החדש מחכה לידו.", "Ticked = the description is updated."))) : null,
+        review.plan.missing.length ? sbH("div", null,
+          sbH("div", { style: { fontWeight: 700, color: "#b02a37", marginBottom: 6 } }, t(`${review.plan.missing.length} רשומות לא נמצאו באקסל החדש — להסיר אותן מה-LLI?`, `${review.plan.missing.length} rows are not in the new file — remove them?`)),
+          sbH("div", { style: { display: "flex", gap: 8, marginBottom: 6 } },
+            sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => setReview((r) => ({ ...r, rem: new Set(r.plan.missing.map((x) => x.key)) })) }, t("סימון הכל", "Select all")),
+            sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => setReview((r) => ({ ...r, rem: new Set() })) }, t("ניקוי", "Clear"))),
+          review.plan.missing.map((x) => sbH("label", { key: x.key, style: { display: "grid", gridTemplateColumns: "24px 90px 1fr auto", gap: 8, alignItems: "start", padding: "5px 0", borderBottom: "1px solid var(--line-soft)", fontSize: 12.5, cursor: "pointer" } },
+            sbH("input", { type: "checkbox", checked: review.rem.has(x.key), onChange: () => setReview((r) => { const m = new Set(r.rem); m.has(x.key) ? m.delete(x.key) : m.add(x.key); return { ...r, rem: m }; }) }),
+            sbH("b", { dir: "ltr" }, x.code),
+            sbH("div", { style: { whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, title: x.desc }, String(x.desc || "").split("\n")[0]),
+            x.handled ? sbH("span", { style: { fontSize: 11, color: "#b25b00", fontWeight: 700 } }, t("כבר טופלה", "Handled")) : sbH("span"))),
+          sbH("div", { style: { fontSize: 12, color: "var(--mist)", marginTop: 4 } }, t("מסומן = יוסר מה-LLI. לא מסומן = נשאר, עם סימון שאינו בקובץ.", "Ticked = removed."))) : null,
+        sbH("div", { style: { display: "flex", gap: 8, justifyContent: "center", marginTop: 14 } },
+          sbH("button", { type: "button", className: "functionEditBtn", onClick: () => review.finish(review.upd, review.rem) },
+            t(`אישור — ${review.upd.size ? `${review.upd.size} תיאורים יתעדכנו` : "בלי שינוי תיאורים"}${review.plan.missing.length ? `, ${review.rem.size} יוסרו` : ""}`, "Confirm")),
+          sbH("button", { type: "button", className: "ghostBtn small", onClick: () => { setReview(null); setBusy(null); } }, t("ביטול — לא לעדכן", "Cancel"))))), document.body) : null,
     draft ? sbH("div", { style: box },
       sbH("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 8 } },
         sbH("b", null, draft.replace ? t("החלפת קובץ", "Replace file") : t("פרק חדש", "New chapter")),
