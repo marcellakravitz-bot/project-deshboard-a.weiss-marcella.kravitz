@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.11.2026 · build 294";
+var APP_BUILD = "10.11.2026 · build 295";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -25054,6 +25054,459 @@ function BoqClassifyTable({ isRTL: appIsRTL, tree, overrides, onChange, onClose,
   );
 }
 
+// =============================================================================
+//  Extra bills of quantities — one chapter each (10.11.2026, build 295)
+//
+//  Every project sends a different table, so nothing about the layout is fixed:
+//  the header row is found by its words, each column gets a role from its header
+//  and its contents, and she confirms (or corrects) the roles on a preview before
+//  anything is written. The roles she chose are remembered for that header, so
+//  the next file of the same shape opens already mapped.
+//
+//  Each line becomes a row of the LLI board in the chapter's category, with its
+//  description and its picture. The rows carry `bx` (which extra BOQ they came
+//  from), so a new version of the file updates them and leaves alone what she
+//  typed on the board (order, dates, supplier, status) and a picture she replaced.
+// =============================================================================
+var BOQX_ROLES = [
+  { key: "ignore", he: "— לא בשימוש" },
+  { key: "code", he: "סימון / מס' סעיף" },
+  { key: "descHe", he: "תיאור (עברית)" },
+  { key: "descEn", he: "תיאור (אנגלית)" },
+  { key: "spec", he: "מפרט נוסף" },
+  { key: "location", he: "מיקום" },
+  { key: "manufacturer", he: "יצרן" },
+  { key: "model", he: "דגם / מק\"ט" },
+  { key: "finish", he: "גוון / גמר" },
+  { key: "unit", he: "יחידה" },
+  { key: "qty", he: "כמות" },
+  { key: "note", he: "הערה" },
+  { key: "image", he: "תמונה" }
+];
+var BOQX_WORDS = [
+  ["image", /(תמונה|תמונות|image|picture|photo|^pic)/i],
+  ["code", /(^סימון|^קוד|מס['׳"]?\s*סעיף|^סעיף|type\s*mark|^mark|^code|^ref\b|^tag\b|^item\b|^no\.?$|^מס['׳]?$)/i],
+  ["unit", /(יח['׳]?\s*מידה|^יחידה|^יח['׳]?$|^unit|uom)/i],
+  ["qty", /(כמות|qty|quantity)/i],
+  ["manufacturer", /(יצרן|manufacturer|brand|vendor|^make)/i],
+  ["model", /(שם\s*המוצר|מק["״׳']?ט|דגם|model|product|catalog|sku|part\s*no)/i],
+  ["finish", /(גוון|גמר|finish|colou?r|^ral)/i],
+  ["location", /(מיקום|location|^room|^area|אזור|חלל)/i],
+  ["note", /(הערה|הערות|^note|remark|comment)/i],
+  ["desc", /(אפיון|איפיון|תיאור|description|^desc|^spec)/i],
+  ["spec", /(לומן|ואט|זווית|lumen|watt|\blm\b|beam|cct|kelvin|dali|ip\s?\d|הספק|טמפ)/i],
+  ["ignore", /(מחיר|price|סה["״]?כ|total|amount|cost|change\s*date|תאריך|^date)/i]
+];
+var BOQX_CODE = /^[A-Za-z֐-׿]{0,4}[\s.\-_/]?\d+[A-Za-z0-9.\-_/]*$/;
+function boqxStr(v) { return String(v == null ? "" : v).replace(/[‎‏‪-‮⁦-⁩]/g, "").replace(/\s+/g, " ").trim(); }
+function boqxIsHe(s) { return /[֐-׿]/.test(s); }
+function boqxWordRole(h) {
+  const s = boqxStr(h);
+  if (!s) return null;
+  for (const [role, re] of BOQX_WORDS) if (re.test(s)) return role;
+  return null;
+}
+// The header row: of the first 40 rows, the one with the most cells whose words name a role.
+function boqxHeaderRow(aoa) {
+  let best = -1, at = -1;
+  for (let r = 0; r < Math.min(40, aoa.length); r++) {
+    const row = aoa[r] || [];
+    const n = row.filter((c) => { const k = boqxWordRole(c); return k && k !== "ignore"; }).length;
+    if (n > best) { best = n; at = r; }
+  }
+  return best >= 2 ? at : -1;
+}
+// Roles for every column, from the header words and what is under them.
+function boqxGuess(aoa, headerRow, remembered) {
+  const head = (aoa[headerRow] || []).map(boqxStr);
+  const width = Math.max(head.length, ...aoa.slice(headerRow + 1, headerRow + 60).map((r) => (r || []).length));
+  const body = aoa.slice(headerRow + 1).filter((r) => (r || []).some((c) => boqxStr(c)));
+  const roles = [];
+  for (let c = 0; c < width; c++) {
+    const h = head[c] || "";
+    if (remembered && remembered[h]) { roles.push(remembered[h]); continue; }
+    let role = boqxWordRole(h) || "ignore";
+    const vals = body.map((r) => boqxStr((r || [])[c])).filter(Boolean);
+    if (role === "desc") {
+      const he = vals.filter(boqxIsHe).length;
+      role = he >= vals.length / 2 ? "descHe" : "descEn";
+    }
+    if (!h && vals.length) {                     // no header: a column of codes is still a code column
+      const codes = vals.filter((v) => BOQX_CODE.test(v) && v.length <= 14).length;
+      if (codes >= Math.max(3, vals.length * 0.6)) role = "code";
+    }
+    roles.push(role);
+  }
+  // a column named like a spec but holding long Hebrew text is the Hebrew description (ROCHE lighting, 10.11.26)
+  if (roles.indexOf("descHe") < 0) {
+    let best = -1, at = -1;
+    roles.forEach((r, i) => {
+      if (r !== "spec" && r !== "ignore") return;
+      if (roles[i] === "ignore" && head[i]) return;
+      const vals = body.map((row) => boqxStr((row || [])[i])).filter(Boolean);
+      const he = vals.filter((v) => boqxIsHe(v) && v.length > 25).length;
+      if (vals.length && he >= vals.length * 0.6 && he > best) { best = he; at = i; }
+    });
+    if (at >= 0) roles[at] = "descHe";
+  }
+  // one of each, except the free-text ones: the first wins, a second description becomes "spec"
+  const seen = {};
+  roles.forEach((r, i) => {
+    if (r === "ignore" || r === "spec" || r === "note") return;
+    if (seen[r]) roles[i] = r === "descHe" || r === "descEn" ? "spec" : r === "qty" ? "ignore" : "ignore";
+    else seen[r] = true;
+  });
+  // the total quantity column beats a per-floor one
+  const q = head.findIndex((h, i) => /(כולל|total|סה["״]?כ\s*כמות)/i.test(h) && /(כמות|qty|quantity)/i.test(h));
+  if (q >= 0 && roles[q] !== "qty") { roles.forEach((r, i) => { if (r === "qty") roles[i] = "ignore"; }); roles[q] = "qty"; }
+  return { head, roles, width };
+}
+// Pick the sheet: the one whose header row names the most roles and has the most lines under it.
+function boqxPickSheet(sheets) {
+  let best = null;
+  for (const sh of sheets) {
+    const hr = boqxHeaderRow(sh.aoa);
+    if (hr < 0) continue;
+    const g = boqxGuess(sh.aoa, hr);
+    const code = g.roles.indexOf("code");
+    const lines = code < 0 ? 0 : sh.aoa.slice(hr + 1).filter((r) => boqxStr((r || [])[code])).length;
+    const score = g.roles.filter((r) => r !== "ignore").length * 10 + lines;
+    if (!best || score > best.score) best = { name: sh.name, headerRow: hr, score };
+  }
+  return best;
+}
+// The lines under the header, by the chosen roles. The row index is kept, for the pictures.
+function boqxLines(aoa, headerRow, roles, head) {
+  const col = (k) => roles.indexOf(k);
+  const all = (k) => roles.map((r, i) => (r === k ? i : -1)).filter((i) => i >= 0);
+  const c = col("code");
+  if (c < 0) return [];
+  const out = [], seen = {};
+  for (let r = headerRow + 1; r < aoa.length; r++) {
+    const row = aoa[r] || [];
+    const code = boqxStr(row[c]);
+    if (!code || code.length > 40) continue;
+    const get = (k) => { const i = col(k); return i < 0 ? "" : boqxStr(row[i]); };
+    const descHe = get("descHe"), descEn = get("descEn");
+    if (!descHe && !descEn && !get("model")) continue;          // a heading or a subtotal, not a line
+    const key = code.toUpperCase();
+    if (seen[key]) continue;
+    seen[key] = true;
+    const specs = all("spec").map((i) => [head[i], boqxStr(row[i])]).filter(([, v]) => v);
+    const parts = [
+      descHe || descEn,
+      descHe && descEn ? descEn : "",
+      [get("manufacturer") && `יצרן: ${get("manufacturer")}`, get("model") && `דגם: ${get("model")}`, get("finish") && `גוון: ${get("finish")}`].filter(Boolean).join(" · "),
+      specs.map(([h, v]) => `${h ? h.replace(/\s*\/\s*/g, "/").trim() + ": " : ""}${v}`).join(" · "),
+      get("location") && `מיקום: ${get("location")}`,
+      all("note").map((i) => boqxStr(row[i])).filter(Boolean).join(" · ")
+    ].filter(Boolean);
+    const qRaw = get("qty");
+    const qty = qRaw === "" ? "" : String(Math.round(Number(qRaw.replace(/[^\d.\-]/g, "")) * 100) / 100 || qRaw);
+    out.push({ row: r, code, desc: parts.join("\n"), unit: get("unit").replace(/^['׳](.+)$/, "$1'"), qty });
+  }
+  return out;
+}
+
+// ---------------------------------------------------------------- pictures in the workbook
+// Two ways a picture sits in Excel: floating over the sheet (a drawing, anchored to a cell),
+// or inside a cell ("Place in cell", rich value). Both come back as {row (0-based) → [{col, blob}]}.
+async function boqxPictures(buf, sheetName) {
+  const mod = await import("https://esm.sh/jszip@3.10.1");
+  const JSZip = mod.default || mod;
+  const zip = await JSZip.loadAsync(buf);
+  const xml = async (p) => { const f = zip.file(p); return f ? new DOMParser().parseFromString(await f.async("string"), "application/xml") : null; };
+  const relsOf = async (part) => {
+    const dir = part.replace(/[^/]+$/, ""), base = part.replace(/^.*\//, "");
+    const d = await xml(`${dir}_rels/${base}.rels`);
+    const m = {};
+    if (d) for (const r of d.getElementsByTagName("Relationship")) m[r.getAttribute("Id")] = { target: r.getAttribute("Target"), type: r.getAttribute("Type") || "" };
+    return m;
+  };
+  const resolve = (from, target) => {
+    if (target.startsWith("/")) return target.slice(1);
+    const parts = from.replace(/[^/]+$/, "").split("/").filter(Boolean);
+    for (const seg of target.split("/")) { if (seg === "..") parts.pop(); else if (seg !== ".") parts.push(seg); }
+    return parts.join("/");
+  };
+  const wb = await xml("xl/workbook.xml");
+  const wbRels = await relsOf("xl/workbook.xml");
+  let sheetPath = null;
+  for (const s of wb.getElementsByTagName("sheet")) {
+    if (s.getAttribute("name") !== sheetName) continue;
+    const id = s.getAttribute("r:id") || s.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id");
+    if (wbRels[id]) sheetPath = resolve("xl/workbook.xml", wbRels[id].target);
+  }
+  const out = {};
+  const put = async (row, col, mediaPath) => {
+    const f = zip.file(mediaPath);
+    if (!f) return;
+    const ext = mediaPath.split(".").pop().toLowerCase();
+    if (!/^(png|jpe?g|gif|bmp|webp)$/.test(ext)) return;                 // emf / wmf cannot be shown in a browser
+    const blob = new Blob([await f.async("uint8array")], { type: `image/${ext === "jpg" ? "jpeg" : ext}` });
+    (out[row] = out[row] || []).push({ col, blob });
+  };
+  if (!sheetPath) return out;
+  // floating pictures
+  const sRels = await relsOf(sheetPath);
+  for (const id in sRels) {
+    if (!/\/drawing$/.test(sRels[id].type)) continue;
+    const dPath = resolve(sheetPath, sRels[id].target);
+    const d = await xml(dPath);
+    const dRels = await relsOf(dPath);
+    if (!d) continue;
+    const anchors = [...d.getElementsByTagName("xdr:twoCellAnchor"), ...d.getElementsByTagName("xdr:oneCellAnchor")];
+    for (const a of anchors) {
+      const from = a.getElementsByTagName("xdr:from")[0], to = a.getElementsByTagName("xdr:to")[0];
+      const blip = a.getElementsByTagName("a:blip")[0];
+      if (!from || !blip) continue;
+      const n = (el, t) => Number(el.getElementsByTagName(t)[0]?.textContent || 0);
+      const r0 = n(from, "xdr:row"), c0 = n(from, "xdr:col");
+      const r1 = to ? n(to, "xdr:row") : r0, c1 = to ? n(to, "xdr:col") : c0;
+      const emb = blip.getAttribute("r:embed") || blip.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "embed");
+      if (!dRels[emb]) continue;
+      await put(Math.floor((r0 + r1) / 2), [c0, c1], resolve(dPath, dRels[emb].target));
+    }
+  }
+  // pictures placed in a cell (Excel 365): cell vm → metadata → rich value → relationship
+  try {
+    const rv = await xml("xl/richData/rdrichvalue.xml");
+    const rel = await xml("xl/richData/richValueRel.xml");
+    const meta = await xml("xl/metadata.xml");
+    if (rv && rel && meta) {
+      const relRels = await relsOf("xl/richData/richValueRel.xml");
+      const relIds = [...rel.getElementsByTagName("rel")].map((x) => x.getAttribute("r:id") || x.getAttributeNS("http://schemas.openxmlformats.org/officeDocument/2006/relationships", "id"));
+      const values = [...rv.getElementsByTagName("rv")].map((x) => Number(x.getElementsByTagName("v")[0]?.textContent));
+      const fut = [...meta.getElementsByTagName("xlrd:rvb")].map((x) => Number(x.getAttribute("i")));
+      const vmBk = [...(meta.getElementsByTagName("valueMetadata")[0]?.getElementsByTagName("bk") || [])].map((bk) => Number(bk.getElementsByTagName("rc")[0]?.getAttribute("v")));
+      const sheet = await xml(sheetPath);
+      for (const cEl of sheet.getElementsByTagName("c")) {
+        const vm = cEl.getAttribute("vm");
+        if (!vm) continue;
+        const rvIdx = fut[vmBk[Number(vm) - 1]];
+        const relIdx = values[rvIdx];
+        const rid = relIds[relIdx];
+        if (rid == null || !relRels[rid]) continue;
+        const ref = cEl.getAttribute("r") || "";
+        const m = /^([A-Z]+)(\d+)$/.exec(ref);
+        if (!m) continue;
+        const col = m[1].split("").reduce((t, ch) => t * 26 + ch.charCodeAt(0) - 64, 0) - 1;
+        await put(Number(m[2]) - 1, [col, col], resolve("xl/richData/richValueRel.xml", relRels[rid].target));
+      }
+    }
+  } catch (e) { console.warn("[awdash] in-cell pictures", e); }
+  return out;
+}
+// The picture of a line: one anchored over the picture column (or next to it); else the only one in the row.
+function boqxPictureFor(pics, row, imgCol) {
+  const list = pics[row] || [];
+  if (!list.length) return null;
+  if (imgCol >= 0) {
+    const over = list.find((p) => p.col[0] <= imgCol + 1 && p.col[1] >= imgCol - 1);
+    if (over) return over.blob;
+    return null;
+  }
+  return list.length === 1 ? list[0].blob : null;
+}
+// Small JPEG for the board: the LLI keeps pictures inside its record, so they are kept light.
+function boqxShrink(blob, max) {
+  return new Promise((res) => {
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, (max || 480) / Math.max(img.width, img.height));
+      const cv = document.createElement("canvas");
+      cv.width = Math.max(1, Math.round(img.width * k)); cv.height = Math.max(1, Math.round(img.height * k));
+      const ctx = cv.getContext("2d");
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+      ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      res(cv.toDataURL("image/jpeg", 0.82));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); res(null); };
+    img.src = url;
+  });
+}
+function boqxCanon(s) { return String(s || "").toUpperCase().replace(/[^A-Z0-9֐-׿]/g, ""); }
+// Merge the lines of one extra BOQ into the LLI rows. What the file owns is refreshed; what she typed stays.
+function boqxMerge(lliRows, src, lines, pictures) {
+  const next = { ...(lliRows || {}) };
+  const mine = Object.keys(next).filter((k) => (next[k] || {}).bx === src.id);
+  let n = Object.keys(next).filter((k) => k.indexOf("m-") === 0).length;
+  const keep = new Set();
+  let added = 0, updated = 0;
+  for (const ln of lines) {
+    const key = `m-bx${src.id}-${boqxCanon(ln.code) || ln.row}`;
+    keep.add(key);
+    const cur = next[key];
+    const pic = pictures[ln.row] || null;
+    if (!cur) {
+      next[key] = { ...lliBlankRow(), typeMark: ln.code, desc: ln.desc, unit: ln.unit, qtyBoq: ln.qty, category: src.category || null,
+        image: pic, bx: src.id, bxDesc: ln.desc, bxImage: !!pic, manualIndex: ++n, boqRef: "" };
+      added++;
+    } else {
+      next[key] = { ...cur, typeMark: ln.code, unit: ln.unit, qtyBoq: ln.qty,
+        // her own wording and her own picture win over the file's
+        desc: cur.desc === cur.bxDesc || !cur.desc ? ln.desc : cur.desc, bxDesc: ln.desc,
+        image: cur.bxImage || !cur.image ? pic || cur.image : cur.image, bxImage: cur.bxImage || !cur.image ? !!pic : false };
+      updated++;
+    }
+  }
+  // a line that left the file: its row goes, unless something was done with it on the board
+  let removed = 0, kept = 0;
+  for (const k of mine) {
+    if (keep.has(k)) continue;
+    const v = next[k];
+    if (v.ordered || v.po || v.supplier || v.poDate || v.byRoom) { next[k] = { ...v, bx: null, bxGone: true }; kept++; }
+    else { delete next[k]; removed++; }
+  }
+  return { rows: next, added, updated, removed, kept };
+}
+function boqxDrop(lliRows, srcId) {
+  const next = { ...(lliRows || {}) };
+  let removed = 0, kept = 0;
+  for (const k of Object.keys(next)) {
+    const v = next[k] || {};
+    if (v.bx !== srcId) continue;
+    if (v.ordered || v.po || v.supplier || v.poDate || v.byRoom) { next[k] = { ...v, bx: null }; kept++; }
+    else { delete next[k]; removed++; }
+  }
+  return { rows: next, removed, kept };
+}
+
+function BoqExtraBlock({ isRTL, projectId, list, lliRows, onApply }) {
+  const [draft, setDraft] = useState6(null);
+  const [busy, setBusy] = useState6(null);
+  const [msg, setMsg] = useState6(null);
+  const t = (he, en) => (isRTL ? he : en);
+  const items = list || [];
+  const cats = BOARD_CATEGORIES.map((c) => ({ key: c.key, he: c.he, en: c.en }));
+  const sigOf = (head) => head.filter(Boolean).join("|").toLowerCase();
+  const remembered = (head) => { try { return JSON.parse(localStorage.getItem("boqx-map:" + sigOf(head)) || "null"); } catch (e) { return null; } };
+  const loadSheet = async (d, name, headerRow) => {
+    const sh = d.sheets.find((s) => s.name === name) || d.sheets[0];
+    const hr = headerRow != null ? headerRow : Math.max(0, boqxHeaderRow(sh.aoa));
+    const head0 = (sh.aoa[hr] || []).map(boqxStr);
+    const old = d.replace && d.replace.rolesByHeader;
+    const g = boqxGuess(sh.aoa, hr, old || remembered(head0));
+    let pics = {};
+    try { pics = await boqxPictures(d.buf, sh.name); } catch (e) { console.warn("[awdash] BOQ pictures", e); }
+    const picCount = Object.values(pics).reduce((n, l) => n + l.length, 0);
+    return { ...d, sheet: sh.name, headerRow: hr, head: g.head, roles: g.roles, pics, picCount };
+  };
+  const onFile = async (e, replace) => {
+    const f = (e.target.files || [])[0];
+    e.target.value = "";
+    if (!f) return;
+    setMsg(null); setBusy(t("קורא את הקובץ…", "Reading the file…"));
+    try {
+      const buf = await f.arrayBuffer();
+      const wb = XLSX3.read(buf, { type: "array" });
+      const sheets = wb.SheetNames.map((name) => ({ name, aoa: XLSX3.utils.sheet_to_json(wb.Sheets[name], { header: 1, raw: false, defval: "" }) }));
+      const pick = boqxPickSheet(sheets);
+      const lighting = /(תאור|lighting|lumen|לומן|luminaire)/i.test(JSON.stringify(sheets.map((s) => s.aoa.slice(0, 4))).slice(0, 4000));
+      let d = { file: f, buf, sheets, replace: replace || null,
+        name: replace ? replace.name : lighting ? "תאורה" : f.name.replace(/\.[^.]+$/, ""),
+        category: replace ? replace.category : lighting ? "lighting" : null };
+      d = await loadSheet(d, replace && sheets.some((s) => s.name === replace.sheet) ? replace.sheet : pick ? pick.name : sheets[0].name,
+        replace && replace.sheet === (pick && pick.name) ? replace.headerRow : pick ? pick.headerRow : null);
+      setDraft(d);
+    } catch (ex) { setMsg(t("הקובץ לא נקרא: ", "Could not read the file: ") + (ex.message || ex)); }
+    setBusy(null);
+  };
+  const sh = draft ? draft.sheets.find((s) => s.name === draft.sheet) : null;
+  const lines = draft && sh ? boqxLines(sh.aoa, draft.headerRow, draft.roles, draft.head) : [];
+  const imgCol = draft ? draft.roles.indexOf("image") : -1;
+  const withPic = draft ? lines.filter((ln) => boqxPictureFor(draft.pics, ln.row, imgCol)).length : 0;
+  const setRole = (i, role) => setDraft((d) => ({ ...d, roles: d.roles.map((r, j) => (j === i ? role : r === role && ["code", "descHe", "descEn", "unit", "qty", "image", "manufacturer", "model", "finish", "location"].includes(role) ? "ignore" : r)) }));
+  const doImport = async () => {
+    if (!draft.name.trim()) { setMsg(t("צריך שם לפרק", "The chapter needs a name")); return; }
+    setBusy(t("מכין את התמונות…", "Preparing the pictures…"));
+    try {
+      const pictures = {};
+      for (const ln of lines) { const b = boqxPictureFor(draft.pics, ln.row, imgCol); if (b) pictures[ln.row] = await boqxShrink(b, 400); }
+      setBusy(t("שומר את הקובץ…", "Saving the file…"));
+      let stored = {};
+      try { stored = await sbUploadFile(projectId, "boq", draft.file) || {}; } catch (e) { console.warn("[awdash] extra BOQ storage", e); }
+      const rolesByHeader = {};
+      draft.head.forEach((h, i) => { if (h) rolesByHeader[h] = draft.roles[i]; });
+      try { localStorage.setItem("boqx-map:" + sigOf(draft.head), JSON.stringify(rolesByHeader)); } catch (e) {}
+      const src = { ...(draft.replace || { id: Date.now().toString(36) }), name: draft.name.trim(), category: draft.category || null,
+        file: { name: draft.file.name, size: draft.file.size, path: stored.path || null }, sheet: draft.sheet, headerRow: draft.headerRow,
+        rolesByHeader, lines: lines.length, pictures: Object.keys(pictures).length, uploadedAt: new Date().toISOString() };
+      const m = boqxMerge(lliRows, src, lines, pictures);
+      const nextList = draft.replace ? items.map((x) => (x.id === src.id ? src : x)) : [...items, src];
+      onApply({ boqExtras: nextList, lliRows: m.rows });
+      setMsg(t(`פרק "${src.name}": ${m.added} שורות חדשות ב-LLI, ${m.updated} עודכנו${m.removed ? `, ${m.removed} הוסרו` : ""}${m.kept ? `, ${m.kept} נשארו כי כבר טופלו` : ""} · ${src.pictures} תמונות.`,
+        `Chapter "${src.name}": ${m.added} new LLI rows, ${m.updated} updated · ${src.pictures} pictures.`));
+      setDraft(null);
+    } catch (ex) { setMsg(t("הייבוא נכשל: ", "Import failed: ") + (ex.message || ex)); }
+    setBusy(null);
+  };
+  const remove = (src) => {
+    if (!confirm(t(`להסיר את הפרק "${src.name}"?\nהשורות שלו יוסרו מה-LLI, חוץ משורות שכבר טופלו (הוזמנו, ספק, מספר הזמנה, BY ROOM).`, `Remove "${src.name}"?`))) return;
+    const m = boqxDrop(lliRows, src.id);
+    onApply({ boqExtras: items.filter((x) => x.id !== src.id), lliRows: m.rows });
+    setMsg(t(`הוסר. ${m.removed} שורות ירדו מה-LLI${m.kept ? `, ${m.kept} נשארו` : ""}.`, "Removed."));
+  };
+  const catName = (k) => { const c = cats.find((x) => x.key === k); return c ? (isRTL ? c.he : c.en) : t("ללא קטגוריה", "No category"); };
+  const box = { border: "1px solid var(--line)", borderRadius: 10, padding: "10px 12px", background: "#fafbfc", marginTop: 8 };
+  const sel = { fontFamily: "inherit", fontSize: 12, padding: "3px 4px", borderRadius: 6, border: "1px solid var(--line)", maxWidth: 150 };
+  return sbH("div", { className: "boqBlock", style: { marginTop: 14 } },
+    sbH("div", { className: "boqTitle" }, t("כתבי כמויות נוספים — פרק לכל קובץ", "Extra bills of quantities — a chapter each")),
+    sbH("p", { className: "boqHint" }, t("למשל כתב כמויות נפרד של גופי תאורה. כל שורה נכנסת ל-LLI עם התיאור והתמונה שבקובץ. המערכת מזהה לבד את העמודות, ואת מאשרת לפני הייבוא.",
+      "For example a separate lighting BOQ. Every line becomes an LLI row with its description and picture.")),
+    items.map((src) => sbH("div", { className: "boqFile", key: src.id, style: { flexWrap: "wrap", gap: 8 } },
+      sbH(FileTextIcon, { size: 15, strokeWidth: 2 }),
+      sbH("b", null, src.name),
+      sbH("span", { className: "boqMeta" }, `${catName(src.category)} · ${src.lines} ${t("שורות", "lines")} · ${src.pictures || 0} ${t("תמונות", "pictures")} · ${(src.file || {}).name || ""} · ${sbFmtDate((src.uploadedAt || "").slice(0, 10))}`),
+      sbH("label", { className: "sbLinkBtn", style: { cursor: "pointer" } }, t("החלפת קובץ", "Replace file"),
+        sbH("input", { type: "file", accept: ".xlsx,.xlsm,.xls,.csv", style: { display: "none" }, onChange: (e) => onFile(e, src) })),
+      sbH("button", { type: "button", className: "sbLinkBtn", onClick: () => remove(src) }, sbH(Trash2, { size: 13, strokeWidth: 2 }), " ", t("הסרה", "Remove")))),
+    draft ? sbH("div", { style: box },
+      sbH("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 8 } },
+        sbH("b", null, draft.replace ? t("החלפת קובץ", "Replace file") : t("פרק חדש", "New chapter")),
+        sbH("input", { value: draft.name, placeholder: t("שם הפרק, למשל תאורה", "Chapter name"), onChange: (e) => setDraft({ ...draft, name: e.target.value }), style: { ...sel, maxWidth: 200, fontSize: 13 } }),
+        sbH("span", null, t("קטגוריה ב-LLI:", "LLI category:")),
+        sbH("select", { value: draft.category || "", onChange: (e) => setDraft({ ...draft, category: e.target.value || null }), style: sel },
+          sbH("option", { value: "" }, t("ללא", "None")), cats.map((c) => sbH("option", { key: c.key, value: c.key }, isRTL ? c.he : c.en))),
+        sbH("span", null, t("גיליון:", "Sheet:")),
+        sbH("select", { value: draft.sheet, style: sel, onChange: async (e) => { setBusy(t("קורא…", "Reading…")); setDraft(await loadSheet(draft, e.target.value, null)); setBusy(null); } },
+          draft.sheets.map((s) => sbH("option", { key: s.name, value: s.name }, s.name))),
+        sbH("span", null, t("שורת כותרות:", "Header row:")),
+        sbH("input", { type: "number", min: 1, value: draft.headerRow + 1, style: { ...sel, width: 56 }, onChange: async (e) => {
+          const hr = Math.max(0, Number(e.target.value) - 1); setDraft(await loadSheet(draft, draft.sheet, hr)); } })),
+      sbH("div", { style: { fontSize: 12, color: "var(--mist)", marginBottom: 6 } }, t("מה כל עמודה — המערכת ניחשה; אפשר לתקן. הבחירה נזכרת לקבצים באותו מבנה.", "What each column is — guessed; correct as needed.")),
+      sbH("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 6, marginBottom: 10 } },
+        draft.head.map((h, i) => {
+          const sample = (sh.aoa.slice(draft.headerRow + 1).map((r) => boqxStr((r || [])[i])).find(Boolean) || "").slice(0, 40);
+          if (!h && !sample) return null;
+          const on = draft.roles[i] !== "ignore";
+          return sbH("div", { key: i, style: { border: "1px solid " + (on ? "var(--accent)" : "var(--line)"), borderRadius: 8, padding: "5px 7px", background: "#fff", opacity: on ? 1 : 0.7 } },
+            sbH("div", { style: { fontWeight: 700, fontSize: 12, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }, title: h }, h || t(`עמודה ${i + 1}`, `Column ${i + 1}`)),
+            sbH("div", { style: { fontSize: 11, color: "var(--mist)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", margin: "2px 0 4px" }, title: sample }, sample || "—"),
+            sbH("select", { value: draft.roles[i], style: { ...sel, maxWidth: "100%", width: "100%" }, onChange: (e) => setRole(i, e.target.value) },
+              BOQX_ROLES.map((r) => sbH("option", { key: r.key, value: r.key }, r.he))));
+        })),
+      sbH("div", { style: { fontSize: 12.5, fontWeight: 700, marginBottom: 4 } },
+        lines.length ? t(`${lines.length} שורות ייכנסו ל-LLI · ${withPic} עם תמונה`, `${lines.length} lines · ${withPic} with a picture`)
+          : t("לא נמצאו שורות — צריך לסמן עמודה של סימון / מס' סעיף ועמודת תיאור", "No lines — mark a code column and a description column")),
+      lines.length ? sbH("div", { style: { maxHeight: 220, overflow: "auto", border: "1px solid var(--line)", borderRadius: 8, background: "#fff" } },
+        sbH("table", { style: { width: "100%", borderCollapse: "collapse", fontSize: 12 } },
+          sbH("tbody", null, lines.slice(0, 40).map((ln) => sbH("tr", { key: ln.row, style: { borderBottom: "1px solid var(--line-soft)" } },
+            sbH("td", { dir: "ltr", style: { padding: "4px 6px", fontWeight: 700, whiteSpace: "nowrap", verticalAlign: "top" } }, ln.code),
+            sbH("td", { style: { padding: "4px 6px", whiteSpace: "pre-line", verticalAlign: "top" } }, ln.desc.split("\n").slice(0, 3).join("\n")),
+            sbH("td", { style: { padding: "4px 6px", whiteSpace: "nowrap", verticalAlign: "top" } }, `${ln.qty || ""} ${ln.unit || ""}`),
+            sbH("td", { style: { padding: "4px 6px", verticalAlign: "top", color: "#1a7f4b" } }, boqxPictureFor(draft.pics, ln.row, imgCol) ? "🖼" : "")))))) : null,
+      sbH("div", { style: { display: "flex", gap: 8, justifyContent: "center", marginTop: 10 } },
+        sbH("button", { type: "button", className: "functionEditBtn", disabled: !lines.length || !!busy, onClick: doImport }, busy || t(`ייבוא ${lines.length} שורות ל-LLI`, `Import ${lines.length} lines`)),
+        sbH("button", { type: "button", className: "ghostBtn small", onClick: () => setDraft(null) }, t("ביטול", "Cancel")))) : null,
+    msg ? sbH("p", { className: "boqHint", style: { color: "var(--ink)" } }, msg) : null,
+    !draft ? sbH("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit", marginTop: 6 } },
+      sbH(Upload4, { size: 14, strokeWidth: 2 }), " ", busy || t("+ כתב כמויות נוסף", "+ Extra BOQ"),
+      sbH("input", { type: "file", accept: ".xlsx,.xlsm,.xls,.csv", style: { display: "none" }, onChange: (e) => onFile(e, null) })) : null);
+}
+
 function BoqUploadBlock({ isRTL, projectId, boq, onChange, boqData, overrides, onOverridesChange, offBoards }) {
   const [busy, setBusy] = useState6(false);
   const [tableOpen, setTableOpen] = useState6(false);
@@ -25592,7 +26045,7 @@ function FloorBoxes({ isRTL, value, onChange }) {
       })),
       (value || []).length ? React15.createElement("span", { style: { fontSize: 12, color: "var(--mist)", marginInlineStart: 8 } }, "Floors " + floorsLabel(value)) : null));
 }
-function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange, plansByProject, onPlansChange, roomsByProject, onRoomsChange, offBoardsByProject }) {
+function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, newProjectName, setNewProjectName, onAddProject, onExport, onImport, boqByProject, onBoqChange, boqDataByProject, boqOverridesByProject, onBoqOverridesChange, plansByProject, onPlansChange, roomsByProject, onRoomsChange, offBoardsByProject, extrasByProject, onExtrasPatch }) {
   const inS = { padding: "8px 10px", border: "1px solid var(--line)", borderRadius: 8, fontSize: 14, background: "#fff", width: "100%" };
   const [openId, setOpenId] = useState6(null);
   const [draft, setDraft] = useState6({ name: "", floors: [], startDate: "", endDate: "", clientLogoUrl: null, supervisionLogoUrl: null, accent: null });
@@ -25627,7 +26080,7 @@ function ProjectSettingsScreen({ isRTL, projects, onUpdate, onTogglePublish, new
     setOpenId(null);
   };
   const field = (labelHe, labelEn, key, type) => /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", flexDirection: "column", gap: 4, fontSize: 12.5, fontWeight: 600, flex: 1, minWidth: 130 } }, isRTL ? labelHe : labelEn, /* @__PURE__ */ React15.createElement("input", { type: type || "text", value: draft[key] || "", onChange: (e) => setDraft((d) => ({ ...d, [key]: e.target.value })), style: inS, dir: type === "date" ? "ltr" : void 0 }));
-  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), React15.createElement(FloorBoxes, { isRTL, value: draft.floors || [], onChange: (floors) => setDraft((d) => ({ ...d, floors })) }), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date"), field("\u05E8\u05D5\u05D5\u05D7 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9 %", "Main contractor markup %", "markupPct", "number")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.supervisionLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו פיקוח" : "Upload supervision logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onSupervisionLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setDraft((d) => ({ ...d, supervisionLogoUrl: null })) }, isRTL ? "הסרת לוגו פיקוח" : "Remove supervision logo") : null), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null })/* PlansUploadBlock hidden 24.10.2026 (build 218): plans are uploaded in the By Room cube now. Its code stays. */, /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
+  return /* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("section", { className: "panel adminPanel adminPanelFlex adminPanelTall" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, isRTL ? "הגדרות פרויקט" : "Project settings"), /* @__PURE__ */ React15.createElement("div", { className: "adminPanelScroll", style: { display: "flex", flexDirection: "column", gap: 10, marginTop: 12, paddingInlineEnd: 6 } }, projects.length === 0 ? /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, isRTL ? "אין עדיין פרויקטים. הוסיפי אחד למטה." : "No projects yet. Add one below.") : projects.map((p) => /* @__PURE__ */ React15.createElement("div", { key: p.id, style: { border: "1px solid var(--line)", borderRadius: 12, overflow: "hidden", background: "#fff" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer" }, onClick: () => toggleOpen(p) }, p.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: p.clientLogoUrl, alt: "", style: { width: 34, height: 34, objectFit: "contain", borderRadius: 6 } }) : /* @__PURE__ */ React15.createElement("div", { style: { width: 34, height: 34, borderRadius: 6, background: "var(--accent-soft)", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--accent)", fontWeight: 800 } }, (p.name || "?").slice(0, 1)), /* @__PURE__ */ React15.createElement("span", { style: { fontWeight: 800, flex: 1 } }, p.name), /* @__PURE__ */ React15.createElement("div", { dir: "ltr", style: { display: "flex", alignItems: "center", gap: 7 }, onClick: (e) => e.stopPropagation() }, /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#9aa3af" : "#c0392b" } }, "OFF"), /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: () => onTogglePublish(p), style: { width: 46, height: 24, borderRadius: 999, background: p.published ? "#1a7f4b" : "#c7ccd4", position: "relative", border: "none", cursor: "pointer", padding: 0, flexShrink: 0 } }, /* @__PURE__ */ React15.createElement("span", { style: { position: "absolute", top: 3, left: p.published ? 25 : 3, width: 18, height: 18, borderRadius: 999, background: "#fff", transition: "left .15s" } })), /* @__PURE__ */ React15.createElement("span", { style: { fontSize: 11, fontWeight: 800, color: p.published ? "#1a7f4b" : "#9aa3af" } }, "ON")), /* @__PURE__ */ React15.createElement(ChevronDown2, { size: 18, strokeWidth: 2, style: { transform: openId === p.id ? "rotate(180deg)" : "none", transition: "transform .15s", color: "var(--mist)" } })), openId === p.id && /* @__PURE__ */ React15.createElement("div", { style: { padding: "4px 14px 22px", borderTop: "1px solid var(--line-soft)" } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", flexWrap: "wrap", gap: 12, marginTop: 12 } }, field("שם הפרויקט", "Project name", "name"), React15.createElement(FloorBoxes, { isRTL, value: draft.floors || [], onChange: (floors) => setDraft((d) => ({ ...d, floors })) }), field("תאריך התחלה", "Start date", "startDate", "date"), field("תאריך סיום", "End date", "endDate", "date"), field("\u05E8\u05D5\u05D5\u05D7 \u05E7\u05D1\u05DC\u05DF \u05E8\u05D0\u05E9\u05D9 %", "Main contractor markup %", "markupPct", "number")), /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 16 } }, /* @__PURE__ */ React15.createElement("div", { style: { fontSize: 12.5, fontWeight: 600, marginBottom: 8 } }, isRTL ? "גוון הפרויקט" : "Project color"), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } }, BRAND_PALETTES.map((pal) => /* @__PURE__ */ React15.createElement("button", { key: pal.key, type: "button", title: isRTL ? pal.nameHe : pal.nameEn, onClick: () => setDraft((d) => ({ ...d, accent: { accent: pal.accent, accentInk: pal.ink, accentSoft: pal.soft } })), style: { width: 30, height: 30, borderRadius: 999, background: pal.accent, cursor: "pointer", border: draft.accent && draft.accent.accent === pal.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0 } })), /* @__PURE__ */ React15.createElement("button", { type: "button", title: isRTL ? "ברירת מחדל" : "Default", onClick: () => setDraft((d) => ({ ...d, accent: null })), style: { width: 30, height: 30, borderRadius: 999, background: "#fff", cursor: "pointer", border: !draft.accent ? "3px solid #14181f" : "2px solid #fff", boxShadow: "0 0 0 1px var(--line)", padding: 0, color: "var(--mist)", fontWeight: 900, fontSize: 15, lineHeight: 1 } }, "\xD7"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, marginTop: 14, flexWrap: "wrap" } }, draft.clientLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.clientLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו לפרויקט" : "Upload project logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("img", { src: draft.supervisionLogoUrl, alt: "", style: { width: 40, height: 40, objectFit: "contain", borderRadius: 8, border: "1px solid var(--line)" } }) : null, /* @__PURE__ */ React15.createElement("label", { className: "ghostBtn small", style: { cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 14, strokeWidth: 2 }), " ", isRTL ? "העלאת לוגו פיקוח" : "Upload supervision logo", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "image/*", style: { display: "none" }, onChange: onSupervisionLogoFile })), draft.supervisionLogoUrl ? /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: () => setDraft((d) => ({ ...d, supervisionLogoUrl: null })) }, isRTL ? "הסרת לוגו פיקוח" : "Remove supervision logo") : null), /* @__PURE__ */ React15.createElement(BoqUploadBlock, { isRTL, projectId: p.id, boq: (boqByProject || {})[p.id] || null, onChange: (next) => onBoqChange && onBoqChange(p.id, next), boqData: (boqDataByProject || {})[p.id] || null, overrides: (boqOverridesByProject || {})[p.id] || {}, onOverridesChange: (next) => onBoqOverridesChange && onBoqOverridesChange(p.id, next), offBoards: (offBoardsByProject || {})[p.id] || null }), React15.createElement(BoqExtraBlock, { isRTL, projectId: p.id, list: ((extrasByProject || {})[p.id] || {}).boqExtras || [], lliRows: ((extrasByProject || {})[p.id] || {}).lliRows || {}, onApply: (patch) => onExtrasPatch && onExtrasPatch(p.id, patch) })/* PlansUploadBlock hidden 24.10.2026 (build 218): plans are uploaded in the By Room cube now. Its code stays. */, /* @__PURE__ */ React15.createElement("div", { style: { marginTop: 18, marginBottom: 4, textAlign: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", className: "functionEditBtn", onClick: () => save(p) }, isRTL ? "שמירת שינויים" : "Save changes"))))))), /* @__PURE__ */ React15.createElement("section", { className: "panel", style: { marginBottom: 12 } }, /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "center" } },/* @__PURE__ */ React15.createElement("input", { type: "text", placeholder: isRTL ? "שם פרויקט חדש" : "New project name", value: newProjectName, onChange: (e) => setNewProjectName(e.target.value), style: { ...inS, width: "auto", minWidth: 220 } }), /* @__PURE__ */ React15.createElement("button", { type: "button", className: "ghostBtn small", onClick: onAddProject }, /* @__PURE__ */ React15.createElement(Plus2, { size: 14, strokeWidth: 2.2 }), " ", isRTL ? "הוספת פרויקט" : "Add project"))), /* @__PURE__ */ React15.createElement("div", { style: { display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap", justifyContent: "center" } }, /* @__PURE__ */ React15.createElement("button", { type: "button", onClick: onExport, style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Upload4, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייצוא נתונים" : "Export data"), /* @__PURE__ */ React15.createElement("label", { style: { display: "flex", alignItems: "center", gap: 6, background: "#14181f", color: "#fff", border: "none", borderRadius: 10, padding: "11px 16px", fontWeight: 700, fontSize: 13, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React15.createElement(Download2, { size: 15, strokeWidth: 2 }), " ", isRTL ? "ייבוא נתונים" : "Import data", /* @__PURE__ */ React15.createElement("input", { type: "file", accept: "application/json,.json", style: { display: "none" }, onChange: (e) => {
     const f = e.target.files && e.target.files[0];
     if (f) onImport(f);
     e.target.value = "";
@@ -27686,7 +28139,7 @@ function ProjectDashboardApp() {
     isRTL, catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog(n),
     // the contacts catalogue tab keeps the categories as they are
     contactsProps: { isRTL, projects: activeContractor.projects.filter((p) => p.name), catalog: contactsCatalog, onCatalogChange: (n) => setContactsCatalog((cur) => ({ ...n, boardCats: (cur && cur.boardCats) || [], hiddenCats: (cur && cur.hiddenCats) || [] })), contactsByProject, onContactsChange: setProjectContacts }
-  }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
+  }), systemAdminSection === "submittals" && /* @__PURE__ */ React15.createElement(SubmittalAdminScreen, { isRTL, signatures: userSignatures, onSignatureChange: setUserSignature }), systemAdminSection === "projects" && /* @__PURE__ */ React15.createElement(ProjectSettingsScreen, { isRTL, projects: activeContractor.projects.filter((p) => p.name), onUpdate: (pid, patch) => updateProject(activeContractor.id, pid, patch), onTogglePublish: toggleProjectPublished, newProjectName, setNewProjectName, onAddProject: addProject, onExport: handleExportState, onImport: handleImportState, boqByProject, onBoqChange: setProjectBoq, boqDataByProject, boqOverridesByProject, onBoqOverridesChange: setBoqFlagOverrides, plansByProject, onPlansChange: setProjectPlans, roomsByProject, onRoomsChange: setProjectRooms, offBoardsByProject, extrasByProject: projectExtras, onExtrasPatch: updateProjectExtras }), systemAdminSection === "__old_projects" &&/* @__PURE__ */ React15.createElement(React15.Fragment, null, /* @__PURE__ */ React15.createElement("button", { className: "loginBack sysBack", onClick: () => setSystemAdminSection(null) }, /* @__PURE__ */ React15.createElement(BackIcon, { size: 14, strokeWidth: 2.4 }), " ", t.systemAdmin.back), /* @__PURE__ */ React15.createElement("section", { className: "panel" }, /* @__PURE__ */ React15.createElement("h2", { className: "panelTitle" }, t.systemAdmin.projectsListTitle), /* @__PURE__ */ React15.createElement("p", { className: "panelSub" }, activeContractor.name || DEFAULT_BRAND_NAME), activeContractor.projects.filter((p) => p.name).map((p) => {
     const isExpanded = selectedProjectId === p.id;
     return /* @__PURE__ */ React15.createElement("div", { key: p.id, className: "adminProjectItem" }, /* @__PURE__ */ React15.createElement(
       "div",
