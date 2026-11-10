@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/view.js — the client's By Room: view only, mobile first. A. Weiss · By Room
-//  byroom build 14 · 10.11.2026
+//  byroom build 17 · 10.11.2026
 //
 //  One copy, used by the phone page opened from a QR code or a link (byroom/index.html)
 //  and by the By Room cube for a signed-in client inside the dashboard.
@@ -95,6 +95,7 @@ export const viewCss = `
 .brv-res .nm{flex:1;font-size:16px}
 .brv-res .fl{font-size:13px;color:var(--steel);white-space:nowrap}
 .brv-msg{padding:28px 18px;text-align:center;color:var(--steel)}
+.brv-grooms{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:8px 0 4px}.brv-grooms span{border:1px solid #d9d4f5;background:#f4f2fd;color:#3C3489;border-radius:8px;padding:1px 8px;font-size:12.5px}.brv-grooms span.on{background:#534AB7;color:#fff;border-color:#534AB7}
 .brv-note{margin-top:16px;padding:10px 12px;border:1px solid #f1d38c;background:#fffaf0;border-radius:12px;font-size:14px;white-space:pre-wrap;text-align:start}.brv-note b{display:block;margin-bottom:3px}
 .brv-chips{display:flex;gap:8px;overflow:auto;padding:10px 14px;background:#fff;border-bottom:1px solid var(--ln)}
 .brv-chip{flex:none;padding:9px 16px;border-radius:999px;border:1px solid var(--ln);background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
@@ -231,12 +232,15 @@ function groupItems(items) {
   return [...g.entries()].sort((a, b) => catOrder(a[0], b[0]));
 }
 
-function RoomCard({ room, floor, cats, note, onItem, onPlan }) {
+function RoomCard({ room, floor, cats, note, group, onItem, onPlan }) {
   if (!room) return html`<div className="brv-card"><div className="brv-msg">${T.loading}</div></div>`;
   const groups = groupItems(room.items);
   return html`<div className="brv-card">
-    <h2>${T.room} ${room.n}</h2>
-    <div className="sub">${room.name || ""}${room.name ? " · " : ""}${T.floor} ${floor}${room.area ? ` · ${Number(room.area)} ${T.sqm}` : ""}</div>
+    ${group ? html`<h2>${group.name}</h2>
+      <div className="sub">${T.room} ${room.n}${room.name ? ` · ${room.name}` : ""} · ${T.floor} ${floor}</div>
+      <div className="brv-grooms">${group.rooms.map((n) => html`<span key=${n} className=${n === room.n ? "on" : ""} dir="ltr">${n}</span>`)}</div>`
+    : html`<h2>${T.room} ${room.n}</h2>
+    <div className="sub">${room.name || ""}${room.name ? " · " : ""}${T.floor} ${floor}${room.area ? ` · ${Number(room.area)} ${T.sqm}` : ""}</div>`}
     ${!groups.length ? html`<div className="brv-msg">${T.none}</div>` : groups.map(([k, list]) => html`<div key=${k}>
       <div className="brv-cat">${catLabel(k, cats)}</div>
       ${list.map((it) => html`<button className="brv-item" key=${it.code} onClick=${() => onItem(it)}>
@@ -323,7 +327,7 @@ export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false 
   if (err) return html`<div className="brv" dir=${dir} style=${style}><style>${viewCss}</style><div className="brv-msg">${err}</div></div>`;
   if (!home) return html`<div className="brv" dir=${dir}><style>${viewCss}</style><div className="brv-msg">${T.loading}</div></div>`;
 
-  const cardBody = card && html`<${RoomCard} room=${roomData} floor=${card.floor} cats=${cats} note=${roomData ? p.roomNotes?.[card.floor + "|" + roomData.n] : null} onItem=${setItem} onPlan=${card.from === "search" ? toPlan : null} />`;
+  const cardBody = card && html`<${RoomCard} room=${roomData} floor=${card.floor} cats=${cats} note=${roomData ? p.roomNotes?.[card.floor + "|" + roomData.n] : null} group=${roomData ? (p.roomGroups ?? []).find((g) => g.floor === card.floor && g.rooms.includes(roomData.n)) : null} onItem=${setItem} onPlan=${card.from === "search" ? toPlan : null} />`;
   const fd = floorData[floor];
   // opening: client logo, then supervision, then A. Weiss, then the project name (as it was set up), the line, and "Enter"
   const seq = [p.clientLogo && "c", p.supervisionLogo && "s", "aw"].filter(Boolean);

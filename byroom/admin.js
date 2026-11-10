@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 16 · 10.11.2026
+//  byroom build 17 · 10.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 16 · 10.11.2026";
+export const BYROOM_BUILD = "byroom build 17 · 10.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -96,6 +96,21 @@ const css = `
 .bra-rooms tr.det>td{background:#f4f8fd;box-shadow:inset -4px 0 0 #1d5fa8;border-bottom:2px solid #1d5fa8;padding:10px 14px}
 .bra-rooms .arr{font-size:11px;color:#1d5fa8}.bra-rooms tr.rw.on .arr{color:#14181f}
 .bra-rooms thead th{position:sticky;top:0;background:#fff;z-index:2;box-shadow:0 1px 0 #e6e6e9}
+.bra-rooms tr.grp td{background:#f4f2fd;border-bottom:1px solid #d9d4f5}.bra-rooms tr.grp td:first-child{box-shadow:inset -4px 0 0 #534AB7}
+.bra-rooms tr.grp.on td{background:#ebe8fb}.bra-rooms tr.grp .arr{color:#534AB7}
+.bra-rooms .gtag{background:#534AB7;color:#fff;border-radius:6px;padding:1px 7px;font-size:11px;font-weight:600}
+.bra-rooms tr.gm td:first-child{box-shadow:inset -4px 0 0 #AFA9EC}.bra-rooms tr.gm td:nth-child(2){padding-inline-start:22px}
+.bra-gear{border:0;background:none;color:#534AB7;cursor:pointer;padding:2px;line-height:0}.bra-gear:hover{color:#26215C}
+.bra-rooms tr.gdet>td{background:#faf9ff;box-shadow:inset -4px 0 0 #534AB7;border-bottom:2px solid #534AB7}
+.bra-gnew{border:1px solid #AFA9EC;background:#faf9ff;border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.bra-gcols{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}.bra-gedit .gh{font-weight:700;margin-bottom:6px;color:#26215C}
+.bra-gchip{display:inline-flex;align-items:center;gap:4px;border:1px solid #d9d4f5;background:#fff;border-radius:8px;padding:2px 6px;margin:0 0 4px 4px;font-size:12.5px}
+.bra-gchip button{border:0;background:none;color:#9a9da5;cursor:pointer;font-size:15px;line-height:1;padding:0 2px}.bra-gchip button:hover{color:#b02a37}
+.bra-glist{max-height:260px;overflow:auto;border:1px solid #e6e6e9;border-radius:8px;background:#fff}
+.bra-glist label{display:flex;align-items:center;gap:6px;padding:4px 8px;border-bottom:1px solid #f2f2f4;font-size:13px;cursor:pointer}.bra-glist label.on{background:#f4f2fd}
+.bra-glist .fc{color:#9a9da5;font-size:11.5px;margin-inline-start:auto}
+.bra-sug{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;padding:4px 0;border-bottom:1px dashed #e6e6e9}
+.bra-appx{margin-top:14px;border:1px solid #e6e6e9;border-radius:12px;padding:10px 14px;background:#fff}
 .bra-rooms td.rdel{width:34px;text-align:center}.bra-rooms td.rdel .bra-trash{opacity:.55}.bra-rooms tr.rw:hover td.rdel .bra-trash{opacity:1}
 .bra-rooms td.ntc{max-width:220px;font-size:12px;color:#5b5e66;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .bra-mk.nodet b{color:#8a6d1f;border-bottom:1px dashed #c9a24a}
@@ -1019,7 +1034,7 @@ async function allRows(q) {          // past the 1000-row page of the API
   const out = [];
   for (let from = 0; ; from += 1000) { const r = must(await q().range(from, from + 999)); out.push(...r); if (r.length < 1000) return out; }
 }
-async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes = new Map(), meta = new Map() }) {
+async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes = new Map(), meta = new Map(), groupOf = () => null }) {
   const rows = [];
   const detail = (kind, code) => { const m = lookup(kind, code); return { mname: m?.name && m.name !== code ? m.name : "", desc: m?.desc ?? "", supplier: m?.supplier ?? "", lli: m?.status ?? "", image: m?.image ?? null }; };
   const have = new Set();
@@ -1052,6 +1067,7 @@ async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes 
     }
   }
   for (const r of rows) {
+    r.group = groupOf(r.floor, r.room)?.name ?? "";
     r.note = notes.get(r.floor + "|" + r.room)?.note ?? "";
     const mt = r.code ? meta.get(r.floor + "|" + r.room + "|" + r.kind + "|" + String(r.code).toUpperCase()) : null;
     r.mnote = mt?.note ?? ""; r.verified = !!mt?.verified;
@@ -1063,10 +1079,10 @@ async function exportRows({ projectId, rooms, floor, unpublished, lookup, notes 
 async function exportXlsx(rows, title) {
   const mod = await import("xlsx");
   const X = mod.utils ? mod : mod.default;
-  const head = ["קומה", "מספר חדר", "שם החדר", 'שטח (מ"ר)', "קטגוריה", "מס' איפיון", "שם האיפיון", "תיאור", "ספק", "סטטוס LLI", "מקור", "מצב", "אומת ✓", "הערה לאיפיון", "הערות כלליות לחדר"];
-  const data = [head, ...rows.map((r) => [r.floor, r.room, r.name, r.area != null ? Number(r.area) : "", r.kind ? catHe(r.kind) : "", r.code, r.mname, r.desc, r.supplier, r.lli, r.src, r.state, r.verified ? "✓" : "", r.mnote, r.note])];
+  const head = ["קומה", "מספר חדר", "שם החדר", 'שטח (מ"ר)', "קטגוריה", "מס' איפיון", "שם האיפיון", "תיאור", "ספק", "סטטוס LLI", "מקור", "מצב", "אומת ✓", "הערה לאיפיון", "הערות כלליות לחדר", "קבוצה"];
+  const data = [head, ...rows.map((r) => [r.floor, r.room, r.name, r.area != null ? Number(r.area) : "", r.kind ? catHe(r.kind) : "", r.code, r.mname, r.desc, r.supplier, r.lli, r.src, r.state, r.verified ? "✓" : "", r.mnote, r.note, r.group])];
   const ws = X.utils.aoa_to_sheet(data);
-  ws["!cols"] = [6, 10, 22, 9, 14, 12, 22, 50, 18, 14, 9, 26, 8, 30, 40].map((w) => ({ wch: w }));
+  ws["!cols"] = [6, 10, 22, 9, 14, 12, 22, 50, 18, 14, 9, 26, 8, 30, 40, 20].map((w) => ({ wch: w }));
   ws["!autofilter"] = { ref: X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: data.length - 1, c: head.length - 1 } }) };
   const wb = X.utils.book_new();
   X.utils.book_append_sheet(wb, ws, "By Room");
@@ -1075,9 +1091,26 @@ async function exportXlsx(rows, title) {
 }
 /** PDF in the A. Weiss format (build 11): one room per page; the A. Weiss logo on the right, floor and room on the
  *  left, no other logo. Opens the print window; "שמירה כ-PDF" there saves it. */
-function exportPdf(rows, title, projectName, brand, floor) {
-  const rooms = new Map();
-  for (const r of rows) { const k = r.floor + "|" + r.room; if (!rooms.has(k)) rooms.set(k, { ...r, items: [] }); if (r.code) rooms.get(k).items.push(r); }
+function exportPdf(rows, title, projectName, brand, floor, groupOf = () => null, appendix = "") {
+  const all = new Map();
+  for (const r of rows) { const k = r.floor + "|" + r.room; if (!all.has(k)) all.set(k, { ...r, items: [] }); if (r.code) all.get(k).items.push(r); }
+  // a group prints once (build 17): one page with its rooms; every room of it is skipped after that
+  const rooms = new Map(), done = new Set();
+  for (const [k, r] of all) {
+    const g = groupOf(r.floor, r.room);
+    if (!g) { rooms.set(k, r); continue; }
+    if (done.has(g.id)) continue;
+    done.add(g.id);
+    const mem = g.rooms.map((n) => all.get(r.floor + "|" + n)).filter(Boolean);
+    const area = mem.reduce((t, m) => t + (Number(m.area) || 0), 0);
+    // the group's own finishes (no proposal of one room); V only when every room has it; notes of each room by number
+    const items = r.items.filter((i) => i.state === ST_PUB || i.state === ST_APPROVED).map((i) => {
+      const same = mem.map((m) => m.items.find((x) => x.kind === i.kind && x.code === i.code));
+      return { ...i, verified: same.every((x) => x?.verified), mnote: same.map((x, j) => (x?.mnote ? `${mem[j].room}: ${x.mnote}` : "")).filter(Boolean).join("\n") };
+    });
+    rooms.set("g:" + g.id, { ...r, items, group: g, name: g.name, room: "", area: area || null, members: mem,
+      note: mem.filter((m) => m.note).map((m) => `${m.room}: ${m.note}`).join("\n") });
+  }
   const badge = (st) => `<span class="st ${st === ST_PUB ? "pub" : st === ST_APPROVED ? "ok" : "wait"}">${esc(st)}</span>`;
   const logo = brand?.brandLogo ? `<img class="logo" src="${esc(brand.brandLogo)}" alt="">` : `<b class="logo-t">א. וייס הנדסה</b>`;
   const today = new Date().toLocaleDateString("he-IL");
@@ -1091,12 +1124,16 @@ function exportPdf(rows, title, projectName, brand, floor) {
       <td class="nt">${esc(i.mnote).replace(/\n/g, "<br>")}</td></tr>`).join("")}</tbody></table>`).join("");
     return `<section class="page">
       <header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div>${r.name ? `<div class="rnm">${esc(r.name)}</div>` : ""}</div>
-        <div class="l"><div class="fl">קומה ${esc(r.floor)}</div><div class="rn" dir="ltr">${esc(r.room)}</div>${r.area ? `<div class="fl">${Number(r.area)} מ"ר</div>` : ""}</div></header>
+        <div class="l"><div class="fl">קומה ${esc(r.floor)}</div>${r.group ? `<div class="rn gr">${r.members.length} חדרים</div>` : `<div class="rn" dir="ltr">${esc(r.room)}</div>`}${r.area ? `<div class="fl">${Math.round(Number(r.area) * 10) / 10} מ"ר</div>` : ""}</div></header>
+      ${r.group ? `<div class="grooms"><b>חדרים בקבוצה:</b> ${r.members.map((m) => `<span><bdi dir="ltr">${esc(m.room)}</bdi>${m.name ? ` ${esc(m.name)}` : ""}</span>`).join("")}</div>` : ""}
       ${body || '<p class="none">אין איפיונים לחדר הזה</p>'}
       ${r.note ? `<div class="gnote"><b>הערות כלליות:</b><div>${esc(r.note).replace(/\n/g, "<br>")}</div></div>` : ""}
       <footer dir="rtl"><bdi>By RooM</bdi> · <bdi>${esc(projectName)}</bdi> · <bdi>${today}</bdi></footer>
     </section>`;
-  }).join("");
+  }).join("") + (appendix.trim() ? `<section class="page">
+      <header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div><div class="rnm">נספח — הערות כלליות</div></div><div class="l"></div></header>
+      <div class="appx">${esc(appendix).replace(/\n/g, "<br>")}</div>
+      <footer dir="rtl"><bdi>By RooM</bdi> · <bdi>${esc(projectName)}</bdi> · <bdi>${today}</bdi></footer></section>` : "");
   printPage(title, `<style>
     @page{size:A4;margin:12mm}body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .page{break-after:page;page-break-after:always;position:relative;min-height:268mm;padding-bottom:10mm;box-sizing:border-box}
@@ -1105,7 +1142,9 @@ function exportPdf(rows, title, projectName, brand, floor) {
     header .r,header .l{width:55mm}header .l{text-align:center;display:flex;flex-direction:column;align-items:center;margin-inline-start:auto;max-width:40mm}header .c{flex:1;text-align:center}
     .logo{max-height:18mm;max-width:55mm;object-fit:contain}.logo-t{font-size:16px}
     .pn{font-size:18px;font-weight:700}.rnm{font-size:16px;font-weight:600;margin-top:1mm}
-    .fl{font-size:13px;color:#5b5e66}.rn{font-size:30px;font-weight:800;line-height:1.1}
+    .fl{font-size:13px;color:#5b5e66}.rn{font-size:30px;font-weight:800;line-height:1.1}.rn.gr{font-size:20px}
+    .grooms{font-size:11.5px;margin:-2mm 0 3mm;line-height:1.9}.grooms span{display:inline-block;border:1px solid #d9d4f5;background:#f4f2fd;border-radius:3mm;padding:0 2.5mm;margin:0 0 1mm 1.5mm}
+    .appx{font-size:13px;line-height:1.8;white-space:normal}
     
     h3{font-size:14px;margin:3mm 0 1.5mm;padding:1mm 2mm;background:#eef1f5;border-radius:1.5mm}
     table{width:100%;border-collapse:collapse}th{font-size:10.5px;color:#5b5e66;text-align:right;font-weight:600;border-bottom:1px solid #c9ccd2;padding:1mm 1.5mm}
@@ -1160,6 +1199,112 @@ function PendingLine({ it, ticked, onToggle, lookup, catalog, lliAll, onPick, in
   </div>`;
 }
 
+/** A room's (or a group's) finishes as one comparable string. */
+const finKey = (fin) => (fin || []).map((f) => f.kind + "|" + String(f.code).trim().toUpperCase()).sort().join(",");
+
+/** The gear of a group (build 17): name, the finishes every room gets, and the rooms. "אישור" writes the finishes to
+ *  every room (a mark the room has and the group does not is removed from it), then saves the group. */
+function GroupEditor({ projectId, group, floor: floor0, floors = [], rooms, groups, catalog, kindsAll, lookup, onClose, onSaved }) {
+  const [name, setName] = useState(group?.name ?? "");
+  const [floor, setFloor] = useState(group?.floor ?? floor0);
+  const [fin, setFin] = useState(group?.finishes ?? []);
+  const [mem, setMem] = useState(new Set(group?.rooms ?? []));
+  const [flt, setFlt] = useState("");
+  const [code, setCode] = useState("");
+  const [kind, setKind] = useState("FL");
+  const [busy, setBusy] = useState(null);
+  const onFloor = rooms.filter((r) => r.floor === floor && !r.pendingOnly).sort(sortRooms);
+  const taken = new Set(groups.filter((g) => g.id !== group?.id && g.floor === floor).flatMap((g) => g.rooms));
+  const free = onFloor.filter((r) => !taken.has(r.room_no));
+  const f = flt.trim().toLowerCase();
+  const hits = free.filter((r) => !f || r.room_no.toLowerCase().includes(f) || (r.name ?? "").toLowerCase().includes(f));
+  const known = catalog.find((m) => m.code === code.trim().toUpperCase());
+  const options = useMemo(() => {
+    const m = new Map([["FL", "ריצוף"], ["FN", "חיפוי קירות"], ["CL", "תקרה"]]);
+    for (const c of CATS) if (!KIND_OF_CAT[c.key] && c.he) m.set(kindOfCat(c.key), c.he);
+    for (const x of catalog) if (x.kind && !m.has(x.kind)) m.set(x.kind, catHe(x.kind));
+    for (const k of kindsAll) if (k && !m.has(k)) m.set(k, catHe(k));
+    return [...m].map(([k, t]) => ({ k, t: String(t) }));
+  }, [catalog, kindsAll]);
+  // rooms with exactly the same finishes: offered as a starting point
+  const same = useMemo(() => { const m = new Map(); for (const r of free) { if (!r.fin.length) continue; const k = finKey(r.fin); if (!m.has(k)) m.set(k, []); m.get(k).push(r); } return [...m.values()].filter((l) => l.length > 1).sort((a, b) => b.length - a.length).slice(0, 5); }, [floor, rooms, groups]);
+  const addFin = () => { const c = code.trim(); if (!c) return; const k = known?.kind ?? kind; if (!fin.some((x) => x.kind === k && x.code.toUpperCase() === c.toUpperCase())) setFin([...fin, { kind: k, code: known?.code ?? c }]); setCode(""); };
+  const toggleRoom = (no) => setMem((m) => { const n = new Set(m); n.has(no) ? n.delete(no) : n.add(no); return n; });
+  const fromRoom = (r) => setFin(r.fin.map((x) => ({ kind: x.kind, code: x.code })));
+  const save = async () => {
+    if (!name.trim()) { alert("צריך שם לקבוצה"); return; }
+    const members = onFloor.filter((r) => mem.has(r.room_no));
+    const target = new Map(fin.map((x) => [x.kind + "|" + x.code.toUpperCase(), x]));
+    const plan = members.map((r) => {
+      const cur = new Map(r.fin.map((x) => [x.kind + "|" + x.code.toUpperCase(), x]));
+      return { r, add: [...target].filter(([k]) => !cur.has(k)).map(([, x]) => x), del: [...cur].filter(([k]) => !target.has(k)).map(([, x]) => x) };
+    });
+    const nDel = plan.reduce((t, p) => t + p.del.length, 0), nAdd = plan.reduce((t, p) => t + p.add.length, 0);
+    if (!confirm(`קבוצה "${name.trim()}" · ${members.length} חדרים · ${fin.length} איפיונים.\n${nAdd ? `יתווספו ${nAdd} איפיונים לחדרים.\n` : ""}${nDel ? `יוסרו ${nDel} איפיונים שאינם בקבוצה (למשל ${plan.find((p) => p.del.length)?.r.room_no}: ${plan.find((p) => p.del.length)?.del.map((x) => x.code).join(", ")}).\n` : ""}להחיל על כל החדרים?`)) return;
+    setBusy("מחיל על החדרים…");
+    try {
+      for (const p of plan) {
+        for (const x of p.add) must(await supabase.rpc("byroom_set_mark", { p_project: projectId, p_floor: floor, p_room: p.r.room_no, p_kind: x.kind, p_code: x.code, p_add: true }));
+        for (const x of p.del) must(await supabase.rpc("byroom_set_mark", { p_project: projectId, p_floor: floor, p_room: p.r.room_no, p_kind: x.kind, p_code: x.code, p_add: false }));
+      }
+      const { data: u } = await supabase.auth.getUser();
+      const row = { project_id: projectId, floor, name: name.trim(), finishes: fin, rooms: members.map((r) => r.room_no), updated_at: new Date().toISOString(), updated_email: u?.user?.email ?? null };
+      if (group) must(await supabase.from("byroom_room_groups").update(row).eq("id", group.id));
+      else must(await supabase.from("byroom_room_groups").insert(row));
+      onSaved();
+    } catch (e) { alert("לא נשמר: " + e.message); }
+    setBusy(null);
+  };
+  const drop = async () => {
+    if (!confirm(`לפרק את הקבוצה "${group.name}"?\nהחדרים נשארים עם הגמרים שלהם, כל אחד כחדר רגיל.`)) return;
+    try { must(await supabase.from("byroom_room_groups").delete().eq("id", group.id)); onSaved(); } catch (e) { alert(e.message); }
+  };
+  return html`<div className="bra-gedit" onClick=${(e) => e.stopPropagation()}>
+    <div className="bra-row" style=${{ gap: "8px", marginBottom: "10px" }}>
+      <b>${group ? "הגדרת הקבוצה" : "קבוצה חדשה"}</b>
+      <input value=${name} placeholder="שם הקבוצה, למשל אופן ספייס" onInput=${(e) => setName(e.target.value)} style=${{ width: "240px" }} />
+      ${!group && floors.length > 1 ? html`<select value=${floor} onChange=${(e) => { setFloor(e.target.value); setMem(new Set()); }}>${floors.map((x) => html`<option key=${x} value=${x}>קומה ${x}</option>`)}</select>` : html`<span>קומה ${floor}</span>`}
+    </div>
+    <div className="bra-gcols">
+      <div>
+        <div className="gh">איפיונים לכל חדרי הקבוצה</div>
+        ${fin.length ? [...new Set(fin.map((x) => x.kind))].sort(kindOrder).map((k) => html`<div key=${k} style=${{ marginBottom: "4px" }}><span style=${{ color: "#5b5e66", fontSize: "12px" }}>${catHe(k)}: </span>
+          ${fin.filter((x) => x.kind === k).map((x) => { const m = lookup(x.kind, x.code); return html`<span key=${x.code} className="bra-gchip"><b dir="ltr">${x.code}</b>${m?.name && m.name !== x.code ? ` ${m.name}` : ""}<button title="הסרה" onClick=${() => setFin(fin.filter((y) => y !== x))}>×</button></span>`; })}</div>`)
+          : html`<div style=${{ color: "#9a9da5", fontSize: "12px", marginBottom: "6px" }}>עדיין אין איפיונים. מוסיפים כאן, או "העתקה מחדר" מתוך הרשימה משמאל.</div>`}
+        <div className="bra-row" style=${{ gap: "6px", marginTop: "6px" }}>
+          <input list="bra-marks-g" placeholder="קוד" value=${code} onInput=${(e) => setCode(e.target.value)} onKeyDown=${(e) => { if (e.key === "Enter") addFin(); }} style=${{ width: "130px" }} dir="ltr" />
+          <datalist id="bra-marks-g">${catalog.map((m) => html`<option key=${m.code} value=${m.code}>${m.name ?? ""}</option>`)}</datalist>
+          ${known ? html`<span style=${{ fontSize: "12px" }}>${catHe(known.kind)}</span>` : html`<${CatCombo} value=${kind} options=${options} onPick=${setKind} />`}
+          <button className="bra-btn small" disabled=${!code.trim()} onClick=${addFin}>הוספה</button>
+        </div>
+        ${same.length ? html`<div style=${{ marginTop: "12px" }}><div className="gh">הצעות — חדרים עם גמרים זהים</div>
+          ${same.map((l, i) => html`<div key=${i} className="bra-sug"><span><b>${l.length} חדרים</b> · ${l.slice(0, 8).map((r) => r.room_no).join(", ")}${l.length > 8 ? "…" : ""} · <span dir="ltr">${l[0].fin.map((x) => x.code).join(" · ")}</span></span>
+            <button className="bra-btn small" onClick=${() => { setMem(new Set(l.map((r) => r.room_no))); fromRoom(l[0]); }}>בחירה</button></div>`)}</div>` : null}
+      </div>
+      <div>
+        <div className="gh">חדרים בקבוצה (${mem.size})</div>
+        <div className="bra-row" style=${{ gap: "6px", marginBottom: "6px" }}>
+          <input type="search" placeholder="סינון לפי מספר או שם — למשל D או עמדות" value=${flt} onInput=${(e) => setFlt(e.target.value)} style=${{ width: "230px" }} />
+          <button className="bra-btn small" disabled=${!hits.length} onClick=${() => setMem((m) => new Set([...m, ...hits.map((r) => r.room_no)]))}>סימון כל התוצאות (${hits.length})</button>
+          <button className="bra-btn small" onClick=${() => setMem(new Set())}>ניקוי</button>
+        </div>
+        <div className="bra-glist">${hits.map((r) => html`<label key=${r.room_no} className=${mem.has(r.room_no) ? "on" : ""}>
+          <input type="checkbox" checked=${mem.has(r.room_no)} onChange=${() => toggleRoom(r.room_no)} />
+          <b dir="ltr">${r.room_no}</b> <span>${r.name ?? ""}</span>
+          <span className="fc" dir="ltr">${r.fin.map((x) => x.code).join(" · ")}</span>
+          ${r.fin.length ? html`<button type="button" className="bra-link" title="הגמרים של החדר הזה יהיו הגמרים של הקבוצה" onClick=${(e) => { e.preventDefault(); fromRoom(r); }}>העתקה מחדר</button>` : null}
+        </label>`)}${!hits.length ? html`<div style=${{ color: "#9a9da5", fontSize: "12px", padding: "6px" }}>אין חדרים פנויים שמתאימים לסינון</div>` : null}</div>
+      </div>
+    </div>
+    <div style=${{ display: "flex", justifyContent: "center", gap: "8px", marginTop: "12px", flexWrap: "wrap" }}>
+      <button className="bra-btn primary" disabled=${!!busy || !mem.size} onClick=${save}>${busy ?? `אישור — החלה על ${mem.size} החדרים`}</button>
+      <button className="bra-btn" onClick=${onClose}>ביטול</button>
+      ${group ? html`<button className="bra-btn" onClick=${drop}>פירוק הקבוצה</button>` : null}
+    </div>
+    <div style=${{ textAlign: "center", fontSize: "12px", color: "#5b5e66", marginTop: "6px" }}>חדר שמוסיפים לו או מורידים ממנו איפיון יוצא מהקבוצה אוטומטית, ונשאר עם הגמרים שלו.</div>
+  </div>`;
+}
+
 function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, editsOk, onEdited, L }) {
   const [rooms, setRooms] = useState(null);
   const [pend, setPend] = useState(new Map());
@@ -1179,6 +1324,11 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
   const [sel, setSel] = useState(new Set());
   const [busy, setBusy] = useState(false);
   const [exporting, setExporting] = useState(null);
+  const [groups, setGroups] = useState([]);                // room groups (build 17)
+  const [groupsOk, setGroupsOk] = useState(true);
+  const [gOpen, setGOpen] = useState(new Set());
+  const [gEdit, setGEdit] = useState(null);                 // group id, or "new"
+  const [gNotice, setGNotice] = useState([]);
   const lookup = useMemo(() => markIndex(marks), [marks]);
   const catalog = useMemo(() => markList(marks), [marks]);
   useEffect(() => { (async () => {
@@ -1209,6 +1359,18 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
       const [fl, no] = k.split("|");
       rows.push({ id: "p:" + k, floor: fl, room_no: no, name: items.find((i) => i.field === "name")?.proposed?.value ?? "", area: items.find((i) => i.field === "area")?.proposed?.value ?? null, fin: [], pendingOnly: true });
     }
+    // groups: a member whose finishes no longer match its group leaves it (her rule, 10.11.26)
+    const { data: gd, error: ge } = await supabase.from("byroom_room_groups").select("*").eq("project_id", projectId).order("name");
+    setGroupsOk(!ge);
+    const byKey = new Map(rows.map((x) => [x.floor + "|" + x.room_no, x]));
+    const left = [];
+    for (const g of gd ?? []) {
+      const gk = finKey(g.finishes);
+      const keep = g.rooms.filter((no) => { const x = byKey.get(g.floor + "|" + no); if (!x || x.pendingOnly) return false; if (finKey(x.fin) !== gk) { left.push(`חדר ${no} יצא מהקבוצה "${g.name}" — הגמרים שלו כבר לא זהים לשל הקבוצה`); return false; } return true; });
+      if (keep.length !== g.rooms.length) { await supabase.from("byroom_room_groups").update({ rooms: keep, updated_at: new Date().toISOString() }).eq("id", g.id); g.rooms = keep; }
+    }
+    if (left.length) setGNotice((n) => [...n, ...left]);
+    setGroups(gd ?? []);
     setPend(pm); setRooms(rows); setSel(new Set());
   })().catch((e) => alert(e.message)); }, [projectId, tick]);
   useEffect(() => { if (!mapFloor) return; (async () => {
@@ -1232,6 +1394,7 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
     return true;
   };
   const pendOf = (r) => pend.get(key(r)) ?? [];
+  const groupOf = (fl, no) => groups.find((g) => g.floor === fl && g.rooms.includes(no)) ?? null;
   const floors = [...new Set(rooms.map((r) => r.floor))].sort((a, b) => Number(a) - Number(b) || a.localeCompare(b));
   const unpublished = (r) => !pubAt || new Date(r.updated_at) > new Date(pubAt);
   const qq = q.trim().toLowerCase();
@@ -1261,10 +1424,10 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
   const doExport = async (kind) => {
     setExporting(kind);
     try {
-      const rows = await exportRows({ projectId, rooms: list.filter((r) => !r.pendingOnly), floor, unpublished, lookup, notes, meta });
+      const rows = await exportRows({ projectId, rooms: list.filter((r) => !r.pendingOnly), floor, unpublished, lookup, notes, meta, groupOf });
       if (!rows.length) { alert("אין מה לייצא בסינון הזה"); return; }
       const title = `By Room - ${projectName}${floor ? ` - קומה ${floor}` : ""} - ${new Date().toLocaleDateString("he-IL").replace(/\./g, "-")}`;
-      if (kind === "xlsx") await exportXlsx(rows, title); else exportPdf(rows, title, projectName, brand, floor);
+      if (kind === "xlsx") await exportXlsx(rows, title); else exportPdf(rows, title, projectName, brand, floor, groupOf, notes.get("*|*")?.note ?? "");
     } catch (e) { alert("הייצוא נכשל: " + e.message); }
     finally { setExporting(null); }
   };
@@ -1308,30 +1471,8 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
       setTick((t) => t + 1);
     } catch (e) { alert(e.message); }
   };
-  if (mapFloor) {
-    const sel1 = rooms.find((r) => r.floor === mapFloor && r.id === open);
-    return html`<div>
-      <div className="bra-row" style=${{ marginBottom: "8px" }}><button className="bra-btn" onClick=${() => { setMapFloor(null); setMap(null); }}>${L.back}</button>
-        ${floors.length > 1 ? html`<select value=${mapFloor} onChange=${(e) => setMapFloor(e.target.value)}>${floors.map((f) => html`<option key=${f} value=${f}>${L.floor} ${f}</option>`)}</select>` : html`<b>${L.floor} ${mapFloor}</b>`}
-        ${sel1 ? html`<span>${L.room} <b>${sel1.room_no}</b> ${sel1.name ?? ""}</span>` : html`<span style=${{ color: "#5b5e66" }}>לחיצה על חדר במפה פותחת אותו ברשימה</span>`}</div>
-      <div className="brv" style=${{ height: "calc(var(--appvh, 100vh) - 230px)", border: "1px solid #e6e6e9", borderRadius: "12px", overflow: "hidden" }}>
-        <${FloorMap} map=${map} selected=${sel1?.room_no ?? null} onPick=${(n) => { const r = rooms.find((x) => x.floor === mapFloor && x.room_no === n); if (r) { setOpen(r.id); setMapFloor(null); setFloor(r.floor); setQ(""); } }} /></div></div>`;
-  }
-  return html`<div className="bra-rooms">
-    <div className="bra-row" style=${{ marginBottom: "8px" }}>
-      <select value=${floor} onChange=${(e) => setFloor(e.target.value)}><option value="">כל הקומות</option>${floors.map((f) => html`<option key=${f} value=${f}>${L.floor} ${f}</option>`)}</select>
-      <input type="search" placeholder="חיפוש חדר, שם, איפיון או הערה" value=${q} onInput=${(e) => setQ(e.target.value)} style=${{ minWidth: "220px" }} />
-      <label><input type="checkbox" checked=${onlyPending} onChange=${(e) => setOnlyPending(e.target.checked)} /> רק חדרים עם ממתינים</label>
-      <span style=${{ color: "#5b5e66" }}>${list.length} חדרים · ${marksN} איפיונים${shownPending.length ? ` · ${shownPending.length} ממתינים לאישור` : ""}</span>
-      <span style=${{ flex: 1 }} />
-      <button className="bra-btn" disabled=${exporting} title="כל החדרים שבסינון: מה שפורסם, מה שאושר וטרם פורסם, ומה שממתין לאישור בגרסאות" onClick=${() => doExport("xlsx")}>${exporting === "xlsx" ? "מכין…" : "ייצוא לאקסל"}</button>
-      <button className="bra-btn" disabled=${exporting} title="כרטיס לכל חדר — נפתח חלון הדפסה; לשמירה כ-PDF בוחרים 'שמירה כ-PDF'" onClick=${() => doExport("pdf")}>${exporting === "pdf" ? "מכין…" : "PDF"}</button>
-      <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>תוכנית קומה</button>
-    </div>
-    <div className="bra-scroll"><table>
-      <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th><th>הערות</th><th></th></tr></thead>
-      <tbody>${list.map((r) => { const on = open === r.id; const pp = pendOf(r); const nt = notes.get(key(r))?.note ?? ""; return html`<${React.Fragment} key=${r.id}>
-        <tr className=${"rw" + (on ? " on" : "")} onClick=${() => setOpen(on ? null : r.id)}>
+  const roomRows = (r, inGroup) => { const on = open === r.id; const pp = pendOf(r); const nt = notes.get(key(r))?.note ?? ""; return html`<${React.Fragment} key=${r.id}>
+        <tr className=${"rw" + (on ? " on" : "") + (inGroup ? " gm" : "")} onClick=${() => setOpen(on ? null : r.id)}>
           <td>${r.floor}</td><td><span className="arr">${on ? "▲" : "▼"}</span> <b dir="ltr">${r.room_no}</b>
             ${pp.length ? html`<div><span className="bra-pend">${r.pendingOnly ? "חדר חדש · " : ""}${pp.length} ממתינים</span></div>` : null}</td>
           <td>${r.name ?? ""}</td><td>${r.area ? `${Number(r.area)} מ"ר` : ""}</td>
@@ -1360,13 +1501,61 @@ function RoomsTab({ projectId, projectName, marks, brand, lliAll, onTickByRoom, 
             <button className="bra-btn" style=${{ minWidth: "240px" }} onClick=${() => setMapFloor(r.floor)}>הצגה על תוכנית הקומה</button></div>
           ${recent && !r.pendingOnly ? html`<div style=${{ marginTop: "8px" }}><${RecentChanges} projectId=${projectId} floor=${r.floor} room=${r.room_no} /></div>` : null}
         </td></tr>` : null}
-      </${React.Fragment}>`; })}</tbody></table></div>
+      </${React.Fragment}>`; };
+  // groups on the floors shown: a purple row, its rooms under it when open (build 17)
+  const inList = new Set(list.map(key));
+  const shownGroups = groups.filter((g) => (!floor || g.floor === floor) && (g.rooms.some((n) => inList.has(g.floor + "|" + n)) || (qq && g.name.toLowerCase().includes(qq)) || (!qq && !onlyPending)));
+  const grouped = new Set(shownGroups.flatMap((g) => g.rooms.map((n) => g.floor + "|" + n)));
+  const entries = [...shownGroups.map((g) => ({ floor: g.floor, g: 0, name: g.name, group: g })), ...list.filter((r) => !grouped.has(key(r))).map((r) => ({ floor: r.floor, g: 1, room: r }))]
+    .sort((a, b) => Number(a.floor) - Number(b.floor) || a.floor.localeCompare(b.floor) || a.g - b.g || (a.g ? sortRooms(a.room, b.room) : a.name.localeCompare(b.name, "he")));
+  const membersOf = (g) => g.rooms.map((n) => rooms.find((r) => r.floor === g.floor && r.room_no === n)).filter(Boolean).sort(sortRooms);
+  const gChips = (g, k) => g.finishes.filter((f) => (k === "other" ? !["FL", "FN", "CL"].includes(f.kind) : f.kind === k)).map((f) => chip(f, null));
+  const groupRows = (g) => { const on = gOpen.has(g.id); const mem = membersOf(g); const area = mem.reduce((t, m) => t + (Number(m.area) || 0), 0);
+    const nums = mem.map((m) => m.room_no); return html`<${React.Fragment} key=${"g" + g.id}>
+      <tr className=${"rw grp" + (on ? " on" : "")} onClick=${() => setGOpen((x) => { const n = new Set(x); n.has(g.id) ? n.delete(g.id) : n.add(g.id); return n; })}>
+        <td>${g.floor}</td><td><span className="arr">${on ? "▲" : "▼"}</span> <span className="gtag">קבוצה</span><div style=${{ fontSize: "12px", color: "#534AB7" }}>${mem.length} חדרים${nums.length ? ` · ${nums[0]}${nums.length > 1 ? "–" + nums[nums.length - 1] : ""}` : ""}</div></td>
+        <td><b>${g.name}</b></td><td>${area ? `${Math.round(area * 10) / 10} מ"ר` : ""}</td>
+        <td>${gChips(g, "FL")}</td><td>${gChips(g, "FN")}</td><td>${gChips(g, "CL")}</td><td>${gChips(g, "other")}</td><td></td>
+        <td className="rdel"><button type="button" className="bra-gear" title="הגדרת הקבוצה — איפיונים וחדרים" aria-label="הגדרת הקבוצה" onClick=${(e) => { e.stopPropagation(); setGEdit(gEdit === g.id ? null : g.id); }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.3 4.3c.4-1.8 3-1.8 3.4 0a1.7 1.7 0 0 0 2.6 1.1c1.5-.9 3.3.8 2.4 2.4a1.7 1.7 0 0 0 1 2.5c1.8.4 1.8 3 0 3.4a1.7 1.7 0 0 0-1 2.6c.9 1.5-.9 3.3-2.4 2.4a1.7 1.7 0 0 0-2.6 1c-.4 1.8-3 1.8-3.4 0a1.7 1.7 0 0 0-2.6-1c-1.5.9-3.3-.9-2.4-2.4a1.7 1.7 0 0 0-1-2.6c-1.8-.4-1.8-3 0-3.4a1.7 1.7 0 0 0 1-2.5c-.9-1.6.9-3.3 2.4-2.4 1 .6 2.3.1 2.6-1.1z" /><circle cx="12" cy="12" r="3" /></svg></button></td></tr>
+      ${gEdit === g.id ? html`<tr className="det gdet"><td colSpan="10"><${GroupEditor} projectId=${projectId} group=${g} rooms=${rooms} groups=${groups} catalog=${catalog} kindsAll=${kindsAll} lookup=${lookup}
+        onClose=${() => setGEdit(null)} onSaved=${() => { setGEdit(null); setTick((t) => t + 1); }} /></td></tr>` : null}
+      ${on ? mem.filter((m) => inList.has(key(m))).map((m) => roomRows(m, true)) : null}
+    </${React.Fragment}>`; };
+  if (mapFloor) {
+    const sel1 = rooms.find((r) => r.floor === mapFloor && r.id === open);
+    return html`<div>
+      <div className="bra-row" style=${{ marginBottom: "8px" }}><button className="bra-btn" onClick=${() => { setMapFloor(null); setMap(null); }}>${L.back}</button>
+        ${floors.length > 1 ? html`<select value=${mapFloor} onChange=${(e) => setMapFloor(e.target.value)}>${floors.map((f) => html`<option key=${f} value=${f}>${L.floor} ${f}</option>`)}</select>` : html`<b>${L.floor} ${mapFloor}</b>`}
+        ${sel1 ? html`<span>${L.room} <b>${sel1.room_no}</b> ${sel1.name ?? ""}</span>` : html`<span style=${{ color: "#5b5e66" }}>לחיצה על חדר במפה פותחת אותו ברשימה</span>`}</div>
+      <div className="brv" style=${{ height: "calc(var(--appvh, 100vh) - 230px)", border: "1px solid #e6e6e9", borderRadius: "12px", overflow: "hidden" }}>
+        <${FloorMap} map=${map} selected=${sel1?.room_no ?? null} onPick=${(n) => { const r = rooms.find((x) => x.floor === mapFloor && x.room_no === n); if (r) { setOpen(r.id); setMapFloor(null); setFloor(r.floor); setQ(""); } }} /></div></div>`;
+  }
+  return html`<div className="bra-rooms">
+    <div className="bra-row" style=${{ marginBottom: "8px" }}>
+      <select value=${floor} onChange=${(e) => setFloor(e.target.value)}><option value="">כל הקומות</option>${floors.map((f) => html`<option key=${f} value=${f}>${L.floor} ${f}</option>`)}</select>
+      <input type="search" placeholder="חיפוש חדר, שם, איפיון או הערה" value=${q} onInput=${(e) => setQ(e.target.value)} style=${{ minWidth: "220px" }} />
+      <label><input type="checkbox" checked=${onlyPending} onChange=${(e) => setOnlyPending(e.target.checked)} /> רק חדרים עם ממתינים</label>
+      <span style=${{ color: "#5b5e66" }}>${list.length} חדרים · ${marksN} איפיונים${shownPending.length ? ` · ${shownPending.length} ממתינים לאישור` : ""}</span>
+      <span style=${{ flex: 1 }} />
+      <button className="bra-btn" disabled=${exporting} title="כל החדרים שבסינון: מה שפורסם, מה שאושר וטרם פורסם, ומה שממתין לאישור בגרסאות" onClick=${() => doExport("xlsx")}>${exporting === "xlsx" ? "מכין…" : "ייצוא לאקסל"}</button>
+      <button className="bra-btn" disabled=${exporting} title="כרטיס לכל חדר — נפתח חלון הדפסה; לשמירה כ-PDF בוחרים 'שמירה כ-PDF'" onClick=${() => doExport("pdf")}>${exporting === "pdf" ? "מכין…" : "PDF"}</button>
+      <button className="bra-btn" onClick=${() => setMapFloor(floor || floors[0])}>תוכנית קומה</button>
+      <button className="bra-btn" disabled=${!groupsOk} title=${groupsOk ? "קבוצת חדרים עם אותם גמרים — מגדירים פעם אחת לכולם" : "צריך להריץ ב-Supabase את 005_room_groups.sql"} onClick=${() => setGEdit(gEdit === "new" ? null : "new")}>+ קבוצה חדשה</button>
+    </div>
+    ${gNotice.length ? html`<${Notice} onClose=${() => setGNotice([])}>${gNotice.map((t, i) => html`<div key=${i}>${t}</div>`)}</${Notice}>` : null}
+    ${gEdit === "new" ? html`<div className="bra-gnew"><${GroupEditor} projectId=${projectId} group=${null} floor=${floor || floors[0]} floors=${floors} rooms=${rooms} groups=${groups} catalog=${catalog} kindsAll=${kindsAll} lookup=${lookup}
+      onClose=${() => setGEdit(null)} onSaved=${() => { setGEdit(null); setTick((t) => t + 1); }} /></div>` : null}
+    <div className="bra-scroll"><table>
+      <thead><tr><th>${L.floor}</th><th>${L.room}</th><th>שם החדר</th><th>${L.area}</th><th>${KIND.FL.he}</th><th>${KIND.FN.he}</th><th>${KIND.CL.he}</th><th>${FIELD_HE.other}</th><th>הערות</th><th></th></tr></thead>
+      <tbody>${entries.map((e) => e.group ? groupRows(e.group) : roomRows(e.room, false))}</tbody></table></div>
+    <div className="bra-appx"><${RoomNote} projectId=${projectId} room=${{ floor: "*", room_no: "*" }} note=${notes.get("*|*")} ok=${notesOk} rows=${4}
+      title="נספח — הערות כלליות לפרויקט" placeholder="הערות שחלות על כל הפרויקט. בהדפסת ה-PDF הן יוצאות כדף אחרון." onSaved=${(n) => setNotes((m) => new Map(m).set("*|*", n))} /></div>
     <p style=${{ fontSize: "12px", color: "#5b5e66", margin: "6px 0 0" }}>השם, התיאור, התמונה והספק של כל איפיון נמשכים מה-LLI (שורות BY ROOM). * = נוסף ידנית. איפיון בצבע חום עם קו מקווקו = אין לו פירוט ב-LLI.</p>
   </div>`;
 }
 
 /** The administrator's note on a room: saved on "שמירה", goes into the Excel / PDF report, not to the client. */
-function RoomNote({ projectId, room, note, ok, onSaved }) {
+function RoomNote({ projectId, room, note, ok, onSaved, title = "הערות כלליות לחדר", rows = 2, placeholder = "למשל: נדרש לוודא גוון מול האדריכל" }) {
   const [v, setV] = useState(note?.note ?? "");
   const [state, setState] = useState(null);
   useEffect(() => { setV(note?.note ?? ""); }, [room.floor, room.room_no, note?.updated_at]);
@@ -1381,8 +1570,8 @@ function RoomNote({ projectId, room, note, ok, onSaved }) {
   };
   if (!ok) return html`<div style=${{ marginTop: "10px", fontSize: "12px", color: "#8a6d1f" }}>הערות לחדר: צריך להריץ פעם אחת ב-Supabase את <code>003_notes_choices.sql</code>.</div>`;
   return html`<div style=${{ marginTop: "12px" }}>
-    <div style=${{ fontWeight: 700, marginBottom: "4px" }}>הערות כלליות לחדר</div>
-    <textarea value=${v} rows="2" style=${{ width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: "13px" }} placeholder="למשל: נדרש לוודא גוון מול האדריכל"
+    <div style=${{ fontWeight: 700, marginBottom: "4px" }}>${title}</div>
+    <textarea value=${v} rows=${rows} style=${{ width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: "13px" }} placeholder=${placeholder}
       onClick=${(e) => e.stopPropagation()} onInput=${(e) => setV(e.target.value)} />
     <div style=${{ display: "flex", flexDirection: "column", alignItems: "center", gap: "4px", marginTop: "6px", textAlign: "center" }}>
       <button className="bra-btn primary" style=${{ minWidth: "140px" }} disabled=${!dirty || state === "saving"} onClick=${save}>${state === "saving" ? "שומר…" : "שמירה"}</button>
@@ -1534,7 +1723,7 @@ function previewApi(projectId, projectName, marks, brand) {
     home: async () => {
       const r = must(await supabase.from("byroom_rooms").select("floor, room_no, name").eq("project_id", projectId).eq("status", "active"));
       const floors = [...new Set(r.map((x) => x.floor))].sort((a, b) => Number(a) - Number(b));
-      return { project: { name: projectName, clientLogo: brand?.clientLogo, supervisionLogo: brand?.supervisionLogo, categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he })), roomNotes: await roomNotesFor(projectId) },
+      return { project: { name: projectName, clientLogo: brand?.clientLogo, supervisionLogo: brand?.supervisionLogo, categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he })), roomNotes: await roomNotesFor(projectId), roomGroups: await roomGroupsFor(projectId) },
         floors: floors.map((f) => ({ floor: f, rooms: r.filter((x) => x.floor === f).map((x) => ({ n: x.room_no, name: x.name })) })) };
     },
     floor: async (f) => {
@@ -1549,10 +1738,15 @@ function previewApi(projectId, projectName, marks, brand) {
 }
 
 /** The general room notes, as {"floor|room": note}: they go to the client with the publish (build 13). */
+/** Room groups for the client: [{floor, name, rooms}] (build 17). */
+async function roomGroupsFor(projectId) {
+  const { data, error } = await supabase.from("byroom_room_groups").select("floor, name, rooms").eq("project_id", projectId);
+  return error ? [] : (data ?? []).filter((g) => g.rooms?.length);
+}
 async function roomNotesFor(projectId) {
   const { data, error } = await supabase.from("byroom_room_notes").select("floor, room_no, note").eq("project_id", projectId);
   if (error) return {};
-  return Object.fromEntries((data ?? []).filter((n) => n.note?.trim()).map((n) => [n.floor + "|" + n.room_no, n.note.trim()]));
+  return Object.fromEntries((data ?? []).filter((n) => n.note?.trim() && n.floor !== "*").map((n) => [n.floor + "|" + n.room_no, n.note.trim()]));
 }
 
 async function publishNow(projectId, projectName, marks, brand) {
@@ -1560,9 +1754,10 @@ async function publishNow(projectId, projectName, marks, brand) {
   try {
     await syncMarks(projectId, marks);
     const roomNotes = await roomNotesFor(projectId);
+    const roomGroups = await roomGroupsFor(projectId);
     const r = must(await supabase.rpc("byroom_publish", { p_project: projectId, p_meta: {
       name: projectName, clientLogo: brand?.clientLogo ?? null, supervisionLogo: brand?.supervisionLogo ?? null,
-      categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he, en: c.en })), roomNotes } }));
+      categories: CATS.map((c) => ({ key: kindOfCat(c.key), he: c.he, en: c.en })), roomNotes, roomGroups } }));
     alert(`פורסם: ${r.rooms} חדרים ב-${r.floors} קומות.`);
   } catch (e) { alert(e.message); }
 }
