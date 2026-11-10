@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 17 · 10.11.2026
+//  byroom build 18 · 10.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 17 · 10.11.2026";
+export const BYROOM_BUILD = "byroom build 18 · 10.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -1114,47 +1114,58 @@ function exportPdf(rows, title, projectName, brand, floor, groupOf = () => null,
   const badge = (st) => `<span class="st ${st === ST_PUB ? "pub" : st === ST_APPROVED ? "ok" : "wait"}">${esc(st)}</span>`;
   const logo = brand?.brandLogo ? `<img class="logo" src="${esc(brand.brandLogo)}" alt="">` : `<b class="logo-t">א. וייס הנדסה</b>`;
   const today = new Date().toLocaleDateString("he-IL");
+  // every printed page of a room repeats its header and the black line (thead), and the footer (tfoot)
+  const page = (head, body) => `<section class="page"><table class="pg"><thead><tr><td>${head}</td></tr></thead>
+    <tfoot><tr><td><footer dir="rtl"><bdi>By RooM</bdi> · <bdi>${esc(projectName)}</bdi> · <bdi>${today}</bdi></footer></td></tr></tfoot>
+    <tbody><tr><td>${body}</td></tr></tbody></table></section>`;
+  // the rooms of a group: ellipses in straight columns; a short last row sits in the middle columns
+  const roomGrid = (nums) => {
+    const N = Math.min(8, nums.length), last = nums.length % N, start = nums.length - last;
+    const off = last ? Math.floor((N - last) / 2) : 0;
+    return `<div class="gtitle">חדרים בקבוצה</div><div class="ggrid" style="grid-template-columns:repeat(${N},19mm)">${nums.map((n, i) =>
+      `<span${i === start && off ? ` style="grid-column-start:${off + 1}"` : ""}><bdi dir="ltr">${esc(n)}</bdi></span>`).join("")}</div>`;
+  };
   const pages = [...rooms.values()].map((r) => {
     const kinds = [...new Set(r.items.map((i) => i.kind))].sort(kindOrder);
-    const body = kinds.map((k) => `<h3>${esc(catHe(k))}</h3><table><thead><tr><th class="v"></th><th class="code">מס' איפיון</th><th>איפיון</th><th class="img">תמונה</th><th class="nt">הערה</th></tr></thead><tbody>${r.items.filter((i) => i.kind === k).map((i) => `<tr>
-      <td class="v">${i.verified ? '<span class="ok">✓</span>' : ""}</td>
+    const body = kinds.map((k) => `<div class="cat"><h3>${esc(catHe(k))}</h3><table class="it"><thead><tr><th class="v"></th><th class="code">מס' איפיון</th><th>איפיון</th><th class="img">תמונה</th><th class="nt">הערה</th></tr></thead><tbody>${r.items.filter((i) => i.kind === k).map((i) => `<tr>
+      <td class="v"><span class="vc${i.verified ? "" : " no"}">✓</span></td>
       <td class="code" dir="ltr">${esc(i.code)}</td>
       <td class="txt">${i.mname ? `<b>${esc(i.mname)}</b>` : ""}${i.desc ? `<div>${esc(i.desc).replace(/\n/g, "<br>")}</div>` : ""}${i.supplier ? `<div class="sup">ספק: ${esc(i.supplier)}</div>` : ""}${i.state !== ST_PUB && i.state !== ST_APPROVED ? `<div>${badge(i.state)}</div>` : ""}</td>
       <td class="img">${i.image ? `<img src="${esc(i.image)}" alt="">` : ""}</td>
-      <td class="nt">${esc(i.mnote).replace(/\n/g, "<br>")}</td></tr>`).join("")}</tbody></table>`).join("");
-    return `<section class="page">
-      <header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div>${r.name ? `<div class="rnm">${esc(r.name)}</div>` : ""}</div>
-        <div class="l"><div class="fl">קומה ${esc(r.floor)}</div>${r.group ? `<div class="rn gr">${r.members.length} חדרים</div>` : `<div class="rn" dir="ltr">${esc(r.room)}</div>`}${r.area ? `<div class="fl">${Math.round(Number(r.area) * 10) / 10} מ"ר</div>` : ""}</div></header>
-      ${r.group ? `<div class="grooms"><b>חדרים בקבוצה:</b> ${r.members.map((m) => `<span><bdi dir="ltr">${esc(m.room)}</bdi>${m.name ? ` ${esc(m.name)}` : ""}</span>`).join("")}</div>` : ""}
+      <td class="nt">${esc(i.mnote).replace(/\n/g, "<br>")}</td></tr>`).join("")}</tbody></table></div>`).join("");
+    const head = `<header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div>${r.name ? `<div class="rnm">${esc(r.name)}</div>` : ""}</div>
+        <div class="l"><div class="fl">קומה ${esc(r.floor)}</div>${r.group ? `<div class="rn gr">${r.members.length} חדרים</div>` : `<div class="rn" dir="ltr">${esc(r.room)}</div>`}${r.area ? `<div class="fl">${Math.round(Number(r.area) * 10) / 10} מ"ר</div>` : ""}</div></header>`;
+    return page(head, `${r.group ? roomGrid(r.members.map((m) => m.room)) : ""}
       ${body || '<p class="none">אין איפיונים לחדר הזה</p>'}
-      ${r.note ? `<div class="gnote"><b>הערות כלליות:</b><div>${esc(r.note).replace(/\n/g, "<br>")}</div></div>` : ""}
-      <footer dir="rtl"><bdi>By RooM</bdi> · <bdi>${esc(projectName)}</bdi> · <bdi>${today}</bdi></footer>
-    </section>`;
-  }).join("") + (appendix.trim() ? `<section class="page">
-      <header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div><div class="rnm">נספח — הערות כלליות</div></div><div class="l"></div></header>
-      <div class="appx">${esc(appendix).replace(/\n/g, "<br>")}</div>
-      <footer dir="rtl"><bdi>By RooM</bdi> · <bdi>${esc(projectName)}</bdi> · <bdi>${today}</bdi></footer></section>` : "");
+      ${r.note ? `<div class="gnote"><b>הערות כלליות:</b><div>${esc(r.note).replace(/\n/g, "<br>")}</div></div>` : ""}`);
+  }).join("") + (appendix.trim() ? page(`<header><div class="r">${logo}</div><div class="c"><div class="pn">${esc(projectName)}</div><div class="rnm">נספח — הערות כלליות</div></div><div class="l"></div></header>`,
+      `<div class="appx">${esc(appendix).replace(/\n/g, "<br>")}</div>`) : "");
   printPage(title, `<style>
     @page{size:A4;margin:12mm}body{margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .page{break-after:page;page-break-after:always;position:relative;min-height:268mm;padding-bottom:10mm;box-sizing:border-box}
+    .page{break-after:page;page-break-after:always}
+    table.pg{width:100%;border-collapse:collapse}.pg>thead>tr>td,.pg>tbody>tr>td,.pg>tfoot>tr>td{padding:0;border:0;vertical-align:top}
+    .pg>thead{display:table-header-group}.pg>tfoot{display:table-footer-group}
+    .cat{break-inside:avoid;page-break-inside:avoid}.it tr{break-inside:avoid;page-break-inside:avoid}
     .page:last-child{break-after:auto;page-break-after:auto}
     header{display:flex;align-items:center;justify-content:space-between;border-bottom:2.5px solid #14181f;padding-bottom:4mm;margin-bottom:5mm}
     header .r,header .l{width:55mm}header .l{text-align:center;display:flex;flex-direction:column;align-items:center;margin-inline-start:auto;max-width:40mm}header .c{flex:1;text-align:center}
     .logo{max-height:18mm;max-width:55mm;object-fit:contain}.logo-t{font-size:16px}
     .pn{font-size:18px;font-weight:700}.rnm{font-size:16px;font-weight:600;margin-top:1mm}
     .fl{font-size:13px;color:#5b5e66}.rn{font-size:30px;font-weight:800;line-height:1.1}.rn.gr{font-size:20px}
-    .grooms{font-size:11.5px;margin:-2mm 0 3mm;line-height:1.9}.grooms span{display:inline-block;border:1px solid #d9d4f5;background:#f4f2fd;border-radius:3mm;padding:0 2.5mm;margin:0 0 1mm 1.5mm}
+    .gtitle{text-align:center;font-weight:700;font-size:13px;margin:-1mm 0 2mm}
+    .ggrid{display:grid;gap:2mm 2.5mm;justify-content:center;margin:0 auto 4mm;direction:rtl}
+    .ggrid span{display:block;text-align:center;border:1px solid #b5d4f4;background:#e6f1fb;color:#0c447c;border-radius:4mm;padding:1mm 0;font-size:12px;font-weight:600}
     .appx{font-size:13px;line-height:1.8;white-space:normal}
     
     h3{font-size:14px;margin:3mm 0 1.5mm;padding:1mm 2mm;background:#eef1f5;border-radius:1.5mm}
-    table{width:100%;border-collapse:collapse}th{font-size:10.5px;color:#5b5e66;text-align:right;font-weight:600;border-bottom:1px solid #c9ccd2;padding:1mm 1.5mm}
-    td{vertical-align:top;padding:2mm 1.5mm;border-bottom:1px solid #e6e8ec;font-size:11.5px}
-    .v{width:7mm;text-align:center}td.v{vertical-align:middle}.ok{display:inline-block;width:5mm;height:5mm;border-radius:50%;background:#2e9e57;color:#fff;font-size:10px;line-height:5mm;text-align:center}
+    table.it{width:100%;border-collapse:collapse}.it th{font-size:10.5px;color:#5b5e66;text-align:right;font-weight:600;border-bottom:1px solid #c9ccd2;padding:1mm 1.5mm}
+    .it td{vertical-align:top;padding:2mm 1.5mm;border-bottom:1px solid #e6e8ec;font-size:11.5px}
+    .v{width:7mm;text-align:center}.it td.v{vertical-align:middle}.vc{display:inline-block;width:5mm;height:5mm;border-radius:50%;background:#2e9e57;color:#fff;font-size:10px;line-height:5mm;text-align:center}.vc.no{background:#c9ccd2}
     td.code,th.code{width:22mm;text-align:center}td.code{font-weight:700}th.img,td.img{width:26mm;text-align:center}td.img img{width:24mm;height:24mm;object-fit:contain}th.nt,td.nt{width:40mm}td.nt{color:#3b3e45}
     .sup{color:#5b5e66;margin-top:1mm}.none{color:#9a9da5;font-size:12px}
     .gnote{margin-top:5mm;border:1px solid #c9ccd2;border-radius:2mm;padding:3mm;font-size:12px}
     .st{font-size:9.5px;border-radius:8px;padding:0 6px;white-space:nowrap}.st.ok{background:#e7eef8;color:#1d5fa8}.st.wait{background:#fff1d6;color:#8a5a00}
-    footer{position:absolute;bottom:0;left:0;right:0;font-size:9.5px;color:#9a9da5;text-align:center;border-top:1px solid #e6e8ec;padding-top:1.5mm}
+    footer{margin-top:5mm;font-size:9.5px;color:#9a9da5;text-align:center;border-top:1px solid #e6e8ec;padding-top:1.5mm}
   </style>${pages}`);
 }
 
