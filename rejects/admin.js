@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from 
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 14 · 11.11.2026";
+export const REJECTS_BUILD = "rejects build 15 · 12.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -729,7 +729,22 @@ const MERGE_JS = `<script>
   }
   Object.defineProperty(window, "__awPaged", { configurable: true,
     get: function () { return v; },
-    set: function (x) { if (x === true && !v) { try { merge(); } catch (e) {} } v = x; } });
+    // the full photos come over the network: the printout waits until every
+    // one has arrived (up to two minutes), so none prints blank
+    set: function (x) {
+      if (x === true && !v) {
+        try { merge(); } catch (e) {}
+        var left = Array.prototype.filter.call(document.querySelectorAll("#pages img"), function (im) { return !im.complete; });
+        if (left.length) {
+          var n = left.length, fin = false;
+          var end = function () { if (!fin) { fin = true; v = true; } };
+          left.forEach(function (im) { var one = function () { if (--n <= 0) end(); }; im.addEventListener("load", one); im.addEventListener("error", one); });
+          setTimeout(end, 120000);
+          return;
+        }
+      }
+      v = x;
+    } });
 })();
 <\/script>`;
 // 11.11.26 (build 13) — the layout of the printout is hers to set, per page
@@ -790,8 +805,12 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
   const plBox = photoBox(share("plans") || 10, wide, plansPer);
   const colg = cols.map((c) => `<col style="width:${c[2].toFixed(2)}%">`).join("");
   const imgs = (arr, cls) => (arr || []).map((p) => {
-    const im = `<img class="ph ${cls || ""}" src="${p.thumb}" alt="">`;
+    // 12.11.26 (build 15) — the PDF carries the full photo (1600px, the copy in
+    // storage), not the 480px thumbnail kept on the row: zoomed in, the
+    // thumbnail was a blur and a plan could not be read. The thumbnail is only
+    // the fallback for a photo whose upload never reached storage.
     const url = p.path && links[p.path];
+    const im = `<img class="ph ${cls || ""}" src="${url || p.thumb}" alt="">`;
     return url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${im}</a>` : im;
   }).join("");
   const cell = (r, k) => {
@@ -859,7 +878,17 @@ ${footBlock}</div><div id="pages"></div>${MERGE_JS}${paginateJs ? paginateJs(pri
   if (printLists.docOnly) return doc;
   if (!w) return;
   w.document.open(); w.document.write(doc); w.document.close(); w.focus();
-  if (whenPaged) whenPaged(w, 300); else setTimeout(() => { try { w.print(); } catch (e) {} }, 800);
+  // 12.11.26 — the full photos take longer than the shared 12-second wait: the
+  // print dialog opens when the pages are final and every photo has arrived
+  // (MERGE_JS holds __awPaged back until then), at most two and a half minutes.
+  const t0 = Date.now();
+  const tick = () => {
+    let ready = false;
+    try { ready = !!w.__awPaged; } catch (e) { ready = true; }
+    if (ready || Date.now() - t0 > 150000) { setTimeout(() => { try { w.print(); } catch (e) {} }, 300); return; }
+    setTimeout(tick, 200);
+  };
+  setTimeout(tick, 300);
 }
 
 // ----------------------------------------------------------------------------- Excel: one sheet per list
