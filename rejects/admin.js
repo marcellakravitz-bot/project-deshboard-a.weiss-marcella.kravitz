@@ -21,13 +21,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
 import {
-  Plus, Printer, FileDown, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save, SlidersHorizontal, RotateCcw,
+  Plus, Printer, FileDown, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save, SlidersHorizontal, RotateCcw, Eye,
 } from "lucide-react";
 import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 15 · 12.11.2026";
+export const REJECTS_BUILD = "rejects build 16 · 12.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -131,6 +131,13 @@ const css = `
 .rj .rjMinSum{flex:1;min-height:70px;resize:vertical;font:inherit;font-size:13px}
 .rj .rjMinDel{border:0;background:transparent;color:#9aa0aa;cursor:pointer;padding:2px}.rj .rjMinDel:hover{color:#c0392b}
 @media (max-width:760px){.rj .rjMin{grid-template-columns:1fr}}
+.rjPrev{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:18px}
+.rjPrevBox{background:#fff;border-radius:14px;width:min(1180px,100%);height:100%;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.3)}
+.rjPrevHead{display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #e6e8ec}
+.rjPrevHead b{font-size:15px;color:#103460;margin-inline-end:8px}
+.rjPrevNote{text-align:center;font-size:12px;color:#6b7280;padding:4px 0 6px}
+.rjPrevFrame{flex:1;width:100%;border:0;background:#8a8f98}
+.rjPrevWait{flex:1;display:flex;align-items:center;justify-content:center;color:#6b7280;margin:0}
 .rj .rjOrient .pgIco.tall{width:9px;height:12px}.rj .rjOrient .pgIco.wide{width:12px;height:9px}
 .rj input.rjPick{accent-color:var(--accent,#0F3460)}
 .rj .rjTitle{font-weight:800;font-size:16px;margin-inline-end:auto}
@@ -258,6 +265,44 @@ export function LayoutPanel({ wide, cols, layout, onChange, onClose }) {
   </div>`;
 }
 
+// 12.11.26 (build 16) — a preview of the printout before exporting it: the
+// pages as they will be dealt, with the small thumbnails (only the shape of the
+// form matters here; the PDF itself carries the full photos). The direction can
+// be switched in it, and "ייצוא PDF" exports from it.
+function PrintPreview({ build, wide, setOrient, onExport, onClose }) {
+  const [doc, setDoc] = useState("");
+  useEffect(() => {
+    let off = false; setDoc("");
+    build().then((d) => {
+      if (off || !d) return;
+      // grey desk, pages with a shadow, all of a page in view at the panel's width
+      const extra = `<style>html,body{background:#8a8f98!important}#pages{padding:14px 0}#pages .page{margin:0 auto 14px;box-shadow:0 2px 12px rgba(0,0,0,.35)}</style>
+<script>(function(){function fit(){var p=document.querySelector("#pages .page");var el=document.getElementById("pages");if(!p||!el)return;el.style.zoom="";var z=Math.min(1,(window.innerWidth-28)/p.offsetWidth);el.style.zoom=z;}window.addEventListener("resize",fit);var t=setInterval(function(){if(window.__awPaged){clearInterval(t);fit();}},120);})();<\/script>`;
+      setDoc(d.replace("</head>", extra + "</head>"));
+    }).catch((e) => console.warn("[rejects] preview", e));
+    return () => { off = true; };
+  }, [build]);
+  useEffect(() => {
+    const k = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k);
+  }, [onClose]);
+  return html`<div className="rjPrev" dir="rtl" onClick=${onClose}>
+    <div className="rjPrevBox" onClick=${(e) => e.stopPropagation()}>
+      <div className="rjPrevHead">
+        <b>תצוגה מקדימה</b>
+        <span className="rjOrient" role="group" aria-label="כיוון הדף">
+          <button type="button" className=${!wide ? "on" : ""} onClick=${() => setOrient("portrait")}><span className="pgIco tall"></span>לאורך</button>
+          <button type="button" className=${wide ? "on" : ""} onClick=${() => setOrient("landscape")}><span className="pgIco wide"></span>לרוחב</button>
+        </span>
+        <button type="button" className="rjBtn primary" onClick=${onExport}><${FileDown} size=${15} /><span>ייצוא PDF</span></button>
+        <button type="button" className="rjBtn" onClick=${onClose} title="סגירה (Esc)"><${X} size=${15} /><span>סגירה</span></button>
+      </div>
+      <div className="rjPrevNote">התמונות כאן מוקטנות — רק לראות את מבנה הטופס. ב-PDF הן מלאות וחדות.</div>
+      ${doc ? html`<iframe className="rjPrevFrame" title="תצוגה מקדימה" srcDoc=${doc}></iframe>` : html`<p className="rjPrevWait">מכין תצוגה…</p>`}
+    </div>
+  </div>`;
+}
+
 export function RejectsBoard({ projectId, projectName, projectEnd, printParts, currentEmail, subs }) {
   const [lists, setLists] = useState(null);
   const [err, setErr] = useState("");
@@ -273,6 +318,8 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   // 11.11.26 (build 13) — her own layout per direction: column widths and photos to a line
   const [layouts, setLayouts] = useState(() => ({ landscape: layoutLoad("landscape"), portrait: layoutLoad("portrait") }));
   const [layoutOpen, setLayoutOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const previewBuild = useRef({ key: null, fn: null });
   const setLayout = (v) => { setLayouts((cur) => ({ ...cur, [orient]: v })); layoutSave(orient, v); };           // listId -> { rowId: true }: rows taken out of print
   const [saveState, setSaveState] = useState("");
   const [toast, setToast] = useState("");
@@ -393,15 +440,21 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   forOut.forEach((l) => { if (someOff(l)) pickMap[l.id] = rowsOn(l); });
   const nOut = targets.length;
   const doPrint = () => printLists({ lists: forOut, rowPick: pickMap, projectName, projectEnd, landscape: orient !== "portrait", layout: layouts[orient], ...(printParts || {}) });
+  // the preview is rebuilt whenever what would print changes
+  const previewKey = previewOpen ? JSON.stringify([orient, layouts[orient], forOut.map((l) => [l.id, l.updated_at, (l.rows || []).length]), pickMap]) : "";
+  // (kept in a ref: this part of the board runs after the early return above,
+  // where no hook may be called)
+  if (previewBuild.current.key !== previewKey) {
+    const args = { lists: forOut, rowPick: pickMap, projectName, projectEnd, landscape: orient !== "portrait", layout: layouts[orient], ...(printParts || {}), docOnly: true };
+    previewBuild.current = { key: previewKey, fn: () => printLists(args) };
+  }
+  const buildPreview = previewBuild.current.fn;
   const doExcel = () => excelLists({ lists: forOut, rowPick: pickMap, projectName }).catch((e) => flash("הייצוא נכשל: " + (e.message || e)));
   const allPicked = lists.length > 0 && lists.every((l) => picked[l.id]);
 
   return html`<div className="rj" dir="rtl"><style>${css}</style>
     <div className="rjTop">
       <button type="button" className="rjBtn primary" onClick=${addList}><${Plus} size=${15} strokeWidth=${2.4} /><span className="lbl">רשימה חדשה</span></button>
-      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doPrint}
-        title=${(orient === "portrait" ? "PDF לאורך" : "PDF לרוחב") + (nOut ? " — הרשימות והשורות המסומנות" : " — כל הרשימות")}>
-        <${FileDown} size=${15} /><span className="lbl">PDF${nOut ? ` (${nOut})` : ""}</span></button>
       <span className="rjOrient" role="group" aria-label="כיוון הדף">
         <button type="button" className=${orient === "portrait" ? "on" : ""} onClick=${() => setOrient("portrait")} title="הדפסה לאורך">
           <span className="pgIco tall"></span>לאורך</button>
@@ -410,12 +463,19 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
       </span>
       <button type="button" className=${"rjBtn" + (layoutOpen ? " on" : "")} disabled=${!lists.length} onClick=${() => setLayoutOpen((v) => !v)}
         title="רוחב העמודות וגודל התמונות בהדפסה"><${SlidersHorizontal} size=${15} /><span className="lbl">פריסה</span></button>
+      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${() => setPreviewOpen(true)}
+        title="איך הטופס ייראה בהדפסה"><${Eye} size=${15} /><span className="lbl">תצוגה מקדימה</span></button>
+      <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doPrint}
+        title=${(orient === "portrait" ? "PDF לאורך" : "PDF לרוחב") + (nOut ? " — הרשימות והשורות המסומנות" : " — כל הרשימות")}>
+        <${FileDown} size=${15} /><span className="lbl">PDF${nOut ? ` (${nOut})` : ""}</span></button>
       <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doExcel}
         title=${nOut ? "אקסל — הרשימות והשורות המסומנות" : "אקסל — כל הרשימות"}>
         <${FileSpreadsheet} size=${15} /><span className="lbl">אקסל${nOut ? ` (${nOut})` : ""}</span></button>
     </div>
     ${layoutOpen && lists.length > 0 && html`<${LayoutPanel} wide=${orient !== "portrait"} cols=${printColumns(forOut, orient !== "portrait", layouts[orient])}
       layout=${layouts[orient]} onChange=${setLayout} onClose=${() => setLayoutOpen(false)} />`}
+    ${previewOpen && lists.length > 0 && html`<${PrintPreview} build=${buildPreview} wide=${orient !== "portrait"} setOrient=${setOrient}
+      onExport=${() => { setPreviewOpen(false); doPrint(); }} onClose=${() => setPreviewOpen(false)} />`}
     ${err && html`<p className="rjErr">${err}</p>`}
     <div className="lliTableWrap rjTableWrap"><table className="lliTable">
       <colgroup><col style=${{ width: 56 }} /><col /><col style=${{ width: 130 }} /><col style=${{ width: 90 }} /><col style=${{ width: 90 }} /><col style=${{ width: 60 }} /></colgroup>
@@ -783,15 +843,16 @@ function photoBox(sharePct, wide, k) {
   return { w, h: Math.round(w * 0.77) };
 }
 
-export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged, landscape = true, layout }) {
+export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged, landscape = true, layout, docOnly }) {
+  const only = !!(docOnly || printLists.docOnly);
   // 11.11.26 — upright (portrait) is a narrower page: the text columns take a
   // larger share, the photos are smaller (three to a line, two lines to a piece).
   const wide = landscape !== false;
   // The window opens on the click itself; a window opened after an await is one
   // the browser blocks as a pop-up.
-  const w = printLists.docOnly ? null : window.open("", "_blank");
+  const w = only ? null : window.open("", "_blank");
   if (w) { try { w.document.write('<p dir="rtl" style="font-family:Arial;padding:24px">מכין את ה-PDF…</p>'); } catch (e) {} }
-  const links = printLists.docOnly ? {} : await signedLinks(lists, rowPick, projectEnd);
+  const links = only ? {} : await signedLinks(lists, rowPick, projectEnd);
   const b = brand || {};
   const acc = WEISS_NAVY;
   const single = lists.length === 1;
@@ -875,7 +936,7 @@ img.ph.pl { width: ${plBox.w}px; height: ${plBox.h}px; }
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div>${dateLine ? `<div class="dt">${esc(dateLine)}</div>` : ""}</div>${clientLogo}${minBlock}</div>
 <table><colgroup>${colg}</colgroup><thead><tr>${cols.map((c) => `<th>${esc(c[1])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
 ${footBlock}</div><div id="pages"></div>${MERGE_JS}${paginateJs ? paginateJs(printedStampText("he")) : ""}</body></html>`;
-  if (printLists.docOnly) return doc;
+  if (only) return doc;
   if (!w) return;
   w.document.open(); w.document.write(doc); w.document.close(); w.focus();
   // 12.11.26 — the full photos take longer than the shared 12-second wait: the
