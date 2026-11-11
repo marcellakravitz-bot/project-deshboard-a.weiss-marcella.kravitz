@@ -21,13 +21,13 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import htm from "https://esm.sh/htm@3.1.1";
 import {
-  Plus, Printer, FileDown, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save,
+  Plus, Printer, FileDown, FileSpreadsheet, Trash2, Camera, Upload, ClipboardPaste, X, ChevronDown, ChevronLeft, Save, SlidersHorizontal, RotateCcw,
 } from "lucide-react";
 import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from "../sign.js";
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 12 · 11.11.2026";
+export const REJECTS_BUILD = "rejects build 14 · 11.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -42,6 +42,22 @@ const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(
 const fmt = (d) => { const s = String(d || "").slice(0, 10).split("-"); return s.length === 3 ? `${s[2]}/${s[1]}/${s[0]}` : ""; };
 const esc = (v) => String(v == null ? "" : v).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 const blankRow = () => ({ id: uid("r"), floor: "", desc: "", owner: "", due: "", photos: [], plans: [], notes: [], done: false });
+// 11.11.26 (build 14) — the minutes of a meeting: who was there, a line per
+// party ("א. וייס" — "מאור אליהו, מרסלה קרביץ"), and a general summary. They
+// live in rejects_lists.minutes ({ people: [{ g, n }], summary }). A list from
+// before keeps its one line of attendees, shown as one line with no party.
+const peopleOf = (l) => {
+  const m = (l && l.minutes) || {};
+  const ppl = (Array.isArray(m.people) ? m.people : []).map((p) => ({ g: String((p && p.g) || ""), n: String((p && p.n) || "") }));
+  if (ppl.length || m.people) return ppl;
+  const old = String((l && l.attendees) || "").trim();
+  return old ? [{ g: "", n: old }] : [];
+};
+const filledPeople = (l) => peopleOf(l).filter((p) => p.g.trim() || p.n.trim());
+const personLine = (p) => (p.g.trim() && p.n.trim() ? `${p.g.trim()} - ${p.n.trim()}` : (p.g.trim() || p.n.trim()));
+// the one-line form, for the subcontractor app and the band of a list printed with others
+const attText = (l) => filledPeople(l).map(personLine).join(" · ");
+const summaryOf = (l) => String(((l && l.minutes) || {}).summary || "").trim();
 const colsOf = (l) => ({ n: true, desc: true, floor: true, owner: true, due: true, photos: true, plans: true, notes: true, done: true, ...((l && l.cols) || {}) });
 
 // ----------------------------------------------------------------------------- pictures
@@ -91,6 +107,30 @@ const css = `
 .rj .rjOrient button+button{border-inline-start:1px solid #d5d9df}
 .rj .rjOrient button.on{background:#1A559E;color:#fff}
 .rj .rjOrient .pgIco{display:inline-block;border:1.6px solid currentColor;border-radius:2px}
+.rj .rjBtn.on{background:#eef3fa;border-color:#1A559E;color:#1A559E}
+.rj .rjLayout{max-width:820px;margin:0 auto 14px;border:1px solid #d5d9df;border-radius:12px;background:#fff;padding:12px 14px;box-shadow:0 2px 10px rgba(16,52,96,.06)}
+.rj .rjLayHead{text-align:center;margin-bottom:10px}.rj .rjLayHead b{display:block;color:#103460;font-size:14px}
+.rj .rjLayHint{font-size:12px;color:#6b7280}
+.rj .rjLayBar{position:relative;display:flex;margin:0 auto;border:1.5px solid #1A559E;border-radius:6px;overflow:visible;height:64px;user-select:none;touch-action:none}
+.rj .rjLayBar.wide{width:100%}.rj .rjLayBar.tall{width:72%}
+.rj .rjLaySeg{display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#f4f6f9;border-inline-start:1px solid #d5d9df;font-size:11px;min-width:0}
+.rj .rjLaySeg:first-child{border-inline-start:0}.rj .rjLaySeg.ph{background:#e6eef8}
+.rj .rjLaySeg .t{font-weight:700;color:#103460;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;padding:0 2px}
+.rj .rjLaySeg .p{color:#6b7280;font-size:10px}
+.rj .rjLayDiv{position:absolute;top:-4px;bottom:-4px;width:10px;cursor:col-resize;z-index:2}
+.rj .rjLayDiv::after{content:"";position:absolute;top:0;bottom:0;left:4px;width:2px;background:#1A559E;border-radius:2px}
+.rj .rjLayDiv:hover::after{left:3px;width:4px}
+.rj .rjLayRow{display:flex;justify-content:center;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:12.5px}
+.rj .rjLayLbl{font-weight:700;color:#3d4350}.rj .rjLaySize{color:#6b7280}
+.rj .rjMin{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 8px}
+.rj .rjMinBox{background:#f4f6f9;border:1px solid #dfe3ea;border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+.rj .rjMinTtl{display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;color:#17181c}
+.rj .rjMinAdd{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;border:1px solid #1A559E;background:#fff;color:#1A559E;cursor:pointer}
+.rj .rjMinRow{display:grid;grid-template-columns:1fr 2fr 28px;gap:6px;align-items:center}
+.rj .rjMinRow .lliIn,.rj .rjMinSum{font-size:13px;text-align:start;width:100%;box-sizing:border-box}
+.rj .rjMinSum{flex:1;min-height:70px;resize:vertical;font:inherit;font-size:13px}
+.rj .rjMinDel{border:0;background:transparent;color:#9aa0aa;cursor:pointer;padding:2px}.rj .rjMinDel:hover{color:#c0392b}
+@media (max-width:760px){.rj .rjMin{grid-template-columns:1fr}}
 .rj .rjOrient .pgIco.tall{width:9px;height:12px}.rj .rjOrient .pgIco.wide{width:12px;height:9px}
 .rj input.rjPick{accent-color:var(--accent,#0F3460)}
 .rj .rjTitle{font-weight:800;font-size:16px;margin-inline-end:auto}
@@ -112,7 +152,7 @@ const css = `
 .rj textarea.rjIn{min-height:54px;resize:vertical}
 .rj tr.ok .rjIn{background:#f4fbf5}
 .rj input[type=checkbox]{width:17px;height:17px;cursor:pointer;accent-color:#1f7a3e}
-.rj .rjHead{display:grid;grid-template-columns:2fr 1fr 3fr;gap:10px;background:#fff;border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:10px 12px;margin:8px 0}
+.rj .rjHead{display:grid;grid-template-columns:3fr 1fr;gap:10px;background:#fff;border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:10px 12px;margin:8px 0}
 .rj .rjHead label{display:flex;flex-direction:column;gap:3px;font-size:11.5px;font-weight:700;color:var(--steel,#5b5e66);text-align:start}
 .rj .rjOpen{padding:10px 10px 16px;background:#fafbfc}
 .rj .shots{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;align-items:center;min-height:40px;outline:none;border-radius:8px;padding:3px}
@@ -171,6 +211,53 @@ const css = `
 `;
 
 // ----------------------------------------------------------------------------- the module
+// The print-layout panel: a strip shaped like the page, one block per printed
+// column; drag a border between two blocks to give one more of the width and
+// the other less. Under it: photos to a line, and the size that gives them.
+export function LayoutPanel({ wide, cols, layout, onChange, onClose }) {
+  const bar = useRef(null);
+  const [live, setLive] = useState(null);                // the shares while dragging
+  const shares = live || cols.map((c) => c[2]);
+  const per = Math.max(1, Math.min(6, +((layout && layout.per) || PER_LINE_DEFAULT)));
+  const iPh = cols.findIndex((c) => c[0] === "photos");
+  const box = iPh >= 0 ? photoBox(shares[iPh], wide, per) : null;
+  const commit = (arr) => onChange({ ...(layout || {}), w: Object.fromEntries(cols.map((c, i) => [c[0], +arr[i].toFixed(2)])) });
+  const startDrag = (i) => (e) => {
+    e.preventDefault();
+    const el = bar.current; if (!el) return;
+    const width = el.getBoundingClientRect().width || 1;
+    const x0 = e.clientX, base = shares.slice();
+    let cur = base;
+    const move = (ev) => {
+      // right to left: block i sits to the right of the border, i+1 to its left;
+      // moving the border left widens block i
+      const d = ((x0 - ev.clientX) / width) * 100;
+      const a = Math.max(2, Math.min(base[i] + base[i + 1] - 2, base[i] + d));
+      cur = base.slice(); cur[i] = a; cur[i + 1] = base[i] + base[i + 1] - a;
+      setLive(cur);
+    };
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); setLive(null); commit(cur); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  };
+  let acc = 0;
+  return html`<div className="rjLayout" dir="rtl">
+    <div className="rjLayHead"><b>פריסת ההדפסה — ${wide ? "לרוחב" : "לאורך"}</b>
+      <span className="rjLayHint">גררי את הקו בין שתי עמודות כדי להרחיב אחת ולצמצם את השכנה. נשמר לכל כיוון דף בנפרד.</span></div>
+    <div className=${"rjLayBar " + (wide ? "wide" : "tall")} ref=${bar}>
+      ${cols.map((c, i) => html`<div key=${c[0]} className=${"rjLaySeg" + (c[0] === "photos" ? " ph" : "")} style=${{ width: shares[i] + "%" }}>
+        <span className="t">${c[1]}</span><span className="p">${Math.round(shares[i])}%</span></div>`)}
+      ${cols.slice(0, -1).map((c, i) => { acc += shares[i]; return html`<span key=${"d" + c[0]} className="rjLayDiv" style=${{ right: `calc(${acc}% - 5px)` }} onPointerDown=${startDrag(i)} title="גררי"></span>`; })}
+    </div>
+    <div className="rjLayRow">
+      ${iPh >= 0 && html`<span className="rjLayLbl">תמונות בשורה:</span>
+      <span className="rjOrient">${[2, 3, 4, 5].map((k) => html`<button type="button" key=${k} className=${per === k ? "on" : ""} onClick=${() => onChange({ ...(layout || {}), per: k })}>${k}</button>`)}</span>
+      <span className="rjLaySize">גודל תמונה בהדפסה: כ-${Math.round(box.w * 25.4 / 96)}×${Math.round(box.h * 25.4 / 96)} מ״מ</span>`}
+      <button type="button" className="rjBtn" onClick=${() => onChange({})} title="חזרה לפריסה הרגילה"><${RotateCcw} size=${14} /><span className="lbl">איפוס</span></button>
+      <button type="button" className="rjBtn" onClick=${onClose}><${X} size=${14} /><span className="lbl">סגירה</span></button>
+    </div>
+  </div>`;
+}
+
 export function RejectsBoard({ projectId, projectName, projectEnd, printParts, currentEmail, subs }) {
   const [lists, setLists] = useState(null);
   const [err, setErr] = useState("");
@@ -182,7 +269,11 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   // 11.11.26 (build 12) — the PDF prints across (landscape) or upright (portrait),
   // her choice, remembered on this computer; the columns are laid out for the page.
   const [orient, setOrientRaw] = useState(() => { try { return localStorage.getItem("rj-print-orient") === "portrait" ? "portrait" : "landscape"; } catch (e) { return "landscape"; } });
-  const setOrient = (v) => { setOrientRaw(v); try { localStorage.setItem("rj-print-orient", v); } catch (e) {} };           // listId -> { rowId: true }: rows taken out of print
+  const setOrient = (v) => { setOrientRaw(v); try { localStorage.setItem("rj-print-orient", v); } catch (e) {} };
+  // 11.11.26 (build 13) — her own layout per direction: column widths and photos to a line
+  const [layouts, setLayouts] = useState(() => ({ landscape: layoutLoad("landscape"), portrait: layoutLoad("portrait") }));
+  const [layoutOpen, setLayoutOpen] = useState(false);
+  const setLayout = (v) => { setLayouts((cur) => ({ ...cur, [orient]: v })); layoutSave(orient, v); };           // listId -> { rowId: true }: rows taken out of print
   const [saveState, setSaveState] = useState("");
   const [toast, setToast] = useState("");
   const dirty = useRef({});                           // listId -> true
@@ -219,11 +310,15 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
     const run = (runs.current[id] = (runs.current[id] || 0) + 1);
     delete dirty.current[id];
     const { error } = await supabase.from("rejects_lists").upsert({
-      id: l.id, project_id: projectId, name: l.name || "", list_date: l.list_date || null, attendees: l.attendees || "",
-      rows: l.rows || [], cols: l.cols || {}, viewers: l.viewers || [], created_at: l.created_at, updated_at: new Date().toISOString(), updated_by: currentEmail || null,
+      id: l.id, project_id: projectId, name: l.name || "", list_date: l.list_date || null, attendees: attText(l),
+      minutes: { people: peopleOf(l), summary: ((l.minutes || {}).summary) || "" }, rows: l.rows || [], cols: l.cols || {}, viewers: l.viewers || [], created_at: l.created_at, updated_at: new Date().toISOString(), updated_by: currentEmail || null,
     }, { onConflict: "id" });
     if (run !== runs.current[id]) return;
-    if (error) { dirty.current[id] = true; setErr("השמירה נכשלה: " + (error.message || "")); setSaveState(""); return; }
+    if (error) {
+      dirty.current[id] = true;
+      setErr(/minutes/.test(error.message || "") ? "חסרה עמודת הנוכחים/סיכום ב-Supabase — יש להריץ את rejects/supabase/002_minutes.sql" : "השמירה נכשלה: " + (error.message || ""));
+      setSaveState(""); return;
+    }
     console.info("[rejects] saved", id);
     setErr("");
   };
@@ -297,7 +392,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   const pickMap = {};
   forOut.forEach((l) => { if (someOff(l)) pickMap[l.id] = rowsOn(l); });
   const nOut = targets.length;
-  const doPrint = () => printLists({ lists: forOut, rowPick: pickMap, projectName, projectEnd, landscape: orient !== "portrait", ...(printParts || {}) });
+  const doPrint = () => printLists({ lists: forOut, rowPick: pickMap, projectName, projectEnd, landscape: orient !== "portrait", layout: layouts[orient], ...(printParts || {}) });
   const doExcel = () => excelLists({ lists: forOut, rowPick: pickMap, projectName }).catch((e) => flash("הייצוא נכשל: " + (e.message || e)));
   const allPicked = lists.length > 0 && lists.every((l) => picked[l.id]);
 
@@ -313,10 +408,14 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
         <button type="button" className=${orient !== "portrait" ? "on" : ""} onClick=${() => setOrient("landscape")} title="הדפסה לרוחב">
           <span className="pgIco wide"></span>לרוחב</button>
       </span>
+      <button type="button" className=${"rjBtn" + (layoutOpen ? " on" : "")} disabled=${!lists.length} onClick=${() => setLayoutOpen((v) => !v)}
+        title="רוחב העמודות וגודל התמונות בהדפסה"><${SlidersHorizontal} size=${15} /><span className="lbl">פריסה</span></button>
       <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doExcel}
         title=${nOut ? "אקסל — הרשימות והשורות המסומנות" : "אקסל — כל הרשימות"}>
         <${FileSpreadsheet} size=${15} /><span className="lbl">אקסל${nOut ? ` (${nOut})` : ""}</span></button>
     </div>
+    ${layoutOpen && lists.length > 0 && html`<${LayoutPanel} wide=${orient !== "portrait"} cols=${printColumns(forOut, orient !== "portrait", layouts[orient])}
+      layout=${layouts[orient]} onChange=${setLayout} onClose=${() => setLayoutOpen(false)} />`}
     ${err && html`<p className="rjErr">${err}</p>`}
     <div className="lliTableWrap rjTableWrap"><table className="lliTable">
       <colgroup><col style=${{ width: 56 }} /><col /><col style=${{ width: 130 }} /><col style=${{ width: 90 }} /><col style=${{ width: 90 }} /><col style=${{ width: 60 }} /></colgroup>
@@ -356,6 +455,32 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
 }
 
 // ----------------------------------------------------------------------------- one list
+// Who was there (a line per party, + adds a line) beside the general summary.
+// Both are left out of the printout while empty.
+function Minutes({ list, edit }) {
+  const ppl = peopleOf(list);
+  const setPeople = (fn) => edit((l) => ({ ...l, minutes: { ...(l.minutes || {}), people: fn(peopleOf(l)) } }));
+  const shown = ppl.length ? ppl : [{ g: "", n: "" }];
+  return html`<div className="rjMin">
+    <div className="rjMinBox">
+      <div className="rjMinTtl"><b>נוכחים</b>
+        <button type="button" className="rjMinAdd" title="הוספת שורה" onClick=${() => setPeople((p) => (p.length ? p : [{ g: "", n: "" }]).concat([{ g: "", n: "" }]))}><${Plus} size=${14} strokeWidth=${2.6} /></button></div>
+      ${shown.map((p, i) => html`<div className="rjMinRow" key=${i}>
+        <input className="lliIn" placeholder="קבוצה — למשל א. וייס / פיקוח / יועץ חשמל" value=${p.g}
+          onChange=${(e) => setPeople((cur) => { const c = cur.length ? cur.slice() : [{ g: "", n: "" }]; c[i] = { ...c[i], g: e.target.value }; return c; })} />
+        <input className="lliIn" placeholder="שמות — למשל מאור אליהו, מרסלה קרביץ" value=${p.n}
+          onChange=${(e) => setPeople((cur) => { const c = cur.length ? cur.slice() : [{ g: "", n: "" }]; c[i] = { ...c[i], n: e.target.value }; return c; })} />
+        <button type="button" className="rjMinDel" title="מחיקת השורה" onClick=${() => setPeople((cur) => cur.filter((_, j) => j !== i))}><${Trash2} size=${14} /></button>
+      </div>`)}
+    </div>
+    <div className="rjMinBox">
+      <div className="rjMinTtl"><b>סיכום כללי</b></div>
+      <textarea className="lliIn rjMinSum" rows="4" placeholder="סיכום כללי של הפגישה / הסיור" value=${((list.minutes || {}).summary) || ""}
+        onChange=${(e) => edit((l) => ({ ...l, minutes: { ...(l.minutes || {}), people: peopleOf(l), summary: e.target.value } }))}></textarea>
+    </div>
+  </div>`;
+}
+
 function ListEditor({ list, projectId, projectName, subs, edit, flash, off, setOff, onSave, saveState }) {
   const cols = colsOf(list);
   const rows = list.rows || [];
@@ -379,8 +504,8 @@ function ListEditor({ list, projectId, projectName, subs, edit, flash, off, setO
       <label>שם הרשימה<input className="lliIn" style=${{ textAlign: "start", fontSize: 13 }} value=${list.name || ""} placeholder="למשל: ריג'קטים חשמל קומה 7"
         autoFocus=${!list.name} onChange=${(e) => edit((l) => ({ ...l, name: e.target.value }))} /></label>
       <label>תאריך<input className="lliIn" style=${{ fontSize: 13 }} type="date" value=${list.list_date || ""} onChange=${(e) => edit((l) => ({ ...l, list_date: e.target.value }))} /></label>
-      <label>נוכחים בסיור<input className="lliIn" style=${{ textAlign: "start", fontSize: 13 }} value=${list.attendees || ""} onChange=${(e) => edit((l) => ({ ...l, attendees: e.target.value }))} /></label>
     </div>
+    <${Minutes} list=${list} edit=${edit} />
     <${Viewers} value=${list.viewers || []} onChange=${(v) => edit((l) => ({ ...l, viewers: v }))} />
     <div className="lliTableWrap rjTableWrap"><table className="lliTable rjRows">
       <colgroup><col style=${{ width: 44 }} /><col style=${{ width: 62 }} /><col style=${{ width: 70 }} /><col style=${{ width: 230 }} />
@@ -555,19 +680,19 @@ function rowsFor(l, rowPick) {
 // dates isolated left-to-right, so a Hebrew line does not turn 03/11/2026 round
 const ltr = (s) => `⁦${s}⁩`;
 function infoLine(l) {
-  return [l.list_date ? `תאריך: ${ltr(fmt(l.list_date))}` : "", (l.attendees || "").trim() ? `נוכחים בסיור: ${l.attendees.trim()}` : ""]
+  return [l.list_date ? `תאריך: ${ltr(fmt(l.list_date))}` : "", attText(l) ? `נוכחים: ${attText(l)}` : ""]
     .filter(Boolean).join("  ·  ");
 }
 function secTitle(l) { return [l.name || "ללא שם", infoLine(l)].filter(Boolean).join("  ·  "); }
 // A row with more photos (or plans) than fit in one piece becomes several pieces.
-function piecesOf(r, per) {
-  const P = per || PHOTOS_PER_PIECE;
+function piecesOf(r, per, perPlans) {
+  const P = per || PHOTOS_PER_PIECE, Q = perPlans || P;
   const ph = r.photos || [], pl = r.plans || [];
-  const n = Math.max(1, Math.ceil(Math.max(ph.length, pl.length) / P));
+  const n = Math.max(1, Math.ceil(ph.length / P), Math.ceil(pl.length / Q));
   const out = [];
   for (let i = 0; i < n; i++) {
     out.push({ ...r, photos: ph.slice(i * P, (i + 1) * P),
-      plans: pl.slice(i * P, (i + 1) * P), cont: i > 0 });
+      plans: pl.slice(i * Q, (i + 1) * Q), cont: i > 0 });
   }
   return out;
 }
@@ -607,7 +732,43 @@ const MERGE_JS = `<script>
     set: function (x) { if (x === true && !v) { try { merge(); } catch (e) {} } v = x; } });
 })();
 <\/script>`;
-export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged, landscape = true }) {
+// 11.11.26 (build 13) — the layout of the printout is hers to set, per page
+// direction: the share of the width each column takes (dragged on the bar in
+// the "פריסה" panel) and how many photos go in one line. The photos then grow
+// to fill their column, so no white space is left beside them.
+const LAYOUT_DEFAULT = {
+  landscape: { n: 3.2, floor: 4.5, desc: 17, owner: 8, due: 7, photos: 44, photosWithPlans: 34, plans: 12, notes: 12, done: 4 },
+  portrait: { n: 4.2, floor: 5.8, desc: 20, owner: 9, due: 8.5, photos: 38, photosWithPlans: 31, plans: 10, notes: 14, done: 4.8 },
+};
+const PER_LINE_DEFAULT = 3;
+// the page geometry of printSheetCss: paper less the white edge, the frame's padding and border
+const pageGeom = (wide) => wide ? { marginMm: 7, padX: 5, framePad: "3mm 5mm", contentMm: 297 - 14 - 10 - 3 } : { marginMm: 6, padX: 4, framePad: "3mm 4mm", contentMm: 210 - 12 - 8 - 3 };
+function layoutLoad(orient) {
+  try { const v = JSON.parse(localStorage.getItem("rj-print-layout-" + orient) || "null"); return v && typeof v === "object" ? v : {}; } catch (e) { return {}; }
+}
+function layoutSave(orient, v) { try { localStorage.setItem("rj-print-layout-" + orient, JSON.stringify(v || {})); } catch (e) {} }
+// The printed columns, each with its share of the width (shares sum to 100).
+export function printColumns(lists, wide, layout) {
+  const on = {};
+  COLS.forEach(([k]) => { on[k] = lists.some((l) => colsOf(l)[k] !== false); });
+  const D = LAYOUT_DEFAULT[wide ? "landscape" : "portrait"];
+  const mine = (layout && layout.w) || {};
+  const label = { n: "מס\"ד", floor: "קומה", desc: "תיאור", owner: "אחריות", due: wide ? "מועד לביצוע" : "מועד ביצוע", photos: "תמונות", plans: "תוכנית", notes: "הערות", done: "טופל" };
+  const cols = COLS.filter(([k]) => on[k]).map(([k]) => {
+    const d = k === "photos" && on.plans ? D.photosWithPlans : D[k];
+    return [k, label[k], mine[k] > 0 ? mine[k] : d];
+  });
+  const total = cols.reduce((a, c) => a + c[2], 0) || 1;
+  return cols.map((c) => [c[0], c[1], (c[2] / total) * 100]);
+}
+// How large a photo may be in a column of the given share: k to a line, filling it.
+function photoBox(sharePct, wide, k) {
+  const px = (pageGeom(wide).contentMm * sharePct / 100) * 96 / 25.4 - 8;   // less the cell's padding and lines
+  const w = Math.max(36, Math.min(320, Math.floor((px - 2 * (k - 1)) / k) - 2));
+  return { w, h: Math.round(w * 0.77) };
+}
+
+export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged, landscape = true, layout }) {
   // 11.11.26 — upright (portrait) is a narrower page: the text columns take a
   // larger share, the photos are smaller (three to a line, two lines to a piece).
   const wide = landscape !== false;
@@ -619,25 +780,17 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
   const b = brand || {};
   const acc = WEISS_NAVY;
   const single = lists.length === 1;
-  const on = {};
-  COLS.forEach(([k]) => { on[k] = lists.some((l) => colsOf(l)[k] !== false); });
-  const cols = [];
-  const W = wide
-    ? { n: 3.2, floor: 4.5, desc: 17, owner: 8, due: 7, photos: on.plans ? 34 : 44, plans: 12, notes: 12, done: 4 }
-    : { n: 4.2, floor: 5.8, desc: 20, owner: 9, due: 8.5, photos: on.plans ? 31 : 38, plans: 10, notes: 14, done: 4.8 };
-  if (on.n) cols.push(["n", "מס\"ד", W.n]);
-  if (on.floor) cols.push(["floor", "קומה", W.floor]);
-  if (on.desc) cols.push(["desc", "תיאור", W.desc]);
-  if (on.owner) cols.push(["owner", "אחריות", W.owner]);
-  if (on.due) cols.push(["due", wide ? "מועד לביצוע" : "מועד ביצוע", W.due]);
-  if (on.photos) cols.push(["photos", "תמונות", W.photos]);
-  if (on.plans) cols.push(["plans", "תוכנית", W.plans]);
-  if (on.notes) cols.push(["notes", "הערות", W.notes]);
-  if (on.done) cols.push(["done", "טופל", W.done]);
-  const total = cols.reduce((a, c) => a + c[2], 0);
-  const colg = cols.map((c) => `<col style="width:${((c[2] / total) * 100).toFixed(2)}%">`).join("");
-  const imgs = (arr) => (arr || []).map((p) => {
-    const im = `<img class="ph" src="${p.thumb}" alt="">`;
+  const cols = printColumns(lists, wide, layout);
+  const geo = pageGeom(wide);
+  const perLine = Math.max(1, Math.min(6, +((layout && layout.per) || PER_LINE_DEFAULT)));
+  const share = (k) => { const c = cols.find((x) => x[0] === k); return c ? c[2] : 0; };
+  const phBox = photoBox(share("photos") || 30, wide, perLine);
+  // plans: as many to a line as fit at the size of a photo, at least one
+  const plansPer = Math.max(1, Math.min(perLine, Math.floor(((geo.contentMm * share("plans") / 100) * 96 / 25.4 - 8) / (phBox.w + 4)) || 1));
+  const plBox = photoBox(share("plans") || 10, wide, plansPer);
+  const colg = cols.map((c) => `<col style="width:${c[2].toFixed(2)}%">`).join("");
+  const imgs = (arr, cls) => (arr || []).map((p) => {
+    const im = `<img class="ph ${cls || ""}" src="${p.thumb}" alt="">`;
     const url = p.path && links[p.path];
     return url ? `<a href="${esc(url)}" target="_blank" rel="noopener">${im}</a>` : im;
   }).join("");
@@ -645,14 +798,14 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
     if (k === "n") return `${r.n}${r.cont ? '<div class="cont">המשך</div>' : ""}`;
     if (k === "due") return r.due ? `<span dir="ltr">${fmt(r.due)}</span>` : "";
     if (k === "photos") return `<div class="phs">${imgs(r.photos)}</div>`;
-    if (k === "plans") return `<div class="phs">${imgs(r.plans)}</div>`;
+    if (k === "plans") return `<div class="phs">${imgs(r.plans, "pl")}</div>`;
     if (k === "notes") return (r.notes || []).map((n) => `<div class="nt"><b dir="ltr">${fmt(n.at)}</b> ${esc(n.text)}</div>`).join("");
     if (k === "done") return r.done ? "✓" : "";
     return esc(r[k]).replace(/\n/g, "<br>");
   };
   // One list: no band — its name, date and attendees are the heading. Several:
   // a quiet grey band names each one, and each starts on its own page.
-  const body = lists.map((l) => rowsFor(l, rowPick).flatMap((r) => piecesOf(r, wide ? PHOTOS_PER_PIECE : 6)).map((r) =>
+  const body = lists.map((l) => rowsFor(l, rowPick).flatMap((r) => piecesOf(r, perLine * 2, plansPer * 2)).map((r) =>
     `<tr data-rid="${esc(l.id + ":" + r.id)}"${single ? "" : ` data-sec="${esc(secTitle(l))}"`} class="${[r.done ? "ok" : "", r.cont ? "contRow" : ""].join(" ").trim()}">${cols.map((c) => `<td class="c-${c[0]}">${cell(r, c[0])}</td>`).join("")}</tr>`).join("")).join("");
   const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "<span></span>";
   const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
@@ -661,10 +814,18 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
   // Under the subject: the date in the subject's colour, then the attendees.
   const l0 = single ? lists[0] : null;
   const dateLine = l0 && l0.list_date ? `תאריך: ${ltr(fmt(l0.list_date))}` : "";
-  const attLine = l0 && (l0.attendees || "").trim() ? `נוכחים בסיור: ${l0.attendees.trim()}` : "";
+  // 11.11.26 — under the heading, before its grey line: who was there (right)
+  // and the general summary (left), on the first page only; either one that is
+  // empty is left out, and the other takes the whole width.
+  const ppl0 = l0 ? filledPeople(l0) : [];
+  const sum0 = l0 ? summaryOf(l0) : "";
+  const pplHtml = ppl0.length ? `<div class="minCell"><div class="minTtl">נוכחים:</div>${ppl0.map((p) =>
+    `<div class="minLine">${p.g.trim() && p.n.trim() ? `<b>${esc(p.g.trim())}</b> - ${esc(p.n.trim())}` : esc(p.g.trim() || p.n.trim())}</div>`).join("")}</div>` : "";
+  const sumHtml = sum0 ? `<div class="minCell"><div class="minTtl">סיכום כללי:</div><div class="minTxt">${esc(sum0).replace(/\n/g, "<br>")}</div></div>` : "";
+  const minBlock = pplHtml || sumHtml ? `<div class="sumRow minRow${pplHtml && sumHtml ? " two" : ""}">${pplHtml}${sumHtml}</div>` : "";
   const doc = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>${esc(`${projectName || ""} - ${title}`)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
-${printSheetCss({ landscape: wide, accent: acc, marginMm: wide ? 7 : 6, framePad: wide ? "3mm 5mm" : "3mm 4mm" })}
+${printSheetCss({ landscape: wide, accent: acc, marginMm: geo.marginMm, framePad: geo.framePad })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: rtl; }
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 6px; margin-bottom: 6px; }
 .hdr img { max-height: 40px; max-width: 140px; object-fit: contain; justify-self: start; }
@@ -677,16 +838,22 @@ body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; dir
 .pgSec { font-size: 10.5px; font-weight: 800; color: ${WEISS_NAVY_INK}; background: #eef1f5; border: 1px solid #dfe3ea; padding: 3px 8px; border-radius: 5px; margin: 0 0 4px; text-align: center; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 th { background: ${acc}; color: #fff; font-size: ${wide ? 9.5 : 8.5}px; font-weight: 800; padding: 5px 3px; border: 1px solid ${acc}; }
-td { font-size: ${wide ? 9 : 8.5}px; padding: 3px; border: 1px solid #e3e6eb; text-align: center; vertical-align: top; word-break: break-word; }
-td.c-desc, td.c-notes { text-align: right; }
+td { font-size: ${wide ? 9 : 8.5}px; padding: 3px; border: 1px solid #e3e6eb; text-align: center; vertical-align: middle; word-break: break-word; }
+.minRow { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; gap: 0; background: #eef1f5; border: 1px solid #dfe3ea; border-radius: 5px; margin-top: 4px; text-align: right; }
+.minRow.two { grid-template-columns: 1fr 1fr; }
+.minRow.two .minCell + .minCell { border-inline-start: 1px solid #d5d9df; }
+.minCell { padding: 4px 9px; font-size: 10px; color: #17181c; line-height: 1.45; }
+.minTtl { font-weight: 800; font-size: 10.5px; color: #000; margin-bottom: 1px; }
+.minLine b { font-weight: 700; }
 tr.ok td { background: #e3f3e6; }
 .phs { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
 .phs a { display: block; line-height: 0; }
-img.ph { width: ${wide ? 104 : 58}px; height: ${wide ? 80 : 45}px; object-fit: contain; border: 1px solid #e6e8ec; border-radius: 2px; background: #fff; display: block; }
+img.ph { width: ${phBox.w}px; height: ${phBox.h}px; object-fit: contain; border: 1px solid #e6e8ec; border-radius: 2px; background: #fff; display: block; }
+img.ph.pl { width: ${plBox.w}px; height: ${plBox.h}px; }
 .cont { font-size: 7.5px; color: #6b7280; font-weight: 600; }
-.nt { margin-bottom: 2px; } .nt b { color: #5b5e66; unicode-bidi: isolate; }
+.nt { margin-bottom: 2px; text-align: center; } .nt b { color: #5b5e66; unicode-bidi: isolate; }
 </style></head><body><div id="src">
-<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div>${dateLine ? `<div class="dt">${esc(dateLine)}</div>` : ""}${attLine ? `<div class="inf">${esc(attLine)}</div>` : ""}</div>${clientLogo}</div>
+<div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div>${dateLine ? `<div class="dt">${esc(dateLine)}</div>` : ""}</div>${clientLogo}${minBlock}</div>
 <table><colgroup>${colg}</colgroup><thead><tr>${cols.map((c) => `<th>${esc(c[1])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
 ${footBlock}</div><div id="pages"></div>${MERGE_JS}${paginateJs ? paginateJs(printedStampText("he")) : ""}</body></html>`;
   if (printLists.docOnly) return doc;
@@ -706,7 +873,9 @@ export async function excelLists({ lists, rowPick, projectName }) {
       c.photos ? ["תמונות"] : [], c.plans ? ["תוכנית"] : [], c.notes ? ["הערות"] : [], c.done ? ["טופל"] : []);
     const top = [[l.name || "ללא שם"]];
     if (l.list_date) top.push([`תאריך: ${fmt(l.list_date)}`]);
-    if ((l.attendees || "").trim()) top.push([`נוכחים בסיור: ${l.attendees.trim()}`]);
+    const ppl = filledPeople(l);
+    if (ppl.length) { top.push(["נוכחים:"]); ppl.forEach((p) => top.push([personLine(p)])); }
+    if (summaryOf(l)) { top.push(["סיכום כללי:"]); top.push([summaryOf(l)]); }
     top.push([]);
     const body = rowsFor(l, rowPick).map((r) => [].concat(c.n ? [r.n] : [],
       c.floor ? [r.floor || ""] : [], c.desc ? [r.desc || ""] : [], c.owner ? [r.owner || ""] : [], c.due ? [fmt(r.due)] : [],
