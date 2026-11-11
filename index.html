@@ -343,7 +343,7 @@ var COPY = {
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
       { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "\u05D4\u05D5\u05E8\u05D0\u05D5\u05EA \u05E9\u05D9\u05E0\u05D5\u05D9", sub: "Change Instructions", locked: true },
-      { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "\u05e8\u05d9\u05d2'\u05e7\u05d8\u05d9\u05dd", sub: "Rejects \u00b7 Punch Lists", locked: true },
+      { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "סיכומי פגישה / ריג'קטים", sub: "Meeting Minutes \u00b7 Rejects", locked: true },
       // 06.11.26 — task management, by category; the administrator's own.
       { key: "tasks", icon: TasksIcon, iconColor: "#DB2777", title: "ניהול משימות", sub: "Task Management", locked: true },
       // 07.11.26 — the facility file closes the board; the empty cube takes its old place.
@@ -468,7 +468,7 @@ var COPY = {
       { key: "sd", icon: Ruler, iconColor: "#0E7490", title: "SD", sub: "Shop Drawings & Method", locked: true },
       { key: "rfi", icon: FileQuestion, iconColor: "#7C3AED", title: "RFI", sub: "Request for Information", locked: true },
       { key: "changeInstructions", icon: Receipt, iconColor: "#C0392B", title: "Change Instructions", sub: "Pricing & Approvals", locked: true },
-      { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "\u05e8\u05d9\u05d2'\u05e7\u05d8\u05d9\u05dd", sub: "Rejects \u00b7 Punch Lists", locked: true },
+      { key: "rejects", icon: RejectsIcon, iconColor: "#B45309", title: "סיכומי פגישה / ריג'קטים", sub: "Meeting Minutes \u00b7 Rejects", locked: true },
       // 06.11.26 — task management, by category; the administrator's own.
       { key: "tasks", icon: TasksIcon, iconColor: "#DB2777", title: "ניהול משימות", sub: "Task Management", locked: true },
       // 07.11.26 — the facility file closes the board; the empty cube takes its old place.
@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "10.11.2026 · build 296";
+var APP_BUILD = "11.11.2026 · build 297";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -24351,13 +24351,13 @@ function UserListPanel({ isRTL, projects, brandLogo, signatures, onSignatureChan
 // the switches from the server (sub-portal, app-config).
 var AW_OWNER_EMAIL = "marcella.kravitz@gmail.com";
 var APP_DEFS = [
-  { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "משימות, יומן עדכונים, ריג'קטים ועוד — כפי שמנהל פרויקט רואה", tab: "מנהל" },
+  { key: "pm", he: "אפליקציית מנהל פרויקט", sub: "משימות, יומן עדכונים, סיכומי פגישה / ריג'קטים ועוד — כפי שמנהל פרויקט רואה", tab: "מנהל" },
   { key: "sub", he: "אפליקציית קבלן משנה", sub: "מה שקבלן משנה רואה בתחום שלו (בתצוגה: קבלן חשמל)", tab: "קבלן" },
   { key: "client", he: "אפליקציית פיקוח, לקוח ואדריכלים", sub: "מסך אחד לפיקוח, ללקוח ולאדריכלים", tab: "פיקוח / לקוח" }
 ];
 // 06.11.26 — the app's home screen: the long buttons (switched on and off) and
 // the row of four icons at the bottom (picked from every option).
-var APP_MAIN = [["weekly", "לו״ז שבועי (מערכת שעות)"], ["tasks", "ניהול משימות", true], ["log", "יומן עדכונים"], ["rejects", "ריג'קטים"]];
+var APP_MAIN = [["weekly", "לו״ז שבועי (מערכת שעות)"], ["tasks", "ניהול משימות", true], ["log", "יומן עדכונים"], ["rejects", "סיכומי פגישה / ריג'קטים"]];
 var APP_BOTTOM_OPTS = [
   ["submittal", "סבמיטלים"], ["sd", "SD"], ["standards", "בדיקות מכון התקנים"],
   ["rooms", "By Room — חיפוש לפי חדר", true], ["schedule", "לו\"ז פרויקט", true], ["lli", "LLI", true],
@@ -24365,7 +24365,7 @@ var APP_BOTTOM_OPTS = [
 ];
 var APP_BUTTONS = [
   ["log", "יומן עדכונים"], ["weekly", "לו״ז שבועי"], ["submittal", "סבמיטלים"], ["sd", "SD"],
-  ["standards", "בדיקות מכון התקנים"], ["rejects", "ריג'קטים"],
+  ["standards", "בדיקות מכון התקנים"], ["rejects", "סיכומי פגישה / ריג'קטים"],
   ["tasks", "ניהול משימות", true]
 ];
 // 06.11.26 — the app preview, live: the real project manager / subcontractor

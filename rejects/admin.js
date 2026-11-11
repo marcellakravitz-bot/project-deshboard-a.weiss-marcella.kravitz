@@ -1,5 +1,5 @@
 // =============================================================================
-//  rejects/admin.js — ריג'קטים (punch lists, floor hand-overs, meeting notes)
+//  rejects/admin.js — סיכומי פגישה / ריג'קטים (punch lists, floor hand-overs, meeting notes)
 //  A. Weiss dashboard · rejects build 1 · 03.11.2026 (site: build 233)
 //
 //  The dashboard loads this file when the cube is opened. Lists live in
@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from 
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 11 · 06.11.2026";
+export const REJECTS_BUILD = "rejects build 12 · 11.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -86,6 +86,12 @@ const css = `
 .rj{font-family:'Assistant','Inter',sans-serif;color:var(--ink,#17181c);font-size:14px;max-width:1400px;margin:0 auto;padding:0 12px 28px}
 .rj .rjBar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--surface,#fff);border:1px solid var(--line,#e6e6e9);border-radius:12px;padding:8px 12px;margin-bottom:10px}
 .rj .rjTop{display:flex;justify-content:center;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 12px}
+.rj .rjOrient{display:inline-flex;border:1px solid #d5d9df;border-radius:8px;overflow:hidden;background:#fff}
+.rj .rjOrient button{display:inline-flex;align-items:center;gap:5px;border:0;background:transparent;padding:6px 10px;font:inherit;font-size:12.5px;font-weight:600;color:#4b5160;cursor:pointer}
+.rj .rjOrient button+button{border-inline-start:1px solid #d5d9df}
+.rj .rjOrient button.on{background:#1A559E;color:#fff}
+.rj .rjOrient .pgIco{display:inline-block;border:1.6px solid currentColor;border-radius:2px}
+.rj .rjOrient .pgIco.tall{width:9px;height:12px}.rj .rjOrient .pgIco.wide{width:12px;height:9px}
 .rj input.rjPick{accent-color:var(--accent,#0F3460)}
 .rj .rjTitle{font-weight:800;font-size:16px;margin-inline-end:auto}
 .rj .rjBtn{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:13px;font-weight:600;padding:6px 12px;border-radius:9px;border:1px solid var(--line,#e6e6e9);background:#fff;color:var(--ink,#17181c);cursor:pointer;white-space:nowrap}
@@ -172,7 +178,11 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   const [picked, setPicked] = useState({});           // lists ticked for print / export
   // 05.11.26 — every row prints until its V is taken off; a row without its V
   // stays editable but is greyed.
-  const [rowOff, setRowOff] = useState({});           // listId -> { rowId: true }: rows taken out of print
+  const [rowOff, setRowOff] = useState({});
+  // 11.11.26 (build 12) — the PDF prints across (landscape) or upright (portrait),
+  // her choice, remembered on this computer; the columns are laid out for the page.
+  const [orient, setOrientRaw] = useState(() => { try { return localStorage.getItem("rj-print-orient") === "portrait" ? "portrait" : "landscape"; } catch (e) { return "landscape"; } });
+  const setOrient = (v) => { setOrientRaw(v); try { localStorage.setItem("rj-print-orient", v); } catch (e) {} };           // listId -> { rowId: true }: rows taken out of print
   const [saveState, setSaveState] = useState("");
   const [toast, setToast] = useState("");
   const dirty = useRef({});                           // listId -> true
@@ -287,7 +297,7 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
   const pickMap = {};
   forOut.forEach((l) => { if (someOff(l)) pickMap[l.id] = rowsOn(l); });
   const nOut = targets.length;
-  const doPrint = () => printLists({ lists: forOut, rowPick: pickMap, projectName, projectEnd, ...(printParts || {}) });
+  const doPrint = () => printLists({ lists: forOut, rowPick: pickMap, projectName, projectEnd, landscape: orient !== "portrait", ...(printParts || {}) });
   const doExcel = () => excelLists({ lists: forOut, rowPick: pickMap, projectName }).catch((e) => flash("הייצוא נכשל: " + (e.message || e)));
   const allPicked = lists.length > 0 && lists.every((l) => picked[l.id]);
 
@@ -295,8 +305,14 @@ export function RejectsBoard({ projectId, projectName, projectEnd, printParts, c
     <div className="rjTop">
       <button type="button" className="rjBtn primary" onClick=${addList}><${Plus} size=${15} strokeWidth=${2.4} /><span className="lbl">רשימה חדשה</span></button>
       <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doPrint}
-        title=${nOut ? "PDF לרוחב — הרשימות והשורות המסומנות" : "PDF לרוחב — כל הרשימות"}>
+        title=${(orient === "portrait" ? "PDF לאורך" : "PDF לרוחב") + (nOut ? " — הרשימות והשורות המסומנות" : " — כל הרשימות")}>
         <${FileDown} size=${15} /><span className="lbl">PDF${nOut ? ` (${nOut})` : ""}</span></button>
+      <span className="rjOrient" role="group" aria-label="כיוון הדף">
+        <button type="button" className=${orient === "portrait" ? "on" : ""} onClick=${() => setOrient("portrait")} title="הדפסה לאורך">
+          <span className="pgIco tall"></span>לאורך</button>
+        <button type="button" className=${orient !== "portrait" ? "on" : ""} onClick=${() => setOrient("landscape")} title="הדפסה לרוחב">
+          <span className="pgIco wide"></span>לרוחב</button>
+      </span>
       <button type="button" className="rjBtn" disabled=${!lists.length} onClick=${doExcel}
         title=${nOut ? "אקסל — הרשימות והשורות המסומנות" : "אקסל — כל הרשימות"}>
         <${FileSpreadsheet} size=${15} /><span className="lbl">אקסל${nOut ? ` (${nOut})` : ""}</span></button>
@@ -544,13 +560,14 @@ function infoLine(l) {
 }
 function secTitle(l) { return [l.name || "ללא שם", infoLine(l)].filter(Boolean).join("  ·  "); }
 // A row with more photos (or plans) than fit in one piece becomes several pieces.
-function piecesOf(r) {
+function piecesOf(r, per) {
+  const P = per || PHOTOS_PER_PIECE;
   const ph = r.photos || [], pl = r.plans || [];
-  const n = Math.max(1, Math.ceil(Math.max(ph.length, pl.length) / PHOTOS_PER_PIECE));
+  const n = Math.max(1, Math.ceil(Math.max(ph.length, pl.length) / P));
   const out = [];
   for (let i = 0; i < n; i++) {
-    out.push({ ...r, photos: ph.slice(i * PHOTOS_PER_PIECE, (i + 1) * PHOTOS_PER_PIECE),
-      plans: pl.slice(i * PHOTOS_PER_PIECE, (i + 1) * PHOTOS_PER_PIECE), cont: i > 0 });
+    out.push({ ...r, photos: ph.slice(i * P, (i + 1) * P),
+      plans: pl.slice(i * P, (i + 1) * P), cont: i > 0 });
   }
   return out;
 }
@@ -590,7 +607,10 @@ const MERGE_JS = `<script>
     set: function (x) { if (x === true && !v) { try { merge(); } catch (e) {} } v = x; } });
 })();
 <\/script>`;
-export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged }) {
+export async function printLists({ lists, rowPick, projectName, projectEnd, brand, paginateJs, whenPaged, landscape = true }) {
+  // 11.11.26 — upright (portrait) is a narrower page: the text columns take a
+  // larger share, the photos are smaller (three to a line, two lines to a piece).
+  const wide = landscape !== false;
   // The window opens on the click itself; a window opened after an await is one
   // the browser blocks as a pop-up.
   const w = printLists.docOnly ? null : window.open("", "_blank");
@@ -602,15 +622,18 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
   const on = {};
   COLS.forEach(([k]) => { on[k] = lists.some((l) => colsOf(l)[k] !== false); });
   const cols = [];
-  if (on.n) cols.push(["n", "מס\"ד", 3.2]);
-  if (on.floor) cols.push(["floor", "קומה", 4.5]);
-  if (on.desc) cols.push(["desc", "תיאור", 17]);
-  if (on.owner) cols.push(["owner", "אחריות", 8]);
-  if (on.due) cols.push(["due", "מועד לביצוע", 7]);
-  if (on.photos) cols.push(["photos", "תמונות", on.plans ? 34 : 44]);
-  if (on.plans) cols.push(["plans", "תוכנית", 12]);
-  if (on.notes) cols.push(["notes", "הערות", 12]);
-  if (on.done) cols.push(["done", "טופל", 4]);
+  const W = wide
+    ? { n: 3.2, floor: 4.5, desc: 17, owner: 8, due: 7, photos: on.plans ? 34 : 44, plans: 12, notes: 12, done: 4 }
+    : { n: 4.2, floor: 5.8, desc: 20, owner: 9, due: 8.5, photos: on.plans ? 31 : 38, plans: 10, notes: 14, done: 4.8 };
+  if (on.n) cols.push(["n", "מס\"ד", W.n]);
+  if (on.floor) cols.push(["floor", "קומה", W.floor]);
+  if (on.desc) cols.push(["desc", "תיאור", W.desc]);
+  if (on.owner) cols.push(["owner", "אחריות", W.owner]);
+  if (on.due) cols.push(["due", wide ? "מועד לביצוע" : "מועד ביצוע", W.due]);
+  if (on.photos) cols.push(["photos", "תמונות", W.photos]);
+  if (on.plans) cols.push(["plans", "תוכנית", W.plans]);
+  if (on.notes) cols.push(["notes", "הערות", W.notes]);
+  if (on.done) cols.push(["done", "טופל", W.done]);
   const total = cols.reduce((a, c) => a + c[2], 0);
   const colg = cols.map((c) => `<col style="width:${((c[2] / total) * 100).toFixed(2)}%">`).join("");
   const imgs = (arr) => (arr || []).map((p) => {
@@ -629,19 +652,19 @@ export async function printLists({ lists, rowPick, projectName, projectEnd, bran
   };
   // One list: no band — its name, date and attendees are the heading. Several:
   // a quiet grey band names each one, and each starts on its own page.
-  const body = lists.map((l) => rowsFor(l, rowPick).flatMap(piecesOf).map((r) =>
+  const body = lists.map((l) => rowsFor(l, rowPick).flatMap((r) => piecesOf(r, wide ? PHOTOS_PER_PIECE : 6)).map((r) =>
     `<tr data-rid="${esc(l.id + ":" + r.id)}"${single ? "" : ` data-sec="${esc(secTitle(l))}"`} class="${[r.done ? "ok" : "", r.cont ? "contRow" : ""].join(" ").trim()}">${cols.map((c) => `<td class="c-${c[0]}">${cell(r, c[0])}</td>`).join("")}</tr>`).join("")).join("");
   const logo = b.logoUrl ? `<img src="${b.logoUrl}" alt="logo">` : "<span></span>";
   const clientLogo = b.clientLogoUrl ? `<img class="clientLogo" src="${b.clientLogoUrl}" alt="logo">` : "<span></span>";
   const footBlock = b.footerImg ? `<div class="footImg" id="footimg"><img src="${b.footerImg}" alt="footer"></div>` : "";
-  const title = single ? (lists[0].name || "ריג'קטים") : "ריג'קטים";
+  const title = single ? (lists[0].name || "סיכומי פגישה / ריג'קטים") : "סיכומי פגישה / ריג'קטים";
   // Under the subject: the date in the subject's colour, then the attendees.
   const l0 = single ? lists[0] : null;
   const dateLine = l0 && l0.list_date ? `תאריך: ${ltr(fmt(l0.list_date))}` : "";
   const attLine = l0 && (l0.attendees || "").trim() ? `נוכחים בסיור: ${l0.attendees.trim()}` : "";
   const doc = `<!doctype html><html dir="rtl" lang="he"><head><meta charset="utf-8"><title>${esc(`${projectName || ""} - ${title}`)}</title><style>
 @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700;800&family=Inter:wght@500;600;700&display=swap');
-${printSheetCss({ landscape: true, accent: acc, marginMm: 7, framePad: "3mm 5mm" })}
+${printSheetCss({ landscape: wide, accent: acc, marginMm: wide ? 7 : 6, framePad: wide ? "3mm 5mm" : "3mm 4mm" })}
 body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; direction: rtl; }
 .hdr { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; border-bottom: 2.5px solid #d5d9df; padding-bottom: 6px; margin-bottom: 6px; }
 .hdr img { max-height: 40px; max-width: 140px; object-fit: contain; justify-self: start; }
@@ -653,13 +676,13 @@ body { font-family: 'Assistant', 'Inter', Arial, sans-serif; color: #17181c; dir
 .ttlWrap .inf { font-size: 10.5px; font-weight: 600; color: #3d4350; margin-top: 2px; }
 .pgSec { font-size: 10.5px; font-weight: 800; color: ${WEISS_NAVY_INK}; background: #eef1f5; border: 1px solid #dfe3ea; padding: 3px 8px; border-radius: 5px; margin: 0 0 4px; text-align: center; }
 table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-th { background: ${acc}; color: #fff; font-size: 9.5px; font-weight: 800; padding: 5px 3px; border: 1px solid ${acc}; }
-td { font-size: 9px; padding: 3px; border: 1px solid #e3e6eb; text-align: center; vertical-align: top; word-break: break-word; }
+th { background: ${acc}; color: #fff; font-size: ${wide ? 9.5 : 8.5}px; font-weight: 800; padding: 5px 3px; border: 1px solid ${acc}; }
+td { font-size: ${wide ? 9 : 8.5}px; padding: 3px; border: 1px solid #e3e6eb; text-align: center; vertical-align: top; word-break: break-word; }
 td.c-desc, td.c-notes { text-align: right; }
 tr.ok td { background: #e3f3e6; }
 .phs { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
 .phs a { display: block; line-height: 0; }
-img.ph { width: 104px; height: 80px; object-fit: contain; border: 1px solid #e6e8ec; border-radius: 2px; background: #fff; display: block; }
+img.ph { width: ${wide ? 104 : 58}px; height: ${wide ? 80 : 45}px; object-fit: contain; border: 1px solid #e6e8ec; border-radius: 2px; background: #fff; display: block; }
 .cont { font-size: 7.5px; color: #6b7280; font-weight: 600; }
 .nt { margin-bottom: 2px; } .nt b { color: #5b5e66; unicode-bidi: isolate; }
 </style></head><body><div id="src">
@@ -701,6 +724,6 @@ export async function excelLists({ lists, rowPick, projectName }) {
   });
   if (!wb.SheetNames.length) return;
   wb.Workbook = { Views: [{ RTL: true }] };
-  const file = `${String(projectName || "").replace(/[\\/:*?"<>|]+/g, " ").trim()} - ריג'קטים - ${today()}.xlsx`.replace(/^ - /, "");
+  const file = `${String(projectName || "").replace(/[\\/:*?"<>|]+/g, " ").trim()} - סיכומי פגישה - ריג'קטים - ${today()}.xlsx`.replace(/^ - /, "");
   XLSX.writeFile(wb, file);
 }
