@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from 
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 16 · 12.11.2026";
+export const REJECTS_BUILD = "rejects build 17 · 12.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -80,13 +80,24 @@ function shrink(im, max, q) {
   g.drawImage(im, 0, 0, c.width, c.height);
   return c;
 }
-// One photo: a 1600px copy to storage, a 480px thumbnail kept on the row.
-async function storePhoto(projectId, listId, file) {
+// One photo: a copy to storage, a 480px thumbnail kept on the row.
+// 12.11.26 (build 17) — her rule: an uploaded file or a camera shot is
+// compressed as before (1600px, JPEG 0.82); a pasted screenshot (Ctrl+V, or
+// "paste" on the right-click) goes up exactly as it is — no resizing, no
+// recompression — so a plan or an e-mail stays sharp in the PDF and when it is
+// opened. A paste over 15 MB, which no screenshot is, is compressed after all.
+async function storePhoto(projectId, listId, file, asIs) {
   const im = await loadImg(file);
   const thumb = shrink(im, 480, 0.72).toDataURL("image/jpeg", 0.72);
-  const big = await new Promise((r) => shrink(im, 1600, 0.82).toBlob(r, "image/jpeg", 0.82));
-  const path = `${projectId}/rejects/${listId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.jpg`;
-  const { error } = await supabase.storage.from(BUCKET).upload(path, big, { contentType: "image/jpeg", upsert: false });
+  let big, type = "image/jpeg", ext = "jpg";
+  if (asIs && file.size <= 15 * 1024 * 1024) {
+    big = file; type = file.type || "image/png";
+    ext = (type.split("/")[1] || "png").replace("jpeg", "jpg").replace(/[^a-z0-9]/gi, "") || "png";
+  } else {
+    big = await new Promise((r) => shrink(im, 1600, 0.82).toBlob(r, "image/jpeg", 0.82));
+  }
+  const path = `${projectId}/rejects/${listId}/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, big, { contentType: type, upsert: false });
   return { id: uid("p"), path: error ? null : path, thumb, name: file.name || "photo.jpg" };
 }
 async function openPhoto(p) {
@@ -645,13 +656,14 @@ function Shots({ items, projectId, projectName, libLabel, listId, flash, rowEdit
   const fileRef = useRef(null);
   const camRef = useRef(null);
   const [busy, setBusy] = useState(0);
-  const add = async (files) => {
+  // pasted: Ctrl+V (asIs), or the right-click "paste", whose file is named pasted.*
+  const add = async (files, pasted) => {
     const list = Array.from(files || []).filter((f) => /^image\//.test(f.type || "image/"));
     if (!list.length) return;
     setBusy((b) => b + list.length);
     for (const f of list) {
       try {
-        const p = await storePhoto(projectId, listId, f);
+        const p = await storePhoto(projectId, listId, f, !!pasted || /^pasted\./.test(f.name || ""));
         if (!p.path) flash("התמונה נשמרה בתצוגה מוקטנת בלבד — העלאה לאחסון נכשלה");
         rowEdit((cur) => cur.concat([p]));
       } catch (e) { flash("הוספת התמונה נכשלה"); }
@@ -660,7 +672,7 @@ function Shots({ items, projectId, projectName, libLabel, listId, flash, rowEdit
   };
   const onPaste = (e) => {
     const files = Array.from((e.clipboardData && e.clipboardData.files) || []);
-    if (files.length) { e.preventDefault(); add(files); }
+    if (files.length) { e.preventDefault(); add(files, true); }
   };
   const remove = (p) => {
     if (!confirm("להסיר את התמונה?")) return;
