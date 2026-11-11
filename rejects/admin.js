@@ -27,7 +27,7 @@ import { supabase, printSheetCss, printedStampText, imgPickProps, imgAsk } from 
 
 const html = htm.bind(React.createElement);
 const F = React.Fragment;
-export const REJECTS_BUILD = "rejects build 17 · 12.11.2026";
+export const REJECTS_BUILD = "rejects build 18 · 12.11.2026";
 if (typeof console !== "undefined") console.info(REJECTS_BUILD);
 
 const BUCKET = "submittals";
@@ -682,7 +682,7 @@ function Shots({ items, projectId, projectName, libLabel, listId, flash, rowEdit
   // A box per picture, and always one empty box after them: click it, then
   // Ctrl+V — or the two small buttons inside it. A filled box opens the picture.
   return html`<div className="rjBoxes">
-    ${items.map((p) => html`<div key=${p.id} className="rjBox" title="פתיחה בגודל מלא" onClick=${() => openPhoto(p)}>
+    ${items.map((p) => html`<div key=${p.id} className="rjBox" title="התמונה המלאה נפתחת בלחיצה מתוך ה-PDF">
       <img src=${p.thumb} alt="" /><button type="button" className="x" title="הסרה" onClick=${(e) => { e.stopPropagation(); remove(p); }}>×</button></div>`)}
     <div className="rjBox" tabIndex="0" onPaste=${onPaste} title="לחיצה על הריבוע ואז Ctrl+V, מקש ימני — או העלאה/צילום"
       onContextMenu=${imgPickProps({ projectId, multiple: true, onFile: (fs) => add(fs) }).onContextMenu}
@@ -772,12 +772,25 @@ async function signedLinks(lists, rowPick, projectEnd) {
   const paths = [];
   lists.forEach((l) => rowsFor(l, rowPick).forEach((r) => (r.photos || []).concat(r.plans || []).forEach((p) => { if (p && p.path) paths.push(p.path); })));
   const out = {};
+  const secs = linkSeconds(projectEnd);
   for (let i = 0; i < paths.length; i += 100) {
     try {
-      const { data } = await supabase.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), linkSeconds(projectEnd));
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrls(paths.slice(i, i + 100), secs);
+      if (error) console.warn("[rejects] links", error);
       (data || []).forEach((d) => { if (d && d.path && d.signedUrl) out[d.path] = d.signedUrl; });
     } catch (e) { console.warn("[rejects] links", e); }
   }
+  // 12.11.26 (build 18) — a photo the batch did not sign is signed on its own;
+  // without a link the PDF would fall back to the small thumbnail (a blur).
+  for (const pth of paths) {
+    if (out[pth]) continue;
+    try {
+      const { data, error } = await supabase.storage.from(BUCKET).createSignedUrl(pth, secs);
+      if (data && data.signedUrl) out[pth] = data.signedUrl; else console.warn("[rejects] link", pth, error);
+    } catch (e) { console.warn("[rejects] link", pth, e); }
+  }
+  const miss = paths.filter((x) => !out[x]).length;
+  console.info("[rejects] print links", paths.length - miss, "of", paths.length);
   return out;
 }
 // A row printed in pieces is put back together wherever two pieces of it landed
@@ -944,7 +957,9 @@ img.ph { width: ${phBox.w}px; height: ${phBox.h}px; object-fit: contain; border:
 img.ph.pl { width: ${plBox.w}px; height: ${plBox.h}px; }
 .cont { font-size: 7.5px; color: #6b7280; font-weight: 600; }
 .nt { margin-bottom: 2px; text-align: center; } .nt b { color: #5b5e66; unicode-bidi: isolate; }
-</style></head><body><div id="src">
+.awTip { position: fixed; top: 0; left: 0; right: 0; z-index: 99; background: #fff7e0; border-bottom: 1px solid #e7c76a; color: #5b4300; font-size: 13px; font-weight: 600; text-align: center; padding: 7px 10px; direction: rtl; }
+@media print { .awTip { display: none !important; } }
+</style></head><body>${only ? "" : `<div class="awTip">בחלון ההדפסה, ביעד, בחרי <b>"שמירה כ-PDF" / "Save as PDF"</b>. מדפסת PDF אחרת (כמו Foxit) מקטינה את התמונות ומוחקת את הקישורים שלהן.</div>`}<div id="src">
 <div class="hdr">${logo}<div class="ttlWrap"><div class="ttl">${esc(projectName || "")}</div><div class="sub">${esc(title)}</div>${dateLine ? `<div class="dt">${esc(dateLine)}</div>` : ""}</div>${clientLogo}${minBlock}</div>
 <table><colgroup>${colg}</colgroup><thead><tr>${cols.map((c) => `<th>${esc(c[1])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
 ${footBlock}</div><div id="pages"></div>${MERGE_JS}${paginateJs ? paginateJs(printedStampText("he")) : ""}</body></html>`;
