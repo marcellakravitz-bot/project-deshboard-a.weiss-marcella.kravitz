@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.11.2026 · build 307";
+var APP_BUILD = "12.11.2026 · build 308";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6636,6 +6636,131 @@ function SubsScheduleView({ tradeLabel, scheduleData }) {
 
 // The same printed sheet as everything else here — the house frame, the two
 // logos, the footer strip — rather than a page of its own invention. (10.9.26)
+
+// 12.11.26 — the week as a real PDF file, to send in WhatsApp. Drawn on a
+// canvas (the browser lays out the Hebrew), one JPEG per A4 landscape page,
+// and wrapped in a small PDF written here — no library to load.
+function awJpegPdf(pages) {
+  // pages: [{ jpeg: Uint8Array, w, h }] at A4 landscape (842 × 595 pt)
+  const enc = new TextEncoder();
+  const parts = [];
+  let size = 0;
+  const offs = [];
+  const push = (x) => { const b = typeof x === "string" ? enc.encode(x) : x; parts.push(b); size += b.length; };
+  push("%PDF-1.4\n%\xE2\xE3\xCF\xD3\n");
+  const n = pages.length;
+  // objects: 1 catalog, 2 pages, then per page: page, content, image
+  const pageObj = (i) => 3 + i * 3;
+  const obj = (id, body) => { offs[id] = size; push(id + " 0 obj\n"); body(); push("\nendobj\n"); };
+  obj(1, () => push("<< /Type /Catalog /Pages 2 0 R >>"));
+  obj(2, () => push("<< /Type /Pages /Count " + n + " /Kids [" + pages.map((_, i) => pageObj(i) + " 0 R").join(" ") + "] >>"));
+  pages.forEach((pg, i) => {
+    const P = pageObj(i), C = P + 1, I = P + 2;
+    obj(P, () => push("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /XObject << /Im" + i + " " + I + " 0 R >> >> /Contents " + C + " 0 R >>"));
+    const cs = "q 842 0 0 595 0 0 cm /Im" + i + " Do Q";
+    obj(C, () => { push("<< /Length " + cs.length + " >>\nstream\n"); push(cs); push("\nendstream"); });
+    obj(I, () => {
+      push("<< /Type /XObject /Subtype /Image /Width " + pg.w + " /Height " + pg.h + " /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length " + pg.jpeg.length + " >>\nstream\n");
+      push(pg.jpeg); push("\nendstream");
+    });
+  });
+  const total = 3 + n * 3;
+  const xref = size;
+  let x = "xref\n0 " + total + "\n0000000000 65535 f \n";
+  for (let id = 1; id < total; id++) x += String(offs[id]).padStart(10, "0") + " 00000 n \n";
+  push(x + "trailer\n<< /Size " + total + " /Root 1 0 R >>\nstartxref\n" + xref + "\n%%EOF");
+  return new Blob(parts, { type: "application/pdf" });
+}
+async function subsWeekPdfBlob({ projectName, weekStart, rows, brandName }) {
+  const W = 2339, H = 1654, M = 70;               // A4 landscape at 200 dpi
+  const days = subsWeekDays(weekStart);
+  const font = (px, bold) => (bold ? "700 " : "400 ") + px + "px Arial, 'Segoe UI', sans-serif";
+  const pages = [];
+  let c = null, g = null, y = 0;
+  const colW = [(W - 2 * M) * 0.13].concat(Array(6).fill((W - 2 * M) * 0.87 / 6));
+  const colX = [];                                   // right edges, right to left
+  { let x = W - M; colW.forEach((w) => { colX.push(x); x -= w; }); }
+  const wrap = (text, max, px, bold) => {
+    g.font = font(px, bold);
+    const out = [];
+    String(text || "").split("\n").forEach((para) => {
+      let line = "";
+      para.split(/\s+/).forEach((w) => {
+        const t = line ? line + " " + w : w;
+        if (g.measureText(t).width <= max || !line) line = t; else { out.push(line); line = w; }
+      });
+      out.push(line);
+    });
+    return out;
+  };
+  const accent = "#1A559E";
+  const header = () => {
+    g.fillStyle = "#fff"; g.fillRect(0, 0, W, H);
+    g.direction = "rtl"; g.textAlign = "center"; g.fillStyle = "#103460";
+    g.font = font(46, true); g.fillText("לו\"ז שבועי — קבלני משנה", W / 2, M + 40);
+    g.font = font(30, false); g.fillStyle = "#3d4350";
+    g.fillText((projectName ? projectName + " · " : "") + "שבוע " + subsFmtDate(weekStart) + " – " + subsFmtDate(days[5].iso), W / 2, M + 88);
+    y = M + 120;
+    const hh = 78;
+    g.fillStyle = accent; g.fillRect(M, y, W - 2 * M, hh);
+    g.fillStyle = "#fff";
+    const heads = ["תחום"].concat(days.map((d) => d.name));
+    heads.forEach((h, i) => {
+      const cx = colX[i] - colW[i] / 2;
+      g.font = font(28, true); g.fillText(h, cx, y + (i ? 34 : 48));
+      if (i) { g.font = font(22, false); g.fillText(subsFmtDate(days[i - 1].iso), cx, y + 64); }
+    });
+    y += hh;
+  };
+  const footer = (k) => {
+    g.direction = "rtl"; g.textAlign = "center"; g.font = font(22, false); g.fillStyle = "#8a8f98";
+    g.fillText((brandName ? brandName + " · " : "") + "עמוד " + k, W / 2, H - 34);
+  };
+  const newPage = () => {
+    if (c) pages.push(c);
+    c = document.createElement("canvas"); c.width = W; c.height = H; g = c.getContext("2d");
+    header();
+  };
+  newPage();
+  const PX = 25, LH = 34, PAD = 14;
+  (rows.length ? rows : [{ label: "אין לו\"ז לשבוע הזה", cells: [] }]).forEach((r, ri) => {
+    const lab = wrap(r.label, colW[0] - 2 * PAD, 27, true);
+    const sub = r.sub ? wrap(r.sub, colW[0] - 2 * PAD, 22, false) : [];
+    const cells = days.map((_, i) => wrap((r.cells || [])[i] || "", colW[i + 1] - 2 * PAD, PX, false));
+    const lines = Math.max(lab.length + sub.length, ...cells.map((x) => x.length), 1);
+    const rh = lines * LH + 2 * PAD;
+    if (y + rh > H - 80) { footer(pages.length + 1); newPage(); }
+    g.fillStyle = ri % 2 ? "#f7f8fa" : "#fff"; g.fillRect(M, y, W - 2 * M, rh);
+    g.fillStyle = "#eef1f5"; g.fillRect(colX[0] - colW[0], y, colW[0], rh);
+    g.strokeStyle = "#d5d9df"; g.lineWidth = 2;
+    colX.forEach((x, i) => g.strokeRect(x - colW[i], y, colW[i], rh));
+    g.direction = "rtl"; g.textAlign = "center";
+    let ty = y + PAD + LH - 9;
+    g.fillStyle = "#17181c"; g.font = font(27, true);
+    lab.forEach((t) => { g.fillText(t, colX[0] - colW[0] / 2, ty); ty += LH; });
+    g.fillStyle = "#5b3fa0"; g.font = font(22, true);
+    sub.forEach((t) => { g.fillText(t, colX[0] - colW[0] / 2, ty); ty += LH; });
+    g.textAlign = "right"; g.fillStyle = "#17181c"; g.font = font(PX, false);
+    cells.forEach((ls, i) => { let yy = y + PAD + LH - 9; ls.forEach((t) => { g.fillText(t, colX[i + 1] - PAD, yy); yy += LH; }); });
+    y += rh;
+  });
+  footer(pages.length + 1);
+  pages.push(c);
+  const out = [];
+  for (const cv of pages) {
+    const blob = await new Promise((res) => cv.toBlob(res, "image/jpeg", 0.9));
+    out.push({ jpeg: new Uint8Array(await blob.arrayBuffer()), w: cv.width, h: cv.height });
+  }
+  return awJpegPdf(out);
+}
+// A phone written the Israeli way (050-…) as WhatsApp wants it: 97250….
+function awWaPhone(p) {
+  let d = String(p || "").replace(/\D/g, "");
+  if (d.indexOf("00") === 0) d = d.slice(2);
+  if (d.indexOf("0") === 0) d = "972" + d.slice(1);
+  return d;
+}
+
 function subsPrintWeek({ printBrand, projectName, isRTL, weekStart, rows, floorTag }) {
   const days = subsWeekDays(weekStart);
   const head = ["\u05ea\u05d7\u05d5\u05dd"].concat(days.map((d) => d.name + "\n" + subsFmtDate(d.iso)));
@@ -6666,7 +6791,16 @@ function subsWeekDays(weekStart) {
 }
 // Every trade's week on one sheet — the thing she actually hands out on a
 // Sunday morning, instead of opening six cubes one after another. (10.9.26)
-function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, isRTL, onChange, onChangeExtra, onBack, onAnnounce }) {
+function SubsWeeklyAll({ data, extra, floors, contacts, canEdit, printBrand, projectName, isRTL, onChange, onChangeExtra, onBack, onAnnounce }) {
+  // 12.11.26 — sending the week in WhatsApp: a fixed message (hers, kept on
+  // this computer) and the week as a PDF file, to each contractor in the system.
+  const WA_MSG_DEFAULT = "שלום {שם},\nמצורף הלו\"ז השבועי של פרויקט {פרויקט} לשבוע {שבוע}.\nנא לעבור ולאשר קבלה.\n\nבברכה,\nא. וייס הנדסה";
+  const [sendOpen, setSendOpen] = React9.useState(false);
+  const [waMsg, setWaMsgRaw] = React9.useState(() => { try { return localStorage.getItem("aw-week-wa-msg") || WA_MSG_DEFAULT; } catch (e) { return WA_MSG_DEFAULT; } });
+  const setWaMsg = (v) => { setWaMsgRaw(v); try { localStorage.setItem("aw-week-wa-msg", v); } catch (e) {} };
+  const [sentTo, setSentTo] = React9.useState({});
+  const [pdfBusy, setPdfBusy] = React9.useState(false);
+  const pdfCache = React9.useRef({ key: "", blob: null });
   const [flSel, setFlSel] = React9.useState("");   // "" = every floor
   const now = new Date();
   const [year, setYear] = React9.useState(now.getFullYear());
@@ -6694,7 +6828,7 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
     const shown = flSel ? [flSel] : flList.concat(
       // a floor with a week of its own that is not in the project's list
       Array.from(new Set(Object.keys(data || {}).map(floorOfKey).filter((f) => f && flList.indexOf(f) < 0))));
-    const tradeLine = (t, f) => ({ key: t.key + "@" + f, label: t.label, sub: flSel ? "" : "\u05e7\u05d5\u05de\u05d4 " + f, locked: true,
+    const tradeLine = (t, f) => ({ key: t.key + "@" + f, label: t.label, sub: flSel ? "" : "\u05e7\u05d5\u05de\u05d4 " + f, locked: false,
       print: "\u05e7\u05d5\u05de\u05d4 " + f + " \u00b7 " + t.label });
     const live = (t, f) => hasText(t.key + "@" + f, wk) || (buf && buf[t.key + "@" + f]);
     if (flSel) {
@@ -6708,7 +6842,7 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
     const general = SUB_TRADES.filter((t) => hasText(t.key, wk));
     if (general.length) {
       if (flSel) out.push({ head: "\u05dc\u05dc\u05d0 \u05e7\u05d5\u05de\u05d4", key: "h-general" });
-      general.forEach((t) => out.push({ key: t.key, label: t.label, sub: "\u05db\u05dc\u05dc\u05d9", locked: true, print: t.label + " \u00b7 \u05db\u05dc\u05dc\u05d9" }));
+      general.forEach((t) => out.push({ key: t.key, label: t.label, sub: "\u05db\u05dc\u05dc\u05d9", locked: false, print: t.label + " \u00b7 \u05db\u05dc\u05dc\u05d9" }));
     }
     // the hand-added contractors, each with its floor if one was given; on a
     // floor, those of that floor and those of no floor
@@ -6759,6 +6893,64 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
     setAdding("");
   };
 
+  // the whole week for the PDF: by trade, each floor under it, then the general
+  // lines and the hand-added contractors that have something written
+  const pdfRows = (wk) => {
+    const out = [];
+    SUB_TRADES.forEach((t) => {
+      Object.keys(data || {}).filter((k) => k.indexOf(t.key + "@") === 0 && hasText(k, wk))
+        .sort((a, b) => floorOfKey(a).localeCompare(floorOfKey(b), "he", { numeric: true }))
+        .forEach((k) => out.push({ label: t.label, sub: "קומה " + floorOfKey(k), cells: ((data || {})[k] || {})[wk] || [] }));
+      if (hasText(t.key, wk)) out.push({ label: t.label, sub: "כללי", cells: ((data || {})[t.key] || {})[wk] || [] });
+    });
+    (extra || []).forEach((x) => { if (hasText(x.id, wk)) out.push({ label: x.label, sub: x.floor ? "קומה " + x.floor : "", cells: ((data || {})[x.id] || {})[wk] || [] }); });
+    return out;
+  };
+  const weekPdf = async (wk) => {
+    const key = wk + "|" + JSON.stringify(pdfRows(wk));
+    if (pdfCache.current.key === key && pdfCache.current.blob) return pdfCache.current.blob;
+    const blob = await subsWeekPdfBlob({ projectName, weekStart: wk, rows: pdfRows(wk), brandName: "א. וייס הנדסה" });
+    pdfCache.current = { key, blob };
+    return blob;
+  };
+  const pdfName = (wk) => "לוז שבועי - " + (projectName ? String(projectName).replace(/[\\/:*?"<>|]/g, "-") + " - " : "") + subsFmtDate(wk).replace(/\//g, ".") + ".pdf";
+  const downloadBlob = (blob, name) => {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  };
+  const msgFor = (who, wk) => {
+    const days = subsWeekDays(wk);
+    return String(waMsg || "").split("{שם}").join(who || "")
+      .split("{פרויקט}").join(projectName || "")
+      .split("{שבוע}").join(subsFmtDate(wk) + " – " + subsFmtDate(days[5].iso));
+  };
+  // phone: the share sheet carries the file and the text together (pick
+  // WhatsApp, then the contractor). Computer: the PDF is downloaded and the
+  // contractor's WhatsApp chat opens with the text — the file is dragged in.
+  const sendWa = async (r) => {
+    const who = r.name || r.company || "";
+    const text = msgFor(who, weekStart);
+    setPdfBusy(true);
+    try {
+      const blob = await weekPdf(weekStart);
+      const name = pdfName(weekStart);
+      const file = new File([blob], name, { type: "application/pdf" });
+      const mobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || "");
+      if (mobile && navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], text });
+      } else {
+        downloadBlob(blob, name);
+        window.open("https://wa.me/" + awWaPhone(r.phone) + "?text=" + encodeURIComponent(text), "_blank");
+      }
+      setSentTo((m) => ({ ...m, [r.id]: true }));
+    } catch (e) {
+      if (!(e && e.name === "AbortError")) alert("השליחה נכשלה: " + ((e && e.message) || e));
+    }
+    setPdfBusy(false);
+  };
+
   if (weekStart) {
     const days = subsWeekDays(weekStart);
     const lines = linesFor(weekStart);
@@ -6781,11 +6973,41 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
           ...(flSel ? { floorTag: "\u05e7\u05d5\u05de\u05d4 " + flSel } : {}),
         }) },
           React9.createElement(Printer, { size: 15, strokeWidth: 2 }),
-          "\u05d4\u05d3\u05e4\u05e1\u05d4")),
+          "\u05d4\u05d3\u05e4\u05e1\u05d4"),
+        React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...btnS, minWidth: 220, ...(sendOpen ? { background: "#1f9d55", borderColor: "#1f9d55", color: "#fff" } : {}) },
+          onClick: () => setSendOpen((v) => !v) },
+          React9.createElement(MsgCircle, { size: 15, strokeWidth: 2 }),
+          "שליחה לקבלנים בוואטסאפ")),
+      sendOpen && React9.createElement("div", { style: { width: "100%", maxWidth: 860, border: "1px solid #bfe3cc", background: "#f3fbf6", borderRadius: 12, padding: "12px 14px", display: "flex", flexDirection: "column", gap: 10 } },
+        React9.createElement("div", { style: { textAlign: "center", fontWeight: 800, color: "#14532d" } }, "שליחת הלו\"ז הכולל (PDF) בוואטסאפ"),
+        React9.createElement("div", { style: { fontSize: 12, color: "#3d4350", textAlign: "center" } },
+          "ההודעה הקבועה (נשמרת במחשב הזה). {שם} {פרויקט} {שבוע} מתמלאים לבד."),
+        React9.createElement("textarea", { value: waMsg, onChange: (e) => setWaMsg(e.target.value), rows: 6,
+          style: { width: "100%", border: "1px solid var(--line)", borderRadius: 8, padding: 8, font: "inherit", fontSize: 13, resize: "vertical", boxSizing: "border-box" } }),
+        React9.createElement("div", { style: { display: "flex", justifyContent: "center", gap: 8, flexWrap: "wrap" } },
+          React9.createElement("button", { type: "button", className: "ghostBtn", disabled: pdfBusy,
+            onClick: async () => { setPdfBusy(true); try { downloadBlob(await weekPdf(weekStart), pdfName(weekStart)); } catch (e) { alert(String((e && e.message) || e)); } setPdfBusy(false); } },
+            React9.createElement(Download, { size: 14, strokeWidth: 2 }), " הורדת ה-PDF"),
+          React9.createElement("button", { type: "button", className: "ghostBtn", onClick: () => setWaMsg(WA_MSG_DEFAULT) }, "הודעה מקורית")),
+        (contacts || []).length === 0
+          ? React9.createElement("p", { style: { margin: 0, textAlign: "center", color: "var(--mist)" } }, "אין קבלנים עם מספר טלפון במערכת (הגדרות משתמש ← קבלני משנה).")
+          : React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", background: "#fff" } },
+            React9.createElement("tbody", null, (contacts || []).map((r) => React9.createElement("tr", { key: r.id },
+              React9.createElement("td", { style: { ...SUBS_CELL, fontWeight: 700 } }, [r.name, r.company].filter((x) => x && String(x).trim()).join(" · ")),
+              React9.createElement("td", { style: SUBS_CELL }, (SUB_TRADES.find((t) => t.key === r.trade) || {}).label || "",
+                Array.isArray(r.floors) && r.floors.length ? React9.createElement("span", { style: { color: "#5b3fa0", fontSize: 12 } }, " · קומה " + r.floors.join(", ")) : null),
+              React9.createElement("td", { style: { ...SUBS_CELL, direction: "ltr", textAlign: "center" } }, r.phone),
+              React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", width: 150 } },
+                React9.createElement("button", { type: "button", disabled: pdfBusy, onClick: () => sendWa(r),
+                  style: { display: "inline-flex", alignItems: "center", gap: 6, border: "none", borderRadius: 8, padding: "7px 12px", font: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer",
+                    background: sentTo[r.id] ? "#dcfce7" : "#25D366", color: sentTo[r.id] ? "#14532d" : "#fff" } },
+                  React9.createElement(MsgCircle, { size: 14, strokeWidth: 2.2 }), sentTo[r.id] ? "נשלח ✓" : "וואטסאפ")))))),
+        React9.createElement("div", { style: { fontSize: 12, color: "#3d4350", textAlign: "center" } },
+          "במחשב: ה-PDF יורד והצ'אט של הקבלן נפתח עם ההודעה — גררי את הקובץ לצ'אט. בטלפון: הקובץ וההודעה נשלחים יחד — בוחרים וואטסאפ ואת הקבלן.")),
       flList.length > 0 && React9.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" } },
         [flBtn("", "\u05db\u05dc \u05d4\u05e7\u05d5\u05de\u05d5\u05ea")].concat(flList.map((f) => flBtn(f, "\u05e7\u05d5\u05de\u05d4 " + f)))),
       React9.createElement("p", { className: "panelSub", style: { margin: "-6px 0 0", textAlign: "center" } },
-        "\u05ea\u05e6\u05d5\u05d2\u05d4 \u05d1\u05dc\u05d1\u05d3 \u2014 \u05d4\u05e2\u05e8\u05d9\u05db\u05d4 \u05de\u05ea\u05d5\u05da \u05d4\u05e7\u05d1\u05dc\u05df \u05d1\u05e7\u05d5\u05de\u05d4 \u05e9\u05dc\u05d5. \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd \u05e0\u05e2\u05e8\u05db\u05d9\u05dd \u05db\u05d0\u05df."),
+        flSel ? "\u05de\u05d4 \u05e9\u05de\u05de\u05dc\u05d0\u05d9\u05dd \u05db\u05d0\u05df \u05de\u05ea\u05e2\u05d3\u05db\u05df \u05d2\u05dd \u05d1\"\u05db\u05dc \u05d4\u05e7\u05d5\u05de\u05d5\u05ea\"." : "\u05de\u05d5\u05e4\u05d9\u05e2\u05d9\u05dd \u05e8\u05e7 \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e9\u05de\u05d5\u05dc\u05d0\u05d5. \u05dc\u05de\u05d9\u05dc\u05d5\u05d9 \u05e7\u05d1\u05dc\u05df \u05d7\u05d3\u05e9 \u2014 \u05d1\u05d7\u05e8\u05d9 \u05e7\u05d5\u05de\u05d4."),
       React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed", margin: "0 auto" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
@@ -7345,7 +7567,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
         }))).concat([React9.createElement("div", { key: "all", className: "subsPyrRow" },
           React9.createElement("button", { type: "button", className: "dashCard subsFloorCard", style: { width: 312, height: 90, maxWidth: "100%" }, onClick: () => goDeeper(() => { setFloor(""); setSection(null); }) },
             React9.createElement("span", { className: "fl" }, React9.createElement("b", { style: { fontSize: 20 } }, "\u05db\u05dc \u05d4\u05e7\u05d5\u05de\u05d5\u05ea")),
-            React9.createElement("span", { className: "nm" }, "\u05dc\u05d5\"\u05d6 \u05db\u05dc\u05dc\u05d9 \u05dc\u05e7\u05d1\u05dc\u05df")))])));
+            React9.createElement("span", { className: "nm" }, "\u05db\u05dc\u05dc\u05d9 \u05dc\u05e7\u05d1\u05dc\u05df")))])));
   }
 
   if (view === "board" && trade) {
@@ -7353,7 +7575,8 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     return React9.createElement("div", { className: "functionPageBody", style: wrapS },
       React9.createElement("h3", { style: { margin: 0 } }, "\u05e7\u05d1\u05dc\u05df " + (tradeOf(trade).label || "") + flTag),
       fl && names.length ? React9.createElement("p", { className: "panelSub", style: { margin: "-10px 0 0", textAlign: "center" } }, names.join(" | ")) : null,
-      cubeGrid(SUB_SECTIONS, (k) => goDeeper(() => { setSubCat(null); setSection(k); }))
+      // 12.11.26 — the week is filled in from the main "לו\"ז שבועי מרוכז" button only
+      cubeGrid(SUB_SECTIONS.filter((x) => x.key !== "weekly"), (k) => goDeeper(() => { setSubCat(null); setSection(k); }))
     );
   }
 
@@ -7361,6 +7584,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
     return React9.createElement(SubsWeeklyAll, {
       canEdit,
       floors: floorsAll,
+      contacts: list.filter((r) => r && r.active !== false && (r.kind || (r.pm ? "pm" : "sub")) === "sub" && String(r.phone || "").replace(/\D/g, "").length >= 9),
       printBrand,
       projectName,
       isRTL,
