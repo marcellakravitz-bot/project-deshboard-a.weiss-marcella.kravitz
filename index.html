@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.11.2026 · build 304";
+var APP_BUILD = "12.11.2026 · build 305";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -925,6 +925,8 @@ var cards = `
           border-color: var(--accent);
           box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 22%, transparent);
         }
+        .dashCard .cardIcon.cardIconNew { cursor: alias; transition: transform .12s, box-shadow .12s; }
+        .dashCard .cardIcon.cardIconNew:hover { transform: scale(1.12); box-shadow: 0 0 0 2px #1A559E33; }
         .dashCard:hover .cardIcon {
           background: var(--accent);
           border-color: var(--accent);
@@ -5494,6 +5496,7 @@ function Dashboard({
   cards: cards2,
   isAuthenticated,
   onOpenCard,
+  onOpenCardNew,
   onLockedCard,
   showBack,
   onBack,
@@ -5529,7 +5532,12 @@ function Dashboard({
         onClick: () => isLocked ? onLockedCard() : onOpenCard(c.key)
       },
       isLocked && /* @__PURE__ */ React9.createElement("span", { className: "lockBadge" }, /* @__PURE__ */ React9.createElement(Lock2, { size: 11, strokeWidth: 2.4 })),
-      /* @__PURE__ */ React9.createElement("div", { className: "cardIcon", style: c.iconColor ? { color: c.iconColor } : void 0 }, /* @__PURE__ */ React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
+      // 12.11.26 — the icon opens the folder in a new window (to have two side
+      // by side); the rest of the cube opens it here, as always.
+      /* @__PURE__ */ React9.createElement("div", { className: "cardIcon" + (onOpenCardNew && !isLocked ? " cardIconNew" : ""), style: c.iconColor ? { color: c.iconColor } : void 0,
+        title: onOpenCardNew && !isLocked ? "\u05e4\u05ea\u05d9\u05d7\u05d4 \u05d1\u05d7\u05dc\u05d5\u05df \u05d7\u05d3\u05e9" : void 0,
+        onClick: onOpenCardNew && !isLocked ? (e) => { e.stopPropagation(); e.preventDefault(); onOpenCardNew(c.key); } : void 0 },
+        /* @__PURE__ */ React9.createElement(c.icon, { size: 20, strokeWidth: 1.7 })),
       /* @__PURE__ */ React9.createElement("div", null, /* @__PURE__ */ React9.createElement("p", { className: "cardTitle" }, c.title))
     );
   })), showBack && /* @__PURE__ */ React9.createElement("div", { style: { display: "flex", justifyContent: "center", padding: "6px 28px 24px" } }, /* @__PURE__ */ React9.createElement("button", { type: "button", onClick: onBack, style: { display: "inline-flex", alignItems: "center", gap: 8, background: "#14181f", color: "#fff", border: "none", borderRadius: 999, padding: "8px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" } }, /* @__PURE__ */ React9.createElement(isRTL ? ArrowRight9 : ArrowLeft9, { size: 15, strokeWidth: 2 }), isRTL ? "חזרה ללוח הפרויקטים" : "Back to project board")));
@@ -26981,6 +26989,36 @@ function ProjectDashboardApp() {
       setView("projectPicker");
     }
   }, [isAuthenticated, appRole, visibleProjects.map((p) => p.id).join(","), selectedProjectId]);
+  // 12.11.26 — a folder opened in a new window (the icon on its cube) arrives
+  // as ?awopen=<project>~<folder>. Once signed in (the session is shared with
+  // the first window) and the project is in the list, it goes straight there,
+  // and the address is cleaned so a refresh does not repeat it.
+  const awOpenRef = useRef5((() => {
+    try {
+      const v = new URLSearchParams(AWDASH_INITIAL_SEARCH).get("awopen");
+      if (!v || v.indexOf("~") < 0) return null;
+      return { pid: v.slice(0, v.indexOf("~")), key: v.slice(v.indexOf("~") + 1) };
+    } catch (e) { return null; }
+  })());
+  useEffect5(() => {
+    const want = awOpenRef.current;
+    if (!want || !isAuthenticated) return;
+    if (view !== "projectPicker" && view !== "dashboard") return;
+    if (!visibleProjects.some((p) => p.id === want.pid)) return;
+    // set until it holds: signing in may put the picker back once more after this
+    if (view !== "dashboard" || selectedProjectId !== want.pid || openCardKey !== want.key) {
+      setSelectedProjectId(want.pid);
+      setView("dashboard");
+      setOpenCardKey(want.key);
+      return;
+    }
+    awOpenRef.current = null;
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("awopen");
+      window.history.replaceState(window.history.state, "", u.pathname + (u.search || "") + u.hash);
+    } catch (e) {}
+  }, [isAuthenticated, view, selectedProjectId, openCardKey, visibleProjects.map((p) => p.id).join(",")]);
   const canEditCard = (key) => appRole === "admin" || authRole === "contractor" && editableProjectIds.includes(activeProject.id) || isSubcontractorHere && visibleCardKeys.includes(key);
   const [docViewerSourceId, setDocViewerSourceId] = useState6(null);
   const [scheduleChangeReport, setScheduleChangeReport] = useState6(null);
@@ -28005,6 +28043,13 @@ function ProjectDashboardApp() {
       cards: facilityCubes(t.cards, appRole).filter((c) => canSeeCard(c.key)),
       isAuthenticated,
       onOpenCard: setOpenCardKey,
+      onOpenCardNew: (key) => {
+        try {
+          const u = new URL(window.location.href);
+          u.hash = ""; u.search = "?awopen=" + encodeURIComponent(selectedProjectId + "~" + key);
+          window.open(u.toString(), "_blank");
+        } catch (e) { setOpenCardKey(key); }
+      },
       onLockedCard: triggerAuthNotice,
       isRTL,
       // 21.10.26 — no button: the browser's Back takes the dashboard to the
