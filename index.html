@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.11.2026 · build 303";
+var APP_BUILD = "12.11.2026 · build 304";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6628,13 +6628,13 @@ function SubsScheduleView({ tradeLabel, scheduleData }) {
 
 // The same printed sheet as everything else here — the house frame, the two
 // logos, the footer strip — rather than a page of its own invention. (10.9.26)
-function subsPrintWeek({ printBrand, projectName, isRTL, weekStart, rows }) {
+function subsPrintWeek({ printBrand, projectName, isRTL, weekStart, rows, floorTag }) {
   const days = subsWeekDays(weekStart);
   const head = ["\u05ea\u05d7\u05d5\u05dd"].concat(days.map((d) => d.name + "\n" + subsFmtDate(d.iso)));
   const body = (rows || []).map((r) => [r.label].concat(days.map((_, i) => (r.cells || [])[i] || "")));
   boardExportPdf({
     title: "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4",
-    subtitle: (projectName ? projectName + " \u00b7 " : "") +
+    subtitle: (projectName ? projectName + " \u00b7 " : "") + (floorTag ? floorTag + " \u00b7 " : "") +
       "\u05e9\u05d1\u05d5\u05e2 " + subsFmtDate(weekStart) + " \u2013 " + subsFmtDate(days[5].iso),
     head,
     body,
@@ -6658,7 +6658,8 @@ function subsWeekDays(weekStart) {
 }
 // Every trade's week on one sheet — the thing she actually hands out on a
 // Sunday morning, instead of opening six cubes one after another. (10.9.26)
-function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, onChange, onChangeExtra, onBack, onAnnounce }) {
+function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, isRTL, onChange, onChangeExtra, onBack, onAnnounce }) {
+  const [flSel, setFlSel] = React9.useState("");   // "" = every floor
   const now = new Date();
   const [year, setYear] = React9.useState(now.getFullYear());
   const [month, setMonth] = React9.useState(now.getMonth());
@@ -6670,16 +6671,38 @@ function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, o
   const btnS = { minWidth: 260, justifyContent: "center", gap: 8 };
   // Trades have a cube and an app. These do not — a crane crew or a surveyor
   // who has to be on the week's sheet and has no reason to sign in anywhere.
-  // 12.11.26 — a trade's week filled in on a floor (inside the trade's cube,
-  // on that floor) is kept under "trade@floor", and this sheet only read the
-  // trade's own line: גבס on floor 7 was filled in and the sheet stayed empty.
-  // Each floor that has a week of its own now gets its own line, right under
-  // its trade — "גבס · קומה 7" — read and written in the same place.
-  const floorKeys = (tk) => Object.keys(data || {}).filter((k) => k.indexOf(tk + "@") === 0)
-    .sort((a, b) => String(a.slice(tk.length + 1)).localeCompare(String(b.slice(tk.length + 1)), "he", { numeric: true }));
-  const lines = SUB_TRADES.flatMap((t) => [{ key: t.key, label: t.label }]
-      .concat(floorKeys(t.key).map((k) => ({ key: k, label: t.label + " \u00b7 \u05e7\u05d5\u05de\u05d4 " + k.slice(t.key.length + 1), floor: true }))))
-    .concat((extra || []).map((x) => ({ key: x.id, label: x.label, extra: true })));
+  // 12.11.26 — the week is kept by floor: she fills each trade in on its floor
+  // (in the trade's cube, on that floor — saved as "trade@floor"), and the
+  // trade's general line is no longer used. So the sheet goes by floors too:
+  // a bar of floors on top; one floor shows its six trades, to read and fill
+  // in; "כל הקומות" shows every floor, one under the other, with the trades
+  // that have something that week. A trade's general line still shows, as
+  // "· כללי", only where something was written in it before.
+  const flList = (floors || []).map(String);
+  const hasText = (key, wk) => (((data || {})[key] || {})[wk] || []).some((x) => (x || "").trim());
+  const floorOfKey = (k) => (k.indexOf("@") > 0 ? k.slice(k.indexOf("@") + 1) : "");
+  const linesFor = (wk) => {
+    const out = [];
+    const shown = flSel ? [flSel] : flList.concat(
+      // a floor with a week of its own that is not in the project's list
+      Array.from(new Set(Object.keys(data || {}).map(floorOfKey).filter((f) => f && flList.indexOf(f) < 0))));
+    shown.forEach((f) => {
+      const trs = SUB_TRADES.filter((t) => flSel || hasText(t.key + "@" + f, wk) || (buf && buf[t.key + "@" + f]));
+      if (!trs.length) return;
+      out.push({ head: "\u05e7\u05d5\u05de\u05d4 " + f, key: "h-" + f });
+      trs.forEach((t) => out.push({ key: t.key + "@" + f, label: t.label, print: "\u05e7\u05d5\u05de\u05d4 " + f + " \u00b7 " + t.label }));
+    });
+    const general = SUB_TRADES.filter((t) => hasText(t.key, wk));
+    if (general.length) {
+      out.push({ head: "\u05dc\u05dc\u05d0 \u05e7\u05d5\u05de\u05d4", key: "h-general" });
+      general.forEach((t) => out.push({ key: t.key, label: t.label + " \u00b7 \u05db\u05dc\u05dc\u05d9", print: t.label + " \u00b7 \u05db\u05dc\u05dc\u05d9" }));
+    }
+    if ((extra || []).length) {
+      out.push({ head: "\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd", key: "h-extra" });
+      (extra || []).forEach((x) => out.push({ key: x.id, label: x.label, print: x.label, extra: true }));
+    }
+    return out;
+  };
   const weeks = [];
   {
     const cursor = new Date(year, month, 1);
@@ -6718,6 +6741,11 @@ function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, o
 
   if (weekStart) {
     const days = subsWeekDays(weekStart);
+    const lines = linesFor(weekStart);
+    const rowsOnly = lines.filter((l) => !l.head);
+    const flBtn = (f, label) => React9.createElement("button", { key: "f" + f, type: "button", onClick: () => setFlSel(f),
+      style: { border: "1px solid " + (flSel === f ? "#5b3fa0" : "var(--line)"), background: flSel === f ? "#5b3fa0" : "#fff", color: flSel === f ? "#fff" : "#3d4350",
+        borderRadius: 8, padding: "6px 12px", font: "inherit", fontSize: 13, fontWeight: 700, cursor: "pointer" } }, label);
     return React9.createElement("div", { className: "functionPageBody", style: { flexDirection: "column", alignItems: "center", padding: 24, gap: 16 } },
       React9.createElement("h3", { style: { margin: 0, textAlign: "center" } }, "\u05dc\u05d5\"\u05d6 \u05e9\u05d1\u05d5\u05e2\u05d9 \u2014 \u05e7\u05d1\u05dc\u05e0\u05d9 \u05de\u05e9\u05e0\u05d4"),
       React9.createElement("p", { className: "panelSub", style: { margin: 0, textAlign: "center" } },
@@ -6729,10 +6757,15 @@ function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, o
           dirty ? "\u05e9\u05de\u05d9\u05e8\u05d4" : "\u05e0\u05e9\u05de\u05e8"),
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: btnS, onClick: () => subsPrintWeek({
           printBrand, projectName, isRTL, weekStart,
-          rows: lines.map((l) => ({ label: l.label, cells: cellsOf(l.key) })),
+          rows: rowsOnly.map((l) => ({ label: flSel ? l.label : (l.print || l.label), cells: cellsOf(l.key) })),
+          ...(flSel ? { floorTag: "\u05e7\u05d5\u05de\u05d4 " + flSel } : {}),
         }) },
           React9.createElement(Printer, { size: 15, strokeWidth: 2 }),
           "\u05d4\u05d3\u05e4\u05e1\u05d4")),
+      flList.length > 0 && React9.createElement("div", { style: { display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center" } },
+        [flBtn("", "\u05db\u05dc \u05d4\u05e7\u05d5\u05de\u05d5\u05ea")].concat(flList.map((f) => flBtn(f, "\u05e7\u05d5\u05de\u05d4 " + f)))),
+      !flSel && React9.createElement("p", { className: "panelSub", style: { margin: "-6px 0 0", textAlign: "center" } },
+        "\u05db\u05d0\u05df \u05de\u05d5\u05e4\u05d9\u05e2\u05d9\u05dd \u05e8\u05e7 \u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e9\u05de\u05d5\u05dc\u05d0\u05d5 \u05d1\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d6\u05d4. \u05dc\u05de\u05d9\u05dc\u05d5\u05d9 \u2014 \u05d1\u05d7\u05e8\u05d9 \u05e7\u05d5\u05de\u05d4."),
       React9.createElement("div", { style: { width: "100%", maxWidth: 1140, overflowX: "auto" } },
         React9.createElement("table", { style: { borderCollapse: "collapse", width: "100%", tableLayout: "fixed", margin: "0 auto" } },
           React9.createElement("thead", null, React9.createElement("tr", null,
@@ -6740,7 +6773,9 @@ function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, o
             days.map((d, i) => React9.createElement("th", { key: i, style: SUBS_HEAD },
               React9.createElement("div", null, d.name),
               React9.createElement("div", { style: { fontSize: 11, color: "var(--mist)", fontWeight: 500, direction: "ltr" } }, subsFmtDate(d.iso)))))),
-          React9.createElement("tbody", null, lines.map((l) => {
+          React9.createElement("tbody", null, (rowsOnly.length ? lines : [{ head: "\u05d0\u05d9\u05df \u05e2\u05d3\u05d9\u05d9\u05df \u05dc\u05d5\"\u05d6 \u05dc\u05e9\u05d1\u05d5\u05e2 \u05d4\u05d6\u05d4", key: "h-none", empty: true }]).map((l) => {
+            if (l.head) return React9.createElement("tr", { key: l.key },
+              React9.createElement("td", { colSpan: 7, style: { ...SUBS_CELL, background: l.empty ? "#fff" : "#efeaf8", color: l.empty ? "var(--mist)" : "#3b2a6b", fontWeight: 800, textAlign: "center", padding: "6px 8px" } }, l.head));
             const cells = cellsOf(l.key);
             return React9.createElement("tr", { key: l.key },
               React9.createElement("td", { style: { ...SUBS_CELL, textAlign: "center", fontWeight: 800, background: "#fafbfc", verticalAlign: "middle" } },
@@ -6783,7 +6818,7 @@ function SubsWeeklyAll({ data, extra, canEdit, printBrand, projectName, isRTL, o
       weeks.map((w) => {
         const key = iso(w);
         const end = new Date(w); end.setDate(end.getDate() + 5);
-        const filled = lines.filter((l) => (((data || {})[l.key] || {})[key] || []).some((x) => (x || "").trim())).length;
+        const filled = Object.keys(data || {}).filter((k) => hasText(k, key)).length;
         return React9.createElement("button", {
           key, type: "button", onClick: () => setWeekStart(key),
           style: { display: "flex", justifyContent: "space-between", alignItems: "center", border: "1px solid var(--line)", borderRadius: 10, background: "#fff", padding: "12px 14px", cursor: "pointer", font: "inherit" }
@@ -7298,6 +7333,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
   if (view === "weekAll") {
     return React9.createElement(SubsWeeklyAll, {
       canEdit,
+      floors: floorsAll,
       printBrand,
       projectName,
       isRTL,
