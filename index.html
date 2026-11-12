@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.11.2026 · build 306";
+var APP_BUILD = "12.11.2026 · build 307";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6694,24 +6694,30 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
     const shown = flSel ? [flSel] : flList.concat(
       // a floor with a week of its own that is not in the project's list
       Array.from(new Set(Object.keys(data || {}).map(floorOfKey).filter((f) => f && flList.indexOf(f) < 0))));
-    shown.forEach((f) => {
-      const trs = SUB_TRADES.filter((t) => flSel || hasText(t.key + "@" + f, wk) || (buf && buf[t.key + "@" + f]));
-      if (!trs.length) return;
-      // 12.11.26 — in "כל הקומות" no floor headings: the floor is written under
-      // the trade, where it was filled in, and the line is locked (it is
-      // filled in inside the trade's cube, on its floor).
-      if (flSel) out.push({ head: "\u05e7\u05d5\u05de\u05d4 " + f, key: "h-" + f });
-      trs.forEach((t) => out.push({ key: t.key + "@" + f, label: t.label, sub: flSel ? "" : "\u05e7\u05d5\u05de\u05d4 " + f, locked: true,
-        print: "\u05e7\u05d5\u05de\u05d4 " + f + " \u00b7 " + t.label }));
-    });
+    const tradeLine = (t, f) => ({ key: t.key + "@" + f, label: t.label, sub: flSel ? "" : "\u05e7\u05d5\u05de\u05d4 " + f, locked: true,
+      print: "\u05e7\u05d5\u05de\u05d4 " + f + " \u00b7 " + t.label });
+    const live = (t, f) => hasText(t.key + "@" + f, wk) || (buf && buf[t.key + "@" + f]);
+    if (flSel) {
+      out.push({ head: "\u05e7\u05d5\u05de\u05d4 " + flSel, key: "h-" + flSel });
+      SUB_TRADES.forEach((t) => out.push(tradeLine(t, flSel)));
+    } else {
+      // 12.11.26 — by trade: a trade on several floors has its floors one under
+      // the other ("גבס / קומה 7", "גבס / קומה 8"), the floor written under it.
+      SUB_TRADES.forEach((t) => shown.forEach((f) => { if (live(t, f)) out.push(tradeLine(t, f)); }));
+    }
     const general = SUB_TRADES.filter((t) => hasText(t.key, wk));
     if (general.length) {
       if (flSel) out.push({ head: "\u05dc\u05dc\u05d0 \u05e7\u05d5\u05de\u05d4", key: "h-general" });
       general.forEach((t) => out.push({ key: t.key, label: t.label, sub: "\u05db\u05dc\u05dc\u05d9", locked: true, print: t.label + " \u00b7 \u05db\u05dc\u05dc\u05d9" }));
     }
-    if ((extra || []).length) {
+    // the hand-added contractors, each with its floor if one was given; on a
+    // floor, those of that floor and those of no floor
+    const ex = (extra || []).filter((x) => !flSel || !x.floor || String(x.floor) === flSel)
+      .slice().sort((a, b) => String(a.label).localeCompare(String(b.label), "he") || String(a.floor || "").localeCompare(String(b.floor || ""), "he", { numeric: true }));
+    if (ex.length) {
       out.push({ head: "\u05e7\u05d1\u05dc\u05e0\u05d9\u05dd \u05e0\u05d5\u05e1\u05e4\u05d9\u05dd", key: "h-extra" });
-      (extra || []).forEach((x) => out.push({ key: x.id, label: x.label, print: x.label, extra: true }));
+      ex.forEach((x) => out.push({ key: x.id, label: x.label, sub: x.floor ? "\u05e7\u05d5\u05de\u05d4 " + x.floor : "", extra: true,
+        print: (x.floor ? "\u05e7\u05d5\u05de\u05d4 " + x.floor + " \u00b7 " : "") + x.label }));
     }
     return out;
   };
@@ -6744,10 +6750,12 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
     }
     setBuf(null);
   };
+  const [addFloor, setAddFloor] = React9.useState("");
   const addLine = () => {
     const label = adding.trim();
     if (!label) return;
-    onChangeExtra((extra || []).concat([{ id: "x-" + Date.now().toString(36), label }]));
+    const fl = addFloor || flSel || "";
+    onChangeExtra((extra || []).concat([{ id: "x-" + Date.now().toString(36), label, ...(fl ? { floor: fl } : {}) }]));
     setAdding("");
   };
 
@@ -6808,7 +6816,7 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
                     ...(l.locked ? { background: "#f6f7f9", color: "#3d4350", cursor: "default" } : {}) }
                 }))));
           })))),
-      canEdit && React9.createElement("div", { style: { display: "flex", gap: 8, width: "100%", maxWidth: 520 } },
+      canEdit && React9.createElement("div", { style: { display: "flex", gap: 8, width: "100%", maxWidth: 620 } },
         React9.createElement("input", {
           value: adding,
           placeholder: "\u05e9\u05dd \u05e7\u05d1\u05dc\u05df \u05dc\u05dc\u05d5\"\u05d6 \u05d1\u05dc\u05d1\u05d3",
@@ -6816,6 +6824,10 @@ function SubsWeeklyAll({ data, extra, floors, canEdit, printBrand, projectName, 
           onKeyDown: (e) => { if (e.key === "Enter") addLine(); },
           style: { flex: 1, border: "1px solid var(--line)", borderRadius: 7, padding: "8px 10px", font: "inherit", fontSize: 13 }
         }),
+        flList.length > 0 && React9.createElement("select", {
+          value: addFloor || flSel || "", onChange: (e) => setAddFloor(e.target.value), title: "\u05e9\u05d9\u05d5\u05da \u05dc\u05e7\u05d5\u05de\u05d4",
+          style: { border: "1px solid var(--line)", borderRadius: 7, padding: "8px 6px", font: "inherit", fontSize: 13, background: "#fff" }
+        }, [React9.createElement("option", { key: "", value: "" }, "\u05dc\u05dc\u05d0 \u05e7\u05d5\u05de\u05d4")].concat(flList.map((f) => React9.createElement("option", { key: f, value: f }, "\u05e7\u05d5\u05de\u05d4 " + f)))),
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: { minWidth: 150, justifyContent: "center", gap: 8 }, onClick: addLine },
           React9.createElement(Users, { size: 15, strokeWidth: 2 }),
           "\u05d4\u05d5\u05e1\u05e4\u05ea \u05e7\u05d1\u05dc\u05df")));
