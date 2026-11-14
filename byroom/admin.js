@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/admin.js — By Room for the system administrator. A. Weiss dashboard
-//  byroom build 18 · 10.11.2026
+//  byroom build 19 · 14.11.2026
 //
 //  The dashboard loads this file when the administrator opens the By Room cube.
 //  It talks to Supabase through the shared client in ../sign.js and keeps all
@@ -24,7 +24,7 @@ import { supabase } from "../sign.js";
 import { ByRoomViewer, FloorMap, KIND, KIND_OF_CAT, viewCss } from "./view.js";
 
 const html = htm.bind(React.createElement);
-export const BYROOM_BUILD = "byroom build 18 · 10.11.2026";
+export const BYROOM_BUILD = "byroom build 19 · 14.11.2026";
 if (typeof console !== "undefined") console.info(BYROOM_BUILD);   // the build is in the console only, not on the screen
 
 // ----------------------------------------------------------------------------- words
@@ -1633,15 +1633,25 @@ function History({ setId, L }) {
 }
 
 // ----------------------------------------------------------------------------- קישורים / QR
-const projectMessage = (projectName, link) => [
+// 14.11.26 — the message is edited on the dashboard ("עריכת ההודעה"), one per project. It is kept as a
+// template: {פרויקט} becomes the project's name and {קישור} the link; a text without {קישור} gets the link
+// at its end. Stored in byroom_room_notes (floor "*", room "#message"), beside the project's other notes;
+// no text stored = the fixed wording below.
+const MSG_ROOM = "#message";
+const DEFAULT_MSG = [
   "שלום,",
-  `מצורף קישור לצפייה בחומרי הגמר לפי חדר בפרויקט ${projectName}.`,
+  "מצורף קישור לצפייה בחומרי הגמר לפי חדר בפרויקט {פרויקט}.",
   "בקישור בוחרים קומה, מקישים על חדר במפה או מקלידים את מספר החדר, ורואים את האיפיונים המאושרים של החדר.",
-  link,
+  "{קישור}",
   "",
   "בברכה,",
   "א. וייס הנדסה",
 ].join("\n");
+const projectMessage = (projectName, link, tpl) => {
+  const t = String(tpl || "").trim() ? String(tpl) : DEFAULT_MSG;
+  const out = t.split("{פרויקט}").join(projectName || "");
+  return out.includes("{קישור}") ? out.split("{קישור}").join(link) : out.replace(/\s+$/, "") + "\n" + link;
+};
 
 function printPage(title, body) {
   const w = window.open("", "_blank");
@@ -1662,7 +1672,25 @@ function QrLinks({ projectId, projectName, L }) {
   const [floors, setFloors] = useState([]);
   const [floor, setFloor] = useState(null);
   const [copied, setCopied] = useState(null);
+  const [tpl, setTpl] = useState(null);          // the project's own wording, or "" = the fixed one
+  const [edit, setEdit] = useState(null);        // the text in the box while editing
+  const [saving, setSaving] = useState(false);
   const base = new URL("./", import.meta.url).href;
+  useEffect(() => {
+    supabase.from("byroom_room_notes").select("note").eq("project_id", projectId).eq("floor", "*").eq("room_no", MSG_ROOM).maybeSingle()
+      .then(({ data }) => setTpl(data?.note ?? ""));
+  }, [projectId]);
+  const saveTpl = async (text) => {
+    setSaving(true);
+    const clean = String(text ?? "").replace(/\s+$/, "");
+    const { data: u } = await supabase.auth.getUser();
+    const { error } = clean && clean !== DEFAULT_MSG
+      ? await supabase.from("byroom_room_notes").upsert({ project_id: projectId, floor: "*", room_no: MSG_ROOM, note: clean, updated_at: new Date().toISOString(), updated_email: u?.user?.email ?? null }, { onConflict: "project_id,floor,room_no" })
+      : await supabase.from("byroom_room_notes").delete().eq("project_id", projectId).eq("floor", "*").eq("room_no", MSG_ROOM);
+    setSaving(false);
+    if (error) { alert("ההודעה לא נשמרה: " + error.message); return; }
+    setTpl(clean === DEFAULT_MSG ? "" : clean); setEdit(null);
+  };
   const load = async () => {
     setKey(must(await supabase.from("byroom_room_links").select("*").eq("project_id", projectId).is("revoked_at", null).order("created_at", { ascending: false }).limit(1)).at(0) ?? null);
     const fl = [...new Set(must(await supabase.from("byroom_rooms").select("floor").eq("project_id", projectId).eq("status", "active")).map((r) => r.floor))].sort((a, b) => Number(a) - Number(b));
@@ -1677,7 +1705,7 @@ function QrLinks({ projectId, projectName, L }) {
   if (!key) return html`<div className="bra-card"><p>${L.noKey}</p><p style=${{ fontSize: "13px", color: "#5b5e66" }}>המפתח הוא מה שפותח את הקישור לצפייה. אפשר לבטל אותו בכל רגע, וכל הקישורים יפסיקו לעבוד.</p>
     <button className="bra-btn primary" onClick=${make}>${L.makeKey}</button></div>`;
   const link = url(null, null);
-  const msg = projectMessage(projectName, link);
+  const msg = projectMessage(projectName, link, tpl);
   const copy = async (t, what) => { try { await navigator.clipboard.writeText(t); setCopied(what); setTimeout(() => setCopied(null), 1800); } catch (e) { prompt("העתיקו:", t); } };
   const whatsapp = () => window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank");
   const mail = () => window.open("https://outlook.office.com/mail/deeplink/compose?" + `subject=${encodeURIComponent(`פרויקט ${projectName} - חומרי גמר לפי חדר`)}&body=${encodeURIComponent(msg.replace(/\n/g, "\r\n"))}`, "_blank");
@@ -1695,7 +1723,19 @@ function QrLinks({ projectId, projectName, L }) {
   return html`<div>
     <div className="bra-card">
       <h3 style=${{ marginTop: 0 }}>ההודעה לפרויקט</h3>
-      <div className="bra-msgbox">${msg}</div>
+      ${edit !== null ? html`<div>
+        <textarea value=${edit} rows=${9} onInput=${(e) => setEdit(e.target.value)}
+          style=${{ width: "100%", boxSizing: "border-box", fontFamily: "inherit", fontSize: "14px", lineHeight: 1.55, padding: "10px", borderRadius: "10px", border: "1px solid #c9ccd2", direction: "rtl" }} />
+        <div style=${{ fontSize: "12px", color: "#5b5e66", margin: "4px 0 8px" }}>{פרויקט} — שם הפרויקט · {קישור} — הקישור (בלי {קישור} הקישור יתווסף בסוף ההודעה)</div>
+        <div className="bra-row" style=${{ justifyContent: "center" }}>
+          <button className="bra-btn primary" disabled=${saving} onClick=${() => saveTpl(edit)}>${saving ? "שומר…" : "שמירה"}</button>
+          <button className="bra-btn" disabled=${saving} onClick=${() => setEdit(null)}>ביטול</button>
+          <button className="bra-btn" disabled=${saving} onClick=${() => setEdit(DEFAULT_MSG)}>חזרה לנוסח הקבוע</button>
+        </div>
+      </div>` : html`<div className="bra-msgbox">${msg}</div>`}
+      ${edit === null ? html`<div className="bra-row" style=${{ marginTop: "10px" }}>
+        <button className="bra-btn" disabled=${tpl === null} onClick=${() => setEdit(tpl || DEFAULT_MSG)}>עריכת ההודעה</button>
+      </div>` : null}
       <div className="bra-row" style=${{ marginTop: "10px" }}>
         <button className="bra-btn primary" onClick=${whatsapp}>שליחה בוואטסאפ</button>
         <button className="bra-btn primary" onClick=${mail}>שליחה במייל (Outlook)</button>

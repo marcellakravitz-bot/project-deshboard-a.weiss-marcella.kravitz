@@ -1,6 +1,6 @@
 // =============================================================================
 //  byroom/view.js — the client's By Room: view only, mobile first. A. Weiss · By Room
-//  byroom build 17 · 10.11.2026
+//  byroom build 19 · 14.11.2026
 //
 //  One copy, used by the phone page opened from a QR code or a link (byroom/index.html)
 //  and by the By Room cube for a signed-in client inside the dashboard.
@@ -35,14 +35,14 @@ const TX = {
     back: "חזרה", home: "מסך ראשי", showPlan: "הצגה על התוכנית", none: "לא הוגדרו איפיונים לחדר הזה", notes: "הערות",
     supplier: "ספק", status: "סטטוס", loading: "טוען…", noRooms: "לא נמצא חדר", tap: "הקישו על חדר בתוכנית",
     notYet: "עדיין לא פורסמו חדרים בפרויקט הזה", all: "כל הקומה", lighting: "תאורה",
-    tagline: "חומרי גמר ואיפיונים לפי חדר", enter: "כניסה", sqm: 'מ"ר', close: "סגירה",
+    tagline: "חומרי גמר ואיפיונים לפי חדר", enter: "כניסה", allFloors: "כל הקומות", sqm: 'מ"ר', close: "סגירה",
   },
   en: {
     byRoom: "Search by room", byPlan: "Search by plan", search: "Room number or name", floor: "Floor", room: "Room",
     back: "Back", home: "Home", showPlan: "Show on plan", none: "No finishes defined for this room", notes: "Notes",
     supplier: "Supplier", status: "Status", loading: "Loading…", noRooms: "No room found", tap: "Tap a room on the plan",
     notYet: "No rooms have been published in this project yet", all: "Whole floor", lighting: "Lighting",
-    tagline: "Finishes and specifications by room", enter: "Enter", sqm: "m²", close: "Close",
+    tagline: "Finishes and specifications by room", enter: "Enter", allFloors: "All floors", sqm: "m²", close: "Close",
   },
 };
 let LANG = "he";
@@ -55,19 +55,32 @@ export const viewCss = `
 .brv{--a:#101114;--ai:#103460;--as:#e9eef6;--ink:#17181c;--steel:#5b5e66;--mist:#9a9da5;--ln:#e6e6e9;--bg2:#f6f6f7;
   font-family:'Assistant','Inter',system-ui,sans-serif;color:var(--ink);background:var(--bg2);min-height:100%;height:100%;display:flex;flex-direction:column;position:relative}
 .brv *{box-sizing:border-box}
+/* 14.11.26 — no scroll bars: the page moves under the finger, as in an app */
+.brv,.brv *{scrollbar-width:none;-ms-overflow-style:none}
+.brv ::-webkit-scrollbar,.brv::-webkit-scrollbar{display:none;width:0;height:0}
+/* 14.11.26 — "By Room" is no longer on the bar: after "כניסה" it heads the screen, under the bar */
+.brv-title{position:relative;background:#fff;text-align:center;padding:13px 70px 11px;border-bottom:1px solid var(--ln)}
+.brv-title .tt{font-family:'Barlow Condensed','Arial Narrow',sans-serif;font-weight:700;font-size:26px;letter-spacing:.07em;color:#00295c;line-height:1;direction:ltr;display:inline-block}
+/* the back button, as in the other apps: "→ חזרה", always to the screen before */
+.brv-back{position:absolute;inset-inline-start:8px;top:50%;transform:translateY(-50%);background:none;border:0;font:inherit;font-size:14px;font-weight:600;color:var(--steel);cursor:pointer;padding:6px 6px;display:inline-flex;align-items:center;gap:5px}
+.brv-out{display:inline-flex;align-items:flex-end;align-self:center;gap:6px;height:28px;padding:0 4px;background:none;border:none;color:#e3e5ea;font:inherit;font-size:13.5px;font-weight:700;line-height:1;cursor:pointer;flex:none;direction:rtl}
+.brv-out svg{display:block;margin-bottom:-1px}
+.brv-out span{line-height:1}
 .brv button{font-family:inherit}
 .brv-bar{display:flex;direction:ltr;align-items:center;gap:6px;padding:calc(env(safe-area-inset-top) + 8px) 12px 8px;background:#101114;color:#fff;min-height:56px;position:sticky;top:0;z-index:4}
 .brv-bar .t{position:absolute;left:50%;top:calc(50% + env(safe-area-inset-top) / 2);transform:translate(-50%,-50%);font-weight:800;font-size:17px;letter-spacing:.3px;white-space:nowrap;pointer-events:none;font-family:'Inter','Assistant',system-ui,sans-serif}
 .brv-bar .logo{height:28px;width:auto;display:block;flex:none}
 .brv-bar .gap{flex:1}
-.brv-lang{display:flex;align-items:center;border:1px solid #3a3d45;border-radius:999px;overflow:hidden;flex:none;font-family:'Inter',system-ui,sans-serif}
-.brv-lang button{border:0;background:transparent;color:#b9bcc4;font-size:12px;font-weight:800;padding:6px 10px;cursor:pointer;letter-spacing:.4px}
-.brv-lang button.on{background:#fff;color:#101114}
-.brv-splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px 22px 40px;text-align:center;background:#fff}
+.brv-splash{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:28px 22px 40px;text-align:center;background:#fff;position:relative;overflow:hidden}
+/* 14.11.26 — the line drawing of the A. Weiss buildings (as on a-weiss.co.il), light grey, under the content */
+.brv-lines{position:absolute;left:0;right:0;bottom:0;width:100%;height:auto;max-height:40%;pointer-events:none;z-index:0;opacity:0;animation:brvLines 1.2s ease .2s forwards}
+.brv-lines path{fill:none;stroke:#c3c5ca;stroke-width:2.2;stroke-linejoin:miter;vector-effect:non-scaling-stroke}
+@keyframes brvLines{from{opacity:0;transform:translateY(10px)}to{opacity:.7;transform:none}}
+.brv-splash > :not(.brv-lines),.brv-home > :not(.brv-lines){position:relative;z-index:1}
 .brv-splash .lg{opacity:0;animation:brvIn .7s cubic-bezier(.2,.7,.2,1) forwards}
 .brv-splash .lg img{display:block;max-height:64px;max-width:190px;object-fit:contain;margin:0 auto}
-.brv-splash .lg.aw{background:#101114;border-radius:14px;padding:10px 18px}
-.brv-splash .lg.aw img{max-height:34px}
+.brv-splash .lg.aw img{max-height:78px;max-width:210px}
+.brv-splash .lg + .lg{margin-top:6px}
 .brv-backrow{background:#fff;border-bottom:1px solid var(--ln);padding:4px 8px}
 .brv-backrow button{border:0;background:transparent;font-size:15px;font-weight:700;color:var(--ai);padding:8px 8px;cursor:pointer}
 .brv-splash h1{font-size:24px;font-weight:800;margin:6px 0 0;line-height:1.25;opacity:0;animation:brvIn .6s ease forwards}
@@ -77,7 +90,7 @@ export const viewCss = `
 @keyframes brvIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){.brv-splash *{animation-duration:.01s!important;animation-delay:0s!important}}
 .brv-icon{width:40px;height:40px;border-radius:999px;border:0;background:transparent;font-size:18px;color:#b9bcc4;cursor:pointer;flex:none}
-.brv-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:28px 18px 40px;text-align:center}
+.brv-home{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:28px 18px 40px;text-align:center;position:relative;overflow:hidden;background:#fff}
 .brv-logos{display:flex;align-items:center;justify-content:center;gap:26px;flex-wrap:wrap}
 .brv-logos img{max-height:56px;max-width:150px;object-fit:contain}
 .brv-home h1{font-size:24px;font-weight:800;margin:0;line-height:1.25}
@@ -87,7 +100,8 @@ export const viewCss = `
 .brv-big button.p{background:var(--a);border-color:var(--a);color:#fff}
 .brv-big button span.i{font-size:22px;width:28px;text-align:center}
 .brv-search{padding:14px;background:#fff;border-bottom:1px solid var(--ln)}
-.brv-search input{width:100%;font:inherit;font-size:18px;padding:13px 14px;border:1.5px solid var(--ln);border-radius:14px;outline:none}
+.brv-search input{width:100%;font:inherit;font-size:18px;padding:13px 14px;border:1.5px solid var(--ln);border-radius:14px;outline:none;text-align:center}
+.brv-search input::placeholder{text-align:center}
 .brv-search input:focus{border-color:var(--a)}
 .brv-list{flex:1;overflow:auto;padding:8px 14px 24px}
 .brv-res{display:flex;align-items:center;gap:12px;width:100%;text-align:start;padding:14px;margin:8px 0;border-radius:14px;border:1px solid var(--ln);background:#fff;cursor:pointer;color:var(--ink)}
@@ -97,7 +111,9 @@ export const viewCss = `
 .brv-msg{padding:28px 18px;text-align:center;color:var(--steel)}
 .brv-grooms{display:flex;flex-wrap:wrap;gap:5px;justify-content:center;margin:8px 0 4px}.brv-grooms span{border:1px solid #d9d4f5;background:#f4f2fd;color:#3C3489;border-radius:8px;padding:1px 8px;font-size:12.5px}.brv-grooms span.on{background:#534AB7;color:#fff;border-color:#534AB7}
 .brv-note{margin-top:16px;padding:10px 12px;border:1px solid #f1d38c;background:#fffaf0;border-radius:12px;font-size:14px;white-space:pre-wrap;text-align:start}.brv-note b{display:block;margin-bottom:3px}
-.brv-chips{display:flex;gap:8px;overflow:auto;padding:10px 14px;background:#fff;border-bottom:1px solid var(--ln)}
+.brv-chips{display:flex;flex-wrap:wrap;gap:8px;padding:10px 14px;background:#fff;border-bottom:1px solid var(--ln);justify-content:center}
+.brv-search .brv-chips{border-bottom:0;padding:0 0 12px}
+.brv-search .brv-chip{padding:7px 14px;font-size:14px}
 .brv-chip{flex:none;padding:9px 16px;border-radius:999px;border:1px solid var(--ln);background:#fff;font-size:15px;font-weight:600;cursor:pointer;color:var(--ink)}
 .brv-chip.on{background:var(--ai);border-color:var(--ai);color:#fff}
 .brv-planwrap{flex:1;display:flex;min-height:0}
@@ -108,12 +124,20 @@ export const viewCss = `
 .brv-hint{position:absolute;top:12px;left:50%;transform:translateX(-50%);background:rgba(23,24,28,.78);color:#fff;font-size:14px;padding:6px 14px;border-radius:999px;pointer-events:none;white-space:nowrap}
 .brv-shade{position:absolute;inset:0;background:rgba(23,24,28,.45);z-index:20;display:flex;align-items:center;justify-content:center;padding:14px}
 .brv-modal{background:#fff;border-radius:20px;width:100%;max-width:560px;max-height:88vh;overflow:auto;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+/* 14.11.26 — on the phone a room (or an item) opens over the whole screen, starting right under "BY ROOM";
+   everything behind it, the bar and the "BY ROOM" heading included, is under the dark shade. */
+.brv-head{position:sticky;top:0;z-index:30}
+.brv-head .brv-bar{position:static}
+@media (max-width:899px){
+  .brv-shade{z-index:40;align-items:stretch;padding:calc(var(--brv-hdr,0px) + 10px) 10px calc(10px + env(safe-area-inset-bottom))}
+  .brv-modal{max-width:none;max-height:none;height:100%}
+}
 .brv-side{width:min(440px,42%);border-inline-start:1px solid var(--ln);background:#fff;overflow:auto;position:relative}
-.brv-x{position:absolute;top:12px;inset-inline-end:12px;width:40px;height:40px;border-radius:50%;border:0;background:var(--bg2);font-size:18px;cursor:pointer;color:var(--ink);z-index:2}
+.brv-x{position:absolute;top:12px;right:12px;width:40px;height:40px;border-radius:50%;border:0;background:var(--bg2);font-size:18px;cursor:pointer;color:var(--ink);z-index:2}
 .brv-card{padding:20px 18px 22px}
-.brv-card h2{margin:0;font-size:26px;font-weight:800;color:var(--ink)}
-.brv-card .sub{color:var(--steel);font-size:15px;margin:2px 0 14px}
-.brv-cat{margin:16px 0 6px;font-size:14px;font-weight:800;color:var(--ai);letter-spacing:.2px}
+.brv-card h2{margin:0;font-size:26px;font-weight:800;color:var(--ink);text-align:center;padding:0 48px}
+.brv-card .sub{color:var(--steel);font-size:15px;margin:2px 0 14px;text-align:center}
+.brv-cat{margin:16px 0 6px;font-size:14px;font-weight:800;color:var(--ai);letter-spacing:.2px;text-align:center}
 .brv-item{display:flex;gap:12px;align-items:center;width:100%;text-align:start;padding:10px;border-radius:14px;border:1px solid var(--ln);background:#fff;margin:6px 0;cursor:pointer;color:var(--ink)}
 .brv-item img,.brv-item .ph{width:62px;height:62px;border-radius:10px;object-fit:cover;flex:none;background:var(--as)}
 .brv-item .ph{display:flex;align-items:center;justify-content:center;color:var(--ai);font-weight:800;font-size:13px}
@@ -125,8 +149,9 @@ export const viewCss = `
 .brv-full{padding:0 0 20px}
 .brv-full img{width:100%;max-height:52vh;object-fit:contain;background:var(--bg2);display:block;border-radius:20px 20px 0 0}
 .brv-full .b{padding:16px 18px}
-.brv-full h3{margin:0;font-size:24px;font-weight:800}
-.brv-full .n{font-size:18px;margin-top:2px}
+.brv-full h3{margin:0;font-size:24px;font-weight:800;text-align:center}
+.brv-full .n{font-size:18px;margin-top:2px;text-align:center}
+.brv-full .cat{font-size:13px;color:#103460;font-weight:800;text-align:center}
 .brv-full .d{font-size:16px;line-height:1.55;margin-top:12px;white-space:pre-wrap}
 .brv-full .kv{display:flex;gap:8px;margin-top:10px;font-size:15px}.brv-full .kv span{color:var(--steel)}
 @media (min-width:900px){.brv-home h1,.brv-splash h1{font-size:34px}.brv-list{max-width:760px;width:100%;margin:0 auto}}
@@ -137,7 +162,21 @@ const kindToName = (k) => { try { return String(k).slice(2).match(/.{3}/g).map((
 const catLabel = (k, cats) => KIND[k]?.[LANG] ?? (k === "lighting" ? T.lighting : (() => { const c = cats?.find((c) => c.key === k); return (LANG === "en" ? c?.en || c?.he : c?.he) ?? (/^h-/.test(k ?? "") ? kindToName(k) : k); })());
 const catOrder = (a, b) => { const x = ORDER.indexOf(a), y = ORDER.indexOf(b); return (x < 0 ? 99 : x) - (y < 0 ? 99 : y) || a.localeCompare(b); };
 const roomSort = (a, b) => { const x = /^(\d+)(.*)$/.exec(a.n), y = /^(\d+)(.*)$/.exec(b.n); return x && y ? Number(x[1]) - Number(y[1]) || x[2].localeCompare(y[2]) : a.n.localeCompare(b.n); };
-const AW_LOGO = new URL("../sub/logo.png", import.meta.url).href;   // the same logo the subcontractor app shows
+// 14.11.26 — the type of the "BY ROOM" heading: a bold condensed sans like the A. Weiss logo, loaded once
+if (typeof document !== "undefined" && !document.getElementById("brv-font")) {
+  const l = document.createElement("link");
+  l.id = "brv-font"; l.rel = "stylesheet";
+  l.href = "https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&display=swap";
+  document.head.appendChild(l);
+}
+const AW_LOGO = new URL("../sub/logo.png", import.meta.url).href;   // the same logo the subcontractor app shows (white, for the dark bar)
+// 14.11.26 — the opening screen: the blue A. Weiss logo the dashboard shows (the same file, sub/brand-logo.svg)
+const AW_LOGO_BLUE = new URL("../sub/brand-logo.svg", import.meta.url).href;
+// 14.11.26 — the line drawing of the A. Weiss buildings, redrawn as lines (crisp at every size, any colour)
+const LINES = html`<svg className="brv-lines" viewBox="0 0 554 398" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+  <path d="M3 281H290M150 281V85L290 3V281M55 281V179L224 97V281M3 281V262L172 180V281" />
+  <path d="M264 395H551M264 395V102L404 184V395M330 395V196L499 277V395M382 395V279L551 361V395" />
+</svg>`;
 const wide = () => typeof window !== "undefined" && !!window.matchMedia?.("(min-width: 900px)").matches;
 
 // ----------------------------------------------------------------------------- plan
@@ -249,7 +288,7 @@ function RoomCard({ room, floor, cats, note, group, onItem, onPlan }) {
           <div><span className="c" dir="ltr">${it.code}</span>${it.name && it.name !== it.code ? html`<span className="n"> · ${it.name}</span>` : null}</div>
           ${it.description ? html`<div className="d">${it.description}</div>` : null}
         </div>
-        <span style=${{ color: "var(--mist,#9a9da5)", fontSize: "18px" }}>‹</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#9a9da5" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style=${{ flex: "none" }}><path d="M15 6l-6 6 6 6" /></svg>
       </button>`)}
     </div>`)}
     ${note ? html`<div className="brv-note"><b>${T.notes}</b><div>${note}</div></div>` : null}
@@ -261,8 +300,8 @@ function ItemCard({ it, cats }) {
   return html`<div className="brv-full">
     ${it.image ? html`<img src=${it.image} alt="" />` : html`<div style=${{ height: "56px" }} />`}
     <div className="b">
-      <div style=${{ fontSize: "13px", color: "#103460", fontWeight: 800 }}>${catLabel(it.kind, cats)}</div>
-      <h3 dir="ltr" style=${{ textAlign: "start" }}>${it.code}</h3>
+      <div className="cat">${catLabel(it.kind, cats)}</div>
+      <h3 dir="ltr">${it.code}</h3>
       ${it.name && it.name !== it.code ? html`<div className="n">${it.name}</div>` : null}
       ${it.description ? html`<div className="d">${it.description}</div>` : null}
       ${it.supplier ? html`<div className="kv"><span>${T.supplier}:</span><b>${it.supplier}</b></div>` : null}
@@ -279,15 +318,16 @@ function Modal({ onClose, children }) {
 }
 
 // ----------------------------------------------------------------------------- the app
-export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false }) {
+export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false, standalone = false }) {
   const [home, setHome] = useState(null);
   const [err, setErr] = useState(null);
   const [screen, setScreen] = useState(initialFloor ? "plan" : "splash");
-  const [lang, setLangState] = useState(readLang);
-  const setLang = (v) => { setLangState(v); saveLang(v); };
+  // 14.11.26 — no language switch any more (its place on the bar is "יציאה"): Hebrew.
+  const lang = "he";
   LANG = lang; T = TX[lang];
-  const dir = lang === "en" ? "ltr" : "rtl";
+  const dir = "rtl";
   const [q, setQ] = useState("");
+  const [qFloor, setQFloor] = useState("");   // 14.11.26 — the search by room: one floor, or "" for all
   const [floor, setFloor] = useState(initialFloor ?? null);
   const [floorData, setFloorData] = useState({});
   const [card, setCard] = useState(initialRoom && initialFloor ? { floor: initialFloor, n: initialRoom, from: "plan" } : null);
@@ -309,63 +349,119 @@ export function ByRoomViewer({ api, initialFloor, initialRoom, embedded = false 
   const style = undefined;
   const all = useMemo(() => (home?.floors ?? []).flatMap((f) => f.rooms.map((r) => ({ ...r, floor: f.floor }))), [home]);
   const qq = q.trim().toLowerCase();
-  const results = qq ? all.filter((r) => r.n.toLowerCase().includes(qq) || (r.name ?? "").toLowerCase().includes(qq)).sort(roomSort) : all.slice().sort((a, b) => Number(a.floor) - Number(b.floor) || roomSort(a, b));
-  const closeCard = () => { setCard(null); setItem(null); };
-  const toPlan = () => { const c = card; setScreen("plan"); setFloor(c.floor); setCard({ ...c, from: "plan" }); };
+  const inFloor = all.filter((r) => !qFloor || r.floor === qFloor);
+  const results = qq ? inFloor.filter((r) => r.n.toLowerCase().includes(qq) || (r.name ?? "").toLowerCase().includes(qq)).sort(roomSort) : inFloor.slice().sort((a, b) => Number(a.floor) - Number(b.floor) || roomSort(a, b));
+  // 14.11.26 — every step is kept, so "→ חזרה" (and, on the phone page, the phone's own back) always returns
+  // to the screen before: a card closes back to its list or plan, a list back to the main screen, the main
+  // screen back to the opening. Inside the dashboard the steps are kept here only, so the dashboard's own
+  // history is not touched.
+  const stack = useRef([]);
+  // the height of the bar + "BY ROOM", so a room card opens right under them (14.11.26)
+  const headRef = useRef(null);
+  const rootRef = useRef(null);
+  useEffect(() => {
+    const set = () => { const h = headRef.current?.offsetHeight; if (h && rootRef.current) rootRef.current.style.setProperty("--brv-hdr", h + "px"); };
+    set();
+    const ro = typeof ResizeObserver !== "undefined" && headRef.current ? new ResizeObserver(set) : null;
+    if (ro) ro.observe(headRef.current);
+    return () => ro?.disconnect();
+  });
+  const now = useRef({});
+  now.current = { screen, card, item };
+  const apply = (s) => {
+    if ("screen" in s) setScreen(s.screen);
+    if ("card" in s) setCard(s.card);
+    if ("item" in s) setItem(s.item);
+    if (s.floor) setFloor(s.floor);
+  };
+  const popOne = () => {
+    const prev = stack.current.pop();
+    if (prev) apply(prev);
+    else apply({ screen: now.current.screen === "home" ? "splash" : "home", card: null, item: null });
+  };
+  const exiting = useRef(false);
+  useEffect(() => {
+    if (!standalone) return;
+    const onPop = () => {
+      if (exiting.current) { exiting.current = false; stack.current = []; apply({ screen: "splash", card: null, item: null }); return; }
+      popOne();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [standalone]);
+  const go = (patch) => {
+    stack.current.push({ ...now.current });
+    apply(patch);
+    if (standalone) try { history.pushState({ brv: stack.current.length }, ""); } catch (e) {}
+  };
+  const back = () => {
+    if (standalone && stack.current.length) { history.back(); return; }
+    popOne();
+  };
+  // יציאה: back to the opening screen, every step dropped
+  const exit = () => {
+    const n = stack.current.length;
+    if (standalone && n) { exiting.current = true; history.go(-n); return; }
+    stack.current = []; apply({ screen: "splash", card: null, item: null });
+  };
+  const closeCard = back;
+  const openCard = (c) => (now.current.card && !now.current.item ? apply({ card: c }) : go({ card: c, item: null }));
+  const toPlan = () => { const c = card; go({ screen: "plan", floor: c.floor, card: { ...c, from: "plan" }, item: null }); };
 
-  // the black bar: A. Weiss logo on the left, "By Room" (always in English) in the exact middle, HE | EN on the right
-  const bar = (onBack) => html`<div className="brv-bar">
+  // the black bar: A. Weiss logo on the left, "יציאה" with the door on the right (as in the other apps).
+  // 14.11.26 — after "כניסה", under the bar: "→ חזרה" and the "BY ROOM" heading in the logo's type.
+  const bar = () => html`<div className="brv-head" ref=${headRef}><div className="brv-bar">
     <img className="logo" src=${AW_LOGO} alt="A. Weiss" />
-    <div className="t">By Room</div>
     <span className="gap" />
-    <div className="brv-lang" role="group" aria-label="language">
-      <button className=${lang === "he" ? "on" : ""} onClick=${() => setLang("he")}>HE</button>
-      <button className=${lang === "en" ? "on" : ""} onClick=${() => setLang("en")}>EN</button>
-    </div>
-  </div>${onBack ? html`<div className="brv-backrow"><button onClick=${onBack}>${lang === "en" ? "‹" : "›"} ${T.back}</button></div>` : null}`;
+    ${screen !== "splash" ? html`<button className="brv-out" onClick=${exit}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M13 4h3a2 2 0 0 1 2 2v14M2 20h3M13 20h9M10 12v.01M13 4.562v16.157a1 1 0 0 1-1.242.97L5 20V5.562a2 2 0 0 1 1.515-1.94l4-1A2 2 0 0 1 13 4.561Z"/></svg><span>יציאה</span></button>` : null}
+  </div>${screen !== "splash" ? html`<div className="brv-title"><button className="brv-back" onClick=${back}>→ ${T.back}</button><span className="tt">BY ROOM</span></div>` : null}</div>`;
 
   if (err) return html`<div className="brv" dir=${dir} style=${style}><style>${viewCss}</style><div className="brv-msg">${err}</div></div>`;
   if (!home) return html`<div className="brv" dir=${dir}><style>${viewCss}</style><div className="brv-msg">${T.loading}</div></div>`;
 
-  const cardBody = card && html`<${RoomCard} room=${roomData} floor=${card.floor} cats=${cats} note=${roomData ? p.roomNotes?.[card.floor + "|" + roomData.n] : null} group=${roomData ? (p.roomGroups ?? []).find((g) => g.floor === card.floor && g.rooms.includes(roomData.n)) : null} onItem=${setItem} onPlan=${card.from === "search" ? toPlan : null} />`;
+  const cardBody = card && html`<${RoomCard} room=${roomData} floor=${card.floor} cats=${cats} note=${roomData ? p.roomNotes?.[card.floor + "|" + roomData.n] : null} group=${roomData ? (p.roomGroups ?? []).find((g) => g.floor === card.floor && g.rooms.includes(roomData.n)) : null} onItem=${(it) => go({ item: it })} onPlan=${card.from === "search" ? toPlan : null} />`;
   const fd = floorData[floor];
-  // opening: client logo, then supervision, then A. Weiss, then the project name (as it was set up), the line, and "Enter"
-  const seq = [p.clientLogo && "c", p.supervisionLogo && "s", "aw"].filter(Boolean);
+  // opening (14.11.26): A. Weiss (the blue logo), then the client, then the supervision, and "Enter" — logos only
+  const seq = ["aw", p.clientLogo && "c", p.supervisionLogo && "s"].filter(Boolean);
   const d = (i) => ({ animationDelay: `${0.15 + i * 0.55}s` });
   const n = seq.length;
-  return html`<div className="brv" dir=${dir} style=${style}>
+  return html`<div className="brv" ref=${rootRef} dir=${dir} style=${style}>
     <style>${viewCss}</style>
-    ${screen === "splash" ? html`${bar(null)}<div className="brv-splash">
-        ${seq.map((k, i) => html`<div key=${k} className=${`lg ${k}`} style=${d(i)}><img src=${k === "c" ? p.clientLogo : k === "s" ? p.supervisionLogo : AW_LOGO} alt=${k === "aw" ? "A. Weiss" : ""} /></div>`)}
-        <div className="ln" style=${d(n)} />
-        <h1 dir="auto" style=${d(n)}>${p.name ?? ""}</h1>
-        <div className="sub" style=${d(n + 0.6)}>${T.tagline}</div>
-        <button className="go" style=${d(n + 1.2)} onClick=${() => setScreen("home")}>${T.enter}</button>
+    ${screen === "splash" ? html`${bar()}<div className="brv-splash">
+        ${seq.map((k, i) => html`<div key=${k} className=${`lg ${k}`} style=${d(i)}><img src=${k === "c" ? p.clientLogo : k === "s" ? p.supervisionLogo : AW_LOGO_BLUE} alt=${k === "aw" ? "A. Weiss" : ""} /></div>`)}
+        <button className="go" style=${d(n + 0.2)} onClick=${() => go({ screen: "home" })}>${T.enter}</button>
+        ${LINES}
       </div>`
-    : screen === "home" ? html`${bar(null)}<div className="brv-home">
+    : screen === "home" ? html`${bar()}<div className="brv-home">
         <h1 dir="auto">${p.name ?? ""}</h1>
         <div className="sub">${T.tagline}</div>
         ${!home.floors.length ? html`<div className="brv-msg">${T.notYet}</div>` : html`<div className="brv-big">
-          <button className="p" onClick=${() => setScreen("search")}><span className="i">⌕</span>${T.byRoom}</button>
-          <button onClick=${() => setScreen("plan")}><span className="i">▦</span>${T.byPlan}</button>
+          <button className="p" onClick=${() => go({ screen: "search" })}><span className="i">⌕</span>${T.byRoom}</button>
+          <button onClick=${() => go({ screen: "plan" })}><span className="i">▦</span>${T.byPlan}</button>
         </div>`}
+        ${LINES}
       </div>`
     : screen === "search" ? html`
-      ${bar(() => setScreen("home"))}
-      <div className="brv-search"><input autoFocus inputMode="search" placeholder=${T.search} value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
+      ${bar()}
+      <div className="brv-search">
+        ${home.floors.length > 1 ? html`<div className="brv-chips">
+          <button className=${`brv-chip ${!qFloor ? "on" : ""}`} onClick=${() => setQFloor("")}>${T.allFloors}</button>
+          ${home.floors.map((f) => html`<button key=${f.floor} className=${`brv-chip ${f.floor === qFloor ? "on" : ""}`} onClick=${() => setQFloor(f.floor)}>${T.floor} ${f.floor}</button>`)}
+        </div>` : null}
+        <input autoFocus inputMode="search" placeholder=${T.search} value=${q} onInput=${(e) => setQ(e.target.value)} /></div>
       <div className="brv-list">
-        ${!results.length ? html`<div className="brv-msg">${T.noRooms}</div>` : results.slice(0, 200).map((r) => html`<button className="brv-res" key=${r.floor + "|" + r.n} onClick=${() => setCard({ floor: r.floor, n: r.n, from: "search" })}>
+        ${!results.length ? html`<div className="brv-msg">${T.noRooms}</div>` : results.slice(0, 200).map((r) => html`<button className="brv-res" key=${r.floor + "|" + r.n} onClick=${() => openCard({ floor: r.floor, n: r.n, from: "search" })}>
           <b dir="ltr">${r.n}</b><span className="nm">${r.name ?? ""}</span><span className="fl">${T.floor} ${r.floor}</span></button>`)}
       </div>`
     : html`
-      ${bar(() => { setScreen("home"); closeCard(); })}
-      ${home.floors.length > 1 ? html`<div className="brv-chips">${home.floors.map((f) => html`<button key=${f.floor} className=${`brv-chip ${f.floor === floor ? "on" : ""}`} onClick=${() => { setFloor(f.floor); closeCard(); }}>${T.floor} ${f.floor}</button>`)}</div>` : null}
+      ${bar()}
+      ${home.floors.length > 1 ? html`<div className="brv-chips">${home.floors.map((f) => html`<button key=${f.floor} className=${`brv-chip ${f.floor === floor ? "on" : ""}`} onClick=${() => { setFloor(f.floor); if (card) apply({ card: null, item: null }); }}>${T.floor} ${f.floor}</button>`)}</div>` : null}
       <div className="brv-planwrap">
-        ${!fd ? html`<div className="brv-msg" style=${{ flex: 1 }}>${T.loading}</div>` : html`<${FloorMap} map=${fd.map} selected=${card?.floor === floor ? card.n : null} onPick=${(n) => setCard({ floor, n, from: "plan" })} />`}
+        ${!fd ? html`<div className="brv-msg" style=${{ flex: 1 }}>${T.loading}</div>` : html`<${FloorMap} map=${fd.map} selected=${card?.floor === floor ? card.n : null} onPick=${(n) => openCard({ floor, n, from: "plan" })} />`}
         ${isWide && card ? html`<div className="brv-side"><button className="brv-x" onClick=${closeCard} aria-label=${T.close}>✕</button>${cardBody}</div>` : null}
       </div>`}
     ${card && !(isWide && screen === "plan") && !item ? html`<${Modal} onClose=${closeCard}>${cardBody}</${Modal}>` : null}
-    ${item ? html`<${Modal} onClose=${() => setItem(null)}><${ItemCard} it=${item} cats=${cats} /></${Modal}>` : null}
+    ${item ? html`<${Modal} onClose=${back}><${ItemCard} it=${item} cats=${cats} /></${Modal}>` : null}
   </div>`;
 }
 

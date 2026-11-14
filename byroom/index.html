@@ -6,12 +6,13 @@
 <meta name="robots" content="noindex">
 <title>A. Weiss · By Room</title>
 <!-- By Room — the page a QR code or a link opens. View only, no sign-in: the project key in the link is the key.
-     Shows only what the administrator published. byroom build 3 · 25.10.2026 -->
+     Shows only what the administrator published. byroom build 19 · 14.11.2026 -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root { --ink: #17181c; --accent: #17181c; --accent-ink: #000000; --accent-soft: #eceef1; }
   html, body, #root { margin: 0; height: 100%; background: #f6f6f7; }
+  html, body { scrollbar-width: none; } ::-webkit-scrollbar { display: none; }   /* 14.11.26 — no scroll bars */
   #boot { font-family: 'Assistant', system-ui, sans-serif; color: #5b5e66; padding: 40px 20px; text-align: center; font-size: 17px; }
 </style>
 <script type="importmap">
@@ -38,6 +39,7 @@ else createRoot(document.getElementById("root")).render(React.createElement(ByRo
   api: publicApi(BYROOM_FUNCTIONS, k),
   initialFloor: p.get("f") || null,      // a room QR opens straight on its floor plan with the room open
   initialRoom: p.get("r") || null,
+  standalone: true,                     // the phone page: "→ חזרה" and the phone's own back walk the same steps
 }));
 </script>
 </body>
