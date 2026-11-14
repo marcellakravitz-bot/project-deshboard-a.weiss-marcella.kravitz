@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;800&family=Inter:wght@500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="common/core.css?v=60">
+<link rel="stylesheet" href="common/core.css?v=61">
 </head>
 <body>
 <!-- 06.11.26 — the one entry link for every app user: phone and code, then the
@@ -31,9 +31,9 @@
 </div>
 <div class="pvBadge">תצוגה מקדימה · נתונים חיים · שינויים לא נשמרים</div>
 <main id="app" class="wrap"></main>
-<footer class="siteFooter" dir="ltr">Marcella Kravitz © <span class="buildStamp">build 60</span></footer>
+<footer class="siteFooter" dir="ltr">Marcella Kravitz © <span class="buildStamp">build 61</span></footer>
 
-<script src="common/core.js?v=60"></script>
+<script src="common/core.js?v=61"></script>
 <script>
 (function(){
 var E=AW.esc, S=AW.state, PREVIEW=AW.PREVIEW;
@@ -157,6 +157,8 @@ function open(p){
   location.href=url;
 }
 function picker(){
+  // 14.11.26 — came here from a notification before signing in: on to it.
+  if(!PREVIEW){ var after=AW.takeAfter(S.projects); if(after){ location.href=after; return; } }
   out.hidden=!!PREVIEW;
   var list=S.projects||[];
   // One line at the top when every project is the same role (a subcontractor

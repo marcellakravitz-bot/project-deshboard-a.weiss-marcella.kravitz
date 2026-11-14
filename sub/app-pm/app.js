@@ -289,7 +289,8 @@ function finishes(){ AW.finishesScreen(fin); }
 function draw(v){
   if(!S.board) return;
   switch(v.v){
-    case "weekly": return weekly(v.day);
+    // 14.11.26 — from a notification: the week that was updated.
+    case "weekly": if(v.week){ weekShown=v.week; delete v.week; } return weekly(v.day);
     case "weekEdit": return weekEdit(v.trade);
     case "log": return logTrades();
     case "logTrade": return logTrade(v.trade);

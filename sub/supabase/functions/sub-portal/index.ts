@@ -156,21 +156,118 @@ async function vapidHeader(endpoint: string): Promise<string | null> {
   const sig = await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, key, new TextEncoder().encode(signing));
   return `vapid t=${signing}.${bytesToB64url(new Uint8Array(sig))},k=${VAPID_PUBLIC}`;
 }
-async function notifyPhones(phones: string[], projectId: string, exclude?: string) {
+// ---------------------------------------------------------------------------
+// 14.11.26 — what a notification says and where it opens.
+//
+// Until now every push went out empty, so the phone could only ever show
+// "עדכון הועלה". A push that carries words must be encrypted for that one
+// phone (RFC 8291, "aes128gcm") with the two keys the phone gave when it
+// signed up (subs_push.keys: p256dh, auth). That is what pushPayload does.
+//
+// The words: the title names the folder ("עדכון ב-SD", "עדכון בלו״ז שבועי"),
+// the body the item and what happened to it ("לוח חשמל קומה 7 - אושר"), then
+// the project. The address opens that person's own app (by his role on the
+// project) straight on the item.
+// ---------------------------------------------------------------------------
+const APP_DIR: Record<string, string> = { pm: "app-pm", sub: "app-sub" };
+type PushMsg = {
+  folder: string;                 // "SD", "Submittal", "לו״ז שבועי", "יומן עדכונים", "ניהול משימות"
+  detail?: string;                // the item and what happened to it
+  // where it opens, per role: { v, id, hk, tr, wk }
+  target?: (role: string) => Record<string, string | undefined> | null;
+};
+const folderTitle = (f: string) => /^[A-Za-z]/.test(f) ? `עדכון ב-${f}` : `עדכון ב${f}`;
+const cut = (s: string, n: number) => { const t = String(s || "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n - 1) + "…" : t; };
+function concatBytes(...parts: Uint8Array[]): Uint8Array {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
+async function hmacBytes(key: Uint8Array, data: Uint8Array): Promise<Uint8Array> {
+  const k = await crypto.subtle.importKey("raw", key as any, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  return new Uint8Array(await crypto.subtle.sign("HMAC", k, data as any));
+}
+// PUSH-ENCRYPT-BEGIN
+// RFC 8291 / RFC 8188. `fixed` is for the test against the RFC's own example only.
+async function pushPayload(text: string, p256dh: string, authSecret: string, fixed?: any): Promise<Uint8Array> {
+  const enc = new TextEncoder();
+  const uaPublic = b64urlToBytes(p256dh);
+  const auth = b64urlToBytes(authSecret);
+  let asPrivate: any, asPublic: Uint8Array;
+  if (fixed) {
+    asPrivate = await crypto.subtle.importKey("jwk", fixed.jwk, { name: "ECDH", namedCurve: "P-256" }, false, ["deriveBits"]);
+    asPublic = b64urlToBytes(fixed.publicKey);
+  } else {
+    const pair: any = await crypto.subtle.generateKey({ name: "ECDH", namedCurve: "P-256" }, true, ["deriveBits"]);
+    asPrivate = pair.privateKey;
+    asPublic = new Uint8Array(await crypto.subtle.exportKey("raw", pair.publicKey));
+  }
+  const uaKey = await crypto.subtle.importKey("raw", uaPublic as any, { name: "ECDH", namedCurve: "P-256" }, false, []);
+  const ecdh = new Uint8Array(await crypto.subtle.deriveBits({ name: "ECDH", public: uaKey } as any, asPrivate, 256));
+  const prkKey = await hmacBytes(auth, ecdh);
+  const ikm = await hmacBytes(prkKey, concatBytes(enc.encode("WebPush: info\0"), uaPublic, asPublic, new Uint8Array([1])));
+  const salt = fixed ? b64urlToBytes(fixed.salt) : crypto.getRandomValues(new Uint8Array(16));
+  const prk = await hmacBytes(salt, ikm);
+  const cek = (await hmacBytes(prk, concatBytes(enc.encode("Content-Encoding: aes128gcm\0"), new Uint8Array([1])))).slice(0, 16);
+  const nonce = (await hmacBytes(prk, concatBytes(enc.encode("Content-Encoding: nonce\0"), new Uint8Array([1])))).slice(0, 12);
+  const key = await crypto.subtle.importKey("raw", cek as any, { name: "AES-GCM" }, false, ["encrypt"]);
+  const plain = concatBytes(enc.encode(text), new Uint8Array([2]));
+  const cipher = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: nonce as any }, key, plain as any));
+  const rs = new Uint8Array([0, 0, 16, 0]);   // 4096
+  return concatBytes(salt, rs, new Uint8Array([asPublic.length]), asPublic, cipher);
+}
+// PUSH-ENCRYPT-END
+// The register's rows for one project: role and phone, for the address.
+async function rolesOn(projectId: string): Promise<Record<string, string>> {
+  const projects = await loadProjects();
+  const p = projects.filter((x: any) => x.id === projectId)[0];
+  const out: Record<string, string> = {};
+  for (const s of (((p?.extras?.subsData || {}).list) || [])) {
+    if (!s || s.active === false) continue;
+    const ph = normPhone(s.phone), r = roleOf(s);
+    if (!out[ph] || ROLE_ORDER.indexOf(r) < ROLE_ORDER.indexOf(out[ph])) out[ph] = r;
+  }
+  return out;
+}
+async function notifyPhones(phones: string[], projectId: string, exclude?: string, msg?: PushMsg) {
   const report: any = { devices: 0, results: [] as string[] };
   const list = Array.from(new Set(phones.filter(Boolean))).filter((p) => p !== exclude);
   if (!list.length) { report.note = "no phones"; return report; }
-  const { data } = await db.from("subs_push").select("endpoint, phone").in("phone", list);
+  const { data } = await db.from("subs_push").select("endpoint, phone, keys").in("phone", list);
   report.devices = (data || []).length;
   if (!VAPID_PRIVATE || !VAPID_PUBLIC) { report.note = "no vapid keys"; return report; }
+  const [roles, meta] = await Promise.all([rolesOn(projectId), loadMeta()]);
+  const projName = String((meta[projectId] || {}).name || "").trim();
   for (const row of (data || [])) {
     try {
       const auth = await vapidHeader(row.endpoint);
       if (!auth) { report.results.push("no auth header"); continue; }
-      const res = await fetch(row.endpoint, {
-        method: "POST",
-        headers: { Authorization: auth, TTL: "86400", "Content-Length": "0", Urgency: "high" },
-      });
+      // The words and the address, for this phone's role on the project.
+      const role = roles[row.phone] || "sub";
+      const t = msg && msg.target ? msg.target(role) : null;
+      const dir = APP_DIR[role];
+      let url = "./";
+      if (dir && projectId) {
+        const qs = new URLSearchParams({ p: projectId });
+        if (t) for (const [k, v] of Object.entries(t)) if (v) qs.set(k, String(v));
+        url = `${dir}/?${qs.toString()}`;
+      }
+      const note = {
+        title: msg ? folderTitle(msg.folder) : "עדכון בפרויקט",
+        body: [msg && msg.detail ? cut(msg.detail, 110) : "", projName].filter(Boolean).join("\n"),
+        url,
+        tag: `aw:${projectId}:${msg ? msg.folder : ""}:${t && (t.id || t.hk || t.tr || t.wk) || ""}`,
+      };
+      const keys = row.keys || {};
+      const headers: Record<string, string> = { Authorization: auth, TTL: "86400", Urgency: "high" };
+      let payload: Uint8Array | null = null;
+      if (keys.p256dh && keys.auth) {
+        payload = await pushPayload(JSON.stringify(note), keys.p256dh, keys.auth);
+        headers["Content-Encoding"] = "aes128gcm";
+        headers["Content-Type"] = "application/octet-stream";
+      } else headers["Content-Length"] = "0";
+      const res = await fetch(row.endpoint, { method: "POST", headers, body: payload as any });
       let body = "";
       try { body = (await res.text()).slice(0, 200); } catch (e) {}
       report.results.push(`${new URL(row.endpoint).host} ${res.status} ${body}`.trim());
@@ -187,8 +284,11 @@ async function phonesFor(projectId: string, trade: string, floor?: string): Prom
   const projects = await loadProjects();
   const p = projects.filter((x: any) => x.id === projectId)[0];
   const list = ((p?.extras?.subsData || {}).list) || [];
+  // 14.11.26 — by role: project managers and that trade's subcontractors. A
+  // client or supervision row is never woken here — their app has only the
+  // finishes list, which sends nothing.
   return list
-    .filter((s: any) => s && s.active !== false && (s.pm || !trade || s.trade === trade))
+    .filter((s: any) => s && s.active !== false && (roleOf(s) === "pm" || (roleOf(s) === "sub" && (!trade || s.trade === trade))))
     .filter((s: any) => !floor || floor === "*" || onFloors(s.floors, [floor]))
     .map((s: any) => normPhone(s.phone));
 }
@@ -425,6 +525,10 @@ function catLabel(grant: any, key: string) {
   return CAT_LABELS[key] || (custom && (custom.he || custom.en)) || key;
 }
 async function submittalsFor(grant: any, key: string) {
+  // 14.11.26 — "lite": for the notifications, which need what each row says and
+  // where it stands, not its pictures and files — nothing is signed.
+  const sg = grant.lite ? async (_p: string) => null : signed;
+  const sa = grant.lite ? async (_a: any[]) => [] as any[] : signAll;
   const ex = grant.extras || {};
   const F: string[] | null = grant.F || null;
   const rowMeta = ex.submittalRowMeta || {};
@@ -472,10 +576,11 @@ async function submittalsFor(grant: any, key: string) {
       typeId: String(ll.typeMark || "").trim() || String(r.typeId || "").trim(),
       description: String(ll.desc || "").trim() || r.itemDescription || r.scope || "",
       decision: null, submitted: false, rev: Number(r.rev) || 0,
-      image: r.image && r.image.path ? await signed(r.image.path)
+      image: r.image && r.image.path ? await sg(r.image.path)
         : (r.image && typeof r.image.thumb === "string" && r.image.thumb.length < 400000 ? r.image.thumb
         : (typeof ll.image === "string" && ll.image.length < 400000 ? ll.image : null)),
       doc: null, files: [],
+      ...(grant.lite ? { floors: floorsOf(r) || [] } : {}),
     }))());
   }
   for (const [hk, r] of Object.entries<any>(fam)) {
@@ -503,11 +608,12 @@ async function submittalsFor(grant: any, key: string) {
         rev: Number(r.rev) || 0,
         // 07.11.26 — the submittal's own picture: a stored one, or the copy
         // kept on the record (e.g. the one brought from LLI).
-        image: r.image && r.image.path ? await signed(r.image.path)
+        image: r.image && r.image.path ? await sg(r.image.path)
           : (r.image && typeof r.image.thumb === "string" && r.image.thumb.length < 400000 ? r.image.thumb
           : (typeof ll.image === "string" && ll.image.length < 400000 ? ll.image : null)),
-        doc: d ? { name: d.name || "submittal.html", type: d.type || "text/html", url: await signed(d.path) } : null,
-        files: decision && APPROVED.indexOf(decision) >= 0 ? await signAll(r.attachments || []) : [],
+        doc: d ? { name: d.name || "submittal.html", type: d.type || "text/html", url: await sg(d.path) } : null,
+        files: decision && APPROVED.indexOf(decision) >= 0 ? await sa(r.attachments || []) : [],
+        ...(grant.lite ? { floors: floorsOf(r) || [] } : {}),
       };
     })());
   }
@@ -532,7 +638,8 @@ async function submittalsFor(grant: any, key: string) {
     const li = ll.image;
     rows.push(Promise.resolve({ id: "c:" + code, hk: "b:" + code, no: "", code, category: cat, catHe: catLabel(grant, cat),
       typeId: mark, description: desc || code, decision: null, submitted: false, rev: 0,
-      image: typeof li === "string" && li.length < 400000 ? li : null, doc: null, files: [] }));
+      image: typeof li === "string" && li.length < 400000 ? li : null, doc: null, files: [],
+      ...(grant.lite ? { floors: m.floors || [] } : {}) }));
   }
   const out = await Promise.all(rows);
   out.forEach((r: any) => { if (r && !r.catHe && r.category) r.catHe = catLabel(grant, r.category); });
@@ -579,7 +686,8 @@ async function sdFor(grant: any, key: string) {
         dueAt: row.dueAt || "",
         updates: (Array.isArray(row.updates) ? row.updates : []).map((u: any) => ({ date: String(u.at || "").slice(0, 10), text: String(u.text || "") })),
         status: approvedByClient ? "approved" : (row.status || "required"),
-        files: ok ? await signAll([(sdAp[code] || {}).file || row.file].filter(Boolean)) : [],
+        files: ok && !grant.lite ? await signAll([(sdAp[code] || {}).file || row.file].filter(Boolean)) : [],
+        ...(grant.lite ? { floors: row.floors || [] } : {}),
       };
     })());
   }
@@ -721,6 +829,155 @@ async function pmPhonesFor(projectId: string): Promise<string[]> {
   return list.filter((s: any) => s && s.active !== false && roleOf(s) === "pm").map((s: any) => normPhone(s.phone));
 }
 
+// 14.11.26 — the words and the address for the log, the week and a task.
+const TRADE_HE: Record<string, string> = { hvac: "מיזוג אוויר", electric: "חשמל", plumbing: "אינסטלציה", drywall: "גבס", security: "ביטחון, בקרה ותקשורת", paint: "צבע" };
+const flTxt = (fl: string) => fl && fl !== "*" ? ` · קומה ${fl}` : "";
+function logMsg(trade: string, subject: string, fl: string): PushMsg {
+  return {
+    folder: "יומן עדכונים",
+    detail: `קבלן ${TRADE_HE[trade] || trade}${flTxt(fl)}${subject ? " - " + subject : ""}`,
+    target: (role) => role === "pm" ? { go: "logTrade", tr: trade } : { go: "log" },
+  };
+}
+function weekMsg(trade: string, fl: string, week: string): PushMsg {
+  const wk = /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : "";
+  return {
+    folder: "לו״ז שבועי",
+    detail: `קבלן ${TRADE_HE[trade] || trade}${flTxt(fl)}${wk ? " · שבוע " + fmtDate(wk) : ""}`,
+    target: () => ({ go: "weekly", wk }),
+  };
+}
+function taskMsg(id: string, desc: string): PushMsg {
+  return {
+    folder: "ניהול משימות",
+    detail: desc ? "משימה חדשה - " + desc : "משימה חדשה",
+    target: () => id ? { go: "task", id } : { go: "tasks" },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 14.11.26 — SD and Submittal: "לוח חשמל קומה 7 - אושר".
+//
+// A status changes in many places (her board, the client signing on the
+// dashboard, the supervision link), and all of them end as rows in app_state.
+// So nobody announces it: after a save the dashboard (and the supervision page
+// after a decision) asks "watch", and the server compares every list the apps
+// show — per viewer key ("pm" or a trade), with every floor — with the last
+// time it looked (app_state "notify-snap:<projectId>"). Each row whose status
+// changed, or that is new on a list, wakes the phones that see it on their
+// floors. The first look at a project only remembers; it tells nobody.
+// A run that loses the race to write the snapshot sends nothing — the other
+// run is telling the same news.
+// ---------------------------------------------------------------------------
+const SD_WORD: Record<string, string> = {
+  required: "נדרש", requested: "נתבקש", submitted: "הוגש", approved: "אושר",
+  approvedNoted: "אושר בכפוף להערות", revise: "להגשה חוזרת", rejected: "לא אושר",
+};
+const SB_WORD: Record<string, string> = {
+  pending: "טרם הוגש", submitted: "הוגש", approved: "אושר", approvedNoted: "אושר בכפוף להערות",
+  revise: "הגשה חדשה בכפוף להערות", rejected: "לא אושר",
+};
+const shortLine = (s: any) => String(s || "").split("\n")[0].replace(/\s+/g, " ").trim();
+const sbState = (r: any) => r.decision || (r.submitted ? "submitted" : "pending");
+// What one viewer key sees: { sd: { code: {...} }, sb: { hk: {...} } }.
+async function watchLists(base: any, key: string) {
+  const g = { ...base, F: null, lite: true };
+  const [sb, sd] = await Promise.all([submittalsFor(g, key), sdFor(g, key)]);
+  const out: any = { sd: {}, sb: {} };
+  for (const r of sd) out.sd[r.code] = {
+    s: r.status, n: shortLine(r.description) || r.typeId || r.code, f: floorArr(r.floors),
+  };
+  for (const r of sb) out.sb[r.hk] = {
+    s: sbState(r), id: r.id || r.code || "", n: r.typeId || r.no || shortLine(r.description) || r.code || "", f: floorArr(r.floors),
+  };
+  return out;
+}
+async function watchProject(projectId: string) {
+  const report: any = { changes: 0, sent: 0 };
+  if (!projectId) return report;
+  const [full, catalog] = await Promise.all([loadProjectFull(projectId), loadCatalog()]);
+  const sdata = (full.extras || {}).subsData || {};
+  const people = ((sdata.list || []) as any[]).filter((s) => s && s.active !== false && (roleOf(s) === "pm" || roleOf(s) === "sub"));
+  const keys = Array.from(new Set(people.map((s) => roleOf(s) === "pm" ? "pm" : String(s.trade || "")).filter(Boolean)));
+  const base = { projectId, extras: full.extras, lli: full.lli, catalog };
+  const now: Record<string, any> = {};
+  for (const k of keys) now[k] = await watchLists(base, k);
+
+  const snapKey = `notify-snap:${projectId}`;
+  const { data: row } = await db.from("app_state").select("value, version").eq("key", snapKey).maybeSingle();
+  const prev = row ? parse(row.value) : null;
+  // Remember first; tell only if this run is the one that wrote.
+  if (!row) {
+    const { error } = await db.from("app_state").insert({ key: snapKey, value: now, version: 1 });
+    report.note = error ? "snapshot race" : "first look";
+    return report;
+  }
+  const version = Number(row.version || 1);
+  const { data: done } = await db.from("app_state").update({ value: now, version: version + 1 })
+    .eq("key", snapKey).eq("version", version).select("key");
+  if (!done || !done.length) { report.note = "snapshot race"; return report; }
+
+  // Changes per viewer key, per folder.
+  type Ch = { kind: "sd" | "sb"; k: string; s: string; n: string; id: string; f: string[] };
+  const changes: Record<string, Ch[]> = {};
+  for (const k of keys) {
+    const was = (prev || {})[k];
+    if (!was) continue;            // a key seen for the first time only remembers
+    const list: Ch[] = [];
+    for (const [code, r] of Object.entries<any>(now[k].sd)) {
+      const p = (was.sd || {})[code];
+      if (!p || p.s !== r.s) list.push({ kind: "sd", k: code, s: r.s, n: r.n, id: code, f: r.f });
+    }
+    for (const [hk, r] of Object.entries<any>(now[k].sb)) {
+      const p = (was.sb || {})[hk];
+      if (!p || p.s !== r.s) list.push({ kind: "sb", k: hk, s: r.s, n: r.n, id: r.id, f: r.f });
+    }
+    if (list.length) changes[k] = list;
+  }
+  report.changes = Object.values(changes).reduce((n, l) => n + l.length, 0);
+  if (!report.changes) return report;
+
+  // Per person: what he sees (his key, his floors, and for a subcontractor
+  // what was put in the bin for his trade).
+  const hide = sdata.hide || {};
+  const byPhone = new Map<string, { role: string; items: Ch[] }>();
+  for (const s of people) {
+    const role = roleOf(s);
+    const key = role === "pm" ? "pm" : String(s.trade || "");
+    const F = floorArr(s.floors).length ? floorArr(s.floors) : null;
+    const hKeys = F ? F.map((f) => `${key}@${f}`) : [key];
+    const gone = (part: string, k: string) => role === "sub" && hKeys.every((hk) => !!(((hide[hk] || {})[part] || {})[k]));
+    const mine = (changes[key] || []).filter((c) => onFloors(c.f, F) && !gone(c.kind === "sd" ? "sd" : "sb", c.k));
+    if (!mine.length) continue;
+    const ph = normPhone(s.phone);
+    const cur = byPhone.get(ph) || { role, items: [] as Ch[] };
+    mine.forEach((c) => { if (!cur.items.some((x) => x.kind === c.kind && x.k === c.k)) cur.items.push(c); });
+    if (ROLE_ORDER.indexOf(role) < ROLE_ORDER.indexOf(cur.role)) cur.role = role;
+    byPhone.set(ph, cur);
+  }
+  // One notification per folder per person; more than three rows at once in
+  // one folder are counted, not listed one by one.
+  for (const [ph, who] of byPhone) {
+    for (const kind of ["sd", "sb"] as const) {
+      const items = who.items.filter((c) => c.kind === kind);
+      if (!items.length) continue;
+      const words = kind === "sd" ? SD_WORD : SB_WORD;
+      const v = kind === "sd" ? "sd" : "submittal";
+      const one = items.length === 1 ? items[0] : null;
+      const detail = items.length <= 3
+        ? items.map((c) => `${cut(c.n, 50)} - ${words[c.s] || c.s}`).join("\n")
+        : `${items.length} פריטים עודכנו`;
+      await notifyPhones([ph], projectId, undefined, {
+        folder: kind === "sd" ? "SD" : "Submittal",
+        detail,
+        target: () => one ? { go: v, id: one.id, hk: kind === "sb" ? one.k : "" } : { go: v },
+      });
+      report.sent++;
+    }
+  }
+  return report;
+}
+
 // ---------------------------------------------------------------------------
 // 06.11.26 — the dashboard's live preview ("אפליקציות" > תצוגה מקדימה).
 // The administrator's own sign-in stands in for the phone code: she sees the
@@ -827,7 +1084,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
 
   if (req.method === "GET") return json({
-    fn: "sub-portal", version: 53,
+    fn: "sub-portal", version: 54,
     push: !!VAPID_PUBLIC,
     publicLen: VAPID_PUBLIC.length,
     privateLen: VAPID_PRIVATE.length,
@@ -921,7 +1178,8 @@ Deno.serve(async (req) => {
           cur.logs[trade] = (cur.logs[trade] || []).concat([entry]);
           return cur;
         });
-        await notifyPhones(await phonesFor(grant.projectId, trade, String(body.floor || "").trim()), grant.projectId, phone);
+        await notifyPhones(await phonesFor(grant.projectId, trade, String(body.floor || "").trim()), grant.projectId, phone,
+          logMsg(trade, subject, String(body.floor || "").trim()));
         return json({ ok: true });
       }
 
@@ -938,7 +1196,7 @@ Deno.serve(async (req) => {
         cur.weekly[wKey][weekStart] = week;
         return cur;
       });
-      await notifyPhones(await phonesFor(grant.projectId, trade, wFloor), grant.projectId, phone);
+      await notifyPhones(await phonesFor(grant.projectId, trade, wFloor), grant.projectId, phone, weekMsg(trade, wFloor, weekStart));
       return json({ ok: true });
     }
 
@@ -960,7 +1218,7 @@ Deno.serve(async (req) => {
     if (body.action === "test-push") {
       const phone = await readToken(body.token);
       if (!phone) return json({ error: "bad-token" }, 401);
-      const report = await notifyPhones([phone], String(body.projectId || ""));
+      const report = await notifyPhones([phone], String(body.projectId || ""), undefined, { folder: "בדיקת התראות", detail: "ההתראות פועלות" });
       if (body.withToken) report.sample = await vapidHeader("https://web.push.apple.com/x");
       return json({ ok: true, report });
     }
@@ -977,7 +1235,31 @@ Deno.serve(async (req) => {
       const { data: who } = await db.auth.getUser(String(body.accessToken || ""));
       const role = who?.user?.app_metadata?.role || who?.user?.user_metadata?.role;
       if (!who?.user || (role !== "admin" && role !== "team")) return json({ error: "unauthorised" }, 401);
-      const report = await notifyPhones(await phonesFor(String(body.projectId || ""), String(body.trade || "")), String(body.projectId || ""));
+      // 14.11.26 — what was updated comes with the call: the log (its subject)
+      // or the weekly schedule (its week), and the floor it was written for.
+      const pid = String(body.projectId || ""), tr = String(body.trade || ""), fl = String(body.floor || "").trim();
+      const msg = body.kind === "log" ? logMsg(tr, String(body.subject || ""), fl)
+        : body.kind === "weekly" ? weekMsg(tr, fl, String(body.week || ""))
+        : undefined;
+      const report = await notifyPhones(await phonesFor(pid, tr, fl), pid, undefined, msg);
+      return json({ ok: true, report });
+    }
+
+    // 14.11.26 — "something was saved on this project": SD and Submittal
+    // statuses are compared with the last look (watchProject). Asked by the
+    // dashboard after a save (any signed-in user — the client's signature
+    // counts too) and by the supervision page after a decision (its link).
+    if (body.action === "watch") {
+      let pid = String(body.projectId || "");
+      if (body.t) {
+        const { data: link } = await db.from("supervision_links").select("project_id").eq("token", String(body.t)).maybeSingle();
+        if (!link) return json({ error: "unauthorised" }, 401);
+        pid = String(link.project_id || "");
+      } else {
+        const { data: who } = await db.auth.getUser(String(body.accessToken || ""));
+        if (!who?.user) return json({ error: "unauthorised" }, 401);
+      }
+      const report = await watchProject(pid);
       return json({ ok: true, report });
     }
 
@@ -992,7 +1274,7 @@ Deno.serve(async (req) => {
         const { data } = await db.from("project_access").select("project_id").eq("user_id", u.id).eq("project_id", projectId);
         if (!data || !data.length) return json({ error: "unauthorised" }, 401);
       }
-      const report = await notifyPhones(await pmPhonesFor(projectId), projectId);
+      const report = await notifyPhones(await pmPhonesFor(projectId), projectId, undefined, taskMsg(String(body.taskId || ""), String(body.desc || "")));
       return json({ ok: true, report });
     }
 
@@ -1175,7 +1457,7 @@ Deno.serve(async (req) => {
       });
       if (refused) return json({ error: refused }, refused === "not-yours" ? 403 : 400);
       if (op === "add") {
-        try { await notifyPhones(await pmPhonesFor(projectId), projectId, phone as string); } catch (e) { console.error("[sub-portal] task push", e); }
+        try { await notifyPhones(await pmPhonesFor(projectId), projectId, phone as string, taskMsg(result && result.id, result && result.desc)); } catch (e) { console.error("[sub-portal] task push", e); }
       }
       return json({ ok: true, task: result ? taskOut(result, phone as string) : null });
     }

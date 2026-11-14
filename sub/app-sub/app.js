@@ -91,6 +91,8 @@ function draw(v){
   if(!S.board) return;
   switch(v.v){
     case "log": return log();
+    // 14.11.26 — from a notification: the week that was updated.
+    case "weekly": if(v.week){ weekShown=v.week; delete v.week; } AW.markSeen("weekly"); return weekly();
     case "submittal": return itemScreen("submittal");
     case "sd": return itemScreen("sd");
     case "standards": return standards();

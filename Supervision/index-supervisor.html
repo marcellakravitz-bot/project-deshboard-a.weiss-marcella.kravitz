@@ -119,7 +119,7 @@
 </div>
 <main id="app" class="wrap"><p class="lead">טוען…</p></main>
 <div id="sdsign"></div>
-<p class="foot">א. וייס הנדסה · 15.9.2026 · build 3</p>
+<p class="foot">א. וייס הנדסה · 14.11.2026 · build 4</p>
 
 <!-- ---------------------------------------------------------------------- -->
 <!-- The drawing-signing screen, imported from the site's own sign.js.        -->
@@ -516,6 +516,12 @@ function submit(d){
       formView(d);
       return;
     }
+    // 14.11.26 — the decision is in: the apps are told (SD / Submittal
+    // notifications). Quiet if it fails; the decision is already saved.
+    try {
+      fetch("https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/sub-portal", { method:"POST",
+        headers:{"content-type":"application/json"}, body:JSON.stringify({ action:"watch", t:TOKEN }) }).catch(function(){});
+    } catch(e) {}
     load();
   }).catch(function(){
     state.sending=false;

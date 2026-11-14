@@ -1,6 +1,6 @@
 // =============================================================================
 //  tasks/admin.js — ניהול משימות (task management). A. Weiss dashboard
-//  tasks build 1 · 06.11.2026 (site: build 257)
+//  tasks build 2 · 14.11.2026 (site: build 309) — task-notify carries the task
 //
 //  The dashboard loads this file when the administrator opens the cube.
 //
@@ -487,7 +487,7 @@ export function TasksBoard({ projectId, projectName, currentEmail, catalog, onCa
         const tok = ses && ses.session && ses.session.access_token;
         if (!tok) return;
         await fetch("https://jvssavyfjuhjniqkiymo.supabase.co/functions/v1/sub-portal", { method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action: "task-notify", accessToken: tok, projectId }) });
+          body: JSON.stringify({ action: "task-notify", accessToken: tok, projectId, taskId: t.id, desc: t.desc || "" }) });
       } catch (e) { console.warn("[tasks] notify failed", e); }
     }, 2500);
     setNewAsk(false);

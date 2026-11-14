@@ -579,7 +579,7 @@ var CLIENT_CARDS = ["schedule", "rooms", "sd", "submittal", "lli"];
 // which they read and never edit (build 57). LEED is the administrator's.
 // (7.9.26)
 var CONTRACTOR_CARDS = CLIENT_CARDS.concat(["contacts", "rfi", "changeInstructions"]);
-var APP_BUILD = "12.11.2026 · build 308";
+var APP_BUILD = "14.11.2026 · build 309";
 // 28.8.26 — the frame does not move. Switching the language used to mirror the
 // whole site: the logo crossed to the other side, the menu button jumped, the
 // nine cards re-ordered themselves. Nothing about that is information — it is
@@ -6023,19 +6023,49 @@ async function supervisionLink({ projectId, kind, docId, rev }) {
 
 // One call, one purpose: wake the phones on this trade. The dashboard proves
 // who it is with its own sign-in token, which the server checks. (11.9.26)
-async function subsAnnounce(projectId, trade) {
+// 14.11.26 — with what was updated, so the notification can say it and open
+// on it: info { kind: "log" | "weekly", floor, subject (log), week (weekly) }.
+async function subsAnnounce(projectId, trade, info) {
   try {
     const { data } = await supabase.auth.getSession();
     const accessToken = data?.session?.access_token;
     if (!accessToken) return;
+    const x = info || {};
     await fetch(`${SUPABASE_URL}/functions/v1/sub-portal`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ action: "announce", accessToken, projectId, trade }),
+      body: JSON.stringify({ action: "announce", accessToken, projectId, trade, kind: x.kind || "", floor: x.floor || "", subject: x.subject || "", week: x.week || "" }),
     });
   } catch (e) {
     console.log("[awdash] announce skipped", e);
   }
+}
+// 14.11.26 — SD and Submittal notifications ("לוח חשמל קומה 7 - אושר"): after
+// a save that wrote the project's submittals, SD, approvals or LLI, the
+// server compares what the apps show with the last time it looked, and tells
+// the phones of whatever changed. A few seconds' wait, so a burst of edits is
+// one look. A failure is quiet: it never touches the saving.
+const WATCH_PARTS = ["project-extras", "project-sd", "project-sd-approvals", "project-submittal-approvals", "project-lli", "project-subs"];
+const subsWatchTimers = {};
+function subsWatchSoon(projectId) {
+  if (!projectId) return;
+  clearTimeout(subsWatchTimers[projectId]);
+  subsWatchTimers[projectId] = setTimeout(async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      const accessToken = data?.session?.access_token;
+      if (!accessToken) return;
+      const r = await fetch(`${SUPABASE_URL}/functions/v1/sub-portal`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "watch", accessToken, projectId }),
+      });
+      const out = await r.json().catch(() => ({}));
+      console.log("[awdash] watch", projectId, out && out.report);
+    } catch (e) {
+      console.log("[awdash] watch skipped", e);
+    }
+  }, 4000);
 }
 function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChange, writtenBy, onAnnounce }) {
   const [draft, setDraft] = React9.useState(null);
@@ -6110,7 +6140,7 @@ function SubsUpdateLog({ trade, tradeLabel, projectId, canEdit, entries, onChang
           // Tell the phones on this trade. It is deliberately allowed to fail
           // quietly: a notification that does not go out must never stop an
           // update from being saved.
-          if (typeof onAnnounce === "function") onAnnounce();
+          if (typeof onAnnounce === "function") onAnnounce(draft.subject.trim());
           setDraft(null); setPasteArmed(false);
         } }, "\u05e9\u05de\u05d9\u05e8\u05d4"),
         React9.createElement("button", { type: "button", className: "functionEditBtn", style: { ...formBtnS, background: "#9aa3af" }, onClick: () => { setDraft(null); setPasteArmed(false); } }, "\u05d1\u05d9\u05d8\u05d5\u05dc"))),
@@ -6879,8 +6909,9 @@ function SubsWeeklyAll({ data, extra, floors, contacts, canEdit, printBrand, pro
     // Only the trades whose boxes actually changed, so filling in one trade
     // does not ring six sets of phones.
     if (typeof onAnnounce === "function") {
-      // a floor's line tells that trade's phones, once per trade
-      Array.from(new Set(touched.map((k) => k.split("@")[0]))).filter((k) => SUB_TRADES.some((t) => t.key === k)).forEach((k) => onAnnounce(k));
+      // a floor's line tells that trade's phones on that floor (14.11.26: one
+      // notification per trade and floor, naming both and the week)
+      touched.filter((k) => SUB_TRADES.some((t) => t.key === k.split("@")[0])).forEach((k) => onAnnounce(k.split("@")[0], { week: weekStart, floor: k.split("@")[1] || "" }));
     }
     setBuf(null);
   };
@@ -7114,7 +7145,7 @@ function SubsWeekly({ trade, tradeLabel, canEdit, data, onChange, printBrand, pr
     onChange({ ...(data || {}), [weekStart]: cells });
     // Same rule as the log: the phones on this trade are told, and a failure
     // to tell them never stops the saving.
-    if (typeof onAnnounce === "function") onAnnounce(trade);
+    if (typeof onAnnounce === "function") onAnnounce(trade, { week: weekStart });
     setBuf(null);
   };
   if (weekStart) {
@@ -7468,7 +7499,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       projectId,
       canEdit,
       writtenBy: currentEmail,
-      onAnnounce: () => subsAnnounce(projectId, trade),
+      onAnnounce: (subject) => subsAnnounce(projectId, trade, { kind: "log", floor: fl, subject }),
       entries: mine,
       onChange: (next) => {
         const ids = {};
@@ -7520,7 +7551,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       printBrand,
       projectName,
       isRTL,
-      onAnnounce: (tr) => subsAnnounce(projectId, tr),
+      onAnnounce: (tr, x) => subsAnnounce(projectId, tr, { kind: "weekly", floor: fl, week: x && x.week }),
       // On a floor: that floor's own week, the one its app shows with it.
       data: ((subsData || {}).weekly || {})[fl ? `${trade}@${fl}` : trade] || {},
       onChange: (next) => onChangeSubsData({ ...(subsData || {}), weekly: { ...((subsData || {}).weekly || {}), [fl ? `${trade}@${fl}` : trade]: next } })
@@ -7590,7 +7621,7 @@ function SubcontractorsCard({ subsData, onChangeSubsData, canEdit, projectId, sc
       isRTL,
       data: (subsData || {}).weekly || {},
       extra: (subsData || {}).weeklyExtra || [],
-      onAnnounce: (tr) => subsAnnounce(projectId, tr),
+      onAnnounce: (tr, x) => subsAnnounce(projectId, tr, { kind: "weekly", floor: x && x.floor, week: x && x.week }),
       onChange: (weekly) => onChangeSubsData({ ...(subsData || {}), weekly }),
       onChangeExtra: (weeklyExtra) => onChangeSubsData({ ...(subsData || {}), weeklyExtra }),
       onBack: () => setView("board"),
@@ -27000,6 +27031,9 @@ function ProjectDashboardApp() {
         "project-subs": subs
       };
       let failed = null;
+      // 14.11.26 — the projects whose SD / submittal rows were written in this
+      // run: the server is asked afterwards whether a status changed.
+      const watchPids = {};
       // One row per project. saveAppState skips a row whose content has not
       // changed, so an edit to one project writes one row, not twenty-eight.
       let overtaken = false;
@@ -27010,6 +27044,7 @@ function ProjectDashboardApp() {
           try {
             const res = await queuedWrite(rowKey, myRun, () => saveAppState(rowKey, byPid[pid]));
             if (res === "overtaken") { overtaken = true; break; }
+            if (res === true && WATCH_PARTS.indexOf(key) >= 0) watchPids[pid] = true;
           } catch (e) {
             console.error(`[awdash] save ${rowKey} failed`, e);
             failed = e && e.message || String(e);
@@ -27021,6 +27056,7 @@ function ProjectDashboardApp() {
         console.log("[awdash] save run", myRun, "stopped — a newer one is running");
         return { overtaken: true };
       }
+      Object.keys(watchPids).forEach(subsWatchSoon);
       // A silent failure here is how work goes missing. Say it out loud.
       setSaveError(failed ? (isRTL ? "\u05d4\u05e9\u05de\u05d9\u05e8\u05d4 \u05dc\u05e9\u05e8\u05ea \u05e0\u05db\u05e9\u05dc\u05d4" : "Saving to the server failed") + ": " + failed : null);
       try {

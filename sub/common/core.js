@@ -327,6 +327,50 @@ var AW = (function(){
   // ------------------------------------------------------------------- boot
   // Opens an app on the project in its address (?p=…): the board is fetched,
   // and the app draws it.
+  // 14.11.26 — opened from a notification: ?go=<screen>&id=…&hk=…&tr=…&wk=…
+  // The project opens on that screen and item, on every floor ("כל הקומות").
+  // Not signed in: the address is kept for ten minutes, the sign-in comes
+  // first, and the person lands here afterwards.
+  var AFTER_KEY="awsub.after";
+  var target = q.get("go") ? { v:q.get("go"), id:q.get("id")||"", hk:q.get("hk")||"", tr:q.get("tr")||"", wk:q.get("wk")||"" } : null;
+  function keepTarget(){ if(target){ try{ localStorage.setItem(AFTER_KEY, JSON.stringify({ url:location.href, at:Date.now() })); }catch(e){} } }
+  function takeAfter(projects){
+    var a=null; try{ a=JSON.parse(localStorage.getItem(AFTER_KEY)||"null"); localStorage.removeItem(AFTER_KEY); }catch(e){}
+    if(!a || !a.url || Date.now()-(a.at||0)>10*60e3) return null;
+    var p=null; try{ p=new URL(a.url).searchParams.get("p"); }catch(e){}
+    return (projects||[]).some(function(x){ return x.id===p; }) ? a.url : null;
+  }
+  function openTarget(){
+    if(!target) return;
+    var t=target; target=null;
+    try{ history.replaceState(history.state, "", location.pathname+"?p="+encodeURIComponent(state.project)+(PREVIEW?"&preview="+encodeURIComponent(PREVIEW.who):"")); }catch(e){}
+    var v={v:t.v};
+    if(t.id) v.id=t.id;
+    if(t.tr) v.trade=t.tr;
+    if(t.wk) v.week=t.wk;
+    var seen={ sd:"sd", submittal:"submittal", log:"log", logTrade:"log", weekly:"weekly", task:"tasks", tasks:"tasks" }[t.v];
+    if(seen) markSeen(seen);
+    if(t.v==="home"){ render(); return; }
+    go(v);
+    if((t.v==="sd"||t.v==="submittal") && (t.id||t.hk)) setTimeout(function(){ focusItem(t.v, t.id, t.hk); }, 60);
+  }
+  // The row of the update, in its list: brought into view, opened (an SD as
+  // its card, a submittal unfolded), and lit for a moment.
+  function focusItem(kind, id, hk){
+    var items = kind==="sd" ? ((state.board||{}).sd||[]) : ((state.board||{}).submittals||[]);
+    var r = items.filter(function(x){ return kind==="sd" ? x.code===id : ((x.id||x.code)===id || (hk && x.hk===hk)); })[0];
+    if(!r) { toast("הפריט כבר לא מופיע ברשימה"); return; }
+    var key = kind==="sd" ? r.code : (r.id||r.code);
+    var find=function(){ var all=el().querySelectorAll(".item[data-id]"); for(var i=0;i<all.length;i++) if(all[i].getAttribute("data-id")===key) return all[i]; return null; };
+    var b=find(); if(!b) return;
+    b.click();
+    setTimeout(function(){
+      var x=find(); if(!x) return;
+      x.scrollIntoView({ block:"center" });
+      x.classList.add("flash");
+      setTimeout(function(){ x.classList.remove("flash"); }, 2600);
+    }, 60);
+  }
   function boot(opts){
     renderFn=opts.render;
     var out=document.getElementById("out");
@@ -336,11 +380,12 @@ var AW = (function(){
     state.project=q.get("p")||"";
     state.token=PREVIEW ? "preview" : (function(){ try{ return localStorage.getItem(TOKEN_KEY); }catch(e){ return null; } })();
     try{ state.projects=JSON.parse(localStorage.getItem(TOKEN_KEY+".projects")||"[]"); }catch(e){ state.projects=[]; }
-    if(!state.token || !state.project){ toEntry(); return; }
+    if(!state.token || !state.project){ keepTarget(); toEntry(); return; }
+    if(target){ state.floor="*"; try{ sessionStorage.setItem(floorKey(), "*"); }catch(e){} }
     // 07.11.26 — the floor chosen earlier in this visit goes with the first
     // request, so the project is fetched once, not twice.
     try{ var sv=sessionStorage.getItem(floorKey()); if(sv) state.floor=sv; }catch(e){}
-    loadBoard(false).then(function(){ if(opts.ready) opts.ready(); });
+    loadBoard(false).then(function(ok){ if(ok) openTarget(); if(opts.ready) opts.ready(); });
     if(PREVIEW){
       setInterval(function(){ refresh(false); }, 12000);
       window.addEventListener("message", function(e){
@@ -374,7 +419,7 @@ var AW = (function(){
         if(!quiet) render();
         return true;
       }
-      if(r.status===401){ if(PREVIEW) retry("התצוגה המקדימה זמינה רק כשמחוברים לדשבורד כמנהלת."); else signOut("ההרשאה כבר לא בתוקף. פנו למנהלת הפרויקט."); return false; }
+      if(r.status===401){ if(!PREVIEW) keepTarget(); if(PREVIEW) retry("התצוגה המקדימה זמינה רק כשמחוברים לדשבורד כמנהלת."); else signOut("ההרשאה כבר לא בתוקף. פנו למנהלת הפרויקט."); return false; }
       retry("השרת לא זמין כרגע. "+((r.data&&r.data.detail)||""), function(){ loadBoard(false); });
       return false;
     }).catch(function(){ retry("אין חיבור לרשת.", function(){ loadBoard(false); }); return false; });
@@ -402,7 +447,7 @@ var AW = (function(){
     sundayOf:sundayOf, shiftWeek:shiftWeek, weekDays:weekDays, timetable:timetable,
     isNew:isNew, markSeen:markSeen, projHead:projHead, floorPicker:floorPicker,
     view:view, go:go, replace:replace, render:render, boot:boot, loadBoard:loadBoard, refresh:refresh,
-    setBusyCheck:function(f){ busyCheck=f; }, signOut:signOut, toEntry:toEntry,
+    setBusyCheck:function(f){ busyCheck=f; }, signOut:signOut, toEntry:toEntry, takeAfter:takeAfter,
     el:el
   };
 })();
